@@ -303,12 +303,12 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 /* ============ GIVE PAGE (blue tone) ============ */
 .give-page .iftar-hero{
   background:
-    radial-gradient(800px 400px at 15% -10%,rgba(33,150,243,.45),transparent 55%),
-    linear-gradient(150deg,#0c1f33 0%,#0f3d5c 55%,#0b2a4a 130%);
+    radial-gradient(800px 400px at 15% -10%,rgba(77,184,255,.55),transparent 55%),
+    linear-gradient(150deg,#123a5c 0%,#1f6fa8 55%,#1a4d7a 130%);
 }
-.give-page .iftar-eyebrow{background:rgba(33,150,243,.85)}
-.give-page .accent{color:#8ecdff}
-.give-page .gold-rule{background:linear-gradient(90deg,#2196f3,#8ecdff)}
+.give-page .iftar-eyebrow{background:rgba(77,184,255,.85)}
+.give-page .accent{color:#bfe6ff}
+.give-page .gold-rule{background:linear-gradient(90deg,#4db8ff,#bfe6ff)}
 .info-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
 .info-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:20px 16px;backdrop-filter:blur(6px)}
 .info-box .ib-ic{font-size:1.5rem;margin-bottom:8px}

@@ -299,6 +299,16 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .iftar-hero h1{font-size:clamp(2.2rem,5.5vw,3.6rem);font-weight:800;line-height:1.1;margin-bottom:14px}
 .iftar-hero h1 .moon{color:var(--gold-light)}
 .iftar-hero .lead{font-weight:300;opacity:.92;font-size:1.08rem;max-width:56ch;margin:0 auto 34px}
+
+/* ============ GIVE PAGE (blue tone) ============ */
+.give-page .iftar-hero{
+  background:
+    radial-gradient(800px 400px at 15% -10%,rgba(33,150,243,.45),transparent 55%),
+    linear-gradient(150deg,#0c1f33 0%,#0f3d5c 55%,#0b2a4a 130%);
+}
+.give-page .iftar-eyebrow{background:rgba(33,150,243,.85)}
+.give-page .accent{color:#8ecdff}
+.give-page .gold-rule{background:linear-gradient(90deg,#2196f3,#8ecdff)}
 .info-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
 .info-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:20px 16px;backdrop-filter:blur(6px)}
 .info-box .ib-ic{font-size:1.5rem;margin-bottom:8px}

@@ -6,6 +6,20 @@ import { collection, addDoc } from 'firebase/firestore'
 
 const CHANNELS = ['Facebook', 'Instagram', 'LINE', 'TikTok', 'Threads', 'Twitter']
 
+const AGES = Array.from({ length: 100 }, (_, i) => i + 1)
+
+const PROVINCES = [
+  'กรุงเทพมหานคร', 'กระบี่', 'กาญจนบุรี', 'กาฬสินธุ์', 'กำแพงเพชร', 'ขอนแก่น', 'จันทบุรี', 'ฉะเชิงเทรา',
+  'ชลบุรี', 'ชัยนาท', 'ชัยภูมิ', 'ชุมพร', 'เชียงราย', 'เชียงใหม่', 'ตรัง', 'ตราด', 'ตาก', 'นครนายก',
+  'นครปฐม', 'นครพนม', 'นครราชสีมา', 'นครศรีธรรมราช', 'นครสวรรค์', 'นนทบุรี', 'นราธิวาส', 'น่าน',
+  'บึงกาฬ', 'บุรีรัมย์', 'ปทุมธานี', 'ประจวบคีรีขันธ์', 'ปราจีนบุรี', 'ปัตตานี', 'พระนครศรีอยุธยา',
+  'พังงา', 'พัทลุง', 'พิจิตร', 'พิษณุโลก', 'เพชรบุรี', 'เพชรบูรณ์', 'แพร่', 'ภูเก็ต', 'มหาสารคาม',
+  'มุกดาหาร', 'แม่ฮ่องสอน', 'ยโสธร', 'ยะลา', 'ร้อยเอ็ด', 'ระนอง', 'ระยอง', 'ราชบุรี', 'ลพบุรี',
+  'ลำปาง', 'ลำพูน', 'เลย', 'ศรีสะเกษ', 'สกลนคร', 'สงขลา', 'สตูล', 'สมุทรปราการ', 'สมุทรสงคราม',
+  'สมุทรสาคร', 'สระแก้ว', 'สระบุรี', 'สิงห์บุรี', 'สุโขทัย', 'สุพรรณบุรี', 'สุราษฎร์ธานี', 'สุรินทร์',
+  'หนองคาย', 'หนองบัวลำภู', 'อ่างทอง', 'อำนาจเจริญ', 'อุดรธานี', 'อุตรดิตถ์', 'อุทัยธานี', 'อุบลราชธานี',
+]
+
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
 
@@ -20,11 +34,11 @@ const T = {
     formSub: 'กรอกข้อมูลเพื่อสำรองที่นั่งเข้าร่วมงาน · ใช้เวลาไม่ถึง 1 นาที',
     fname: 'ชื่อ', fnamePh: 'ชื่อจริง', lname: 'นามสกุล', lnamePh: 'นามสกุล',
     phone: 'เบอร์โทรศัพท์', phonePh: '08X-XXX-XXXX', email: 'อีเมล',
-    gender: 'เพศ', genders: ['ชาย', 'หญิง'], age: 'อายุ', agePh: 'อายุ (ปี)',
+    gender: 'เพศ', genders: ['ชาย', 'หญิง'], age: 'อายุ', agePh: 'อายุ (ปี)', ageSelect: 'เลือกอายุ',
     channel: 'รู้จักงานนี้จากช่องทางใด', other: 'อื่นๆ',
     job: 'อาชีพ', jobPh: 'เช่น นักเรียน, พนักงาน', jobSelect: 'เลือกอาชีพ',
     jobs: ['นักเรียน/นักศึกษา', 'พนักงานบริษัท/เอกชน', 'ข้าราชการ/รัฐวิสาหกิจ', 'เจ้าของธุรกิจ/ค้าขาย', 'อาชีพอิสระ/ฟรีแลนซ์', 'รับจ้างทั่วไป', 'แม่บ้าน/พ่อบ้าน', 'เกษียณ', 'อื่นๆ'],
-    province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก',
+    province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก', provinceSelect: 'เลือกจังหวัด',
     expect: 'สิ่งที่คาดหวังจากงานนี้',
     expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอาอ์', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
     comment: 'ข้อเสนอแนะเพิ่มเติม', commentPh: 'อยากบอกอะไรกับทีมงาน...',
@@ -51,11 +65,11 @@ const T = {
     formSub: 'Fill in your details to reserve a seat · takes less than a minute',
     fname: 'First Name', fnamePh: 'First name', lname: 'Last Name', lnamePh: 'Last name',
     phone: 'Phone Number', phonePh: '08X-XXX-XXXX', email: 'Email',
-    gender: 'Gender', genders: ['Male', 'Female'], age: 'Age', agePh: 'Age (years)',
+    gender: 'Gender', genders: ['Male', 'Female'], age: 'Age', agePh: 'Age (years)', ageSelect: 'Select age',
     channel: 'How did you hear about this event?', other: 'Other',
     job: 'Occupation', jobPh: 'e.g. student, employee', jobSelect: 'Select occupation',
     jobs: ['Student', 'Private employee', 'Government employee', 'Business owner', 'Freelancer', 'General laborer', 'Homemaker', 'Retired', 'Other'],
-    province: 'Province', provincePh: 'Province of residence',
+    province: 'Province', provincePh: 'Province of residence', provinceSelect: 'Select province',
     expect: 'What do you expect from this event?',
     expects: ['Join iftar', 'Listen to talks', 'Join dua', 'Meet brothers & sisters', 'Donate'],
     comment: 'Additional comments', commentPh: 'Anything you want to tell the team...',
@@ -82,11 +96,11 @@ const T = {
     formSub: 'املأ بياناتك لحجز مقعدك · يستغرق أقل من دقيقة',
     fname: 'الاسم', fnamePh: 'الاسم الأول', lname: 'اسم العائلة', lnamePh: 'اسم العائلة',
     phone: 'رقم الهاتف', phonePh: '08X-XXX-XXXX', email: 'البريد الإلكتروني',
-    gender: 'الجنس', genders: ['ذكر', 'أنثى'], age: 'العمر', agePh: 'العمر (سنة)',
+    gender: 'الجنس', genders: ['ذكر', 'أنثى'], age: 'العمر', agePh: 'العمر (سنة)', ageSelect: 'اختر العمر',
     channel: 'كيف عرفت عن هذه الفعالية؟', other: 'أخرى',
     job: 'المهنة', jobPh: 'مثل: طالب، موظف', jobSelect: 'اختر المهنة',
     jobs: ['طالب', 'موظف قطاع خاص', 'موظف حكومي', 'صاحب عمل/تجارة', 'عمل حر', 'عامل عام', 'ربة منزل', 'متقاعد', 'أخرى'],
-    province: 'المحافظة', provincePh: 'محافظة الإقامة',
+    province: 'المحافظة', provincePh: 'محافظة الإقامة', provinceSelect: 'اختر المحافظة',
     expect: 'ماذا تتوقع من هذه الفعالية؟',
     expects: ['المشاركة في الإفطار', 'حضور المحاضرات', 'المشاركة في الدعاء', 'لقاء الإخوة', 'التبرع'],
     comment: 'ملاحظات إضافية', commentPh: 'ما الذي تود إخبار الفريق به...',
@@ -251,7 +265,10 @@ export default function Iftar() {
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.age}</label>
-                    <input className="iftar-input" type="number" min="0" max="120" placeholder={t.agePh} value={form.age} onChange={set('age')} />
+                    <select className="iftar-input" value={form.age} onChange={set('age')}>
+                      <option value="" disabled>{t.ageSelect}</option>
+                      {AGES.map((a) => <option key={a} value={a}>{a}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -284,7 +301,10 @@ export default function Iftar() {
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.province}</label>
-                    <input className="iftar-input" type="text" placeholder={t.provincePh} value={form.province} onChange={set('province')} />
+                    <select className="iftar-input" value={form.province} onChange={set('province')}>
+                      <option value="" disabled>{t.provinceSelect}</option>
+                      {PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
                   </div>
                 </div>
 

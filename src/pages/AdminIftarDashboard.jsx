@@ -4,6 +4,9 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 
 const ADMIN_PASS = 'ummatee2026'
 
+// Apps Script Web App เดียวกับที่หน้าลงทะเบียนใช้ส่งข้อมูล (doGet คืนรายการจาก Sheet)
+const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
+
 function BarList({ title, data, color = '#2e7d52' }) {
   const max = Math.max(1, ...data.map((d) => d.value))
   return (
@@ -95,19 +98,31 @@ export default function AdminIftarDashboard() {
     if (!authed) return
     let cancelled = false
     setLoading(true)
-    getDocs(query(collection(db, 'iftarRegs'), orderBy('date', 'desc')))
-      .then((snap) => {
-        if (cancelled) return
-        setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-      })
-      .catch(() => {
-        // ถ้า orderBy ใช้ไม่ได้ (field ไม่มี index) ลองดึงแบบไม่เรียง
-        getDocs(collection(db, 'iftarRegs')).then((snap) => {
+
+    const loadFromFirestore = () =>
+      getDocs(query(collection(db, 'iftarRegs'), orderBy('date', 'desc')))
+        .then((snap) => {
           if (cancelled) return
           setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
         })
+        .catch(() =>
+          getDocs(collection(db, 'iftarRegs')).then((snap) => {
+            if (cancelled) return
+            setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+          })
+        )
+
+    // ดึงจาก Google Sheet ก่อน (ข้อมูลหลัก) ถ้าไม่ได้ค่อย fallback ไป Firestore
+    fetch(SHEET_ENDPOINT)
+      .then((res) => res.json())
+      .then((out) => {
+        if (cancelled) return
+        if (!Array.isArray(out.rows)) throw new Error('bad response')
+        setRegs(out.rows.map((r, i) => ({ id: r.ref || i, ...r })).reverse())
       })
+      .catch(() => loadFromFirestore())
       .finally(() => !cancelled && setLoading(false))
+
     return () => { cancelled = true }
   }, [authed])
 

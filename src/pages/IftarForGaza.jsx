@@ -22,7 +22,9 @@ const T = {
     phone: 'เบอร์โทรศัพท์', phonePh: '08X-XXX-XXXX', email: 'อีเมล',
     gender: 'เพศ', genders: ['ชาย', 'หญิง'], age: 'อายุ', agePh: 'อายุ (ปี)',
     channel: 'รู้จักงานนี้จากช่องทางใด', other: 'อื่นๆ',
-    job: 'อาชีพ', jobPh: 'เช่น นักเรียน, พนักงาน', province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก',
+    job: 'อาชีพ', jobPh: 'เช่น นักเรียน, พนักงาน', jobSelect: 'เลือกอาชีพ',
+    jobs: ['นักเรียน/นักศึกษา', 'พนักงานบริษัท/เอกชน', 'ข้าราชการ/รัฐวิสาหกิจ', 'เจ้าของธุรกิจ/ค้าขาย', 'อาชีพอิสระ/ฟรีแลนซ์', 'รับจ้างทั่วไป', 'แม่บ้าน/พ่อบ้าน', 'เกษียณ', 'อื่นๆ'],
+    province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก',
     expect: 'สิ่งที่คาดหวังจากงานนี้',
     expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอาอ์', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
     comment: 'ข้อเสนอแนะเพิ่มเติม', commentPh: 'อยากบอกอะไรกับทีมงาน...',
@@ -51,7 +53,9 @@ const T = {
     phone: 'Phone Number', phonePh: '08X-XXX-XXXX', email: 'Email',
     gender: 'Gender', genders: ['Male', 'Female'], age: 'Age', agePh: 'Age (years)',
     channel: 'How did you hear about this event?', other: 'Other',
-    job: 'Occupation', jobPh: 'e.g. student, employee', province: 'Province', provincePh: 'Province of residence',
+    job: 'Occupation', jobPh: 'e.g. student, employee', jobSelect: 'Select occupation',
+    jobs: ['Student', 'Private employee', 'Government employee', 'Business owner', 'Freelancer', 'General laborer', 'Homemaker', 'Retired', 'Other'],
+    province: 'Province', provincePh: 'Province of residence',
     expect: 'What do you expect from this event?',
     expects: ['Join iftar', 'Listen to talks', 'Join dua', 'Meet brothers & sisters', 'Donate'],
     comment: 'Additional comments', commentPh: 'Anything you want to tell the team...',
@@ -80,7 +84,9 @@ const T = {
     phone: 'رقم الهاتف', phonePh: '08X-XXX-XXXX', email: 'البريد الإلكتروني',
     gender: 'الجنس', genders: ['ذكر', 'أنثى'], age: 'العمر', agePh: 'العمر (سنة)',
     channel: 'كيف عرفت عن هذه الفعالية؟', other: 'أخرى',
-    job: 'المهنة', jobPh: 'مثل: طالب، موظف', province: 'المحافظة', provincePh: 'محافظة الإقامة',
+    job: 'المهنة', jobPh: 'مثل: طالب، موظف', jobSelect: 'اختر المهنة',
+    jobs: ['طالب', 'موظف قطاع خاص', 'موظف حكومي', 'صاحب عمل/تجارة', 'عمل حر', 'عامل عام', 'ربة منزل', 'متقاعد', 'أخرى'],
+    province: 'المحافظة', provincePh: 'محافظة الإقامة',
     expect: 'ماذا تتوقع من هذه الفعالية؟',
     expects: ['المشاركة في الإفطار', 'حضور المحاضرات', 'المشاركة في الدعاء', 'لقاء الإخوة', 'التبرع'],
     comment: 'ملاحظات إضافية', commentPh: 'ما الذي تود إخبار الفريق به...',
@@ -107,7 +113,7 @@ function Chip({ label, active, onClick }) {
   )
 }
 
-const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', province: '', comment: '' }
+const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', jobOther: '', province: '', comment: '' }
 
 export default function Iftar() {
   const { lang } = useLang()
@@ -137,7 +143,7 @@ export default function Iftar() {
     const regData = {
       date: new Date().toLocaleString('th-TH'),
       fname: f.fname.trim(), lname: f.lname.trim(), gender, age: f.age.trim(), phone: f.phone.trim(), email: f.email.trim(),
-      job: f.job.trim(), province: f.province.trim(),
+      job: (f.job === t.jobs[t.jobs.length - 1] ? f.jobOther : f.job).trim(), province: f.province.trim(),
       channel: channel.join(', '), expect: expect.join(', '), comment: f.comment.trim(),
     }
 
@@ -261,7 +267,20 @@ export default function Iftar() {
                 <div className="iftar-row">
                   <div className="iftar-field">
                     <label className="iftar-label">{t.job}</label>
-                    <input className="iftar-input" type="text" placeholder={t.jobPh} value={form.job} onChange={set('job')} />
+                    <select className="iftar-input" value={form.job} onChange={set('job')}>
+                      <option value="" disabled>{t.jobSelect}</option>
+                      {t.jobs.map((j) => <option key={j} value={j}>{j}</option>)}
+                    </select>
+                    {form.job === t.jobs[t.jobs.length - 1] && (
+                      <input
+                        className="iftar-input"
+                        type="text"
+                        placeholder={t.jobPh}
+                        value={form.jobOther}
+                        onChange={set('jobOther')}
+                        style={{ marginTop: 10 }}
+                      />
+                    )}
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.province}</label>

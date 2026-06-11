@@ -333,6 +333,8 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .iftar-input::placeholder{color:rgba(255,255,255,.4)}
 .iftar-input:focus{outline:none;border-color:var(--gold-light);background:rgba(255,255,255,.1)}
 textarea.iftar-input{resize:vertical;min-height:96px}
+select.iftar-input{appearance:none;cursor:pointer}
+select.iftar-input option{color:#222;background:#fff}
 .chip-wrap{display:flex;flex-wrap:wrap;gap:10px}
 .iftar-chip{
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);

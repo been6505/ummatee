@@ -582,18 +582,19 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
 
 /* หน้า admin Qurban — ตัวอักษรใหญ่และหนาขึ้นเป็นพิเศษ อ่านง่าย */
-.admin-qurban .admin-head h1{font-size:2rem;font-weight:800}
-.admin-qurban .admin-head p{font-size:1.05rem;font-weight:600}
-.admin-qurban .admin-stat .v{font-size:2.4rem}
-.admin-qurban .admin-stat .l{font-size:1rem;font-weight:600}
-.admin-qurban .admin-card h4{font-size:1.15rem;font-weight:800}
-.admin-qurban .admin-bar-row{font-size:1rem;font-weight:600}
+.admin-qurban{font-weight:700}
+.admin-qurban .admin-head h1{font-size:2rem;font-weight:900}
+.admin-qurban .admin-head p{font-size:1.05rem;font-weight:700}
+.admin-qurban .admin-stat .v{font-size:2.4rem;font-weight:900}
+.admin-qurban .admin-stat .l{font-size:1rem;font-weight:700}
+.admin-qurban .admin-card h4{font-size:1.15rem;font-weight:900}
+.admin-qurban .admin-bar-row{font-size:1rem;font-weight:700}
 .admin-qurban .admin-bar-label{flex:0 0 130px}
-.admin-qurban .admin-bar-value{flex:0 0 40px}
-.admin-qurban .admin-legend{font-size:.98rem;font-weight:600}
+.admin-qurban .admin-bar-value{flex:0 0 40px;font-weight:900}
+.admin-qurban .admin-legend{font-size:.98rem;font-weight:700}
 .admin-qurban .admin-table{font-size:1rem}
-.admin-qurban .admin-table td{font-weight:600}
-.admin-qurban .admin-table th{font-weight:800;font-size:1rem}
+.admin-qurban .admin-table td{font-weight:700}
+.admin-qurban .admin-table th{font-weight:900;font-size:1rem}
 
 /* ===== Social media follow ===== */
 .social-section{padding:0 0 96px}

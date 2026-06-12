@@ -325,9 +325,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 }
 
 /* หน้า /missions/qurban2026 — ตัวอักษรหนาขึ้นทั้งหน้า อ่านชัดขึ้น */
-.qurban-page{font-weight:700}
-.qurban-page .qurban-legend-item{font-weight:700}
-.qurban-page p{font-weight:600}
+.qurban-page{font-weight:800}
+.qurban-page .qurban-legend-item{font-weight:800}
+.qurban-page p{font-weight:700}
 
 /* ============ CTA STRIP ============ */
 .cta-strip{

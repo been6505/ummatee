@@ -4,10 +4,14 @@ import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
 import { collection, addDoc } from 'firebase/firestore'
 
+// หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
+// ตัวเลือกช่องทางที่รู้จักงาน
 const CHANNELS = ['Facebook', 'Instagram', 'LINE', 'TikTok', 'Threads', 'Twitter']
 
+// ตัวเลือกอายุ 1-100 ปี สำหรับ dropdown
 const AGES = Array.from({ length: 100 }, (_, i) => i + 1)
 
+// รายชื่อ 77 จังหวัดของไทย สำหรับ dropdown
 const PROVINCES = [
   'กรุงเทพมหานคร', 'กระบี่', 'กาญจนบุรี', 'กาฬสินธุ์', 'กำแพงเพชร', 'ขอนแก่น', 'จันทบุรี', 'ฉะเชิงเทรา',
   'ชลบุรี', 'ชัยนาท', 'ชัยภูมิ', 'ชุมพร', 'เชียงราย', 'เชียงใหม่', 'ตรัง', 'ตราด', 'ตาก', 'นครนายก',
@@ -119,6 +123,7 @@ const T = {
   },
 }
 
+// ปุ่มตัวเลือกแบบ chip (กดเลือก/ยกเลิกได้)
 function Chip({ label, active, onClick }) {
   return (
     <button type="button" className={`iftar-chip ${active ? 'selected' : ''}`} onClick={onClick}>
@@ -127,6 +132,7 @@ function Chip({ label, active, onClick }) {
   )
 }
 
+// ค่าเริ่มต้นของฟอร์ม (ใช้ตอน reset ด้วย)
 const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', jobOther: '', province: '', comment: '' }
 
 export default function Iftar() {
@@ -144,9 +150,11 @@ export default function Iftar() {
   const toggle = (list, setList, v) =>
     setList(list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
 
+  // ตรวจความถูกต้องของฟอร์ม แล้วส่งข้อมูลลงทะเบียน
   const submit = async () => {
     const f = form
     setError('')
+    // ตรวจช่องบังคับ: ชื่อ นามสกุล เบอร์โทร (และรูปแบบเบอร์/อีเมล)
     if (!f.fname.trim()) return setError(t.errFname)
     if (!f.lname.trim()) return setError(t.errLname)
     if (!f.phone.trim()) return setError(t.errPhone)
@@ -175,6 +183,7 @@ export default function Iftar() {
       // สำรองลง Firestore (ถ้าพลาดไม่ถือว่าลงทะเบียนล้มเหลว เพราะข้อมูลหลักอยู่ในชีตแล้ว)
       await addDoc(collection(db, 'iftarRegs'), saved).catch(() => { /* noop */ })
 
+      // เก็บสำเนาในเครื่อง (localStorage) ไว้ให้แผง "ตรวจสอบรายชื่อ" ใช้แสดง
       try {
         const regs = JSON.parse(localStorage.getItem('iftarRegs') || '[]')
         regs.push(saved)
@@ -190,6 +199,7 @@ export default function Iftar() {
     }
   }
 
+  // ล้างฟอร์มทั้งหมดเพื่อลงทะเบียนคนถัดไป
   const reset = () => {
     setForm(EMPTY); setGender(''); setChannel([]); setExpect([]); setError(''); setSuccessRef(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -339,6 +349,7 @@ export default function Iftar() {
   )
 }
 
+// แผงตรวจสอบรายชื่อผู้ลงทะเบียน — อ่านจาก localStorage ของเครื่องนั้น ๆ (ไม่ใช่ข้อมูลรวมทั้งหมด)
 function CheckPanel({ t }) {
   const [open, setOpen] = useState(false)
   const [regs, setRegs] = useState([])

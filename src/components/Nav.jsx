@@ -2,12 +2,15 @@ import { useState } from 'react'
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 
+// แถบเมนูหลักของเว็บ (desktop + drawer มือถือ) พร้อมตัวสลับภาษา TH/EN/AR
+// ภาษาที่รองรับทั้งหมด
 const LANGS = [
   { code: 'th', short: 'TH', label: 'ไทย', flag: '🇹🇭' },
   { code: 'en', short: 'EN', label: 'English', flag: '🇬🇧' },
   { code: 'ar', short: 'AR', label: 'العربية', flag: '🇸🇦' },
 ]
 
+// ข้อความเมนูแยกตามภาษา (d* = ข้อความใน drawer มือถือ)
 const T = {
   th: { home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza', give: 'งาน "ให้"', qurban: 'ภารกิจกุรบาน', cta: 'บริจาคเลย', dHome: '🏠 หน้าหลัก', dDonation: '💚 ร่วมบริจาค', dIftar: 'ลงทะเบียน Iftar For Gaza', dGive: 'งาน "ให้" ครั้งที่ 6', dQurban: 'ภารกิจกุรบาน 1447' },
   en: { home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza', give: 'GIVE Event', qurban: 'Qurban Mission', cta: 'Donate Now', dHome: '🏠 Home', dDonation: '💚 Donate', dIftar: 'Register · Iftar For Gaza', dGive: 'GIVE Event · 6th Edition', dQurban: 'Qurban Mission 1447' },
@@ -21,6 +24,7 @@ export default function Nav({ scrolled }) {
   const [open, setOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
   const close = () => setOpen(false)
+  // คลิกลิงก์: กัน reload หน้า แล้วใช้ go() เปลี่ยนหน้าแบบ SPA (ปิด drawer ด้วยถ้าระบุ)
   const link = (e, p, alsoClose) => {
     e.preventDefault()
     go(p)
@@ -69,6 +73,7 @@ export default function Nav({ scrolled }) {
         </div>
       </nav>
 
+      {/* ฉากมืดด้านหลัง + เมนู drawer สำหรับจอมือถือ */}
       <div className={`scrim ${open ? 'show' : ''}`} onClick={close}></div>
       <div className={`nav-drawer ${open ? 'open' : ''}`}>
         <button className="drawer-close" onClick={close} aria-label="close">×</button>

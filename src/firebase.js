@@ -1,6 +1,8 @@
+// ตั้งค่าเชื่อมต่อ Firebase (โปรเจกต์ ummatee-app) และ export ตัว Firestore (db) ให้หน้าอื่นใช้
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 
+// ค่า config นี้เป็นข้อมูลสาธารณะของ Firebase ฝั่ง client (ไม่ใช่ secret)
 const firebaseConfig = {
   apiKey: 'AIzaSyBYD1pYwC-ygjn2PFgLV7t7FYfgI0x56Mw',
   authDomain: 'ummatee-app.firebaseapp.com',

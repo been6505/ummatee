@@ -5,6 +5,8 @@ import FadeUp from '../components/FadeUp.jsx'
 import CopyIcon from '../components/CopyIcon.jsx'
 import Footer from '../components/Footer.jsx'
 
+// หน้าร่วมบริจาค — แสดงบัญชี ibank ทั้ง 8 บัญชี แตะคัดลอกเลขบัญชีได้
+// ข้อความแยกตามภาษา
 const T = {
   th: {
     badge: '💚 ร่วมบริจาค · Donation',
@@ -38,6 +40,7 @@ const T = {
   },
 }
 
+// แถวบัญชีธนาคาร 1 แถว — แตะเพื่อคัดลอกเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
 function AccountRow({ a }) {
   const [copied, setCopied] = useState(false)
   const copy = () => {
@@ -50,6 +53,7 @@ function AccountRow({ a }) {
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
   }
+  // วิธีสำรองสำหรับเบราว์เซอร์เก่าที่ไม่มี navigator.clipboard
   const fallback = (text) => {
     const t = document.createElement('textarea')
     t.value = text; t.style.position = 'fixed'; t.style.opacity = '0'

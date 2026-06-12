@@ -3,6 +3,8 @@ import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 
+// หน้าแรกของเว็บ — hero, แถบสถิติ, การ์ดกิจกรรม 2 ใบ, สิ่งที่เราช่วยเหลือ และ CTA ท้ายหน้า
+// ข้อความทุกส่วนของหน้าแยกตามภาษา th/en/ar
 const T = {
   th: {
     eyebrow: 'มูลนิธิอุมมะตี · Ummatee Thailand',
@@ -126,6 +128,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* แถบตัวเลขสถิติ 4 ช่อง */}
       <section className="stats-band">
         <div className="stats-inner">
           {t.stats.map((s, i) => (
@@ -145,6 +148,7 @@ export default function Home() {
             <p>{t.waysSub}</p>
             <div className="gold-rule"></div>
           </FadeUp>
+          {/* การ์ดทางลัด 2 ใบ: ลงทะเบียน Iftar / ไปหน้าบริจาค */}
           <div className="focus-grid">
             <FadeUp className="focus-card focus-iftar" onClick={() => go('iftar')}>
               <div className="fc-pattern hero-pattern"></div>

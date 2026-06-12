@@ -2,6 +2,8 @@ import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 
+// หน้างาน "ให้" ครั้งที่ 6 (GIVE) — ข้อมูลงาน วัน/สถานที่/เวลา โปสเตอร์ และกิจกรรมในงาน
+// ข้อความแยกตามภาษา
 const T = {
   th: {
     eyebrow: 'งาน "ให้" ครั้งที่ 6 · GIVE',

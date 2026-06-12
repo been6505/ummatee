@@ -1,3 +1,4 @@
+// ไอคอนรูป "คัดลอก" (SVG) ใช้ในหน้าบริจาคตรงปุ่มคัดลอกเลขบัญชี
 export default function CopyIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

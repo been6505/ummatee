@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 
+// แดชบอร์ด admin สรุปภารกิจกุรบาน 2026 (/admin/missions/qurban2026) — ข้อมูล fix ในไฟล์ ไม่ได้ดึงจากเซิร์ฟเวอร์
 const ADMIN_PASS = 'ummatee2026'
 
+// จำนวนวัวกุรบานภารกิจนานาชาติ แยกตามประเทศ (รวม 100 ตัว)
 const COUNTRIES = [
   { n: 'India', v: 55 },
   { n: 'Chad', v: 13 },
@@ -33,8 +35,10 @@ const COUNTRIES = [
   { n: 'Burkina Faso', v: 1 },
 ]
 
+// สร้างสีไล่โทน (hue วนรอบวงล้อสี) ให้แต่ละประเทศ
 const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
 
+// ยอดแยกตามกลุ่มภารกิจหลัก
 const CATEGORY_DATA = [
   { label: 'Palestine 🇵🇸', value: 145, unit: 'วัว' },
   { label: 'Syria 🇸🇾', value: 12, unit: 'แกะ' },
@@ -51,8 +55,10 @@ const GRAND_TOTAL = [
   { label: 'Afghanistan (แกะ)', value: 5 },
 ].sort((a, b) => b.value - a.value)
 
+// ยอดรวมกุรบานทั้งหมดทุกภารกิจ (= 296)
 const GRAND_TOTAL_SUM = GRAND_TOTAL.reduce((s, d) => s + d.value, 0)
 
+// การ์ดสถิติด้านบนสุดของแดชบอร์ด
 const SUMMARY = [
   { e: '🌍', l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
   { e: '🐄', l: 'วัว', v: '279', u: 'ตัว' },
@@ -62,9 +68,11 @@ const SUMMARY = [
 
 const DONUT_COLORS = ['#2e7d52', '#e8194a', '#c9a84c', '#2196f3', '#8e44ad', '#e67e22']
 
+// รัศมีและเส้นรอบวงของโดนัทชาร์ต
 const R = 70
 const CIRC = 2 * Math.PI * R
 
+// โดนัทชาร์ต SVG — แต่ละรายการเป็นเส้นโค้ง 1 ชิ้น ยาวตามสัดส่วน พร้อมตัวเลขรวมตรงกลาง
 function DonutChart({ data, colors, unit }) {
   const total = data.reduce((s, d) => s + d.v, 0) || 1
   let offset = 0
@@ -97,6 +105,7 @@ function DonutChart({ data, colors, unit }) {
   )
 }
 
+// กราฟแท่งแนวนอน — ความกว้างเทียบกับค่าสูงสุดในชุดข้อมูล
 function BarList({ title, data, color = '#2e7d52', valueLabel = (v) => v }) {
   const max = Math.max(1, ...data.map((d) => d.value))
   return (
@@ -120,6 +129,7 @@ export default function AdminQurbanDashboard() {
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
 
+  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
   if (!authed) {
     return (
       <main className="admin-login">

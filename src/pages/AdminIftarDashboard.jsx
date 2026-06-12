@@ -3,11 +3,14 @@ import { db } from '../firebase.js'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 
+// แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
+// ดึงรายชื่อผู้ลงทะเบียนจาก Google Sheet เป็นหลัก (fallback เป็น Firestore) แล้วสรุปเป็นกราฟ + ตาราง
 const ADMIN_PASS = 'ummatee2026'
 
 // Apps Script Web App เดียวกับที่หน้าลงทะเบียนใช้ส่งข้อมูล (doGet คืนรายการจาก Sheet)
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
 
+// กราฟแท่งแนวนอน — ความกว้างเทียบกับค่าสูงสุดในชุดข้อมูล
 function BarList({ title, data, color = '#2e7d52' }) {
   const max = Math.max(1, ...data.map((d) => d.value))
   return (
@@ -27,9 +30,11 @@ function BarList({ title, data, color = '#2e7d52' }) {
   )
 }
 
+// รัศมีและเส้นรอบวงของโดนัทชาร์ต
 const R = 60
 const CIRC = 2 * Math.PI * R
 
+// โดนัทชาร์ต SVG — แต่ละรายการเป็นเส้นโค้ง 1 ชิ้น พร้อมตัวเลขรวมตรงกลาง
 function DonutChart({ data, colors }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1
   let offset = 0
@@ -61,6 +66,7 @@ function DonutChart({ data, colors }) {
   )
 }
 
+// นับจำนวนตามค่าที่ fn คืน (รองรับหลายค่าต่อ 1 รายการ เช่น channel ที่คั่นด้วยจุลภาค) เรียงมาก→น้อย
 function countBy(list, fn) {
   const map = {}
   list.forEach((item) => {
@@ -75,6 +81,7 @@ function countBy(list, fn) {
     .sort((a, b) => b.value - a.value)
 }
 
+// จัดอายุเป็นช่วง ๆ สำหรับกราฟ
 function ageGroup(ageStr) {
   const age = parseInt(ageStr, 10)
   if (!age) return 'ไม่ระบุ'
@@ -95,6 +102,7 @@ export default function AdminIftarDashboard() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  // โหลดข้อมูลหลังล็อกอิน: ลอง Google Sheet ก่อน ถ้าพลาดค่อยใช้ Firestore
   useEffect(() => {
     if (!authed) return
     let cancelled = false
@@ -127,11 +135,13 @@ export default function AdminIftarDashboard() {
     return () => { cancelled = true }
   }, [authed])
 
+  // ตัวกรองและการเรียงลำดับของตารางรายชื่อ
   const [genderFilter, setGenderFilter] = useState('')
   const [provinceFilter, setProvinceFilter] = useState('')
   const [sortKey, setSortKey] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
 
+  // คลิกหัวตาราง: คอลัมน์เดิม = สลับ asc/desc, คอลัมน์ใหม่ = เริ่มที่ asc
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('asc') }
@@ -142,6 +152,7 @@ export default function AdminIftarDashboard() {
     [regs]
   )
 
+  // กรองด้วยคำค้น/เพศ/จังหวัด แล้วเรียงตามคอลัมน์ที่เลือก (อายุเรียงแบบตัวเลข)
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let list = regs.filter((r) => {
@@ -160,6 +171,7 @@ export default function AdminIftarDashboard() {
     return list
   }, [regs, search, genderFilter, provinceFilter, sortKey, sortDir])
 
+  // สรุปข้อมูลเป็นชุดสำหรับกราฟแต่ละตัว
   const genderData = useMemo(() => countBy(regs, (r) => r.gender), [regs])
   const ageData = useMemo(() => countBy(regs, (r) => ageGroup(r.age)), [regs])
   const channelData = useMemo(() => countBy(regs, (r) => (r.channel || '').split(',').map((s) => s.trim()).filter(Boolean)), [regs])
@@ -167,6 +179,7 @@ export default function AdminIftarDashboard() {
   const expectData = useMemo(() => countBy(regs, (r) => (r.expect || '').split(',').map((s) => s.trim()).filter(Boolean)), [regs])
   const jobData = useMemo(() => countBy(regs, (r) => r.job).slice(0, 10), [regs])
 
+  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
   if (!authed) {
     return (
       <main className="admin-login">

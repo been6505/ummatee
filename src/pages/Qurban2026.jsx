@@ -2,6 +2,8 @@ import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 
+// หน้า public สรุปภารกิจกุรบาน 1447/2026 — สถิติรวม รายละเอียดราย missions และโดนัทชาร์ต 100 วัว
+// ข้อความแยกตามภาษา
 const T = {
   th: {
     eyebrow: 'ภารกิจกุรบาน · Qurban Help Worldwide',
@@ -59,6 +61,7 @@ const T = {
   },
 }
 
+// จำนวนวัวกุรบาน (รวม 100 ตัว) แยกตามประเทศในภารกิจนานาชาติ
 const COUNTRIES = [
   { n: 'India', v: 55 },
   { n: 'Chad', v: 13 },
@@ -94,15 +97,14 @@ const TOTAL_COW = COUNTRIES.reduce((s, c) => s + c.v, 0) // 100
 // สร้างสีไล่โทนให้แต่ละประเทศ
 const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
 
+// ค่าคงที่ของวงโดนัท: รัศมีและเส้นรอบวง (ใช้คำนวณความยาวแต่ละชิ้น)
 const R = 80
 const CIRC = 2 * Math.PI * R
 
+// โดนัทชาร์ตวาดด้วย SVG — แต่ละประเทศเป็นเส้นโค้ง 1 ชิ้น ความยาวตามสัดส่วนจำนวนวัว
 function DonutChart({ unit }) {
   let offset = 0
   return (
-
-
-
     <svg viewBox="0 0 200 200" className="qurban-donut">
       <circle cx="100" cy="100" r={R} fill="none" stroke="#eee" strokeWidth="32" />
       {COUNTRIES.map((c, i) => {

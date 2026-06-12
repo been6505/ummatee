@@ -15,6 +15,7 @@ import AdminHome from './pages/AdminHome.jsx'
 const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/dashboard': 'admin-home' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026' }
 
+// อ่าน path ปัจจุบันจาก URL แล้วแปลงเป็นชื่อหน้า (ถ้าไม่รู้จักให้ไปหน้า home)
 const pageFromPath = () => PATH_TO_PAGE[window.location.pathname] || 'home'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [page])
 
+  // หน้า admin เรนเดอร์แยกเดี่ยว ๆ ไม่มี Nav/Footer ของเว็บหลัก
   if (page === 'admin-iftar') return <AdminIftarDashboard />
   if (page === 'admin-qurban') return <AdminQurbanDashboard />
   if (page === 'admin-home') return <AdminHome />

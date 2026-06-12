@@ -1,6 +1,8 @@
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 
+// ส่วนท้ายเว็บ (โลโก้ เมนูลัด ช่องทางติดต่อ) ใช้ร่วมกันทุกหน้า public
+// ข้อความแยกตามภาษา
 const T = {
   th: {
     tagline: 'มูลนิธิอุมมะตี — ให้ 100 ถึง 100',

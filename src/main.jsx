@@ -1,3 +1,4 @@
+// จุดเริ่มต้นของแอป — เรนเดอร์ <App /> ลงใน <div id="root"> ของ index.html
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

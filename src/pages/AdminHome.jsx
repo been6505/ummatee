@@ -1,18 +1,22 @@
 import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 
+// หน้าแรกของระบบ admin (/admin/dashboard) — ใส่รหัสผ่านก่อน แล้วเลือกเข้าดูแดชบอร์ดแต่ละตัว
 const ADMIN_PASS = 'ummatee2026'
 
+// การ์ดลิงก์ไปยังแดชบอร์ดย่อย
 const LINKS = [
   { href: '/admin/event/iftar2026', icon: '🇵🇸', title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน' },
   { href: '/admin/missions/qurban2026', icon: '🐑', title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
 ]
 
 export default function AdminHome() {
+  // สถานะล็อกอินเก็บใน sessionStorage — ล็อกอินครั้งเดียวใช้ได้ทุกหน้า admin จนกว่าจะปิดแท็บ
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin-authed') === '1')
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
 
+  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
   if (!authed) {
     return (
       <main className="admin-login">

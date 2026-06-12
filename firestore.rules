@@ -2,32 +2,60 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ลงทะเบียน Iftar — ทุกคนส่งฟอร์มได้ แต่อ่าน/แก้/ลบได้เฉพาะ admin ที่ล็อกอิน
-    match /iftarRegs/{id} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
+    // ── แอดมินตัวจริงเท่านั้น ──
+    // ต้องล็อกอิน และอีเมลต้องอยู่ใน allowlist นี้
+    // (แค่ "ล็อกอิน" ไม่พอ เพราะใครก็สมัครบัญชี Firebase เองได้)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'ummatee.thailand@gmail.com'
+        ];
     }
 
-    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะ admin
+    // ── ตรวจรูปแบบฟอร์มลงทะเบียน Iftar กันสแปม/เอกสารขยะ ──
+    // จำกัดจำนวนฟิลด์ และให้ฟิลด์สำคัญเป็น string ความยาวสมเหตุสมผล
+    function validIftarReg() {
+      let d = request.resource.data;
+      return d.size() <= 16
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && (!('email' in d) || (d.email is string && d.email.size() <= 200))
+        && (!('comment' in d) || (d.comment is string && d.comment.size() <= 1000))
+        && (!('province' in d) || (d.province is string && d.province.size() <= 100));
+    }
+
+    // ลงทะเบียน Iftar — ส่งฟอร์มได้ทุกคน (มีการตรวจรูปแบบ) แต่อ่าน/แก้/ลบเฉพาะแอดมิน
+    match /iftarRegs/{id} {
+      allow create: if validIftarReg();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะแอดมิน
     match /config/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // บันทึกเงินบริจาค — เฉพาะ admin
+    // บันทึกเงินบริจาค — เฉพาะแอดมิน
     match /donations/{id} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
-    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะ admin
+    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมิน
     match /contentPosts/{id} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
-    // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะ admin
+    // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะแอดมิน
     match /products/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

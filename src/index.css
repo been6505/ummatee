@@ -689,8 +689,6 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-post-top strong{font-size:.92rem}
 .admin-post-status{font-size:.7rem;font-weight:700;color:#fff;padding:3px 10px;border-radius:999px}
 .admin-post-text{font-size:.85rem;color:var(--ink-soft);margin:6px 0;white-space:pre-wrap}
-.admin-post-media{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-.admin-post-media img,.admin-post-media video{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #eee}
 .admin-post-platforms{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .admin-post-platforms span{font-size:.68rem;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px}
 .admin-post-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}

@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { db, storage } from '../firebase.js'
+import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 
-// ปฏิทินวางแผนคอนเทนต์ (/admin/calendar) — เพิ่มกิจกรรม/โพสต์ ตั้งเวลา เลือกแพลตฟอร์ม แนบรูป/วิดีโอ
-// เก็บใน Firestore (collection: contentPosts) + ไฟล์สื่อใน Firebase Storage (content/)
+// ปฏิทินวางแผนคอนเทนต์ (/admin/calendar) — เพิ่มกิจกรรม/โพสต์ ตั้งเวลา เลือกแพลตฟอร์ม (ข้อความเท่านั้น เพิ่มรูป/วิดีโอได้ทีหลัง)
+// เก็บใน Firestore (collection: contentPosts)
 // หมายเหตุ: ระบบนี้เก็บ "แผนโพสต์" — การโพสต์จริงลงแต่ละแพลตฟอร์มยังต้องทำผ่านแอปของแพลตฟอร์มนั้น
 
 const PLATFORMS = [
@@ -42,7 +41,6 @@ export default function AdminCalendar() {
   const [posts, setPosts] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
-  const [files, setFiles] = useState([])
   const [status, setStatus] = useState('')
 
   useEffect(() => {
@@ -81,26 +79,13 @@ export default function AdminCalendar() {
   const startEdit = (p) => {
     setEditId(p.id)
     setForm({ title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled' })
-    setFiles([])
   }
-  const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM); setFiles([]) }
+  const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
   const save = async () => {
     if (!form.title.trim()) { setStatus('กรุณากรอกชื่อกิจกรรม/โพสต์'); return }
     setStatus('กำลังบันทึก...')
     try {
-      // อัปโหลดไฟล์สื่อ (รูป/วิดีโอ) ขึ้น Storage แล้วเก็บ URL
-      const media = []
-      for (const file of files) {
-        setStatus(`กำลังอัปโหลด ${file.name}...`)
-        const r = ref(storage, `content/${Date.now()}-${file.name}`)
-        await uploadBytes(r, file)
-        media.push({
-          url: await getDownloadURL(r),
-          type: file.type.startsWith('video') ? 'video' : 'image',
-          name: file.name,
-        })
-      }
       const payload = {
         date: selected,
         time: form.time,
@@ -110,10 +95,9 @@ export default function AdminCalendar() {
         status: form.status,
       }
       if (editId) {
-        const existing = posts.find((p) => p.id === editId)
-        await updateDoc(doc(db, 'contentPosts', editId), { ...payload, media: [...(existing?.media || []), ...media] })
+        await updateDoc(doc(db, 'contentPosts', editId), payload)
       } else {
-        await addDoc(collection(db, 'contentPosts'), { ...payload, media, createdAt: Date.now() })
+        await addDoc(collection(db, 'contentPosts'), { ...payload, createdAt: Date.now() })
       }
       cancelEdit()
       setStatus('บันทึกสำเร็จ ✓')
@@ -142,7 +126,7 @@ export default function AdminCalendar() {
         <div className="admin-head">
           <div>
             <h1>ปฏิทินคอนเทนต์</h1>
-            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ แนบรูป/วิดีโอ ตั้งเวลา</p>
+            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา เลือกแพลตฟอร์ม</p>
           </div>
         </div>
 
@@ -196,14 +180,6 @@ export default function AdminCalendar() {
                     <span className="admin-post-status" style={{ background: STATUS_COLOR[p.status] }}>{STATUS[p.status]}</span>
                   </div>
                   {p.text && <p className="admin-post-text">{p.text}</p>}
-                  {(p.media || []).length > 0 && (
-                    <div className="admin-post-media">
-                      {p.media.map((m, i) => m.type === 'video'
-                        ? <video key={i} src={m.url} controls preload="metadata" />
-                        : <a key={i} href={m.url} target="_blank" rel="noreferrer"><img src={m.url} alt={m.name} /></a>
-                      )}
-                    </div>
-                  )}
                   <div className="admin-post-platforms">
                     {(p.platforms || []).map((id) => {
                       const pl = PLATFORMS.find((x) => x.id === id)
@@ -252,10 +228,6 @@ export default function AdminCalendar() {
                     </button>
                   ))}
                 </div>
-                <label>แนบรูปภาพ / วิดีโอ
-                  <input type="file" accept="image/*,video/*" multiple onChange={(e) => setFiles([...e.target.files])} />
-                </label>
-                {files.length > 0 && <p style={{ fontSize: '.82rem', color: '#666' }}>{files.length} ไฟล์: {files.map((f) => f.name).join(', ')}</p>}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
                   <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
                   {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}

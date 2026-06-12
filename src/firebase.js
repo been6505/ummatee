@@ -2,7 +2,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
-import { getStorage } from 'firebase/storage'
 
 // ค่า config นี้เป็นข้อมูลสาธารณะของ Firebase ฝั่ง client (ไม่ใช่ secret)
 const firebaseConfig = {
@@ -18,4 +17,3 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
-export const storage = getStorage(app)

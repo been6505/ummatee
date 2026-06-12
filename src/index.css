@@ -24,6 +24,100 @@ img{max-width:100%;display:block}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
 
+.admin-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #111827;
+  color: #fff;
+}
+
+.admin-nav-brand {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.admin-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-nav-links a,
+.admin-drawer a {
+  text-decoration: none;
+  color: inherit;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.admin-nav-links a.active,
+.admin-drawer a.active {
+  background: rgba(255,255,255,.15);
+}
+
+.admin-nav-logout {
+  border: none;
+  background: #dc2626;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-nav-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+/* Drawer */
+.admin-drawer {
+  position: fixed;
+  top: 0;
+  right: -280px;
+  width: 280px;
+  height: 100vh;
+  background: #111827;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: right .3s ease;
+  z-index: 9999;
+}
+
+.admin-drawer.show {
+  right: 0;
+}
+
+.drawer-close {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .admin-nav-links {
+    display: none;
+  }
+
+  .admin-nav-toggle {
+    display: block;
+  }
+}
+
+
+
 /* ============ NAV ============ */
 #main-nav{
   position:fixed;top:0;left:0;right:0;z-index:100;
@@ -467,3 +561,16 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-nav-links a.active{background:rgba(255,255,255,.15);color:#fff}
 .admin-nav-logout{border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:.86rem}
 .admin-nav-logout:hover{background:rgba(255,255,255,.1)}
+
+/* ===== Social media follow ===== */
+.social-section{padding:0 0 96px}
+.social-card{position:relative;overflow:hidden;background:var(--green-deep);border-radius:24px;padding:48px 32px;text-align:center;color:#fff}
+.social-card h2{font-size:1.6rem;margin-bottom:8px}
+.social-card p{color:rgba(255,255,255,.75);margin-bottom:26px}
+.social-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;position:relative}
+.social-btn{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;font-weight:700;font-size:.95rem;padding:10px 20px;border-radius:999px;transition:transform .15s,box-shadow .15s}
+.social-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.social-btn .si{font-size:1.05rem}
+.social-row-footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.social-btn-sm{display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.85);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.25);transition:background .15s}
+.social-btn-sm:hover{background:rgba(255,255,255,.12);color:#fff}

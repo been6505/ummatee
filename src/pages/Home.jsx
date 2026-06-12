@@ -2,6 +2,7 @@ import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
+import SocialLinks from '../components/SocialLinks.jsx'
 
 // หน้าแรกของเว็บ — hero, แถบสถิติ, การ์ดกิจกรรม 2 ใบ, สิ่งที่เราช่วยเหลือ และ CTA ท้ายหน้า
 // ข้อความทุกส่วนของหน้าแยกตามภาษา th/en/ar
@@ -35,6 +36,7 @@ const T = {
     ctaStripTitle: 'พร้อมจะเป็นส่วนหนึ่งของการให้แล้วหรือยัง?',
     ctaStripP: 'เลือกหนทางของคุณ — มาร่วมงาน Iftar For Gaza หรือเริ่มบริจาคได้ทันที',
     ctaStripIftar: 'ลงทะเบียน Iftar For Gaza', ctaStripDonate: 'ร่วมบริจาค',
+    followTitle: 'ติดตามอุมมะตีได้ทุกช่องทาง', followP: 'อัปเดตภารกิจช่วยเหลือและกิจกรรมล่าสุดของเราได้ที่โซเชียลมีเดียทุกแพลตฟอร์ม',
   },
   en: {
     eyebrow: 'Ummatee Foundation · Ummatee Thailand',
@@ -65,6 +67,7 @@ const T = {
     ctaStripTitle: 'Ready to Be Part of the Giving?',
     ctaStripP: 'Choose your path — join Iftar For Gaza or start donating right away',
     ctaStripIftar: 'Register · Iftar For Gaza', ctaStripDonate: 'Donate',
+    followTitle: 'Follow Ummatee Everywhere', followP: 'Stay updated on our latest aid missions and activities on every platform',
   },
   ar: {
     eyebrow: 'مؤسسة أمّتي · تايلاند',
@@ -95,6 +98,7 @@ const T = {
     ctaStripTitle: 'هل أنت مستعد لتكون جزءاً من العطاء؟',
     ctaStripP: 'اختر طريقك — انضم إلى إفطار من أجل غزة أو ابدأ التبرع فوراً',
     ctaStripIftar: 'سجّل · إفطار من أجل غزة', ctaStripDonate: 'تبرّع',
+    followTitle: 'تابع أمّتي على كل المنصات', followP: 'تابع آخر مهماتنا الإغاثية وأنشطتنا على جميع وسائل التواصل الاجتماعي',
   },
 }
 
@@ -197,6 +201,18 @@ export default function Home() {
               <a href="#" className="btn btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}><span className="ic">🌙</span> {t.ctaStripIftar}</a>
               <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><span className="ic">💚</span> {t.ctaStripDonate}</a>
             </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      {/* ช่วงท้ายหน้าแรก: ชวนติดตามโซเชียลมีเดียของอุมมะตี */}
+      <section className="social-section">
+        <div className="wrap">
+          <FadeUp className="social-card">
+            <div className="fc-pattern hero-pattern"></div>
+            <h2>{t.followTitle}</h2>
+            <p>{t.followP}</p>
+            <SocialLinks />
           </FadeUp>
         </div>
       </section>

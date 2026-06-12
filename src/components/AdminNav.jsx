@@ -1,5 +1,5 @@
-// แถบเมนูด้านบนที่ใช้ร่วมกันทุกหน้า admin — มีลิงก์สลับหน้า + ปุ่มออกจากระบบ
-// รายการลิงก์ในเมนู (path ต้องตรงกับ PATH_TO_PAGE ใน App.jsx)
+import { useState } from 'react'
+
 const LINKS = [
   { href: '/admin/dashboard', label: '🏠 หน้าหลัก' },
   { href: '/admin/event/iftar2026', label: '🇵🇸 Iftar For Gaza' },
@@ -7,25 +7,77 @@ const LINKS = [
 ]
 
 export default function AdminNav() {
-  // ใช้ path ปัจจุบันเพื่อไฮไลต์ลิงก์ของหน้าที่กำลังเปิดอยู่
   const path = window.location.pathname
+  const [open, setOpen] = useState(false)
+
+  const logout = () => {
+    sessionStorage.removeItem('admin-authed')
+    window.location.reload()
+  }
+
   return (
-    <nav className="admin-nav">
-      <div className="admin-nav-wrap">
-        <span className="admin-nav-brand">🛠️ Admin</span>
+    <>
+      <nav className="admin-nav">
+        <div className="admin-nav-brand">
+          🛠️ Admin
+        </div>
+
+        {/* Desktop Menu */}
         <div className="admin-nav-links">
           {LINKS.map((l) => (
-            <a key={l.href} href={l.href} className={path === l.href ? 'active' : ''}>{l.label}</a>
+            <a
+              key={l.href}
+              href={l.href}
+              className={path === l.href ? 'active' : ''}
+            >
+              {l.label}
+            </a>
           ))}
+
+          <button
+            className="admin-nav-logout"
+            onClick={logout}
+          >
+            ออกจากระบบ
+          </button>
         </div>
-        {/* ออกจากระบบ: ลบสถานะล็อกอินใน sessionStorage แล้วโหลดหน้าใหม่เพื่อกลับไปหน้า login */}
+
+        {/* Mobile Button */}
+        <button
+          className="admin-nav-toggle"
+          onClick={() => setOpen(true)}
+        >
+          ☰
+        </button>
+      </nav>
+
+      {/* Mobile Drawer */}
+      <div className={`admin-drawer ${open ? 'show' : ''}`}>
+        <button
+          className="drawer-close"
+          onClick={() => setOpen(false)}
+        >
+          ×
+        </button>
+
+        {LINKS.map((l) => (
+          <a
+            key={l.href}
+            href={l.href}
+            className={path === l.href ? 'active' : ''}
+            onClick={() => setOpen(false)}
+          >
+            {l.label}
+          </a>
+        ))}
+
         <button
           className="admin-nav-logout"
-          onClick={() => { sessionStorage.removeItem('admin-authed'); window.location.reload() }}
+          onClick={logout}
         >
           ออกจากระบบ
         </button>
       </div>
-    </nav>
+    </>
   )
 }

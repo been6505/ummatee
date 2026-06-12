@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '../firebase.js'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import AdminNav from '../components/AdminNav.jsx'
 
 const ADMIN_PASS = 'ummatee2026'
 
@@ -199,18 +200,13 @@ export default function AdminIftarDashboard() {
 
   return (
     <main className="admin-dash">
+      <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
             <h1>📊 Iftar For Gaza — Dashboard</h1>
             <p>ข้อมูลผู้ลงทะเบียนเข้าร่วมงานทั้งหมด</p>
           </div>
-          <button
-            className="admin-logout"
-            onClick={() => { sessionStorage.removeItem('admin-authed'); setAuthed(false) }}
-          >
-            ออกจากระบบ
-          </button>
         </div>
 
         <div className="admin-stats">

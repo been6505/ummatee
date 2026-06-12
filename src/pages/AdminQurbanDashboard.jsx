@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AdminNav from '../components/AdminNav.jsx'
 
 const ADMIN_PASS = 'ummatee2026'
 
@@ -156,18 +157,13 @@ export default function AdminQurbanDashboard() {
 
   return (
     <main className="admin-dash">
+      <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
             <h1>📊 Qurban 2026 — Dashboard</h1>
             <p>สรุปการแจกจ่ายกุรบานทั้งหมด 1447 / 2026</p>
           </div>
-          <button
-            className="admin-logout"
-            onClick={() => { sessionStorage.removeItem('admin-authed'); setAuthed(false) }}
-          >
-            ออกจากระบบ
-          </button>
         </div>
 
         <div className="admin-stats">

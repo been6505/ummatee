@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AdminNav from '../components/AdminNav.jsx'
 
 const ADMIN_PASS = 'ummatee2026'
 
@@ -45,18 +46,13 @@ export default function AdminHome() {
 
   return (
     <main className="admin-dash">
+      <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
             <h1>🛠️ Admin Dashboard</h1>
             <p>เลือกดูข้อมูลและกราฟสรุปของแต่ละกิจกรรม</p>
           </div>
-          <button
-            className="admin-logout"
-            onClick={() => { sessionStorage.removeItem('admin-authed'); window.location.reload() }}
-          >
-            ออกจากระบบ
-          </button>
         </div>
 
         <div className="admin-grid">

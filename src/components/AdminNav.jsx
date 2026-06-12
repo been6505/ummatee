@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/admin/missions/qurban2026', label: '🐑 Qurban 2026' },
   { href: '/admin/donations', label: '💰 เงินบริจาค' },
   { href: '/admin/calendar', label: '📅 ปฏิทิน' },
+  { href: '/admin/shop', label: '🛍️ Um Shop' },
 ]
 
 export default function AdminNav() {

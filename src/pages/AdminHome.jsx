@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/admin/missions/qurban2026', icon: '🐑', title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
   { href: '/admin/donations', icon: '💰', title: 'เงินบริจาค', desc: 'บันทึกและสรุปยอดบริจาคแยกตาม 8 บัญชี ibank' },
   { href: '/admin/calendar', icon: '📅', title: 'ปฏิทินคอนเทนต์', desc: 'วางแผนกิจกรรม ตั้งเวลาโพสต์ แนบรูป/วิดีโอ หลายแพลตฟอร์ม' },
+  { href: '/admin/shop', icon: '🛍️', title: 'Um Shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
 ]
 
 export default function AdminHome() {

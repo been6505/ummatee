@@ -714,3 +714,29 @@ select.iftar-input option{color:#222;background:#fff}
 .social-row-footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .social-btn-sm{display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.85);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.25);transition:background .15s}
 .social-btn-sm:hover{background:rgba(255,255,255,.12);color:#fff}
+
+/* Um Shop — public */
+.admin-form-grid textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;resize:vertical}
+.admin-shop-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover}
+.shop-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:28px}
+.shop-search{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.shop-search:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.shop-toolbar select{padding:10px 14px;border-radius:10px;border:1px solid #ddd;font-size:.9rem;font-family:inherit;background:#fff}
+.shop-toolbar select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:24px}
+.shop-card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.06);display:flex;flex-direction:column}
+.shop-img{position:relative;aspect-ratio:1/1;background:#f4f6f4;overflow:hidden}
+.shop-img img{width:100%;height:100%;object-fit:cover;display:block}
+.shop-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;color:#ccc}
+.shop-badge-out{position:absolute;top:10px;left:10px;background:#d84315;color:#fff;font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:999px}
+.shop-share{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.9);font-size:1.05rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.shop-share:hover{background:#fff}
+.shop-body{padding:16px;display:flex;flex-direction:column;gap:6px}
+.shop-cat{font-size:.72rem;font-weight:700;color:var(--green-mid);text-transform:uppercase;letter-spacing:.04em}
+.shop-name{margin:0;font-size:1.05rem;color:var(--green-deep)}
+.shop-price{font-size:1.15rem;font-weight:800;color:var(--gold)}
+.shop-desc{margin:0;font-size:.85rem;color:var(--ink-soft);line-height:1.5}
+.shop-meta-row{font-size:.82rem;color:var(--ink-soft)}
+.shop-meta-label{font-weight:700;color:var(--green-deep)}
+.shop-stock{font-size:.82rem;font-weight:700;color:var(--green-mid);margin-top:4px}
+.shop-stock.out{color:#d84315}

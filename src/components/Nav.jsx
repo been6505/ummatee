@@ -12,9 +12,9 @@ const LANGS = [
 
 // ข้อความเมนูแยกตามภาษา (d* = ข้อความใน drawer มือถือ)
 const T = {
-  th: { home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza', give: 'งาน "ให้"', qurban: 'ภารกิจกุรบาน', cta: 'บริจาคเลย', dHome: '🏠 หน้าหลัก', dDonation: '💚 ร่วมบริจาค', dIftar: 'ลงทะเบียน Iftar For Gaza', dGive: 'งาน "ให้" ครั้งที่ 6', dQurban: 'ภารกิจกุรบาน 1447' },
-  en: { home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza', give: 'GIVE Event', qurban: 'Qurban Mission', cta: 'Donate Now', dHome: '🏠 Home', dDonation: '💚 Donate', dIftar: 'Register · Iftar For Gaza', dGive: 'GIVE Event · 6th Edition', dQurban: 'Qurban Mission 1447' },
-  ar: { home: 'الرئيسية', donation: 'تبرّع', iftar: 'إفطار من أجل غزة', give: 'فعالية "العطاء"', qurban: 'مهمة الأضاحي', cta: 'تبرّع الآن', dHome: '🏠 الرئيسية', dDonation: '💚 تبرّع', dIftar: 'التسجيل · إفطار من أجل غزة', dGive: 'فعالية "العطاء" السادسة', dQurban: 'مهمة الأضاحي 1447' },
+  th: { home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza', give: 'งาน "ให้"', qurban: 'ภารกิจกุรบาน', shop: 'Um Shop', cta: 'บริจาคเลย', dHome: '🏠 หน้าหลัก', dDonation: '💚 ร่วมบริจาค', dIftar: 'ลงทะเบียน Iftar For Gaza', dGive: 'งาน "ให้" ครั้งที่ 6', dQurban: 'ภารกิจกุรบาน 1447', dShop: '🛍️ Um Shop' },
+  en: { home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza', give: 'GIVE Event', qurban: 'Qurban Mission', shop: 'Um Shop', cta: 'Donate Now', dHome: '🏠 Home', dDonation: '💚 Donate', dIftar: 'Register · Iftar For Gaza', dGive: 'GIVE Event · 6th Edition', dQurban: 'Qurban Mission 1447', dShop: '🛍️ Um Shop' },
+  ar: { home: 'الرئيسية', donation: 'تبرّع', iftar: 'إفطار من أجل غزة', give: 'فعالية "العطاء"', qurban: 'مهمة الأضاحي', shop: 'Um Shop', cta: 'تبرّع الآن', dHome: '🏠 الرئيسية', dDonation: '💚 تبرّع', dIftar: 'التسجيل · إفطار من أجل غزة', dGive: 'فعالية "العطاء" السادسة', dQurban: 'مهمة الأضاحي 1447', dShop: '🛍️ Um Shop' },
 }
 
 export default function Nav({ scrolled }) {
@@ -47,6 +47,7 @@ export default function Nav({ scrolled }) {
           <li><a href="#" onClick={(e) => link(e, 'home')}>{t.home}</a></li>
           <li><a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>
            <li><a href="#" onClick={(e) => link(e, 'qurban')}><span>🐑</span> {t.qurban}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'shop')}><span>🛍️</span> {t.shop}</a></li>
          
           <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><span>🇵🇸</span> {t.iftar}</a></li>
           <li><a href="#" onClick={(e) => link(e, 'give')}><span>🤲</span> {t.give}</a></li>
@@ -82,6 +83,7 @@ export default function Nav({ scrolled }) {
         <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"> <span>🇵🇸</span> {t.dIftar}</a>
         <a href="#" onClick={(e) => link(e, 'give', true)}> <span>🤲</span> {t.dGive}</a>
         <a href="#" onClick={(e) => link(e, 'qurban', true)}> <span>🐑</span> {t.dQurban}</a>
+        <a href="#" onClick={(e) => link(e, 'shop', true)}> {t.dShop}</a>
         <div className="drawer-langs">
           {LANGS.map((l) => (
             <button key={l.code} className={`lang-opt ${l.code === lang ? 'active' : ''}`} onClick={() => chooseLang(l.code)}>

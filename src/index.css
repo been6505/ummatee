@@ -536,7 +536,7 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-error{color:#e8194a;font-size:.86rem;margin-bottom:12px}
 
 .admin-dash{min-height:100vh;background:linear-gradient(180deg,#EAF6EE 0%,#F4F9F5 280px,#F4F9F5 100%);padding:32px 16px;font-family:inherit}
-.admin-wrap{max-width:1200px;margin:0 auto}
+.admin-wrap{max-width:1200px;margin:32px auto 0}
 .admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap}
 .admin-head h1{font-size:1.6rem;margin-bottom:4px;color:var(--green-deep)}
 .admin-head p{color:var(--ink-soft)}

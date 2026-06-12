@@ -5,7 +5,7 @@ export const SOCIALS = [
   { name: 'Instagram', icon: '📷', color: '#e1306c', url: 'https://www.instagram.com/ummatee.thailand' },
   { name: 'TikTok', icon: '♪', color: '#010101', url: 'https://www.tiktok.com/@ummatee.thailand' },
   { name: 'YouTube', icon: '▶', color: '#ff0000', url: 'https://www.youtube.com/@ummateethailand' },
-  { name: 'LINE', icon: '💬', color: '#06c755', url: 'https://line.me/R/ti/p/@ummatee' },
+  { name: 'LINE', icon: '💬', color: '#06c755', url: 'https://line.me/R/ti/p/@745bvvgx' },
   { name: 'Threads', icon: '@', color: '#000000', url: 'https://www.threads.com/@ummatee.thailand' },
 ]
 

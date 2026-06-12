@@ -6,6 +6,8 @@ const LINKS = [
   { href: '/admin/dashboard', label: '🏠 หน้าหลัก' },
   { href: '/admin/event/iftar2026', label: '🇵🇸 Iftar For Gaza' },
   { href: '/admin/missions/qurban2026', label: '🐑 Qurban 2026' },
+  { href: '/admin/donations', label: '💰 เงินบริจาค' },
+  { href: '/admin/calendar', label: '📅 ปฏิทิน' },
 ]
 
 export default function AdminNav() {

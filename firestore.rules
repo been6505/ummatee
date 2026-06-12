@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ลงทะเบียน Iftar — ทุกคนส่งฟอร์มได้ แต่อ่าน/แก้/ลบได้เฉพาะ admin ที่ล็อกอิน
+    match /iftarRegs/{id} {
+      allow create: if true;
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะ admin
+    match /config/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // บันทึกเงินบริจาค — เฉพาะ admin
+    match /donations/{id} {
+      allow read, write: if request.auth != null;
+    }
+
+    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะ admin
+    match /contentPosts/{id} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

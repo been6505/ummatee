@@ -8,6 +8,8 @@ import useAdminAuth from '../useAdminAuth.js'
 const LINKS = [
   { href: '/admin/event/iftar2026', icon: '🇵🇸', title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน' },
   { href: '/admin/missions/qurban2026', icon: '🐑', title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
+  { href: '/admin/donations', icon: '💰', title: 'เงินบริจาค', desc: 'บันทึกและสรุปยอดบริจาคแยกตาม 8 บัญชี ibank' },
+  { href: '/admin/calendar', icon: '📅', title: 'ปฏิทินคอนเทนต์', desc: 'วางแผนกิจกรรม ตั้งเวลาโพสต์ แนบรูป/วิดีโอ หลายแพลตฟอร์ม' },
 ]
 
 export default function AdminHome() {

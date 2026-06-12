@@ -40,17 +40,17 @@ const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.l
 
 // ยอดแยกตามกลุ่มภารกิจหลัก
 const CATEGORY_DATA = [
-  { label: 'Palestine 🇵🇸', value: 145, unit: 'วัว' },
-  { label: 'Syria 🇸🇾', value: 12, unit: 'แกะ' },
-  { label: 'Thailand 🇹🇭', value: 34, unit: 'วัว' },
-  { label: 'Worldwide 🌍', value: 100, unit: 'วัว' },
+  { label: 'Palestine', value: 145, unit: 'วัว' },
+  { label: 'Syria', value: 12, unit: 'แกะ' },
+  { label: 'Thailand', value: 34, unit: 'วัว' },
+  { label: 'Worldwide', value: 100, unit: 'วัว' },
 ]
 
 // รวมทุกภารกิจเข้าด้วยกัน: Palestine, Syria, Thailand, นานาชาติ (แยกตามประเทศ), Afghanistan (แกะ)
 const GRAND_TOTAL = [
-  { label: 'Palestine 🇵🇸', value: 145 },
-  { label: 'Syria 🇸🇾', value: 12 },
-  { label: 'Thailand 🇹🇭', value: 34 },
+  { label: 'Palestine', value: 145 },
+  { label: 'Syria', value: 12 },
+  { label: 'Thailand', value: 34 },
   ...COUNTRIES.map((c) => ({ label: c.n, value: c.v })),
   { label: 'Afghanistan (แกะ)', value: 5 },
 ].sort((a, b) => b.value - a.value)
@@ -60,10 +60,10 @@ const GRAND_TOTAL_SUM = GRAND_TOTAL.reduce((s, d) => s + d.value, 0)
 
 // การ์ดสถิติด้านบนสุดของแดชบอร์ด
 const SUMMARY = [
-  { e: '🌍', l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
-  { e: '🐄', l: 'วัว', v: '279', u: 'ตัว' },
-  { e: '🐑', l: 'แกะ', v: '17', u: 'ตัว' },
-  { e: '📦', l: 'รวมทั้งหมด', v: '1,948', u: 'ส่วน' },
+  { l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
+  { l: 'วัว', v: '279', u: 'ตัว' },
+  { l: 'แกะ', v: '17', u: 'ตัว' },
+  { l: 'รวมทั้งหมด', v: '1,948', u: 'ส่วน' },
 ]
 
 const DONUT_COLORS = ['#2e7d52', '#e8194a', '#c9a84c', '#2196f3', '#8e44ad', '#e67e22']
@@ -135,12 +135,12 @@ export default function AdminQurbanDashboard() {
   const categoryBars = CATEGORY_DATA.map((c) => ({ label: c.label, value: c.value }))
 
   return (
-    <main className="admin-dash">
+    <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1>📊 Qurban 2026 — Dashboard</h1>
+            <h1>Qurban 2026 — Dashboard</h1>
             <p>สรุปการแจกจ่ายกุรบานทั้งหมด 1447 / 2026</p>
           </div>
         </div>
@@ -148,12 +148,12 @@ export default function AdminQurbanDashboard() {
         <div className="admin-stats">
           {SUMMARY.map((s) => (
             <div className="admin-stat" key={s.l}>
-              <div className="v">{s.e} {s.v}</div>
+              <div className="v">{s.v}</div>
               <div className="l">{s.l} ({s.u})</div>
             </div>
           ))}
           <div className="admin-stat">
-            <div className="v">🐑🐄 {GRAND_TOTAL_SUM}</div>
+            <div className="v">{GRAND_TOTAL_SUM}</div>
             <div className="l">กุรบานทั้งหมด (รวมนานาชาติ)</div>
           </div>
         </div>
@@ -211,7 +211,7 @@ export default function AdminQurbanDashboard() {
         </div>
 
         <div className="admin-card" style={{ marginTop: 24 }}>
-          <h4>🐑🐄 กุรบานทั้งหมด (Palestine + Syria + Thailand + นานาชาติ) — รวม {GRAND_TOTAL_SUM} ส่วน</h4>
+          <h4>กุรบานทั้งหมด (Palestine + Syria + Thailand + นานาชาติ) — รวม {GRAND_TOTAL_SUM} ส่วน</h4>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>

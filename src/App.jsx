@@ -8,9 +8,10 @@ import IftarForGaza from './pages/IftarForGaza.jsx'
 import GiveForUm from './pages/GiveForUm.jsx'
 import Qurban2026 from './pages/Qurban2026.jsx'
 import AdminIftarDashboard from './pages/AdminIftarDashboard.jsx'
+import AdminQurbanDashboard from './pages/AdminQurbanDashboard.jsx'
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/dashboard/event/iftar-for-gaza': 'admin-iftar' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/dashboard/event/iftar-for-gaza': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026' }
 
 const pageFromPath = () => PATH_TO_PAGE[window.location.pathname] || 'home'
@@ -46,6 +47,7 @@ export default function App() {
   }, [page])
 
   if (page === 'admin-iftar') return <AdminIftarDashboard />
+  if (page === 'admin-qurban') return <AdminQurbanDashboard />
 
   return (
     <LangProvider>

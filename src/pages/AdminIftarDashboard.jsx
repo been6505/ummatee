@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { db } from '../firebase.js'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
+import AdminLogin from '../components/AdminLogin.jsx'
+import useAdminAuth from '../useAdminAuth.js'
 
 // แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
 // ดึงรายชื่อผู้ลงทะเบียนจาก Google Sheet เป็นหลัก (fallback เป็น Firestore) แล้วสรุปเป็นกราฟ + ตาราง
-const ADMIN_PASS = 'ummatee2026'
 
 // Apps Script Web App เดียวกับที่หน้าลงทะเบียนใช้ส่งข้อมูล (doGet คืนรายการจาก Sheet)
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
@@ -97,9 +98,8 @@ function ageGroup(ageStr) {
 const DONUT_COLORS = ['#2e7d52', '#e8194a', '#c9a84c', '#2196f3', '#8e44ad', '#e67e22']
 
 export default function AdminIftarDashboard() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin-authed') === '1')
-  const [pass, setPass] = useState('')
-  const [error, setError] = useState('')
+  const { user, loading: authLoading } = useAdminAuth()
+  const authed = !!user
   const [regs, setRegs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -181,37 +181,9 @@ export default function AdminIftarDashboard() {
   const expectData = useMemo(() => countBy(regs, (r) => (r.expect || '').split(',').map((s) => s.trim()).filter(Boolean)), [regs])
   const jobData = useMemo(() => countBy(regs, (r) => r.job).slice(0, 10), [regs])
 
-  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
-  if (!authed) {
-    return (
-      <main className="admin-login">
-        <form
-          className="admin-login-box"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (pass === ADMIN_PASS) {
-              sessionStorage.setItem('admin-authed', '1')
-              setAuthed(true)
-            } else {
-              setError('รหัสผ่านไม่ถูกต้อง')
-            }
-          }}
-        >
-          <h2>🔒 Admin Login</h2>
-          <p>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</p>
-          <input
-            type="password"
-            placeholder="รหัสผ่าน"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            autoFocus
-          />
-          {error && <div className="admin-error">{error}</div>}
-          <button type="submit">เข้าสู่ระบบ</button>
-        </form>
-      </main>
-    )
-  }
+  // ยังไม่ล็อกอิน → แสดงฟอร์มล็อกอิน
+  if (authLoading) return null
+  if (!authed) return <AdminLogin />
 
   return (
     <main className="admin-dash">

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { signOut } from 'firebase/auth'
+import { auth } from '../firebase.js'
 
 const LINKS = [
   { href: '/admin/dashboard', label: '🏠 หน้าหลัก' },
@@ -11,8 +13,7 @@ export default function AdminNav() {
   const [open, setOpen] = useState(false)
 
   const logout = () => {
-    sessionStorage.removeItem('admin-authed')
-    window.location.reload()
+    signOut(auth)
   }
 
   return (

@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
+import AdminLogin from '../components/AdminLogin.jsx'
+import useAdminAuth from '../useAdminAuth.js'
 
 // แดชบอร์ด admin สรุปภารกิจกุรบาน 2026 (/admin/missions/qurban2026) — ข้อมูล fix ในไฟล์ ไม่ได้ดึงจากเซิร์ฟเวอร์
-const ADMIN_PASS = 'ummatee2026'
 
 // จำนวนวัวกุรบานภารกิจนานาชาติ แยกตามประเทศ (รวม 100 ตัว)
 const COUNTRIES = [
@@ -125,41 +125,10 @@ function BarList({ title, data, color = '#2e7d52', valueLabel = (v) => v }) {
 }
 
 export default function AdminQurbanDashboard() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin-authed') === '1')
-  const [pass, setPass] = useState('')
-  const [error, setError] = useState('')
+  const { user, loading } = useAdminAuth()
 
-  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
-  if (!authed) {
-    return (
-      <main className="admin-login">
-        <form
-          className="admin-login-box"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (pass === ADMIN_PASS) {
-              sessionStorage.setItem('admin-authed', '1')
-              setAuthed(true)
-            } else {
-              setError('รหัสผ่านไม่ถูกต้อง')
-            }
-          }}
-        >
-          <h2>🔒 Admin Login</h2>
-          <p>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</p>
-          <input
-            type="password"
-            placeholder="รหัสผ่าน"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            autoFocus
-          />
-          {error && <div className="admin-error">{error}</div>}
-          <button type="submit">เข้าสู่ระบบ</button>
-        </form>
-      </main>
-    )
-  }
+  if (loading) return null
+  if (!user) return <AdminLogin />
 
   const topCountries = GRAND_TOTAL.slice(0, 10)
   const allCountries = GRAND_TOTAL

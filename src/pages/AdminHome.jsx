@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
+import AdminLogin from '../components/AdminLogin.jsx'
+import useAdminAuth from '../useAdminAuth.js'
 
-// หน้าแรกของระบบ admin (/admin/dashboard) — ใส่รหัสผ่านก่อน แล้วเลือกเข้าดูแดชบอร์ดแต่ละตัว
-const ADMIN_PASS = 'ummatee2026'
+// หน้าแรกของระบบ admin (/admin/dashboard) — ล็อกอินด้วยอีเมล/รหัสผ่านก่อน แล้วเลือกเข้าดูแดชบอร์ดแต่ละตัว
 
 // การ์ดลิงก์ไปยังแดชบอร์ดย่อย
 const LINKS = [
@@ -11,53 +11,17 @@ const LINKS = [
 ]
 
 export default function AdminHome() {
-  // สถานะล็อกอินเก็บใน sessionStorage — ล็อกอินครั้งเดียวใช้ได้ทุกหน้า admin จนกว่าจะปิดแท็บ
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin-authed') === '1')
-  const [pass, setPass] = useState('')
-  const [error, setError] = useState('')
+  const { user, loading } = useAdminAuth()
 
-  // ยังไม่ล็อกอิน → แสดงฟอร์มใส่รหัสผ่าน
-  if (!authed) {
-    return (
-      <main className="admin-login">
-        <form
-          className="admin-login-box"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (pass === ADMIN_PASS) {
-              sessionStorage.setItem('admin-authed', '1')
-              setAuthed(true)
-            } else {
-              setError('รหัสผ่านไม่ถูกต้อง')
-            }
-          }}
-        >
-          <h2>🔒 Admin Login</h2>
-          <p>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</p>
-          <input
-            type="password"
-            placeholder="รหัสผ่าน"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            autoFocus
-          />
-          {error && <div className="admin-error">{error}</div>}
-          <button type="submit">เข้าสู่ระบบ</button>
-        </form>
-      </main>
-    )
-  }
+  if (loading) return null
+  if (!user) return <AdminLogin />
 
   return (
     <main className="admin-dash">
       <AdminNav />
+      <div></div>
       <div className="admin-wrap">
-        <div className="admin-head">
-          <div>
-            <h1>🛠️ Admin Dashboard</h1>
-            <p>เลือกดูข้อมูลและกราฟสรุปของแต่ละกิจกรรม</p>
-          </div>
-        </div>
+        
 
         <div className="admin-grid">
           {LINKS.map((l) => (

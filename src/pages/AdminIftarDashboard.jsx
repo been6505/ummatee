@@ -9,6 +9,8 @@ const ADMIN_PASS = 'ummatee2026'
 
 // Apps Script Web App เดียวกับที่หน้าลงทะเบียนใช้ส่งข้อมูล (doGet คืนรายการจาก Sheet)
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
+// token ต้องตรงกับที่ตั้งไว้ใน doGet ของ Apps Script — ถ้าไม่ส่งหรือผิด จะได้ {"error":"unauthorized"}
+const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
 
 // กราฟแท่งแนวนอน — ความกว้างเทียบกับค่าสูงสุดในชุดข้อมูล
 function BarList({ title, data, color = '#2e7d52' }) {
@@ -122,7 +124,7 @@ export default function AdminIftarDashboard() {
         )
 
     // ดึงจาก Google Sheet ก่อน (ข้อมูลหลัก) ถ้าไม่ได้ค่อย fallback ไป Firestore
-    fetch(SHEET_ENDPOINT)
+    fetch(`${SHEET_ENDPOINT}?token=${SHEET_TOKEN}`)
       .then((res) => res.json())
       .then((out) => {
         if (cancelled) return

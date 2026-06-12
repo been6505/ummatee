@@ -29,8 +29,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  background: #111827;
+  background: linear-gradient(135deg, var(--green-mid), var(--green-deep));
   color: #fff;
+  box-shadow: 0 4px 16px -8px rgba(27,94,54,.45);
 }
 
 .admin-nav-brand {
@@ -52,18 +53,29 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   border-radius: 8px;
 }
 
+.admin-nav-links a:hover,
+.admin-drawer a:hover {
+  background: rgba(255,255,255,.1);
+}
+
 .admin-nav-links a.active,
 .admin-drawer a.active {
-  background: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.18);
+  font-weight: 600;
 }
 
 .admin-nav-logout {
   border: none;
-  background: #dc2626;
-  color: white;
+  background: var(--gold);
+  color: var(--green-deep);
+  font-weight: 700;
   padding: 8px 14px;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.admin-nav-logout:hover {
+  background: var(--gold-light);
 }
 
 .admin-nav-toggle {
@@ -82,7 +94,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   right: -280px;
   width: 280px;
   height: 100vh;
-  background: #111827;
+  background: linear-gradient(165deg, var(--green-mid), var(--green-deep));
   color: white;
   padding: 20px;
   display: flex;
@@ -507,22 +519,22 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-login-box button:hover{background:var(--green-mid)}
 .admin-error{color:#e8194a;font-size:.86rem;margin-bottom:12px}
 
-.admin-dash{min-height:100vh;background:#f4f6f5;padding:32px 16px;font-family:inherit}
+.admin-dash{min-height:100vh;background:linear-gradient(180deg,#EAF6EE 0%,#F4F9F5 280px,#F4F9F5 100%);padding:32px 16px;font-family:inherit}
 .admin-wrap{max-width:1200px;margin:0 auto}
 .admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap}
-.admin-head h1{font-size:1.6rem;margin-bottom:4px}
+.admin-head h1{font-size:1.6rem;margin-bottom:4px;color:var(--green-deep)}
 .admin-head p{color:var(--ink-soft)}
-.admin-logout{border:1px solid #ddd;background:#fff;padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:600}
-.admin-logout:hover{background:#f0f0f0}
+.admin-logout{border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:600}
+.admin-logout:hover{background:rgba(46,125,82,.08)}
 
 .admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-.admin-stat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.admin-stat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
 .admin-stat .v{font-size:2rem;font-weight:800;color:var(--green-deep)}
 .admin-stat .l{color:var(--ink-soft);font-size:.86rem;margin-top:4px}
 
 .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
-.admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.admin-card h4{margin-bottom:14px;font-size:1rem}
+.admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
+.admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
 .admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}
 .admin-empty{color:var(--ink-soft);font-size:.9rem}
 

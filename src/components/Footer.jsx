@@ -9,21 +9,21 @@ const T = {
     tagline: 'มูลนิธิอุมมะตี — ให้ 100 ถึง 100',
     menu: 'เมนู', home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza',
     qurban: 'ภารกิจกุรบาน', give: 'งาน "ให้"',
-    contact: 'ติดต่อ', follow: 'ติดตามเรา',
+    contact: 'ติดต่อ',
     rights: 'สงวนลิขสิทธิ์.', made: 'สร้างด้วย ❤️ เพื่ออุมมะฮ์',
   },
   en: {
     tagline: 'Ummatee Foundation — Give 100, Reach 100',
     menu: 'Menu', home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza',
     qurban: 'Qurban Mission', give: 'GIVE Event',
-    contact: 'Contact', follow: 'Follow Us',
+    contact: 'Contact',
     rights: 'All rights reserved.', made: 'Made with ❤️ for the Ummah',
   },
   ar: {
     tagline: 'مؤسسة أمّتي — أعطِ ١٠٠ تصل ١٠٠',
     menu: 'القائمة', home: 'الرئيسية', donation: 'تبرّع', iftar: 'إفطار من أجل غزة',
     qurban: 'مهمة الأضاحي', give: 'فعالية "العطاء"',
-    contact: 'تواصل معنا', follow: 'تابعنا',
+    contact: 'تواصل معنا',
     rights: 'جميع الحقوق محفوظة.', made: 'صُنع بـ ❤️ من أجل الأمة',
   },
 }
@@ -59,16 +59,10 @@ export default function Footer() {
             <a href="#" onClick={(e) => link(e, 'iftar')}>{t.iftar}</a>
             <a href="#" onClick={(e) => link(e, 'give')}><span>🤲</span> {t.give}</a>
 
-
-
-
           </div>
           <div className="foot-col">
             <h5>{t.contact}</h5>
             <a href='mailto:ummatee.thailand@gmail.com'>📧 ummatee.thailand@gmail.com</a>
-          </div>
-          <div className="foot-col">
-            <h5>{t.follow}</h5>
             <SocialLinks variant="footer" />
           </div>
         </div>

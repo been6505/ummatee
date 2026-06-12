@@ -13,6 +13,7 @@
 html{scroll-behavior:smooth}
 body{
   font-family:'Noto Sans Thai','Poppins',system-ui,sans-serif;
+  font-weight:500;
   color:var(--black);
   background:var(--paper);
   line-height:1.65;
@@ -235,7 +236,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   letter-spacing:-.5px;margin-bottom:22px;max-width:14ch;
 }
 .hero-title .accent{color:var(--gold-light)}
-.hero-sub{font-size:clamp(1.02rem,2vw,1.22rem);font-weight:300;max-width:54ch;color:rgba(255,255,255,.9);margin-bottom:40px}
+.hero-sub{font-size:clamp(1.02rem,2vw,1.22rem);font-weight:450;max-width:54ch;color:rgba(255,255,255,.9);margin-bottom:40px}
 .hero-actions{display:flex;flex-wrap:wrap;gap:16px}
 
 .btn{
@@ -278,7 +279,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .stat-block{position:relative}
 .stat-block:not(:last-child)::after{content:"";position:absolute;right:-12px;top:18%;height:64%;width:1px;background:rgba(255,255,255,.12)}
 .stat-number{font-size:clamp(2rem,4vw,2.9rem);font-weight:800;color:var(--gold-light);line-height:1;letter-spacing:-1px}
-.stat-label{font-size:.92rem;color:rgba(255,255,255,.7);margin-top:10px;font-weight:300}
+.stat-label{font-size:.92rem;color:rgba(255,255,255,.7);margin-top:10px;font-weight:450}
 
 /* ============ MISSION / ACTIONS SECTION ============ */
 .section{padding:96px 0}
@@ -300,7 +301,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .focus-donate{background:linear-gradient(150deg,var(--green-deep),var(--green-mid))}
 .fc-tag{position:relative;z-index:2;font-size:.78rem;letter-spacing:2px;text-transform:uppercase;opacity:.85;margin-bottom:12px;font-weight:600}
 .focus-card h3{position:relative;z-index:2;font-size:1.7rem;font-weight:800;margin-bottom:10px}
-.focus-card p{position:relative;z-index:2;font-size:.98rem;font-weight:300;opacity:.92;margin-bottom:24px}
+.focus-card p{position:relative;z-index:2;font-size:.98rem;font-weight:450;opacity:.92;margin-bottom:24px}
 .fc-link{position:relative;z-index:2;display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:.98rem}
 .fc-link .arrow{transition:transform .2s}
 .focus-card:hover .fc-link .arrow{transform:translateX(5px)}
@@ -331,7 +332,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 }
 .cta-strip .fc-pattern{position:absolute;inset:0;opacity:.14}
 .cta-strip h2{position:relative;z-index:2;font-size:clamp(1.6rem,3.5vw,2.3rem);font-weight:800;margin-bottom:14px}
-.cta-strip p{position:relative;z-index:2;opacity:.88;font-weight:300;max-width:50ch;margin:0 auto 30px}
+.cta-strip p{position:relative;z-index:2;opacity:.88;font-weight:450;max-width:50ch;margin:0 auto 30px}
 .cta-strip .hero-actions{position:relative;z-index:2;justify-content:center}
 
 /* ============ FOOTER ============ */
@@ -339,7 +340,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.1)}
 .foot-brand{display:flex;align-items:center;gap:12px;color:#fff;font-weight:800;font-size:1.3rem;margin-bottom:16px}
 .foot-col h5{color:#fff;font-size:.82rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;font-weight:600}
-.foot-col a,.foot-col p{display:block;font-size:.94rem;margin-bottom:11px;transition:color .2s;font-weight:300}
+.foot-col a,.foot-col p{display:block;font-size:.94rem;margin-bottom:11px;transition:color .2s;font-weight:450}
 .foot-col a:hover{color:var(--gold-light)}
 .foot-bottom{padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:.84rem;color:rgba(255,255,255,.5)}
 
@@ -355,7 +356,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .page-band .badge{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:7px 18px;border-radius:999px;font-size:.84rem;margin-bottom:20px}
 .page-band h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.15;margin-bottom:16px}
 .page-band h1 .accent{color:var(--gold-light)}
-.page-band p{font-weight:300;opacity:.9;font-size:1.06rem}
+.page-band p{font-weight:450;opacity:.9;font-size:1.06rem}
 
 .don-stage{max-width:760px;margin:-44px auto 0;padding:0 20px 90px;position:relative;z-index:5}
 .ibank-badge{
@@ -420,7 +421,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .iftar-eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(232,25,44,.85);padding:8px 20px;border-radius:999px;font-weight:600;font-size:.86rem;letter-spacing:.5px;margin-bottom:22px}
 .iftar-hero h1{font-size:clamp(2.2rem,5.5vw,3.6rem);font-weight:800;line-height:1.1;margin-bottom:14px}
 .iftar-hero h1 .moon{color:var(--gold-light)}
-.iftar-hero .lead{font-weight:300;opacity:.92;font-size:1.08rem;max-width:56ch;margin:0 auto 34px}
+.iftar-hero .lead{font-weight:450;opacity:.92;font-size:1.08rem;max-width:56ch;margin:0 auto 34px}
 
 /* ============ GIVE PAGE (blue tone) ============ */
 .give-page .iftar-hero{
@@ -441,7 +442,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .iftar-card{max-width:700px;margin:0 auto;padding:0 20px}
 .form-shell{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px 34px;box-shadow:0 30px 80px -40px rgba(0,0,0,.7)}
 .form-shell h2{font-size:1.5rem;font-weight:800;margin-bottom:6px}
-.form-shell .fs-sub{color:rgba(255,255,255,.6);font-size:.94rem;margin-bottom:30px;font-weight:300}
+.form-shell .fs-sub{color:rgba(255,255,255,.6);font-size:.94rem;margin-bottom:30px;font-weight:450}
 
 .iftar-field{margin-bottom:18px}
 .iftar-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -475,7 +476,7 @@ select.iftar-input option{color:#222;background:#fff}
 .success-check{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--gold-light),var(--gold));display:grid;place-items:center;margin:0 auto 24px;font-size:2.4rem;color:var(--green-deep);box-shadow:0 14px 34px -12px rgba(201,168,76,.8);animation:pop .5s cubic-bezier(.16,1.4,.4,1) both}
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .success-card h2{font-size:1.7rem;font-weight:800;margin-bottom:10px}
-.success-card p{color:rgba(255,255,255,.75);font-weight:300;margin-bottom:8px}
+.success-card p{color:rgba(255,255,255,.75);font-weight:450;margin-bottom:8px}
 .ref-pill{display:inline-block;margin:18px 0;background:rgba(201,168,76,.15);border:1px dashed var(--gold);color:var(--gold-light);font-family:'Poppins',monospace;font-weight:700;letter-spacing:2px;font-size:1.3rem;padding:12px 28px;border-radius:14px}
 
 /* check registration */
@@ -494,7 +495,7 @@ select.iftar-input option{color:#222;background:#fff}
 .check-item .ci-ref{font-family:'Poppins',monospace;font-weight:700;color:var(--gold-light);font-size:.84rem;flex:0 0 auto}
 .check-item .ci-name{font-weight:600;font-size:.96rem}
 .check-item .ci-meta{font-size:.8rem;color:rgba(255,255,255,.5)}
-.check-empty{text-align:center;color:rgba(255,255,255,.45);padding:30px;font-weight:300}
+.check-empty{text-align:center;color:rgba(255,255,255,.45);padding:30px;font-weight:450}
 
 /* ============ RESPONSIVE ============ */
 @media(max-width:860px){

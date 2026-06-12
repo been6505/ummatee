@@ -12,7 +12,7 @@ import AdminQurbanDashboard from './pages/AdminQurbanDashboard.jsx'
 import AdminHome from './pages/AdminHome.jsx'
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/dashboard/event/iftar-for-gaza': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/dashboard': 'admin-home' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/dashboard': 'admin-home' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026' }
 
 const pageFromPath = () => PATH_TO_PAGE[window.location.pathname] || 'home'

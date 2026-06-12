@@ -3,7 +3,7 @@ import { useState } from 'react'
 const ADMIN_PASS = 'ummatee2026'
 
 const LINKS = [
-  { href: '/admin/dashboard/event/iftar-for-gaza', icon: '🇵🇸', title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน' },
+  { href: '/admin/event/iftar2026', icon: '🇵🇸', title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน' },
   { href: '/admin/missions/qurban2026', icon: '🐑', title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
 ]
 

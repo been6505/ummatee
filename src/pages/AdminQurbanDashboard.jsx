@@ -210,26 +210,6 @@ export default function AdminQurbanDashboard() {
           </div>
         </div>
 
-        <div className="admin-card" style={{ marginTop: 24 }}>
-          <h4>กุรบานทั้งหมด (Palestine + Syria + Thailand + นานาชาติ) — รวม {GRAND_TOTAL_SUM} ส่วน</h4>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr><th>ลำดับ</th><th>ประเทศ / กลุ่ม</th><th>จำนวน</th><th>สัดส่วนของทั้งหมด</th></tr>
-              </thead>
-              <tbody>
-                {GRAND_TOTAL.map((d, i) => (
-                  <tr key={d.label}>
-                    <td>{i + 1}</td>
-                    <td>{d.label}</td>
-                    <td>{d.value}</td>
-                    <td>{((d.value / GRAND_TOTAL_SUM) * 100).toFixed(1)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </main>
   )

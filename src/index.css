@@ -325,9 +325,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 }
 
 /* หน้า /missions/qurban2026 — ตัวอักษรหนาขึ้นทั้งหน้า อ่านชัดขึ้น */
-.qurban-page{font-weight:800}
-.qurban-page .qurban-legend-item{font-weight:800}
+.qurban-page{font-weight:800;font-size:1.08em}
+.qurban-page .qurban-legend-item{font-weight:800;font-size:1.05rem}
 .qurban-page p{font-weight:700}
+.qurban-page h1{font-size:clamp(2.4rem,6vw,4rem)}
+.qurban-page h2{font-size:clamp(2rem,4.5vw,2.9rem)}
+.qurban-page .help-item h4{font-size:1.5rem}
+.qurban-page .iftar-eyebrow{font-size:1rem}
+.qurban-page .lead{font-size:1.2rem}
 
 /* ============ CTA STRIP ============ */
 .cta-strip{

@@ -32,7 +32,6 @@ const COUNTRIES = [
   { n: 'Burkina Faso', v: 1 },
 ]
 
-const TOTAL_COW = COUNTRIES.reduce((s, c) => s + c.v, 0) // 100
 const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
 
 const CATEGORY_DATA = [
@@ -151,8 +150,8 @@ export default function AdminQurbanDashboard() {
     )
   }
 
-  const topCountries = [...COUNTRIES].sort((a, b) => b.v - a.v).slice(0, 10).map((c) => ({ label: c.n, value: c.v }))
-  const allCountries = [...COUNTRIES].sort((a, b) => b.v - a.v).map((c) => ({ label: c.n, value: c.v }))
+  const topCountries = GRAND_TOTAL.slice(0, 10)
+  const allCountries = GRAND_TOTAL
   const categoryBars = CATEGORY_DATA.map((c) => ({ label: c.label, value: c.value }))
 
   return (
@@ -216,11 +215,11 @@ export default function AdminQurbanDashboard() {
         </div>
 
         <div className="admin-card" style={{ marginTop: 24 }}>
-          <h4>สัดส่วนทุกประเทศ ({allCountries.length} ประเทศ)</h4>
+          <h4>สัดส่วนทุกประเทศ/กลุ่ม ({allCountries.length} รายการ)</h4>
           <div className="admin-table-wrap">
             <table className="admin-table">
               <thead>
-                <tr><th>ลำดับ</th><th>ประเทศ</th><th>จำนวนวัว</th><th>สัดส่วน</th></tr>
+                <tr><th>ลำดับ</th><th>ประเทศ/กลุ่ม</th><th>จำนวน</th><th>สัดส่วน</th></tr>
               </thead>
               <tbody>
                 {allCountries.map((c, i) => (
@@ -228,7 +227,7 @@ export default function AdminQurbanDashboard() {
                     <td>{i + 1}</td>
                     <td>{c.label}</td>
                     <td>{c.value}</td>
-                    <td>{((c.value / TOTAL_COW) * 100).toFixed(1)}%</td>
+                    <td>{((c.value / GRAND_TOTAL_SUM) * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

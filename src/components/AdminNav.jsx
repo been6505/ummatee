@@ -35,6 +35,11 @@ export default function AdminNav() {
             </a>
           ))}
 
+          {/* อีเมลของแอดมินที่ล็อกอินอยู่ */}
+          {auth.currentUser?.email && (
+            <span className="admin-nav-user">{auth.currentUser.email}</span>
+          )}
+
           <button
             className="admin-nav-logout"
             onClick={logout}
@@ -47,6 +52,7 @@ export default function AdminNav() {
         <button
           className="admin-nav-toggle"
           onClick={() => setOpen(true)}
+          aria-label="เปิดเมนู"
         >
           ☰
         </button>
@@ -57,6 +63,7 @@ export default function AdminNav() {
         <button
           className="drawer-close"
           onClick={() => setOpen(false)}
+          aria-label="ปิดเมนู"
         >
           ×
         </button>
@@ -71,6 +78,11 @@ export default function AdminNav() {
             {l.label}
           </a>
         ))}
+
+        {/* อีเมลของแอดมินที่ล็อกอินอยู่ */}
+        {auth.currentUser?.email && (
+          <span className="admin-nav-user">{auth.currentUser.email}</span>
+        )}
 
         <button
           className="admin-nav-logout"

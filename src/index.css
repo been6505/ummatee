@@ -65,6 +65,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   font-weight: 600;
 }
 
+.admin-nav-user {
+  font-size: .82rem;
+  opacity: .75;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-nav-logout {
   border: none;
   background: var(--gold);

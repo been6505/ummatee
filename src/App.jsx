@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavCtx } from './navContext'
 import { LangProvider } from './i18n.jsx'
 import Nav from './components/Nav.jsx'
 import Home from './pages/Home.jsx'
-import Donation from './pages/Donation.jsx'
-import IftarForGaza from './pages/IftarForGaza.jsx'
-import GiveForUm from './pages/GiveForUm.jsx'
-import Qurban2026 from './pages/Qurban2026.jsx'
-import AdminIftarDashboard from './pages/AdminIftarDashboard.jsx'
-import AdminQurbanDashboard from './pages/AdminQurbanDashboard.jsx'
-import AdminHome from './pages/AdminHome.jsx'
+
+// โหลดเฉพาะหน้าที่ผู้ใช้เปิดจริง (code-splitting) — ลดขนาด JS ตอนโหลดครั้งแรก
+const Donation = lazy(() => import('./pages/Donation.jsx'))
+const IftarForGaza = lazy(() => import('./pages/IftarForGaza.jsx'))
+const GiveForUm = lazy(() => import('./pages/GiveForUm.jsx'))
+const Qurban2026 = lazy(() => import('./pages/Qurban2026.jsx'))
+const AdminIftarDashboard = lazy(() => import('./pages/AdminIftarDashboard.jsx'))
+const AdminQurbanDashboard = lazy(() => import('./pages/AdminQurbanDashboard.jsx'))
+const AdminHome = lazy(() => import('./pages/AdminHome.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
 const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/dashboard': 'admin-home' }
@@ -49,19 +51,21 @@ export default function App() {
   }, [page])
 
   // หน้า admin เรนเดอร์แยกเดี่ยว ๆ ไม่มี Nav/Footer ของเว็บหลัก
-  if (page === 'admin-iftar') return <AdminIftarDashboard />
-  if (page === 'admin-qurban') return <AdminQurbanDashboard />
-  if (page === 'admin-home') return <AdminHome />
+  if (page === 'admin-iftar') return <Suspense fallback={null}><AdminIftarDashboard /></Suspense>
+  if (page === 'admin-qurban') return <Suspense fallback={null}><AdminQurbanDashboard /></Suspense>
+  if (page === 'admin-home') return <Suspense fallback={null}><AdminHome /></Suspense>
 
   return (
     <LangProvider>
       <NavCtx.Provider value={go}>
         <Nav scrolled={scrolled} />
-        {page === 'home' && <Home />}
-        {page === 'donation' && <Donation />}
-        {page === 'iftar' && <IftarForGaza />}
-        {page === 'give' && <GiveForUm />}
-        {page === 'qurban' && <Qurban2026 />}
+        <Suspense fallback={null}>
+          {page === 'home' && <Home />}
+          {page === 'donation' && <Donation />}
+          {page === 'iftar' && <IftarForGaza />}
+          {page === 'give' && <GiveForUm />}
+          {page === 'qurban' && <Qurban2026 />}
+        </Suspense>
       </NavCtx.Provider>
     </LangProvider>
   )

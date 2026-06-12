@@ -186,17 +186,6 @@ export default function AdminQurbanDashboard() {
 
         <div className="admin-grid">
           <div className="admin-card admin-card-center">
-            <h4>สัดส่วนวัวกุรบาน 100 ตัว แยกตามประเทศ</h4>
-            <DonutChart data={COUNTRIES} colors={COLORS} unit="วัว / cow" />
-            <div className="admin-legend">
-              {COUNTRIES.slice(0, 8).map((c, i) => (
-                <span key={c.n}><i style={{ background: COLORS[i % COLORS.length] }} /> {c.n}: {c.v}</span>
-              ))}
-              <span><i style={{ background: '#999' }} /> อื่นๆ: {COUNTRIES.slice(8).reduce((s, c) => s + c.v, 0)}</span>
-            </div>
-          </div>
-
-          <div className="admin-card admin-card-center">
             <h4>การแบ่งกลุ่มภารกิจ</h4>
             <DonutChart
               data={CATEGORY_DATA.map((c) => ({ n: c.label, v: c.value }))}
@@ -211,6 +200,18 @@ export default function AdminQurbanDashboard() {
           </div>
 
           <BarList title="กลุ่มภารกิจ (Palestine / Syria / Thailand / Worldwide)" data={categoryBars} color="#e8194a" />
+
+          <div className="admin-card admin-card-center">
+            <h4>สัดส่วนวัวกุรบาน 100 ตัว แยกตามประเทศ</h4>
+            <DonutChart data={COUNTRIES} colors={COLORS} unit="วัว / cow" />
+            <div className="admin-legend">
+              {COUNTRIES.slice(0, 8).map((c, i) => (
+                <span key={c.n}><i style={{ background: COLORS[i % COLORS.length] }} /> {c.n}: {c.v}</span>
+              ))}
+              <span><i style={{ background: '#999' }} /> อื่นๆ: {COUNTRIES.slice(8).reduce((s, c) => s + c.v, 0)}</span>
+            </div>
+          </div>
+
           <BarList title="ประเทศที่ได้รับมากที่สุด (Top 10)" data={topCountries} color="#2196f3" />
         </div>
 

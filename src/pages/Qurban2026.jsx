@@ -106,8 +106,18 @@ export default function Qurban2026() {
   if (loading) return null
 
   const COUNTRIES = q.countries
-  const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
-  const TOTAL_COW = COUNTRIES.reduce((s, c) => s + c.v, 0)
+  const COUNTRY_COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
+
+  // รวม Palestine / Syria / Thailand เข้ากับยอดนานาชาติแยกตามประเทศ + Afghanistan เป็นกราฟวงกลมเดียว
+  const ALL_DATA = [
+    { n: 'Palestine', v: q.categories.palestine },
+    { n: 'Syria', v: q.categories.syria },
+    { n: 'Thailand', v: q.categories.thailand },
+    ...COUNTRIES,
+    { n: 'Afghanistan', v: q.afghanistanSheep },
+  ]
+  const ALL_COLORS = ['#1B5E36', '#C9302C', '#2196f3', ...COUNTRY_COLORS, '#999']
+  const ALL_TOTAL = ALL_DATA.reduce((s, c) => s + c.v, 0)
 
   const stats = [
     { ...t.stats[0], v: String(q.summary.countries) },
@@ -180,20 +190,15 @@ export default function Qurban2026() {
             <div className="gold-rule"></div>
           </FadeUp>
           <div className="qurban-chart-wrap">
-            <DonutChart unit={t.donutUnit} countries={COUNTRIES} colors={COLORS} total={TOTAL_COW} />
+            <DonutChart unit={t.donutUnit} countries={ALL_DATA} colors={ALL_COLORS} total={ALL_TOTAL} />
             <div className="qurban-legend">
-              {COUNTRIES.map((c, i) => (
+              {ALL_DATA.map((c, i) => (
                 <div className="qurban-legend-item" key={c.n}>
-                  <span className="dot" style={{ background: COLORS[i] }}></span>
+                  <span className="dot" style={{ background: ALL_COLORS[i] }}></span>
                   <span className="name">{c.n}</span>
                   <span className="val">{c.v}</span>
                 </div>
               ))}
-              <div className="qurban-legend-item">
-                <span className="dot" style={{ background: '#999' }}></span>
-                <span className="name">Afghanistan ({t.sheep})</span>
-                <span className="val">{q.afghanistanSheep}</span>
-              </div>
             </div>
           </div>
         </div>

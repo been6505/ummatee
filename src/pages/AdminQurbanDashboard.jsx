@@ -1,70 +1,10 @@
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
+import { useQurbanData } from '../data/qurbanData.js'
 
-// แดชบอร์ด admin สรุปภารกิจกุรบาน 2026 (/admin/missions/qurban2026) — ข้อมูล fix ในไฟล์ ไม่ได้ดึงจากเซิร์ฟเวอร์
-
-// จำนวนวัวกุรบานภารกิจนานาชาติ แยกตามประเทศ (รวม 100 ตัว)
-const COUNTRIES = [
-  { n: 'India', v: 55 },
-  { n: 'Chad', v: 13 },
-  { n: 'Bangladesh', v: 3 },
-  { n: 'Benin', v: 2 },
-  { n: 'Ethiopia', v: 2 },
-  { n: 'Kenya', v: 2 },
-  { n: 'Mozambique', v: 2 },
-  { n: 'Nigeria', v: 2 },
-  { n: 'Kashmir', v: 1 },
-  { n: 'Yemen', v: 1 },
-  { n: 'Indonesia', v: 1 },
-  { n: 'Lebanon', v: 1 },
-  { n: 'Pakistan', v: 1 },
-  { n: 'Nepal', v: 1 },
-  { n: 'Sudan', v: 1 },
-  { n: 'Myanmar', v: 1 },
-  { n: 'Mauritania', v: 1 },
-  { n: 'Sierra Leone', v: 1 },
-  { n: 'South Sudan', v: 1 },
-  { n: 'Malawi', v: 1 },
-  { n: 'Somalia', v: 1 },
-  { n: 'Cameroon', v: 1 },
-  { n: 'Uganda', v: 1 },
-  { n: 'Niger', v: 1 },
-  { n: 'Tanzania', v: 1 },
-  { n: 'Rohingya', v: 1 },
-  { n: 'Burkina Faso', v: 1 },
-]
-
-// สร้างสีไล่โทน (hue วนรอบวงล้อสี) ให้แต่ละประเทศ
-const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
-
-// ยอดแยกตามกลุ่มภารกิจหลัก
-const CATEGORY_DATA = [
-  { label: 'Palestine', value: 145, unit: 'วัว' },
-  { label: 'Syria', value: 12, unit: 'แกะ' },
-  { label: 'Thailand', value: 34, unit: 'วัว' },
-  { label: 'Worldwide', value: 100, unit: 'วัว' },
-]
-
-// รวมทุกภารกิจเข้าด้วยกัน: Palestine, Syria, Thailand, นานาชาติ (แยกตามประเทศ), Afghanistan (แกะ)
-const GRAND_TOTAL = [
-  { label: 'Palestine', value: 145 },
-  { label: 'Syria', value: 12 },
-  { label: 'Thailand', value: 34 },
-  ...COUNTRIES.map((c) => ({ label: c.n, value: c.v })),
-  { label: 'Afghanistan (แกะ)', value: 5 },
-].sort((a, b) => b.value - a.value)
-
-// ยอดรวมกุรบานทั้งหมดทุกภารกิจ (= 296)
-const GRAND_TOTAL_SUM = GRAND_TOTAL.reduce((s, d) => s + d.value, 0)
-
-// การ์ดสถิติด้านบนสุดของแดชบอร์ด
-const SUMMARY = [
-  { l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
-  { l: 'วัว', v: '279', u: 'ตัว' },
-  { l: 'แกะ', v: '17', u: 'ตัว' },
-  { l: 'รวมทั้งหมด', v: '1,948', u: 'ส่วน' },
-]
+// แดชบอร์ด admin สรุปภารกิจกุรบาน 2026 (/admin/missions/qurban2026) — ข้อมูลอ่านจาก Firestore (config/qurban2026)
+// แก้ไขข้อมูลได้ที่หน้า /admin/missions/qurban2026/edit
 
 const DONUT_COLORS = ['#2e7d52', '#e8194a', '#c9a84c', '#2196f3', '#8e44ad', '#e67e22']
 
@@ -126,9 +66,38 @@ function BarList({ title, data, color = '#2e7d52', valueLabel = (v) => v }) {
 
 export default function AdminQurbanDashboard() {
   const { user, loading } = useAdminAuth()
+  const { data: q, loading: dataLoading } = useQurbanData()
 
   if (loading) return null
   if (!user) return <AdminLogin />
+  if (dataLoading) return null
+
+  const COUNTRIES = q.countries
+  const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
+
+  const CATEGORY_DATA = [
+    { label: 'Palestine', value: q.categories.palestine, unit: 'วัว' },
+    { label: 'Syria', value: q.categories.syria, unit: 'แกะ' },
+    { label: 'Thailand', value: q.categories.thailand, unit: 'วัว' },
+    { label: 'Worldwide', value: q.categories.worldwide, unit: 'วัว' },
+  ]
+
+  const GRAND_TOTAL = [
+    { label: 'Palestine', value: q.categories.palestine },
+    { label: 'Syria', value: q.categories.syria },
+    { label: 'Thailand', value: q.categories.thailand },
+    ...COUNTRIES.map((c) => ({ label: c.n, value: c.v })),
+    { label: 'Afghanistan (แกะ)', value: q.afghanistanSheep },
+  ].sort((a, b) => b.value - a.value)
+
+  const GRAND_TOTAL_SUM = GRAND_TOTAL.reduce((s, d) => s + d.value, 0)
+
+  const SUMMARY = [
+    { l: 'ประเทศที่ได้รับ', v: String(q.summary.countries), u: 'ประเทศ' },
+    { l: 'วัว', v: String(q.summary.cows), u: 'ตัว' },
+    { l: 'แกะ', v: String(q.summary.sheep), u: 'ตัว' },
+    { l: 'รวมทั้งหมด', v: q.summary.total.toLocaleString(), u: 'ส่วน' },
+  ]
 
   const topCountries = GRAND_TOTAL.slice(0, 10)
   const allCountries = GRAND_TOTAL
@@ -143,6 +112,7 @@ export default function AdminQurbanDashboard() {
             <h1>Qurban 2026 — Dashboard</h1>
             <p>สรุปการแจกจ่ายกุรบานทั้งหมด 1447 / 2026</p>
           </div>
+          <a className="admin-btn" href="/admin/missions/qurban2026/edit">แก้ไขข้อมูล</a>
         </div>
 
         <div className="admin-stats">
@@ -176,7 +146,7 @@ export default function AdminQurbanDashboard() {
           <BarList title="กลุ่มภารกิจ (Palestine / Syria / Thailand / Worldwide)" data={categoryBars} color="#e8194a" />
 
           <div className="admin-card admin-card-center">
-            <h4>สัดส่วนวัวกุรบาน 100 ตัว แยกตามประเทศ</h4>
+            <h4>สัดส่วนวัวกุรบาน {COUNTRIES.reduce((s, c) => s + c.v, 0)} ตัว แยกตามประเทศ</h4>
             <DonutChart data={COUNTRIES} colors={COLORS} unit="วัว / cow" />
             <div className="admin-legend">
               {COUNTRIES.slice(0, 8).map((c, i) => (

@@ -1,6 +1,7 @@
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
+import { useQurbanData } from '../data/qurbanData.js'
 
 // หน้า public สรุปภารกิจกุรบาน 1447/2026 — สถิติรวม รายละเอียดราย missions และโดนัทชาร์ต 100 วัว
 // ข้อความแยกตามภาษา
@@ -61,60 +62,24 @@ const T = {
   },
 }
 
-// จำนวนวัวกุรบาน (รวม 100 ตัว) แยกตามประเทศในภารกิจนานาชาติ
-const COUNTRIES = [
-  { n: 'India', v: 55 },
-  { n: 'Chad', v: 13 },
-  { n: 'Bangladesh', v: 3 },
-  { n: 'Benin', v: 2 },
-  { n: 'Ethiopia', v: 2 },
-  { n: 'Kenya', v: 2 },
-  { n: 'Mozambique', v: 2 },
-  { n: 'Nigeria', v: 2 },
-  { n: 'Kashmir', v: 1 },
-  { n: 'Yemen', v: 1 },
-  { n: 'Indonesia', v: 1 },
-  { n: 'Lebanon', v: 1 },
-  { n: 'Pakistan', v: 1 },
-  { n: 'Nepal', v: 1 },
-  { n: 'Sudan', v: 1 },
-  { n: 'Myanmar', v: 1 },
-  { n: 'Mauritania', v: 1 },
-  { n: 'Sierra Leone', v: 1 },
-  { n: 'South Sudan', v: 1 },
-  { n: 'Malawi', v: 1 },
-  { n: 'Somalia', v: 1 },
-  { n: 'Cameroon', v: 1 },
-  { n: 'Uganda', v: 1 },
-  { n: 'Niger', v: 1 },
-  { n: 'Tanzania', v: 1 },
-  { n: 'Rohingya', v: 1 },
-  { n: 'Burkina Faso', v: 1 },
-]
-
-const TOTAL_COW = COUNTRIES.reduce((s, c) => s + c.v, 0) // 100
-
-// สร้างสีไล่โทนให้แต่ละประเทศ
-const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
-
 // ค่าคงที่ของวงโดนัท: รัศมีและเส้นรอบวง (ใช้คำนวณความยาวแต่ละชิ้น)
 const R = 80
 const CIRC = 2 * Math.PI * R
 
 // โดนัทชาร์ตวาดด้วย SVG — แต่ละประเทศเป็นเส้นโค้ง 1 ชิ้น ความยาวตามสัดส่วนจำนวนวัว
-function DonutChart({ unit }) {
+function DonutChart({ unit, countries, colors, total }) {
   let offset = 0
   return (
     <svg viewBox="0 0 200 200" className="qurban-donut">
       <circle cx="100" cy="100" r={R} fill="none" stroke="#eee" strokeWidth="32" />
-      {COUNTRIES.map((c, i) => {
-        const len = (c.v / TOTAL_COW) * CIRC
+      {countries.map((c, i) => {
+        const len = (c.v / total) * CIRC
         const seg = (
           <circle
             key={c.n}
             cx="100" cy="100" r={R}
             fill="none"
-            stroke={COLORS[i]}
+            stroke={colors[i]}
             strokeWidth="32"
             strokeDasharray={`${len} ${CIRC - len}`}
             strokeDashoffset={-offset}
@@ -127,7 +92,7 @@ function DonutChart({ unit }) {
         return seg
       })}
       <circle cx="100" cy="100" r={R - 16} fill="var(--paper, #fff)" />
-      <text x="100" y="94" textAnchor="middle" fontSize="28" fontWeight="800" fill="var(--green-deep, #1a5c3a)">100</text>
+      <text x="100" y="94" textAnchor="middle" fontSize="28" fontWeight="800" fill="var(--green-deep, #1a5c3a)">{total}</text>
       <text x="100" y="116" textAnchor="middle" fontSize="13" fill="var(--green-mid, #2e7d52)">{unit}</text>
     </svg>
   )
@@ -136,6 +101,21 @@ function DonutChart({ unit }) {
 export default function Qurban2026() {
   const { lang } = useLang()
   const t = T[lang]
+  const { data: q, loading } = useQurbanData()
+
+  if (loading) return null
+
+  const COUNTRIES = q.countries
+  const COLORS = COUNTRIES.map((_, i) => `hsl(${Math.round((i * 360) / COUNTRIES.length)}, 65%, 55%)`)
+  const TOTAL_COW = COUNTRIES.reduce((s, c) => s + c.v, 0)
+
+  const stats = [
+    { ...t.stats[0], v: String(q.summary.countries) },
+    { ...t.stats[1], v: String(q.summary.cows) },
+    { ...t.stats[2], v: String(q.summary.sheep) },
+    { ...t.stats[3], v: q.summary.total.toLocaleString() },
+  ]
+
   return (
     <main className="page qurban-page">
       <section className="iftar-hero">
@@ -150,10 +130,10 @@ export default function Qurban2026() {
       <section className="section">
         <div className="wrap">
           <div className="help-grid">
-            {t.stats.map((s, i) => (
+            {stats.map((s, i) => (
               <FadeUp className="help-item" key={i}>
                 <div className="he">{s.e}</div>
-                <h4>{s.v} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{s.u}</span></h4>
+                <h4>{s.v} <span style={{ fontSize: '1rem', fontWeight: 400 }}>{s.u}</span></h4>
                 <p>{s.l}</p>
               </FadeUp>
             ))}
@@ -170,22 +150,22 @@ export default function Qurban2026() {
           <div className="help-grid">
             <FadeUp className="help-item">
               <div className="he">🇵🇸</div>
-              <h4>145 <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
+              <h4>{q.categories.palestine} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
               <p>{t.palestine}</p>
             </FadeUp>
             <FadeUp className="help-item">
               <div className="he">🇸🇾</div>
-              <h4>12 <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.sheep}</span></h4>
+              <h4>{q.categories.syria} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.sheep}</span></h4>
               <p>{t.syria}</p>
             </FadeUp>
             <FadeUp className="help-item">
               <div className="he">🇹🇭</div>
-              <h4>34 <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
+              <h4>{q.categories.thailand} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
               <p>{t.thai}</p>
             </FadeUp>
             <FadeUp className="help-item">
               <div className="he">🌍</div>
-              <h4>100 <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
+              <h4>{q.categories.worldwide} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
               <p>{t.world}</p>
             </FadeUp>
           </div>
@@ -200,7 +180,7 @@ export default function Qurban2026() {
             <div className="gold-rule"></div>
           </FadeUp>
           <div className="qurban-chart-wrap">
-            <DonutChart unit={t.donutUnit} />
+            <DonutChart unit={t.donutUnit} countries={COUNTRIES} colors={COLORS} total={TOTAL_COW} />
             <div className="qurban-legend">
               {COUNTRIES.map((c, i) => (
                 <div className="qurban-legend-item" key={c.n}>
@@ -212,7 +192,7 @@ export default function Qurban2026() {
               <div className="qurban-legend-item">
                 <span className="dot" style={{ background: '#999' }}></span>
                 <span className="name">Afghanistan ({t.sheep})</span>
-                <span className="val">5</span>
+                <span className="val">{q.afghanistanSheep}</span>
               </div>
             </div>
           </div>

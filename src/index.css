@@ -612,6 +612,24 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-qurban .admin-bar-row{font-size:1rem;font-weight:600}
 .admin-qurban .admin-bar-label{flex:0 0 130px}
 .admin-qurban .admin-bar-value{flex:0 0 40px}
+
+/* ปุ่มและฟอร์มแก้ไขข้อมูล admin */
+.admin-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;background:#fff;border:1px solid rgba(27,94,54,.2);color:var(--green-deep);font-weight:700;text-decoration:none;font-size:.9rem;cursor:pointer;transition:background .15s,box-shadow .15s}
+.admin-btn:hover{background:#EAF6EE}
+.admin-btn-primary{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(27,94,54,.5)}
+.admin-btn-primary:hover{filter:brightness(1.08)}
+.admin-btn-danger{padding:6px 12px;border-radius:8px;border:1px solid rgba(216,67,21,.3);background:#fff;color:#d84315;font-weight:700;font-size:.8rem;cursor:pointer}
+.admin-btn-danger:hover{background:#fdeee9}
+
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+.admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-form-grid input,.admin-table-edit input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.admin-form-grid input:focus,.admin-table-edit input:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-table-edit input[type="text"]{width:100%}
+
+@media (max-width:640px){
+  .admin-form-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+}
 .admin-qurban .admin-legend{font-size:.98rem;font-weight:600}
 .admin-qurban .admin-table{font-size:1rem}
 .admin-qurban .admin-table td{font-weight:600}

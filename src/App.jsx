@@ -11,10 +11,11 @@ const GiveForUm = lazy(() => import('./pages/GiveForUm.jsx'))
 const Qurban2026 = lazy(() => import('./pages/Qurban2026.jsx'))
 const AdminIftarDashboard = lazy(() => import('./pages/AdminIftarDashboard.jsx'))
 const AdminQurbanDashboard = lazy(() => import('./pages/AdminQurbanDashboard.jsx'))
+const AdminQurbanEdit = lazy(() => import('./pages/AdminQurbanEdit.jsx'))
 const AdminHome = lazy(() => import('./pages/AdminHome.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/dashboard': 'admin-home' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/dashboard': 'admin-home' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026' }
 
 // อ่าน path ปัจจุบันจาก URL แล้วแปลงเป็นชื่อหน้า (ถ้าไม่รู้จักให้ไปหน้า home)
@@ -53,6 +54,7 @@ export default function App() {
   // หน้า admin เรนเดอร์แยกเดี่ยว ๆ ไม่มี Nav/Footer ของเว็บหลัก
   if (page === 'admin-iftar') return <Suspense fallback={null}><AdminIftarDashboard /></Suspense>
   if (page === 'admin-qurban') return <Suspense fallback={null}><AdminQurbanDashboard /></Suspense>
+  if (page === 'admin-qurban-edit') return <Suspense fallback={null}><AdminQurbanEdit /></Suspense>
   if (page === 'admin-home') return <Suspense fallback={null}><AdminHome /></Suspense>
 
   return (

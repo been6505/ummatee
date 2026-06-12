@@ -42,6 +42,17 @@ const CATEGORY_DATA = [
   { label: 'Worldwide 🌍', value: 100, unit: 'วัว' },
 ]
 
+// รวมทุกภารกิจเข้าด้วยกัน: Palestine, Syria, Thailand, นานาชาติ (แยกตามประเทศ), Afghanistan (แกะ)
+const GRAND_TOTAL = [
+  { label: 'Palestine 🇵🇸', value: 145 },
+  { label: 'Syria 🇸🇾', value: 12 },
+  { label: 'Thailand 🇹🇭', value: 34 },
+  ...COUNTRIES.map((c) => ({ label: c.n, value: c.v })),
+  { label: 'Afghanistan (แกะ)', value: 5 },
+].sort((a, b) => b.value - a.value)
+
+const GRAND_TOTAL_SUM = GRAND_TOTAL.reduce((s, d) => s + d.value, 0)
+
 const SUMMARY = [
   { e: '🌍', l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
   { e: '🐄', l: 'วัว', v: '279', u: 'ตัว' },
@@ -167,6 +178,10 @@ export default function AdminQurbanDashboard() {
               <div className="l">{s.l} ({s.u})</div>
             </div>
           ))}
+          <div className="admin-stat">
+            <div className="v">🐑🐄 {GRAND_TOTAL_SUM}</div>
+            <div className="l">กุรบานทั้งหมด (รวมนานาชาติ)</div>
+          </div>
         </div>
 
         <div className="admin-grid">
@@ -213,6 +228,27 @@ export default function AdminQurbanDashboard() {
                     <td>{c.label}</td>
                     <td>{c.value}</td>
                     <td>{((c.value / TOTAL_COW) * 100).toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="admin-card" style={{ marginTop: 24 }}>
+          <h4>🐑🐄 กุรบานทั้งหมด (Palestine + Syria + Thailand + นานาชาติ) — รวม {GRAND_TOTAL_SUM} ส่วน</h4>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr><th>ลำดับ</th><th>ประเทศ / กลุ่ม</th><th>จำนวน</th><th>สัดส่วนของทั้งหมด</th></tr>
+              </thead>
+              <tbody>
+                {GRAND_TOTAL.map((d, i) => (
+                  <tr key={d.label}>
+                    <td>{i + 1}</td>
+                    <td>{d.label}</td>
+                    <td>{d.value}</td>
+                    <td>{((d.value / GRAND_TOTAL_SUM) * 100).toFixed(1)}%</td>
                   </tr>
                 ))}
               </tbody>

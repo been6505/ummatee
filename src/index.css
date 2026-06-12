@@ -324,6 +324,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   .qurban-donut{width:220px;height:220px}
 }
 
+/* หน้า /missions/qurban2026 — ตัวอักษรหนาขึ้นทั้งหน้า อ่านชัดขึ้น */
+.qurban-page{font-weight:700}
+.qurban-page .qurban-legend-item{font-weight:700}
+.qurban-page p{font-weight:600}
+
 /* ============ CTA STRIP ============ */
 .cta-strip{
   margin:0 auto;max-width:1112px;border-radius:28px;overflow:hidden;position:relative;

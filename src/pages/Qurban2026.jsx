@@ -137,7 +137,7 @@ export default function Qurban2026() {
   const { lang } = useLang()
   const t = T[lang]
   return (
-    <main className="page">
+    <main className="page qurban-page">
       <section className="iftar-hero">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">

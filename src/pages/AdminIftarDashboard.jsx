@@ -126,13 +126,38 @@ export default function AdminIftarDashboard() {
     return () => { cancelled = true }
   }, [authed])
 
+  const [genderFilter, setGenderFilter] = useState('')
+  const [provinceFilter, setProvinceFilter] = useState('')
+  const [sortKey, setSortKey] = useState('date')
+  const [sortDir, setSortDir] = useState('desc')
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(key); setSortDir('asc') }
+  }
+
+  const provinceOptions = useMemo(
+    () => Array.from(new Set(regs.map((r) => (r.province || '').trim()).filter(Boolean))).sort(),
+    [regs]
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return regs
-    return regs.filter((r) =>
-      `${r.fname} ${r.lname} ${r.phone} ${r.email} ${r.province} ${r.job} ${r.ref}`.toLowerCase().includes(q)
-    )
-  }, [regs, search])
+    let list = regs.filter((r) => {
+      if (q && !`${r.fname} ${r.lname} ${r.phone} ${r.email} ${r.province} ${r.job} ${r.ref}`.toLowerCase().includes(q)) return false
+      if (genderFilter && r.gender !== genderFilter) return false
+      if (provinceFilter && r.province !== provinceFilter) return false
+      return true
+    })
+    list = [...list].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey]
+      if (sortKey === 'age') { av = parseInt(av, 10) || 0; bv = parseInt(bv, 10) || 0 }
+      else { av = (av ?? '').toString(); bv = (bv ?? '').toString() }
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return list
+  }, [regs, search, genderFilter, provinceFilter, sortKey, sortDir])
 
   const genderData = useMemo(() => countBy(regs, (r) => r.gender), [regs])
   const ageData = useMemo(() => countBy(regs, (r) => ageGroup(r.age)), [regs])
@@ -219,19 +244,41 @@ export default function AdminIftarDashboard() {
             <div className="admin-card" style={{ marginTop: 24 }}>
               <div className="admin-table-head">
                 <h4>รายชื่อผู้ลงทะเบียน ({filtered.length})</h4>
-                <input
-                  className="admin-search"
-                  placeholder="ค้นหาชื่อ, เบอร์, อีเมล, จังหวัด..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <div className="admin-filters">
+                  <input
+                    className="admin-search"
+                    placeholder="ค้นหาชื่อ, เบอร์, อีเมล, จังหวัด..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <select className="admin-select" value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}>
+                    <option value="">ทุกเพศ</option>
+                    <option value="ชาย">ชาย</option>
+                    <option value="หญิง">หญิง</option>
+                  </select>
+                  <select className="admin-select" value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)}>
+                    <option value="">ทุกจังหวัด</option>
+                    {provinceOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                  {(search || genderFilter || provinceFilter) && (
+                    <button className="admin-clear" onClick={() => { setSearch(''); setGenderFilter(''); setProvinceFilter('') }}>
+                      ล้างตัวกรอง
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
                     <tr>
-                      <th>Ref</th><th>ชื่อ-นามสกุล</th><th>เพศ</th><th>อายุ</th><th>เบอร์โทร</th>
-                      <th>อีเมล</th><th>อาชีพ</th><th>จังหวัด</th><th>ช่องทาง</th><th>วันที่ลงทะเบียน</th>
+                      {[
+                        ['ref', 'Ref'], ['fname', 'ชื่อ-นามสกุล'], ['gender', 'เพศ'], ['age', 'อายุ'], ['phone', 'เบอร์โทร'],
+                        ['email', 'อีเมล'], ['job', 'อาชีพ'], ['province', 'จังหวัด'], ['channel', 'ช่องทาง'], ['date', 'วันที่ลงทะเบียน'],
+                      ].map(([key, label]) => (
+                        <th key={key} className="admin-th-sort" onClick={() => toggleSort(key)}>
+                          {label} {sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>

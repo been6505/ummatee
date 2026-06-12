@@ -455,3 +455,5 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-th-sort{cursor:pointer;user-select:none}
 .admin-th-sort:hover{background:#e9ecea}
 .admin-table tbody tr:hover{background:#fafafa}
+.admin-link-card{display:block;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
+.admin-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}

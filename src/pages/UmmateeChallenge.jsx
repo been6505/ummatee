@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { DonutChart } from '../components/AdminCharts.jsx'
 
 // แดชบอร์ดแสดงผลยอดบริจาค Ummatee Challenge 2026 — สำหรับเปิดบนทีวีหน้างาน (/challenge)
-const TARGET = 1500000
-const RAISED = 732799.36
+const PER_PERSON = 100 // ค่าใช้จ่ายช่วยเหลือผู้ยากไร้ต่อคน (บาท)
+const poor = 5000 // จำนวนผู้ยากไร้เป้าหมาย (คน)
+const TARGET = poor * PER_PERSON // ยอดเป้าหมายรวม = จำนวนคน x ค่าใช้จ่ายต่อคน
+const RAISED = 73
 
 const ACCOUNT = {
   bank: 'ธนาคารอิสลามแห่งประเทศไทย (ibank)',
-  name: 'มูลนิธิอุมมะตี · Ummatee Foundation',
+  name: 'เพื่อช่วยเหลือผู้ยากไร้ปาเลสไตน์',
   number: '0011 1863 48',
 }
 
@@ -21,6 +23,7 @@ export default function UmmateeChallenge() {
 
   const remaining = Math.max(TARGET - RAISED, 0)
   const progress = (RAISED / TARGET) * 100
+  const canHelp = Math.min(Math.floor(RAISED / PER_PERSON), poor)
 
   const date = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'numeric', year: 'numeric' })
   const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -31,6 +34,7 @@ export default function UmmateeChallenge() {
   ]
 
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const fmtInt = (n) => n.toLocaleString('en-US')
 
   return (
     <div className="uc-dash">
@@ -39,21 +43,21 @@ export default function UmmateeChallenge() {
           <div className="uc-brand">
             <img className="uc-logo" src="/logo.png" alt="" />
             <div>
-              <h1>UMMATEE CHALLENGE 2026</h1>
+              <h1>IFTAR FOR GAZA 2026</h1>
               <h2>ให้ 100 ถึง 100</h2>
               <p>อัปเดตยอดเงินบริจาค · Financial Dashboard</p>
             </div>
           </div>
           <div className="uc-time-box">
             <div className="uc-time-item">
-              <span className="uc-ic">📅</span>
+              <span className="uc-ic"></span>
               <div>
                 <div className="uc-label">Last Update</div>
                 <div className="uc-value">{date}</div>
               </div>
             </div>
             <div className="uc-time-item">
-              <span className="uc-ic">🕐</span>
+              <span className="uc-ic"></span>
               <div>
                 <div className="uc-label">Time</div>
                 <div className="uc-value">{time}</div>
@@ -63,23 +67,28 @@ export default function UmmateeChallenge() {
         </header>
 
         <div className="uc-stats">
+
           <div className="uc-stat">
-            <div className="uc-stat-ic">🎯</div>
+            <div className="uc-stat-label">Goal<br /><span>ผู้ยากไร้</span></div>
+            <div className="uc-stat-value">{fmtInt(poor)} <small>คน</small></div>
+          </div>
+          <div className="uc-stat">
+            <div className="uc-stat-label">Helped<br /><span>สามารถช่วยเหลือได้</span></div>
+            <div className="uc-stat-value">{fmtInt(canHelp)} <small>คน</small></div>
+          </div>
+          <div className="uc-stat">
             <div className="uc-stat-label">Target<br /><span>ยอดเป้าหมาย</span></div>
             <div className="uc-stat-value">{fmt(TARGET)} <small>THB.</small></div>
           </div>
           <div className="uc-stat">
-            <div className="uc-stat-ic">💚</div>
             <div className="uc-stat-label">Total Raised<br /><span>ยอดบริจาคสะสม</span></div>
             <div className="uc-stat-value">{fmt(RAISED)} <small>THB.</small></div>
           </div>
           <div className="uc-stat">
-            <div className="uc-stat-ic">👛</div>
             <div className="uc-stat-label">Remaining<br /><span>ยอดคงเหลือ</span></div>
             <div className="uc-stat-value">{fmt(remaining)}</div>
           </div>
           <div className="uc-stat">
-            <div className="uc-stat-ic">📈</div>
             <div className="uc-stat-label">Progress<br /><span>ความคืบหน้า</span></div>
             <div className="uc-stat-value">{progress.toFixed(2)}%</div>
           </div>
@@ -122,14 +131,14 @@ export default function UmmateeChallenge() {
 
           <div className="uc-account">
             <h3>Account Details</h3>
-            <div className="uc-summary-body">
+            <div className="uc-account-body">
               <div className="uc-bank-logo">
-                <img src="/Logo-ibank.svg.png" alt="ibank" />
+                <img src="/ibank.png" alt="ibank" />
               </div>
               <div className="uc-account-info">
-                <div className="uc-account-row"><span className="uc-account-ic">🏦</span> <b>BANK</b><br />{ACCOUNT.bank}</div>
-                <div className="uc-account-row"><span className="uc-account-ic">👤</span> <b>ACCOUNT NAME</b><br />{ACCOUNT.name}</div>
-                <div className="uc-account-row"><span className="uc-account-ic">#️⃣</span> <b>ACCOUNT NUMBER</b><br />{ACCOUNT.number}</div>
+                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.bank}</div>
+                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.name}</div>
+                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.number}</div>
               </div>
             </div>
           </div>

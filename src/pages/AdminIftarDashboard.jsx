@@ -188,7 +188,7 @@ export default function AdminIftarDashboard() {
           <p style={{ textAlign: 'center', padding: 40 }}>กำลังโหลดข้อมูล...</p>
         ) : (
           <>
-            <div className="admin-grid">
+            <div className="admin-grid-3">
               <ChartCard title="เพศ" data={genderData} colors={PALETTE} types={['donut', 'column', 'hbar']} />
               <ChartCard title="ช่วงอายุ" data={ageData} types={['donut', 'column', 'hbar', 'line']} />
               <ChartCard title="รู้จักงานจากช่องทาง" data={channelData} types={['donut', 'hbar', 'column']} />

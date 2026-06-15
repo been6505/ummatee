@@ -855,12 +855,10 @@ select.iftar-input option{color:#222;background:#fff}
   .uc-summary-body,.uc-account-body{flex-direction:column;text-align:center}
   .uc-legend{width:100%}
   .uc-legend-item{justify-content:center}
-}
-/* มือถือเล็ก */
-@media (max-width: 420px){
-  .uc-stats{grid-template-columns:1fr}
-  .uc-stat{border-right:none !important;border-bottom:1px solid rgba(255,255,255,.15)}
-  .uc-time-box{flex-direction:column}
+  /* มือถือ: เวลา 1 แถว 2 คอลัมน์ | stat 3 แถว 2 คอลัมน์ */
+  .uc-time-box{flex-direction:row}
+  .uc-stat:nth-child(odd){border-right:1px solid rgba(255,255,255,.15)}
+  .uc-stat:nth-child(even){border-right:none}
 }
 
 @media (max-width: 900px){ /* ปรับขนาดบนมือถือ/หน้าจอแคบ */

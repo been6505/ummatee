@@ -797,16 +797,16 @@ select.iftar-input option{color:#222;background:#fff}
 .uc-card{width:100%;max-width:1400px;background:var(--paper);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card)}
 .uc-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:2px solid var(--gold);background:var(--green-deep)}
 .uc-brand{display:flex;align-items:center;gap:16px}
-.uc-logo{width:88px;height:88px;border-radius:50%;object-fit:contain;flex-shrink:0;border:2px solid var(--gold);font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;background:#fff;padding:6px}
-.uc-brand h1{margin:0;color:var(--gold-light);font-size:1.7rem;font-weight:800;letter-spacing:.5px}
+.uc-logo{width:150px;height:150px;border-radius:50%;object-fit:contain;flex-shrink:0;border:5px solid var(--gold);font-size:2rem;font-weight:800;display:flex;align-items:center;justify-content:center;background:#fff;padding:6px}
+.uc-brand h1{margin:0;color:var(--gold-light);font-size:3em;font-weight:800;letter-spacing:.5px}
 .uc-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#fff}
 .uc-brand p{margin:2px 0 0;color:rgba(255,255,255,.75);font-size:1rem}
 .uc-time-box{display:flex;gap:36px}
 .uc-time-item{display:flex;align-items:center;gap:14px;border:1px solid var(--gold);border-radius:14px;padding:16px 22px;color:#fff}
-.uc-time-item .uc-ic{font-size:2.2rem}
+.uc-time-item .uc-ic{font-size:1.5rem}
 .uc-label{font-size:1rem;color:var(--gold-light);font-weight:700}
 .uc-value{font-size:1.4rem;font-weight:800;color:#fff}
-.uc-stats{display:grid;grid-template-columns:repeat(4,1fr)}
+.uc-stats{display:grid;grid-template-columns:repeat(6,1fr)}
 .uc-stat{background:var(--green-mid);color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
 .uc-stat:last-child{border-right:none}
 .uc-stat-ic{font-size:1.6rem;margin-bottom:6px}
@@ -824,10 +824,10 @@ select.iftar-input option{color:#222;background:#fff}
 .uc-summary h3,.uc-account h3{margin:0 0 16px;font-size:1.45rem;font-weight:800;color:var(--green-deep)}
 .uc-summary-body{display:flex;align-items:center;gap:24px;border:1px solid var(--gold-light);border-radius:12px;padding:20px;background:#fff;flex:1}
 .uc-legend{display:flex;flex-direction:column;gap:18px}
-.uc-legend-item{display:flex;align-items:center;gap:12px;font-size:1.15rem}
+.uc-legend-item{display:flex;align-items:center;gap:12px;font-size:1.5rem}
 .uc-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
-.uc-legend-label{font-size:1.05rem;color:var(--ink-soft)}
-.uc-legend-value{font-weight:800;color:var(--green-deep);font-size:1.2rem}
+.uc-legend-label{font-size:1.5rem;color:var(--ink-soft)}
+.uc-legend-value{font-weight:700;color:var(--green-deep);font-size:1.5rem}
 .uc-account-body{display:flex;align-items:center;gap:24px;border:1px solid var(--gold-light);border-radius:12px;padding:20px;background:#fff}
 .uc-bank-logo{flex-shrink:0;width:90px;height:90px;border-radius:50%;background:#fff;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .uc-bank-logo img{width:100%;height:100%;object-fit:cover;display:block}

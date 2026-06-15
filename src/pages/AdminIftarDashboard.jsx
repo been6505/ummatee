@@ -4,6 +4,7 @@ import { collection, getDocs, orderBy, query } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
+import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 
 // แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
 // ดึงรายชื่อผู้ลงทะเบียนจาก Google Sheet เป็นหลัก (fallback เป็น Firestore) แล้วสรุปเป็นกราฟ + ตาราง
@@ -13,59 +14,31 @@ const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZR
 // token ต้องตรงกับที่ตั้งไว้ใน doGet ของ Apps Script — ถ้าไม่ส่งหรือผิด จะได้ {"error":"unauthorized"}
 const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
 
-// กราฟแท่งแนวนอน — ความกว้างเทียบกับค่าสูงสุดในชุดข้อมูล
-function BarList({ title, data, color = '#2e7d52' }) {
-  const max = Math.max(1, ...data.map((d) => d.value))
+// การ์ดกราฟที่เลือกประเภทได้ (โดนัท/แท่งนอน/แท่งตั้ง/เส้น) — ใช้ชุดกราฟกลางจาก AdminCharts
+function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true }) {
+  const [type, setType] = useState(types[0])
+  const cols = colors || legendColors(data.length)
   return (
-    <div className="admin-card">
-      <h4>{title}</h4>
-      {data.length === 0 && <p className="admin-empty">ไม่มีข้อมูล</p>}
-      {data.map((d) => (
-        <div className="admin-bar-row" key={d.label}>
-          <span className="admin-bar-label">{d.label}</span>
-          <div className="admin-bar-track">
-            <div className="admin-bar-fill" style={{ width: `${(d.value / max) * 100}%`, background: color }} />
-          </div>
-          <span className="admin-bar-value">{d.value}</span>
-        </div>
-      ))}
+    <div className="admin-card admin-card-center">
+      <div className="admin-card-head">
+        <h4>{title}</h4>
+        <ChartTypeSwitch value={type} onChange={setType} types={types} />
+      </div>
+      {data.length === 0 ? (
+        <p className="admin-empty">ไม่มีข้อมูล</p>
+      ) : (
+        <>
+          <Chart type={type} data={data} colors={cols} />
+          {showLegend && type === 'donut' && (
+            <div className="admin-legend">
+              {data.map((d, i) => (
+                <span key={d.label}><i style={{ background: cols[i % cols.length] }} /> {d.label}: {d.value}</span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
-  )
-}
-
-// รัศมีและเส้นรอบวงของโดนัทชาร์ต
-const R = 60
-const CIRC = 2 * Math.PI * R
-
-// โดนัทชาร์ต SVG — แต่ละรายการเป็นเส้นโค้ง 1 ชิ้น พร้อมตัวเลขรวมตรงกลาง
-function DonutChart({ data, colors }) {
-  const total = data.reduce((s, d) => s + d.value, 0) || 1
-  let offset = 0
-  return (
-    <svg viewBox="0 0 160 160" className="admin-donut">
-      <circle cx="80" cy="80" r={R} fill="none" stroke="#eee" strokeWidth="26" />
-      {data.map((d, i) => {
-        const len = (d.value / total) * CIRC
-        const seg = (
-          <circle
-            key={d.label}
-            cx="80" cy="80" r={R}
-            fill="none"
-            stroke={colors[i % colors.length]}
-            strokeWidth="26"
-            strokeDasharray={`${len} ${CIRC - len}`}
-            strokeDashoffset={-offset}
-            transform="rotate(-90 80 80)"
-          >
-            <title>{d.label}: {d.value}</title>
-          </circle>
-        )
-        offset += len
-        return seg
-      })}
-      <circle cx="80" cy="80" r={R - 13} fill="#fff" />
-      <text x="80" y="84" textAnchor="middle" fontSize="22" fontWeight="800" fill="#1a5c3a">{total}</text>
-    </svg>
   )
 }
 
@@ -95,7 +68,6 @@ function ageGroup(ageStr) {
   return '50+'
 }
 
-const DONUT_COLORS = ['#2e7d52', '#e8194a', '#c9a84c', '#2196f3', '#8e44ad', '#e67e22']
 
 export default function AdminIftarDashboard() {
   const { user, loading: authLoading } = useAdminAuth()
@@ -208,20 +180,12 @@ export default function AdminIftarDashboard() {
         ) : (
           <>
             <div className="admin-grid">
-              <div className="admin-card admin-card-center">
-                <h4>เพศ</h4>
-                <DonutChart data={genderData} colors={DONUT_COLORS} />
-                <div className="admin-legend">
-                  {genderData.map((d, i) => (
-                    <span key={d.label}><i style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} /> {d.label}: {d.value}</span>
-                  ))}
-                </div>
-              </div>
-              <BarList title="ช่วงอายุ" data={ageData} color="#2196f3" />
-              <BarList title="รู้จักงานจากช่องทาง" data={channelData} color="#e8194a" />
-              <BarList title="สิ่งที่คาดหวังจากงาน" data={expectData} color="#c9a84c" />
-              <BarList title="จังหวัดที่พำนัก (Top 10)" data={provinceData} color="#8e44ad" />
-              <BarList title="อาชีพ (Top 10)" data={jobData} color="#2e7d52" />
+              <ChartCard title="เพศ" data={genderData} colors={PALETTE} types={['donut', 'column', 'hbar']} />
+              <ChartCard title="ช่วงอายุ" data={ageData} types={['donut', 'column', 'hbar', 'line']} />
+              <ChartCard title="รู้จักงานจากช่องทาง" data={channelData} types={['donut', 'hbar', 'column']} />
+              <ChartCard title="สิ่งที่คาดหวังจากงาน" data={expectData} types={['donut', 'hbar', 'column']} />
+              <ChartCard title="จังหวัดที่พำนัก (Top 10)" data={provinceData} types={['hbar', 'column', 'donut', 'line']} />
+              <ChartCard title="อาชีพ (Top 10)" data={jobData} types={['hbar', 'column', 'donut']} />
             </div>
 
             <div className="admin-card" style={{ marginTop: 24 }}>

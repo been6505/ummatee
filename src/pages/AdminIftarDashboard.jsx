@@ -78,6 +78,17 @@ function ageGroup(ageStr) {
 }
 
 
+// มิติที่ใช้กรองตาราง — รวมเพศ/อาชีพ/จังหวัด/ช่วงอายุ/ช่องทางที่รู้จัก/สิ่งที่คาดหวัง
+// get() คืน array ของค่า (รองรับฟิลด์หลายค่าอย่าง channel/expect ที่คั่นด้วยจุลภาค)
+const FILTER_FIELDS = [
+  { key: 'gender', label: 'เพศ', get: (r) => [r.gender] },
+  { key: 'job', label: 'อาชีพ', get: (r) => [r.job] },
+  { key: 'province', label: 'จังหวัด', get: (r) => [r.province] },
+  { key: 'age', label: 'ช่วงอายุ', get: (r) => [ageGroup(r.age)] },
+  { key: 'channel', label: 'รู้จักงาน', get: (r) => (r.channel || '').split(',').map((s) => s.trim()).filter(Boolean) },
+  { key: 'expect', label: 'สิ่งที่คาดหวัง', get: (r) => (r.expect || '').split(',').map((s) => s.trim()).filter(Boolean) },
+]
+
 export default function AdminIftarDashboard() {
   const { user, loading: authLoading } = useAdminAuth()
   const authed = !!user
@@ -119,8 +130,8 @@ export default function AdminIftarDashboard() {
   }, [authed])
 
   // ตัวกรองและการเรียงลำดับของตารางรายชื่อ
-  const [genderFilter, setGenderFilter] = useState('')
-  const [provinceFilter, setProvinceFilter] = useState('')
+  const [filterField, setFilterField] = useState('gender') // มิติที่เลือกกรอง (จัดเรียงโดย)
+  const [filterValue, setFilterValue] = useState('') // ค่าที่เลือกในมิตินั้น
   const [sortKey, setSortKey] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
 
@@ -130,18 +141,22 @@ export default function AdminIftarDashboard() {
     else { setSortKey(key); setSortDir('asc') }
   }
 
-  const provinceOptions = useMemo(
-    () => Array.from(new Set(regs.map((r) => (r.province || '').trim()).filter(Boolean))).sort(),
-    [regs]
+  const fieldDef = FILTER_FIELDS.find((f) => f.key === filterField) || FILTER_FIELDS[0]
+
+  // ค่าตัวเลือกของมิติที่เลือก (distinct, เรียง) — เปลี่ยนมิติแล้วต้องรีเซ็ตค่าที่เลือก
+  const valueOptions = useMemo(
+    () => Array.from(new Set(regs.flatMap((r) => fieldDef.get(r)).map((v) => (v || '').toString().trim()).filter(Boolean))).sort(),
+    [regs, filterField]
   )
 
-  // กรองด้วยคำค้น/เพศ/จังหวัด แล้วเรียงตามคอลัมน์ที่เลือก (อายุเรียงแบบตัวเลข)
+  const pickField = (key) => { setFilterField(key); setFilterValue('') }
+
+  // กรองด้วยคำค้น + มิติที่เลือก แล้วเรียงตามคอลัมน์ที่เลือก (อายุเรียงแบบตัวเลข)
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     let list = regs.filter((r) => {
       if (q && !`${r.fname} ${r.lname} ${r.phone} ${r.email} ${r.province} ${r.job} ${r.ref}`.toLowerCase().includes(q)) return false
-      if (genderFilter && r.gender !== genderFilter) return false
-      if (provinceFilter && r.province !== provinceFilter) return false
+      if (filterValue && !fieldDef.get(r).map((v) => (v || '').toString().trim()).includes(filterValue)) return false
       return true
     })
     list = [...list].sort((a, b) => {
@@ -152,7 +167,7 @@ export default function AdminIftarDashboard() {
       return sortDir === 'asc' ? cmp : -cmp
     })
     return list
-  }, [regs, search, genderFilter, provinceFilter, sortKey, sortDir])
+  }, [regs, search, filterField, filterValue, sortKey, sortDir])
 
   // สรุปข้อมูลเป็นชุดสำหรับกราฟแต่ละตัว
   const genderData = useMemo(() => countBy(regs, (r) => r.gender), [regs])
@@ -207,17 +222,15 @@ export default function AdminIftarDashboard() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
-                  <select className="admin-select" value={genderFilter} onChange={(e) => setGenderFilter(e.target.value)}>
-                    <option value="">ทุกเพศ</option>
-                    <option value="ชาย">ชาย</option>
-                    <option value="หญิง">หญิง</option>
+                  <select className="admin-select" value={filterField} onChange={(e) => pickField(e.target.value)} title="จัดเรียงโดย">
+                    {FILTER_FIELDS.map((f) => <option key={f.key} value={f.key}>จัดเรียงโดย: {f.label}</option>)}
                   </select>
-                  <select className="admin-select" value={provinceFilter} onChange={(e) => setProvinceFilter(e.target.value)}>
-                    <option value="">ทุกจังหวัด</option>
-                    {provinceOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+                  <select className="admin-select" value={filterValue} onChange={(e) => setFilterValue(e.target.value)}>
+                    <option value="">ทั้งหมด ({fieldDef.label})</option>
+                    {valueOptions.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
-                  {(search || genderFilter || provinceFilter) && (
-                    <button className="admin-clear" onClick={() => { setSearch(''); setGenderFilter(''); setProvinceFilter('') }}>
+                  {(search || filterValue) && (
+                    <button className="admin-clear" onClick={() => { setSearch(''); setFilterValue('') }}>
                       ล้างตัวกรอง
                     </button>
                   )}

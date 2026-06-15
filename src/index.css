@@ -451,7 +451,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
     radial-gradient(900px 500px at 85% -10%,rgba(255,200,120,.35),transparent 55%),
     linear-gradient(150deg,#e8772b 0%,#f4a23a 55%,#e8772b 130%);
 }
-.gaza-page .iftar-poster{display:block;max-width:420px;width:100%;margin:0 auto 28px;border-radius:18px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.gaza-page .iftar-poster{display:block;max-width:420px;width:100%;margin:0 auto 24px;border-radius:18px;}
 .gaza-page .iftar-campaign{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.92);color:#b5481c;padding:8px 22px;border-radius:999px;font-weight:800;font-size:.95rem;margin-bottom:14px}
 .gaza-page .iftar-eyebrow{background:rgba(0,0,0,.25)}
 .gaza-page .iftar-tagline{font-weight:700;font-size:1.1rem;opacity:.95;margin:-6px 0 18px}
@@ -460,11 +460,15 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .gaza-page .info-box .ib-k{opacity:.85}
 .gaza-page .info-box .ib-link{background:rgba(255,255,255,.92);color:#b5481c}
 .gaza-page .info-box .ib-link:hover{background:#fff}
-.iftar-donate{display:flex;align-items:center;gap:14px;justify-content:center;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:14px 28px;margin:28px auto 0;max-width:480px}
+.iftar-donate{display:flex;align-items:center;gap:14px;justify-content:center;width:100%;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:14px 28px;margin:28px auto 0;max-width:480px;color:#fff;cursor:pointer;transition:background .2s,transform .2s}
+.iftar-donate:hover{background:rgba(255,255,255,.24);transform:translateY(-2px)}
 .iftar-donate-icon{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.iftar-donate-body{text-align:left;line-height:1.4}
+.iftar-donate-body{text-align:left;line-height:1.4;flex:1}
 .iftar-donate-title{font-size:.85rem;opacity:.9}
 .iftar-donate-account{font-size:1.4rem;font-weight:800;letter-spacing:1px}
+.iftar-donate .don-copy{width:36px;height:36px;flex:0 0 36px;border-radius:10px;display:grid;place-items:center;background:rgba(0,0,0,.18);color:#fff;transition:background .2s}
+.iftar-donate:hover .don-copy{background:rgba(0,0,0,.3)}
+.iftar-donate .don-copy.copied{background:#fff;color:#b5481c}
 .iftar-extra{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:18px;font-weight:600;font-size:.92rem;opacity:.95}
 
 /* ============ GIVE PAGE (blue tone) ============ */
@@ -476,7 +480,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .give-page .iftar-eyebrow{background:rgba(77,184,255,.85)}
 .give-page .accent{color:#bfe6ff}
 .give-page .gold-rule{background:linear-gradient(90deg,#4db8ff,#bfe6ff)}
-.info-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+.info-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px}
 .info-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:20px 16px;backdrop-filter:blur(6px)}
 .info-box .ib-ic{font-size:1.5rem;margin-bottom:8px}
 .info-box .ib-k{font-size:1rem;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;margin-bottom:4px}
@@ -788,6 +792,55 @@ select.iftar-input option{color:#222;background:#fff}
 .shop-modal-info .shop-stock{font-size:.95rem} /* แถวจำนวนคงเหลือ */
 .shop-interest-btn{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;font-weight:700;padding:18px 28px;border-radius:999px;text-decoration:none;font-size:1.15rem;transition:transform .15s,box-shadow .15s} /* ปุ่ม "สนใจสินค้า" ไปไลน์ */
 .shop-interest-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(6,199,85,.3)}
+/* แดชบอร์ดยอดบริจาค YATIM FIRST 2026 — /yatim-first */
+.yf-dash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0b0b0b;font-family:inherit}
+.yf-card{width:100%;max-width:1400px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.yf-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:2px solid #2e7d52}
+.yf-brand{display:flex;align-items:center;gap:16px}
+.yf-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.yf-brand h1{margin:0;color:#2e7d52;font-size:1.7rem;font-weight:800;letter-spacing:.5px}
+.yf-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#222}
+.yf-brand p{margin:2px 0 0;color:#555;font-size:1rem}
+.yf-time-box{display:flex;gap:16px}
+.yf-time-item{display:flex;align-items:center;gap:10px;border:1px solid #2e7d52;border-radius:12px;padding:10px 18px}
+.yf-time-item .yf-ic{font-size:1.4rem}
+.yf-label{font-size:.85rem;color:#666;font-weight:700}
+.yf-value{font-size:1.1rem;font-weight:800;color:#222}
+.yf-stats{display:grid;grid-template-columns:repeat(4,1fr)}
+.yf-stat{background:#2e7d52;color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
+.yf-stat:last-child{border-right:none}
+.yf-stat-ic{font-size:1.6rem;margin-bottom:6px}
+.yf-stat-label{font-weight:800;font-size:1.05rem;line-height:1.5;margin-bottom:8px}
+.yf-stat-label span{font-weight:600;font-size:.85rem;opacity:.9}
+.yf-stat-value{font-size:1.6rem;font-weight:800}
+.yf-stat-value small{font-size:1rem;font-weight:700}
+.yf-progress-section{padding:20px 32px}
+.yf-progress-section h3{margin:0 0 12px;font-size:1.2rem;font-weight:800;color:#222}
+.yf-progress-bar{display:flex;height:36px;border-radius:8px;overflow:hidden;background:#e53935}
+.yf-progress-fill{background:#2e7d52;height:100%;transition:width .4s}
+.yf-progress-labels{display:flex;justify-content:space-between;margin-top:6px;font-weight:700;color:#444}
+.yf-bottom{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;padding:0 32px 24px}
+.yf-summary h3,.yf-account h3{margin:0 0 16px;font-size:1.2rem;font-weight:800;color:#222}
+.yf-summary-body{display:flex;align-items:center;gap:24px;border:1px solid #ddd;border-radius:12px;padding:20px}
+.yf-legend{display:flex;flex-direction:column;gap:14px}
+.yf-legend-item{display:flex;align-items:center;gap:10px}
+.yf-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.yf-legend-label{font-size:.95rem;color:#555}
+.yf-legend-value{font-weight:800;color:#222}
+.yf-account-body{display:flex;align-items:center;gap:24px;border:1px solid #ddd;border-radius:12px;padding:20px;height:100%}
+.yf-bank-logo{flex-shrink:0;width:90px;height:90px;border-radius:50%;background:#e60050;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;text-align:center}
+.yf-account-info{display:flex;flex-direction:column;gap:10px}
+.yf-account-row{font-size:.95rem;color:#333;line-height:1.5}
+.yf-account-row b{color:#2e7d52;letter-spacing:.5px;font-size:.85rem}
+.yf-account-ic{margin-right:4px}
+.yf-footer{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;align-items:center;background:#2e7d52;color:#fff;padding:14px 24px;font-size:.95rem;font-weight:600}
+@media (max-width: 900px){
+  .yf-header{flex-direction:column;align-items:flex-start}
+  .yf-stats{grid-template-columns:repeat(2,1fr)}
+  .yf-bottom{grid-template-columns:1fr}
+  .yf-summary-body,.yf-account-body{flex-direction:column;text-align:center}
+}
+
 @media (max-width: 900px){ /* ปรับขนาดบนมือถือ/หน้าจอแคบ */
   .shop-modal-body{grid-template-columns:1fr} /* บนมือถือ ให้เรียง 1 คอลัมน์ (รูปบน รายละเอียดล่าง) */
   .shop-modal-info{padding:24px}

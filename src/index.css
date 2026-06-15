@@ -451,7 +451,7 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
     radial-gradient(900px 500px at 85% -10%,rgba(255,200,120,.35),transparent 55%),
     linear-gradient(150deg,#e8772b 0%,#f4a23a 55%,#e8772b 130%);
 }
-.gaza-page .iftar-poster{display:block;max-width:320px;width:100%;margin:0 auto 24px;border-radius:18px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.gaza-page .iftar-poster{display:block;max-width:420px;width:100%;margin:0 auto 28px;border-radius:18px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
 .gaza-page .iftar-campaign{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.92);color:#b5481c;padding:8px 22px;border-radius:999px;font-weight:800;font-size:.95rem;margin-bottom:14px}
 .gaza-page .iftar-eyebrow{background:rgba(0,0,0,.25)}
 .gaza-page .iftar-tagline{font-weight:700;font-size:1.1rem;opacity:.95;margin:-6px 0 18px}

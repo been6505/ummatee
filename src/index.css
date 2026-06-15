@@ -793,11 +793,11 @@ select.iftar-input option{color:#222;background:#fff}
 .shop-interest-btn{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;font-weight:700;padding:18px 28px;border-radius:999px;text-decoration:none;font-size:1.15rem;transition:transform .15s,box-shadow .15s} /* ปุ่ม "สนใจสินค้า" ไปไลน์ */
 .shop-interest-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(6,199,85,.3)}
 /* แดชบอร์ดยอดบริจาค YATIM FIRST 2026 — /yatim-first */
-.uc-dash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--green-deep);font-family:inherit}
+.uc-dash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:0%;font-family:inherit;background:linear-gradient(180deg,#EAF6EE 0%,#F4F9F5 280px,#F4F9F5 100%);box-shadow:inset 5px 40px 50px 1px rgba(27,94,54,.08)}
 .uc-card{width:100%;max-width:1400px;background:var(--paper);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card)}
 .uc-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:2px solid var(--gold);background:var(--green-deep)}
 .uc-brand{display:flex;align-items:center;gap:16px}
-.uc-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--gold)}
+.uc-logo{width:88px;height:88px;border-radius:50%;object-fit:contain;flex-shrink:0;border:2px solid var(--gold);font-size:1.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;background:#fff;padding:6px}
 .uc-brand h1{margin:0;color:var(--gold-light);font-size:1.7rem;font-weight:800;letter-spacing:.5px}
 .uc-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#fff}
 .uc-brand p{margin:2px 0 0;color:rgba(255,255,255,.75);font-size:1rem}
@@ -810,8 +810,8 @@ select.iftar-input option{color:#222;background:#fff}
 .uc-stat{background:var(--green-mid);color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
 .uc-stat:last-child{border-right:none}
 .uc-stat-ic{font-size:1.6rem;margin-bottom:6px}
-.uc-stat-label{font-weight:800;font-size:1.05rem;line-height:1.5;margin-bottom:8px}
-.uc-stat-label span{font-weight:600;font-size:.85rem;opacity:.9}
+.uc-stat-label{font-weight:800;font-size:1.75rem;line-height:1.5;margin-bottom:8px}
+.uc-stat-label span{font-weight:600;font-size:1.5rem;opacity:.9}
 .uc-stat-value{font-size:1.6rem;font-weight:800;color:var(--gold-light)}
 .uc-stat-value small{font-size:1rem;font-weight:700;color:#fff}
 .uc-progress-section{padding:20px 32px}

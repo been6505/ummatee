@@ -638,8 +638,11 @@ select.iftar-input option{color:#222;background:#fff}
 
 .admin-table-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
 .admin-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.admin-search{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;min-width:220px}
+.admin-search{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;min-width:50px}
 .admin-select{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;background:#fff;cursor:pointer}
+.admin-select-icon{display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#6b7280}
+.admin-select-icon .admin-select{border:none;padding:10px 4px;background:transparent}
+.admin-select-icon svg{flex-shrink:0}
 .admin-clear{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.86rem;background:#fff;cursor:pointer;color:var(--ink-soft)}
 .admin-clear:hover{background:#f0f0f0}
 .admin-table-wrap{overflow-x:auto}

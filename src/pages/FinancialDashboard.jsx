@@ -82,7 +82,7 @@ export default function FinancialDashboard() {
           <div className="uc-brand">
             <img className="uc-logo" src="/logo.png" alt="" />
             <div>
-              <h1>อัปเดตยอดเงินบริจาค · Financial Dashboard</h1>
+              <h1>อัปเดตยอดเงินบริจาค <br/> Financial Dashboard</h1>
               <h2>IFTAR FOR GAZA 2026</h2>
             </div>
           </div>

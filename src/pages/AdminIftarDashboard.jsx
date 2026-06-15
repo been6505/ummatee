@@ -222,9 +222,12 @@ export default function AdminIftarDashboard() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
-                  <select className="admin-select" value={filterField} onChange={(e) => pickField(e.target.value)} title="จัดเรียงโดย">
-                    {FILTER_FIELDS.map((f) => <option key={f.key} value={f.key}>จัดเรียงโดย: {f.label}</option>)}
-                  </select>
+                  <div className="admin-select-icon" title="จัดเรียงโดย">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                    <select className="admin-select" value={filterField} onChange={(e) => pickField(e.target.value)}>
+                      {FILTER_FIELDS.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                    </select>
+                  </div>
                   <select className="admin-select" value={filterValue} onChange={(e) => setFilterValue(e.target.value)}>
                     <option value="">ทั้งหมด ({fieldDef.label})</option>
                     {valueOptions.map((v) => <option key={v} value={v}>{v}</option>)}

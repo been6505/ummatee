@@ -610,6 +610,8 @@ select.iftar-input option{color:#222;background:#fff}
 .fin-chart-legend{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--ink-soft);font-weight:600}
 .fin-chart-legend span{display:flex;align-items:center;gap:8px}
 .fin-chart-legend i{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
+.admin-account-preview{margin-top:14px;display:flex;flex-direction:column;gap:6px;font-size:.92rem;color:var(--ink-soft);background:rgba(46,125,82,.05);border:1px solid rgba(46,125,82,.12);border-radius:10px;padding:14px}
+.admin-account-preview b{color:var(--green-deep)}
 .admin-empty{color:var(--ink-soft);font-size:.9rem}
 
 .admin-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:.88rem}

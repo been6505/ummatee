@@ -3,6 +3,7 @@ import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
 import { collection, addDoc } from 'firebase/firestore'
+import CopyIcon from '../components/CopyIcon.jsx'
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
 // ตัวเลือกช่องทางที่รู้จักงาน
@@ -43,7 +44,7 @@ const T = {
     ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ ศรีนครินทร์',
     ibMap: 'ดูแผนที่',
     ibType: 'ประเภท', ibTypeV: 'เข้าร่วมฟรี ไม่มีค่าใช้จ่าย',
-    donateTitle: 'อุมมะตี เพื่อช่วยผู้ยากไร้ในปาเลสไตน์',
+    donateTitle: 'เพื่อช่วยผู้ยากไร้ในปาเลสไตน์',
     donateAccount: '0011 1863 48',
     seatLimit: 'บุฟเฟ่ต์จำกัด 500 ที่นั่ง',
     contactTel: 'สอบถามเพิ่มเติม Tel. 061-7962074',
@@ -150,6 +151,38 @@ const T = {
   },
 }
 
+// กล่องเลขบัญชีบริจาค — แตะเพื่อคัดลอกเฉพาะเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
+function DonateAccount({ icon, title, account }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    const clean = account.replace(/\s/g, '')
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean).catch(() => fallbackCopy(clean))
+    } else {
+      fallbackCopy(clean)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
+  }
+  const fallbackCopy = (text) => {
+    const el = document.createElement('textarea')
+    el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+    document.body.appendChild(el); el.select()
+    try { document.execCommand('copy') } catch (e) { /* noop */ }
+    document.body.removeChild(el)
+  }
+  return (
+    <button type="button" className="iftar-donate" onClick={copy}>
+      <img className="iftar-donate-icon" src={icon} alt="" />
+      <div className="iftar-donate-body">
+        <div className="iftar-donate-title">{title}</div>
+        <div className="iftar-donate-account">{account}</div>
+      </div>
+      <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? '✓' : <CopyIcon />}</div>
+    </button>
+  )
+}
+
 // ปุ่มตัวเลือกแบบ chip (กดเลือก/ยกเลิกได้)
 function Chip({ label, active, onClick }) {
   return (
@@ -236,25 +269,23 @@ export default function Iftar() {
     <main className="page gaza-page">
       <section className="iftar-hero">
         <div className="fc-pattern hero-pattern"></div>
+
         <div className="inner">
-          <img className="iftar-poster" src={POSTER_IMG} alt="Iftar For Gaza" loading="lazy" />
-          <span className="iftar-campaign">{t.campaign}</span>
-          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
-          <h1><span className="moon">Iftar</span> For Gaza</h1>
+                    <h1><span className="moon">Iftar</span> For Gaza</h1>
           <p className="iftar-tagline">{t.tagline}</p>
+
+          <span className="iftar-campaign">{t.campaign}</span>
+          <img className="iftar-poster" src="/posteriftar.jpg" alt="Iftar For Gaza" loading="lazy" />
+          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
+
           <p className="lead">{t.lead}</p>
           <div className="info-boxes">
-            <div className="info-box"><div className="ib-ic">📅</div><div className="ib-k">{t.ibDate}</div><div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
+            <div className="info-box"><div className="ib-ic">📅</div><span className="ib-k">{t.ibDate}</span>
+            <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
             <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
             <div className="info-box"><div className="ib-ic">🎟️</div><div className="ib-k">{t.ibType}</div><div className="ib-v">{t.ibTypeV}</div></div>
           </div>
-          <div className="iftar-donate">
-            <img className="iftar-donate-icon" src="/Logo-ibank.svg.png" alt="" />
-            <div className="iftar-donate-body">
-              <div className="iftar-donate-title">{t.donateTitle}</div>
-              <div className="iftar-donate-account">{t.donateAccount}</div>
-            </div>
-          </div>
+          <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
           <div className="iftar-extra">
             <span>{t.seatLimit}</span>
             <span>{t.contactTel}</span>

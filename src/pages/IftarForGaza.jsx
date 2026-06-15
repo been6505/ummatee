@@ -273,15 +273,14 @@ export default function Iftar() {
         <div className="inner">
           <h1><span className="moon">Iftar</span> For Gaza</h1>
           <p className="iftar-tagline">{t.tagline}</p>
+          <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
 
-          <span className="iftar-campaign">{t.campaign}</span>
-          <img className="iftar-poster" src="/posteriftar.jpg" alt="Iftar For Gaza" loading="lazy" />
+          <img className="iftar-poster" src="/poster-iftar.png" alt="Iftar For Gaza" loading="lazy" />
 
           <p className="lead">{t.lead}</p>
 
-          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
-          
 
+          <span className="iftar-campaign">{t.campaign}</span>
           <div className="info-boxes">
             <div className="info-box"><div className="ib-ic">   <span className="ib-k">{t.ibDate}</span></div>
               <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
@@ -290,14 +289,14 @@ export default function Iftar() {
           </div>
           <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
           <div className="iftar-extra">
-            
-            <span>{t.contactTel}</span>
-            
+
+
+
           </div>
         </div>
       </section>
 
-      <section className="iftar-stage">
+      <section className="iftar-stage" id="iftar-form">
         {successRef ? (
           <div className="iftar-success">
             <div className="success-card">

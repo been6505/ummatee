@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/admin/donations', label: '💰 เงินบริจาค' },
   { href: '/admin/calendar', label: '📅 ปฏิทิน' },
   { href: '/admin/shop', label: '🛍️ Um Shop' },
+  { href: '/admin/financial-dashboard', label: '📊 แดชบอร์ดการเงิน' },
 ]
 
 export default function AdminNav() {

@@ -1,19 +1,45 @@
 import { useEffect, useState } from 'react'
 import { DonutChart } from '../components/AdminCharts.jsx'
+import CopyIcon from '../components/CopyIcon.jsx'
+import { useFinancialData } from '../data/financialData.js'
 
-// แดชบอร์ดแสดงผลยอดบริจาค Ummatee Challenge 2026 — สำหรับเปิดบนทีวีหน้างาน (/challenge)
-const PER_PERSON = 100 // ค่าใช้จ่ายช่วยเหลือผู้ยากไร้ต่อคน (บาท)
-const poor = 5000 // จำนวนผู้ยากไร้เป้าหมาย (คน)
-const TARGET = poor * PER_PERSON // ยอดเป้าหมายรวม = จำนวนคน x ค่าใช้จ่ายต่อคน
-const RAISED = 1000000
+// แดชบอร์ดแสดงผลยอดบริจาค (Financial Dashboard) — สำหรับเปิดบนทีวีหน้างาน (/challenge)
+// ข้อมูลอ่านจาก Firestore (config/financialDashboard) แก้ไขได้ที่ /admin/financial-dashboard
 
-const ACCOUNT = {
-  bank: 'ธนาคารอิสลามแห่งประเทศไทย (ibank)',
-  name: 'เพื่อช่วยเหลือผู้ยากไร้ปาเลสไตน์',
-  number: '0011 1863 48',
+// กล่องข้อมูลบัญชี — แตะเพื่อคัดลอกเฉพาะเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
+function AccountInfo({ account }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    const clean = account.number.replace(/\s/g, '')
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean).catch(() => fallbackCopy(clean))
+    } else {
+      fallbackCopy(clean)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
+  }
+  const fallbackCopy = (text) => {
+    const el = document.createElement('textarea')
+    el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+    document.body.appendChild(el); el.select()
+    try { document.execCommand('copy') } catch (e) { /* noop */ }
+    document.body.removeChild(el)
+  }
+  return (
+    <button type="button" className="uc-account-info" onClick={copy} title="คลิกเพื่อคัดลอกเลขบัญชี">
+      <div className="uc-account-row uc-account-bank">{account.bank}</div>
+      <div className="uc-account-row uc-account-name">{account.name}</div>
+      <div className="uc-account-row uc-account-number">
+        {account.number}
+        <span className={`uc-account-copy ${copied ? 'copied' : ''}`}>{copied ? '✓ คัดลอกแล้ว' : <CopyIcon />}</span>
+      </div>
+    </button>
+  )
 }
 
-export default function UmmateeChallenge() {
+export default function FinancialDashboard() {
+  const { data, loading } = useFinancialData()
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -21,9 +47,13 @@ export default function UmmateeChallenge() {
     return () => clearInterval(id)
   }, [])
 
+  const { poor, perPerson, raised, account } = data
+  const TARGET = poor * perPerson
+  const RAISED = raised
+
   const remaining = Math.max(TARGET - RAISED, 0)
-  const progress = (RAISED / TARGET) * 100
-  const canHelp = Math.min(Math.floor(RAISED / PER_PERSON), poor)
+  const progress = TARGET > 0 ? (RAISED / TARGET) * 100 : 0
+  const canHelp = Math.min(Math.floor(RAISED / (perPerson || 1)), poor)
 
   const date = now.toLocaleDateString('th-TH', { day: '2-digit', month: 'numeric', year: 'numeric' })
   const time = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -38,10 +68,12 @@ export default function UmmateeChallenge() {
     { label: 'สามารถช่วยเหลือได้', value: canHelp },
     { label: 'รอความช่วยเหลือ', value: helpRemaining },
   ]
-  const helpProgress = (canHelp / poor) * 100
+  const helpProgress = poor > 0 ? (canHelp / poor) * 100 : 0
 
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const fmtInt = (n) => n.toLocaleString('en-US')
+
+  if (loading) return null
 
   return (
     <div className="uc-dash">
@@ -52,7 +84,6 @@ export default function UmmateeChallenge() {
             <div>
               <h1>อัปเดตยอดเงินบริจาค · Financial Dashboard</h1>
               <h2>IFTAR FOR GAZA 2026</h2>
-             
             </div>
           </div>
           <div className="uc-time-box">
@@ -74,7 +105,6 @@ export default function UmmateeChallenge() {
         </header>
 
         <div className="uc-stats">
-
           <div className="uc-stat">
             <div className="uc-stat-label">Goal<br /><span>ผู้ยากไร้</span></div>
             <div className="uc-stat-value">{fmtInt(poor)} <small>คน</small></div>
@@ -165,11 +195,7 @@ export default function UmmateeChallenge() {
               <div className="uc-bank-logo">
                 <img src="/ibank.png" alt="ibank" />
               </div>
-              <div className="uc-account-info">
-                <div className="uc-account-row uc-account-bank">{ACCOUNT.bank}</div>
-                <div className="uc-account-row uc-account-name">{ACCOUNT.name}</div>
-                <div className="uc-account-row uc-account-number">{ACCOUNT.number}</div>
-              </div>
+              <AccountInfo account={account} />
             </div>
           </div>
         </div>
@@ -177,7 +203,6 @@ export default function UmmateeChallenge() {
         <footer className="uc-footer">
           <span> มูลนิธิอุมมะตี · Ummatee Foundation</span>
           <span> facebook.com/UmmateeinThailand</span>
-        
         </footer>
       </div>
     </div>

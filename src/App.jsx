@@ -17,10 +17,11 @@ const AdminCalendar = lazy(() => import('./pages/AdminCalendar.jsx'))
 const AdminHome = lazy(() => import('./pages/AdminHome.jsx'))
 const Shop = lazy(() => import('./pages/Shop.jsx'))
 const AdminShop = lazy(() => import('./pages/AdminShop.jsx'))
-const UmmateeChallenge = lazy(() => import('./pages/UmmateeChallenge.jsx'))
+const FinancialDashboard = lazy(() => import('./pages/FinancialDashboard.jsx'))
+const AdminFinancialDashboard = lazy(() => import('./pages/AdminFinancialDashboard.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/um-shop': 'shop', '/admin/shop': 'admin-shop', '/challenge': 'challenge' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/um-shop': 'shop', '/admin/shop': 'admin-shop', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026', shop: '/um-shop' }
 
 // อ่าน path ปัจจุบันจาก URL แล้วแปลงเป็นชื่อหน้า (ถ้าไม่รู้จักให้ไปหน้า home)
@@ -64,7 +65,8 @@ export default function App() {
   if (page === 'admin-calendar') return <Suspense fallback={null}><AdminCalendar /></Suspense>
   if (page === 'admin-home') return <Suspense fallback={null}><AdminHome /></Suspense>
   if (page === 'admin-shop') return <Suspense fallback={null}><AdminShop /></Suspense>
-  if (page === 'challenge') return <Suspense fallback={null}><UmmateeChallenge /></Suspense>
+  if (page === 'challenge') return <Suspense fallback={null}><FinancialDashboard /></Suspense>
+  if (page === 'admin-financial') return <Suspense fallback={null}><AdminFinancialDashboard /></Suspense>
 
   return (
     <LangProvider>

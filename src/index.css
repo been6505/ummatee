@@ -602,6 +602,8 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
 /* กริดกราฟแบบ 3 คอลัมน์ (หน้า admin iftar) — ย่อเป็น 2 และ 1 คอลัมน์บนจอเล็ก */
 .admin-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.admin-grid-3 .admin-card{padding:12px}
+.admin-grid-3 button{display:none}
 @media (max-width:1000px){.admin-grid-3{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.admin-grid-3{grid-template-columns:1fr}}
 /* มือถือ: จัดหัวการ์ดกราฟ (ชื่อ + ปุ่มเลือกชนิด) และข้อความให้อยู่กึ่งกลาง */

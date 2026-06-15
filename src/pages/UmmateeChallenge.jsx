@@ -5,7 +5,7 @@ import { DonutChart } from '../components/AdminCharts.jsx'
 const PER_PERSON = 100 // ค่าใช้จ่ายช่วยเหลือผู้ยากไร้ต่อคน (บาท)
 const poor = 5000 // จำนวนผู้ยากไร้เป้าหมาย (คน)
 const TARGET = poor * PER_PERSON // ยอดเป้าหมายรวม = จำนวนคน x ค่าใช้จ่ายต่อคน
-const RAISED = 100
+const RAISED = 1000000
 
 const ACCOUNT = {
   bank: 'ธนาคารอิสลามแห่งประเทศไทย (ibank)',
@@ -50,9 +50,9 @@ export default function UmmateeChallenge() {
           <div className="uc-brand">
             <img className="uc-logo" src="/logo.png" alt="" />
             <div>
-              <h1>IFTAR FOR GAZA 2026</h1>
-              <h2>ให้ 100 ถึง 100</h2>
-              <p>อัปเดตยอดเงินบริจาค · Financial Dashboard</p>
+              <h1>อัปเดตยอดเงินบริจาค · Financial Dashboard</h1>
+              <h2>IFTAR FOR GAZA 2026</h2>
+             
             </div>
           </div>
           <div className="uc-time-box">
@@ -166,18 +166,18 @@ export default function UmmateeChallenge() {
                 <img src="/ibank.png" alt="ibank" />
               </div>
               <div className="uc-account-info">
-                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.bank}</div>
-                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.name}</div>
-                <div className="uc-account-row"><span className="uc-account-ic"></span> {ACCOUNT.number}</div>
+                <div className="uc-account-row uc-account-bank">{ACCOUNT.bank}</div>
+                <div className="uc-account-row uc-account-name">{ACCOUNT.name}</div>
+                <div className="uc-account-row uc-account-number">{ACCOUNT.number}</div>
               </div>
             </div>
           </div>
         </div>
 
         <footer className="uc-footer">
-          <span>💚 มูลนิธิอุมมะตี · Ummatee Foundation</span>
-          <span>📘 facebook.com/ummatee.foundation</span>
-          <span>📷 ummatee.foundation</span>
+          <span> มูลนิธิอุมมะตี · Ummatee Foundation</span>
+          <span> facebook.com/UmmateeinThailand</span>
+        
         </footer>
       </div>
     </div>

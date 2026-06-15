@@ -819,7 +819,7 @@ select.iftar-input option{color:#222;background:#fff}
 .uc-progress-bar{display:flex;height:36px;border-radius:8px;overflow:hidden;background:#e6dfc9}
 .uc-progress-fill{background:linear-gradient(90deg,var(--green-mid),var(--gold));height:100%;transition:width .4s}
 .uc-progress-labels{display:flex;justify-content:space-between;margin-top:6px;font-weight:700;color:var(--ink-soft)}
-.uc-bottom{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;padding:0 32px 24px;align-items:stretch}
+.uc-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding:0 32px 24px;align-items:stretch}
 .uc-summary,.uc-account{display:flex;flex-direction:column}
 .uc-summary h3,.uc-account h3{margin:0 0 16px;font-size:1.45rem;font-weight:800;color:var(--green-deep)}
 .uc-summary-body{display:flex;align-items:center;gap:24px;border:1px solid var(--gold-light);border-radius:12px;padding:20px;background:#fff;flex:1}

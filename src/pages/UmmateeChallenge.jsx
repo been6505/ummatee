@@ -5,7 +5,7 @@ import { DonutChart } from '../components/AdminCharts.jsx'
 const PER_PERSON = 100 // ค่าใช้จ่ายช่วยเหลือผู้ยากไร้ต่อคน (บาท)
 const poor = 5000 // จำนวนผู้ยากไร้เป้าหมาย (คน)
 const TARGET = poor * PER_PERSON // ยอดเป้าหมายรวม = จำนวนคน x ค่าใช้จ่ายต่อคน
-const RAISED = 73
+const RAISED = 100
 
 const ACCOUNT = {
   bank: 'ธนาคารอิสลามแห่งประเทศไทย (ibank)',
@@ -32,6 +32,13 @@ export default function UmmateeChallenge() {
     { label: 'ยอดบริจาคสะสม', value: RAISED },
     { label: 'ยอดคงเหลือ', value: remaining },
   ]
+
+  const helpRemaining = Math.max(poor - canHelp, 0)
+  const helpDonut = [
+    { label: 'สามารถช่วยเหลือได้', value: canHelp },
+    { label: 'รอความช่วยเหลือ', value: helpRemaining },
+  ]
+  const helpProgress = (canHelp / poor) * 100
 
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const fmtInt = (n) => n.toLocaleString('en-US')
@@ -73,7 +80,7 @@ export default function UmmateeChallenge() {
             <div className="uc-stat-value">{fmtInt(poor)} <small>คน</small></div>
           </div>
           <div className="uc-stat">
-            <div className="uc-stat-label">Helped<br /><span>สามารถช่วยเหลือได้</span></div>
+            <div className="uc-stat-label">Helped<br /><span>ช่วยเหลือได้</span></div>
             <div className="uc-stat-value">{fmtInt(canHelp)} <small>คน</small></div>
           </div>
           <div className="uc-stat">
@@ -123,6 +130,29 @@ export default function UmmateeChallenge() {
                   <div>
                     <div className="uc-legend-label">ยอดคงเหลือ</div>
                     <div className="uc-legend-value">{fmt(remaining)} THB. <b>{(100 - progress).toFixed(2)}%</b></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="uc-summary">
+            <h3>Help Summary</h3>
+            <div className="uc-summary-body">
+              <DonutChart data={helpDonut} colors={['#2E7D52', '#C9A84C']} unit="คน" size={170} />
+              <div className="uc-legend">
+                <div className="uc-legend-item">
+                  <span className="uc-dot" style={{ background: '#2E7D52' }} />
+                  <div>
+                    <div className="uc-legend-label">ช่วยเหลือได้แล้ว</div>
+                    <div className="uc-legend-value">{fmtInt(canHelp)} คน <b>{helpProgress.toFixed(2)}%</b></div>
+                  </div>
+                </div>
+                <div className="uc-legend-item">
+                  <span className="uc-dot" style={{ background: '#C9A84C' }} />
+                  <div>
+                    <div className="uc-legend-label">รอความช่วยเหลือ</div>
+                    <div className="uc-legend-value">{fmtInt(helpRemaining)} คน <b>{(100 - helpProgress).toFixed(2)}%</b></div>
                   </div>
                 </div>
               </div>

@@ -38,16 +38,16 @@ const T = {
   th: {
     campaign: '🎗️ ให้ 100 ถึง 100',
     eyebrow: 'ลงทะเบียนเข้าร่วมงาน · ฟรี',
-    lead: 'ร่วมละศีลอดเพื่อพี่น้องกาซา แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาอ์ให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
+    lead: 'ร่วมละศีลอดเพื่อพี่น้องกาซ่า แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
     tagline: 'Break your Fast, Open Your Heart',
-    ibDate: 'วัน & เวลา', ibDateV1: 'ศุกร์ 26 มิถุนายน 2569', ibDateV2: '15:30-20:15 น.',
+    ibDate: 'วัน & เวลา', ibDateV1: 'ศุกร์ 26 มิถุนายน 2569', ibDateV2: '15:30-20:30 น.',
     ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ ศรีนครินทร์',
     ibMap: 'ดูแผนที่',
     ibType: 'ประเภท', ibTypeV: 'เข้าร่วมฟรี ไม่มีค่าใช้จ่าย',
-    donateTitle: 'เพื่อช่วยผู้ยากไร้ในปาเลสไตน์',
+    donateTitle: 'มูลนิธิอุมมะตี เพื่อช่วยปาเลสไตน์',
     donateAccount: '0011 1863 48',
-    seatLimit: 'บุฟเฟ่ต์จำกัด 500 ที่นั่ง',
-    contactTel: 'สอบถามเพิ่มเติม Tel. 061-7962074',
+    seatLimit: 'บุฟเฟ่ต์จำกัด 400 ที่นั่ง',
+    contactTel: 'สอบถามเพิ่มเติม Tel. 065-926-7512',
     formTitle: 'แบบฟอร์มลงทะเบียน',
     formSub: 'กรอกข้อมูลเพื่อสำรองที่นั่งเข้าร่วมงาน · ใช้เวลาไม่ถึง 1 นาที',
     fname: 'ชื่อ', fnamePh: 'ชื่อจริง', lname: 'นามสกุล', lnamePh: 'นามสกุล',
@@ -58,7 +58,7 @@ const T = {
     jobs: ['นักเรียน/นักศึกษา', 'พนักงานบริษัท/เอกชน', 'ข้าราชการ/รัฐวิสาหกิจ', 'เจ้าของธุรกิจ/ค้าขาย', 'อาชีพอิสระ/ฟรีแลนซ์', 'รับจ้างทั่วไป', 'แม่บ้าน/พ่อบ้าน', 'เกษียณ', 'อื่นๆ'],
     province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก', provinceSelect: 'เลือกจังหวัด',
     expect: 'สิ่งที่คาดหวังจากงานนี้',
-    expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอาอ์', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
+    expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอา', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
     comment: 'ข้อเสนอแนะเพิ่มเติม', commentPh: 'อยากบอกอะไรกับทีมงาน...',
     submit: 'ยืนยันการลงทะเบียน', submitting: 'กำลังบันทึก...',
     errFname: 'กรุณากรอกชื่อ', errLname: 'กรุณากรอกนามสกุล', errPhone: 'กรุณากรอกเบอร์โทรศัพท์',
@@ -78,14 +78,14 @@ const T = {
     eyebrow: 'Register for the event · Free',
     lead: 'Break fast together for Gaza, share a meal of brotherhood, and join in dua for the oppressed. Register in advance to reserve your seat.',
     tagline: 'Break your Fast, Open Your Heart',
-    ibDate: 'Date & Time', ibDateV1: 'Friday, 26 June 2026', ibDateV2: '15:30-20:15',
+    ibDate: 'Date & Time', ibDateV1: 'Friday, 26 June 2026', ibDateV2: '15:30-20:30',
     ibPlace: 'Location', ibPlaceV: 'Sinthorn Steak House Srinakarin',
     ibMap: 'View map',
     ibType: 'Admission', ibTypeV: 'Free entry, no charge',
-    donateTitle: 'Ummatee — helping those in need in Palestine',
+    donateTitle: 'Ummatee — help Palestine',
     donateAccount: '0011 1863 48',
-    seatLimit: 'Buffet limited to 500 seats',
-    contactTel: 'Enquiries: Tel. 061-7962074',
+    seatLimit: 'Buffet limited to 400 seats',
+    contactTel: 'Enquiries: Tel. 065-926-7512',
     formTitle: 'Registration Form',
     formSub: 'Fill in your details to reserve a seat · takes less than a minute',
     fname: 'First Name', fnamePh: 'First name', lname: 'Last Name', lnamePh: 'Last name',
@@ -116,14 +116,14 @@ const T = {
     eyebrow: 'سجّل لحضور الفعالية · مجاناً',
     lead: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك وجبة الأخوّة، وادعُ للمستضعفين. سجّل مسبقاً لحجز مقعدك.',
     tagline: 'Break your Fast, Open Your Heart',
-    ibDate: 'التاريخ والوقت', ibDateV1: 'الجمعة 26 يونيو 2026', ibDateV2: '15:30-20:15',
+    ibDate: 'التاريخ والوقت', ibDateV1: 'الجمعة 26 يونيو 2026', ibDateV2: '15:30-20:30',
     ibPlace: 'المكان', ibPlaceV: 'Sinthorn Steak House Srinakarin',
     ibMap: 'عرض الخريطة',
     ibType: 'الدخول', ibTypeV: 'مجاني بدون رسوم',
-    donateTitle: 'أمّتي — لمساعدة المحتاجين في فلسطين',
+    donateTitle: 'Ummatee - help Palestine ',
     donateAccount: '0011 1863 48',
-    seatLimit: 'البوفيه محدود بـ 500 مقعد',
-    contactTel: 'للاستعلام: Tel. 061-7962074',
+    seatLimit: 'البوفيه محدود بـ 400 مقعد',
+    contactTel: 'للاستعلام: Tel. 065-926-7512',
     formTitle: 'نموذج التسجيل',
     formSub: 'املأ بياناتك لحجز مقعدك · يستغرق أقل من دقيقة',
     fname: 'الاسم', fnamePh: 'الاسم الأول', lname: 'اسم العائلة', lnamePh: 'اسم العائلة',
@@ -176,7 +176,7 @@ function DonateAccount({ icon, title, account }) {
       <img className="iftar-donate-icon" src={icon} alt="" />
       <div className="iftar-donate-body">
         <div className="iftar-donate-title">{title}</div>
-        <div className="iftar-donate-account">{account}</div>
+        <div className="iftar-donate-account" dir="ltr">{account}</div>
       </div>
       <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? '✓' : <CopyIcon />}</div>
     </button>
@@ -275,7 +275,7 @@ export default function Iftar() {
           <p className="iftar-tagline">{t.tagline}</p>
           <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
 
-          <img className="iftar-poster" src="/poster-iftar.png" alt="Iftar For Gaza" loading="lazy" />
+          <img className="iftar-poster" src="/poster-iftar-gaza.png" alt="Iftar For Gaza" loading="lazy" />
 
           <p className="lead">{t.lead}</p>
 

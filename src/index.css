@@ -604,6 +604,14 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media (max-width:1000px){.admin-grid-3{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:640px){.admin-grid-3{grid-template-columns:1fr}}
+/* มือถือ: จัดหัวการ์ดกราฟ (ชื่อ + ปุ่มเลือกชนิด) และข้อความให้อยู่กึ่งกลาง */
+@media (max-width:640px){
+  .admin-grid-3 .admin-card-head{flex-direction:column;align-items:center;text-align:center;justify-content:center}
+  .admin-grid-3 .admin-card-head h4{text-align:center;width:100%}
+  .admin-grid-3 .admin-chart-switch{justify-content:center}
+  .admin-grid-3 .admin-legend{justify-content:center;text-align:center}
+  .admin-grid-3 .admin-empty{text-align:center;width:100%}
+}
 .admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
 .admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
 .admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}

@@ -271,24 +271,28 @@ export default function Iftar() {
         <div className="fc-pattern hero-pattern"></div>
 
         <div className="inner">
-                    <h1><span className="moon">Iftar</span> For Gaza</h1>
+          <h1><span className="moon">Iftar</span> For Gaza</h1>
           <p className="iftar-tagline">{t.tagline}</p>
 
           <span className="iftar-campaign">{t.campaign}</span>
           <img className="iftar-poster" src="/posteriftar.jpg" alt="Iftar For Gaza" loading="lazy" />
-          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
 
           <p className="lead">{t.lead}</p>
+
+          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
+          
+
           <div className="info-boxes">
-            <div className="info-box"><div className="ib-ic">📅</div><span className="ib-k">{t.ibDate}</span>
-            <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
-            <div className="info-box"><div className="ib-ic">🎟️</div><div className="ib-k">{t.ibType}</div><div className="ib-v">{t.ibTypeV}</div></div>
+            <div className="info-box"><div className="ib-ic">   <span className="ib-k">{t.ibDate}</span></div>
+              <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
+            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibPlace}</span> </div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
+            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibType}</span></div><div className="ib-v"><p>{t.seatLimit}</p>{t.ibTypeV}</div></div>
           </div>
           <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
           <div className="iftar-extra">
-            <span>{t.seatLimit}</span>
+            
             <span>{t.contactTel}</span>
+            
           </div>
         </div>
       </section>

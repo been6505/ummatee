@@ -793,52 +793,53 @@ select.iftar-input option{color:#222;background:#fff}
 .shop-interest-btn{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#06c755;color:#fff;font-weight:700;padding:18px 28px;border-radius:999px;text-decoration:none;font-size:1.15rem;transition:transform .15s,box-shadow .15s} /* ปุ่ม "สนใจสินค้า" ไปไลน์ */
 .shop-interest-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(6,199,85,.3)}
 /* แดชบอร์ดยอดบริจาค YATIM FIRST 2026 — /yatim-first */
-.yf-dash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#0b0b0b;font-family:inherit}
-.yf-card{width:100%;max-width:1400px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-.yf-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:2px solid #2e7d52}
-.yf-brand{display:flex;align-items:center;gap:16px}
-.yf-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.yf-brand h1{margin:0;color:#2e7d52;font-size:1.7rem;font-weight:800;letter-spacing:.5px}
-.yf-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#222}
-.yf-brand p{margin:2px 0 0;color:#555;font-size:1rem}
-.yf-time-box{display:flex;gap:16px}
-.yf-time-item{display:flex;align-items:center;gap:10px;border:1px solid #2e7d52;border-radius:12px;padding:10px 18px}
-.yf-time-item .yf-ic{font-size:1.4rem}
-.yf-label{font-size:.85rem;color:#666;font-weight:700}
-.yf-value{font-size:1.1rem;font-weight:800;color:#222}
-.yf-stats{display:grid;grid-template-columns:repeat(4,1fr)}
-.yf-stat{background:#2e7d52;color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
-.yf-stat:last-child{border-right:none}
-.yf-stat-ic{font-size:1.6rem;margin-bottom:6px}
-.yf-stat-label{font-weight:800;font-size:1.05rem;line-height:1.5;margin-bottom:8px}
-.yf-stat-label span{font-weight:600;font-size:.85rem;opacity:.9}
-.yf-stat-value{font-size:1.6rem;font-weight:800}
-.yf-stat-value small{font-size:1rem;font-weight:700}
-.yf-progress-section{padding:20px 32px}
-.yf-progress-section h3{margin:0 0 12px;font-size:1.2rem;font-weight:800;color:#222}
-.yf-progress-bar{display:flex;height:36px;border-radius:8px;overflow:hidden;background:#e53935}
-.yf-progress-fill{background:#2e7d52;height:100%;transition:width .4s}
-.yf-progress-labels{display:flex;justify-content:space-between;margin-top:6px;font-weight:700;color:#444}
-.yf-bottom{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;padding:0 32px 24px}
-.yf-summary h3,.yf-account h3{margin:0 0 16px;font-size:1.2rem;font-weight:800;color:#222}
-.yf-summary-body{display:flex;align-items:center;gap:24px;border:1px solid #ddd;border-radius:12px;padding:20px}
-.yf-legend{display:flex;flex-direction:column;gap:14px}
-.yf-legend-item{display:flex;align-items:center;gap:10px}
-.yf-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
-.yf-legend-label{font-size:.95rem;color:#555}
-.yf-legend-value{font-weight:800;color:#222}
-.yf-account-body{display:flex;align-items:center;gap:24px;border:1px solid #ddd;border-radius:12px;padding:20px;height:100%}
-.yf-bank-logo{flex-shrink:0;width:90px;height:90px;border-radius:50%;background:#e60050;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95rem;text-align:center}
-.yf-account-info{display:flex;flex-direction:column;gap:10px}
-.yf-account-row{font-size:.95rem;color:#333;line-height:1.5}
-.yf-account-row b{color:#2e7d52;letter-spacing:.5px;font-size:.85rem}
-.yf-account-ic{margin-right:4px}
-.yf-footer{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;align-items:center;background:#2e7d52;color:#fff;padding:14px 24px;font-size:.95rem;font-weight:600}
+.uc-dash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--green-deep);font-family:inherit}
+.uc-card{width:100%;max-width:1400px;background:var(--paper);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-card)}
+.uc-header{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px 32px;border-bottom:2px solid var(--gold);background:var(--green-deep)}
+.uc-brand{display:flex;align-items:center;gap:16px}
+.uc-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid var(--gold)}
+.uc-brand h1{margin:0;color:var(--gold-light);font-size:1.7rem;font-weight:800;letter-spacing:.5px}
+.uc-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#fff}
+.uc-brand p{margin:2px 0 0;color:rgba(255,255,255,.75);font-size:1rem}
+.uc-time-box{display:flex;gap:16px}
+.uc-time-item{display:flex;align-items:center;gap:10px;border:1px solid var(--gold);border-radius:12px;padding:10px 18px;color:#fff}
+.uc-time-item .uc-ic{font-size:1.4rem}
+.uc-label{font-size:.85rem;color:var(--gold-light);font-weight:700}
+.uc-value{font-size:1.1rem;font-weight:800;color:#fff}
+.uc-stats{display:grid;grid-template-columns:repeat(4,1fr)}
+.uc-stat{background:var(--green-mid);color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
+.uc-stat:last-child{border-right:none}
+.uc-stat-ic{font-size:1.6rem;margin-bottom:6px}
+.uc-stat-label{font-weight:800;font-size:1.05rem;line-height:1.5;margin-bottom:8px}
+.uc-stat-label span{font-weight:600;font-size:.85rem;opacity:.9}
+.uc-stat-value{font-size:1.6rem;font-weight:800;color:var(--gold-light)}
+.uc-stat-value small{font-size:1rem;font-weight:700;color:#fff}
+.uc-progress-section{padding:20px 32px}
+.uc-progress-section h3{margin:0 0 12px;font-size:1.2rem;font-weight:800;color:var(--green-deep)}
+.uc-progress-bar{display:flex;height:36px;border-radius:8px;overflow:hidden;background:#e6dfc9}
+.uc-progress-fill{background:linear-gradient(90deg,var(--green-mid),var(--gold));height:100%;transition:width .4s}
+.uc-progress-labels{display:flex;justify-content:space-between;margin-top:6px;font-weight:700;color:var(--ink-soft)}
+.uc-bottom{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;padding:0 32px 24px}
+.uc-summary h3,.uc-account h3{margin:0 0 16px;font-size:1.2rem;font-weight:800;color:var(--green-deep)}
+.uc-summary-body{display:flex;align-items:center;gap:24px;border:1px solid var(--gold-light);border-radius:12px;padding:20px;background:#fff}
+.uc-legend{display:flex;flex-direction:column;gap:14px}
+.uc-legend-item{display:flex;align-items:center;gap:10px}
+.uc-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.uc-legend-label{font-size:.95rem;color:var(--ink-soft)}
+.uc-legend-value{font-weight:800;color:var(--green-deep)}
+.uc-account-body{display:flex;align-items:center;gap:24px;border:1px solid var(--gold-light);border-radius:12px;padding:20px;height:100%}
+.uc-bank-logo{flex-shrink:0;width:90px;height:90px;border-radius:50%;background:#fff;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.uc-bank-logo img{width:100%;height:100%;object-fit:cover}
+.uc-account-info{display:flex;flex-direction:column;gap:10px}
+.uc-account-row{font-size:.95rem;color:var(--black);line-height:1.5}
+.uc-account-row b{color:var(--green-mid);letter-spacing:.5px;font-size:.85rem}
+.uc-account-ic{margin-right:4px}
+.uc-footer{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;align-items:center;background:var(--green-deep);color:#fff;padding:14px 24px;font-size:.95rem;font-weight:600}
 @media (max-width: 900px){
-  .yf-header{flex-direction:column;align-items:flex-start}
-  .yf-stats{grid-template-columns:repeat(2,1fr)}
-  .yf-bottom{grid-template-columns:1fr}
-  .yf-summary-body,.yf-account-body{flex-direction:column;text-align:center}
+  .uc-header{flex-direction:column;align-items:flex-start}
+  .uc-stats{grid-template-columns:repeat(2,1fr)}
+  .uc-bottom{grid-template-columns:1fr}
+  .uc-summary-body,.uc-account-body{flex-direction:column;text-align:center}
 }
 
 @media (max-width: 900px){ /* ปรับขนาดบนมือถือ/หน้าจอแคบ */

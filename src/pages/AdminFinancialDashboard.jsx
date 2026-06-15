@@ -3,6 +3,7 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useFinancialData, saveFinancialData, DEFAULT_FINANCIAL } from '../data/financialData.js'
+import { DonutChart } from '../components/AdminCharts.jsx'
 
 // หน้าแก้ไขข้อมูลแดชบอร์ดการเงิน (/admin/financial-dashboard)
 // แก้จำนวนผู้ยากไร้ / ค่าใช้จ่ายต่อคน / ยอดบริจาคสะสม / ข้อมูลบัญชี — บันทึกลง Firestore (config/financialDashboard)
@@ -27,8 +28,20 @@ export default function AdminFinancialDashboard() {
 
   const target = (Number(form.poor) || 0) * (Number(form.perPerson) || 0)
   const canHelp = form.perPerson > 0 ? Math.min(Math.floor((Number(form.raised) || 0) / form.perPerson), Number(form.poor) || 0) : 0
-  const progress = target > 0 ? ((Number(form.raised) || 0) / target) * 100 : 0
+  const raised = Number(form.raised) || 0
+  const progress = target > 0 ? (raised / target) * 100 : 0
+  const remaining = Math.max(target - raised, 0)
+  const helpRemaining = Math.max((Number(form.poor) || 0) - canHelp, 0)
   const fmt = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+  const donationDonut = [
+    { label: 'ยอดบริจาคสะสม', value: raised },
+    { label: 'ยอดคงเหลือ', value: remaining },
+  ]
+  const helpDonut = [
+    { label: 'ช่วยเหลือได้แล้ว', value: canHelp },
+    { label: 'รอความช่วยเหลือ', value: helpRemaining },
+  ]
 
   const save = async () => {
     setStatus('กำลังบันทึก...')
@@ -64,7 +77,7 @@ export default function AdminFinancialDashboard() {
             <label>จำนวนผู้ยากไร้ (คน)
               <input type="number" min="0" value={form.poor} onChange={(e) => setNum('poor', e.target.value)} />
             </label>
-            <label>ค่าใช้จ่ายช่วยเหลือต่อคน (บาท)
+            <label>ช่วยเหลือต่อคน (บาท)
               <input type="number" min="0" value={form.perPerson} onChange={(e) => setNum('perPerson', e.target.value)} />
             </label>
             <label>ยอดบริจาคสะสม (บาท)
@@ -75,6 +88,28 @@ export default function AdminFinancialDashboard() {
             <div className="admin-stat"><b>{fmt(target)}</b><div className="l">ยอดเป้าหมาย (คน × ต่อคน)</div></div>
             <div className="admin-stat"><b>{canHelp.toLocaleString()}</b><div className="l">ช่วยเหลือได้แล้ว (คน)</div></div>
             <div className="admin-stat"><b>{progress.toFixed(2)}%</b><div className="l">ความคืบหน้า</div></div>
+          </div>
+        </div>
+
+        <div className="admin-card" style={{ marginBottom: 24 }}>
+          <h4>กราฟพรีวิว (อัปเดตตามค่าที่กรอก)</h4>
+          <div className="fin-charts">
+            <div className="fin-chart">
+              <div className="fin-chart-title">ยอดบริจาค (THB)</div>
+              <DonutChart data={donationDonut} colors={['#2E7D52', '#C9A84C']} unit="THB." size={180} />
+              <div className="fin-chart-legend">
+                <span><i style={{ background: '#2E7D52' }} /> บริจาคแล้ว {fmt(raised)} ({progress.toFixed(2)}%)</span>
+                <span><i style={{ background: '#C9A84C' }} /> คงเหลือ {fmt(remaining)}</span>
+              </div>
+            </div>
+            <div className="fin-chart">
+              <div className="fin-chart-title">การช่วยเหลือ (คน)</div>
+              <DonutChart data={helpDonut} colors={['#2E7D52', '#C9A84C']} unit="คน" size={180} />
+              <div className="fin-chart-legend">
+                <span><i style={{ background: '#2E7D52' }} /> ช่วยแล้ว {canHelp.toLocaleString()} คน</span>
+                <span><i style={{ background: '#C9A84C' }} /> รอช่วย {helpRemaining.toLocaleString()} คน</span>
+              </div>
+            </div>
           </div>
         </div>
 

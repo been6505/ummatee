@@ -482,9 +482,9 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .give-page .gold-rule{background:linear-gradient(90deg,#4db8ff,#bfe6ff)}
 .info-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px}
 .info-box{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:20px 16px;backdrop-filter:blur(6px)}
-.info-box .ib-ic{font-size:1.5rem;margin-bottom:8px}
-.info-box .ib-k{font-size:1rem;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;margin-bottom:4px}
-.info-box .ib-v{font-weight:600;font-size:1rem}
+.info-box .ib-ic{font-size:.5rem;margin-bottom:8px}
+.info-box .ib-k{font-size:1.5rem;letter-spacing:1.5px;text-transform:uppercase;opacity:.65;margin-bottom:4px;font-weight:600}
+.info-box .ib-v{font-weight:600;font-size:1.25rem}
 .info-box .ib-link{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font-weight:600;font-size:.9rem;text-decoration:none;transition:background .15s,transform .15s}
 .info-box .ib-link:hover{background:rgba(255,255,255,.24);transform:translateY(-2px)}
 
@@ -603,6 +603,13 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
 .admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
 .admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}
+/* กราฟพรีวิวในหน้า admin/financial-dashboard */
+.fin-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.fin-chart{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:16px;border:1px solid rgba(46,125,82,.12);border-radius:12px}
+.fin-chart-title{font-weight:800;color:var(--green-deep);font-size:1rem}
+.fin-chart-legend{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--ink-soft);font-weight:600}
+.fin-chart-legend span{display:flex;align-items:center;gap:8px}
+.fin-chart-legend i{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
 .admin-empty{color:var(--ink-soft);font-size:.9rem}
 
 .admin-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:.88rem}

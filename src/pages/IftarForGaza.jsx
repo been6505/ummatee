@@ -30,9 +30,10 @@ const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZR
 const T = {
   th: {
     eyebrow: 'ลงทะเบียนเข้าร่วมงาน · ฟรี',
-    lead: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาอ์ให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
+    lead: 'ร่วมละศีลอดเพื่อพี่น้องกาซา แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาอ์ให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
     ibDate: 'วัน & เวลา', ibDateV1: '26 กรกฎาคม 2569', ibDateV2: '15.00-20.30 น.',
-    ibPlace: 'สถานที่', ibPlaceV: 'กรุงเทพมหานคร',
+    ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ กรุงเทพมหานคร',
+    ibMap: 'ดูแผนที่', ibMapLink: 'https://maps.app.goo.gl/MeUdbtRPhB7mKBcb7',
     ibType: 'ประเภท', ibTypeV: 'เข้าร่วมฟรี ไม่มีค่าใช้จ่าย',
     formTitle: 'แบบฟอร์มลงทะเบียน',
     formSub: 'กรอกข้อมูลเพื่อสำรองที่นั่งเข้าร่วมงาน · ใช้เวลาไม่ถึง 1 นาที',
@@ -215,7 +216,7 @@ export default function Iftar() {
           <p className="lead">{t.lead}</p>
           <div className="info-boxes">
             <div className="info-box"><div className="ib-ic">📅</div><div className="ib-k">{t.ibDate}</div><div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div></div>
+            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={t.ibMapLink} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
             <div className="info-box"><div className="ib-ic">🎟️</div><div className="ib-k">{t.ibType}</div><div className="ib-v">{t.ibTypeV}</div></div>
           </div>
         </div>

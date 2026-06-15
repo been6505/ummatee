@@ -801,11 +801,11 @@ select.iftar-input option{color:#222;background:#fff}
 .uc-brand h1{margin:0;color:var(--gold-light);font-size:1.7rem;font-weight:800;letter-spacing:.5px}
 .uc-brand h2{margin:0;font-size:1.3rem;font-weight:800;color:#fff}
 .uc-brand p{margin:2px 0 0;color:rgba(255,255,255,.75);font-size:1rem}
-.uc-time-box{display:flex;gap:16px}
-.uc-time-item{display:flex;align-items:center;gap:10px;border:1px solid var(--gold);border-radius:12px;padding:10px 18px;color:#fff}
-.uc-time-item .uc-ic{font-size:1.4rem}
-.uc-label{font-size:.85rem;color:var(--gold-light);font-weight:700}
-.uc-value{font-size:1.1rem;font-weight:800;color:#fff}
+.uc-time-box{display:flex;gap:36px}
+.uc-time-item{display:flex;align-items:center;gap:14px;border:1px solid var(--gold);border-radius:14px;padding:16px 22px;color:#fff}
+.uc-time-item .uc-ic{font-size:2.2rem}
+.uc-label{font-size:1rem;color:var(--gold-light);font-weight:700}
+.uc-value{font-size:1.4rem;font-weight:800;color:#fff}
 .uc-stats{display:grid;grid-template-columns:repeat(4,1fr)}
 .uc-stat{background:var(--green-mid);color:#fff;padding:20px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.15)}
 .uc-stat:last-child{border-right:none}

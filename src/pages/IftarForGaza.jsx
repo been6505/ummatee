@@ -27,14 +27,26 @@ const PROVINCES = [
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
 
+// ลิงก์แผนที่ไปยังสถานที่จัดงาน (ใช้ร่วมกันทุกภาษา)
+const IB_MAP_LINK = 'https://maps.app.goo.gl/MeUdbtRPhB7mKBcb7'
+
+// ไฟล์โปสเตอร์ประชาสัมพันธ์งาน (วางไฟล์ไว้ที่ public/iftar-for-gaza-poster.jpg)
+const POSTER_IMG = '/iftar-for-gaza-poster.jpg'
+
 const T = {
   th: {
+    campaign: '🎗️ ให้ 100 ถึง 100',
     eyebrow: 'ลงทะเบียนเข้าร่วมงาน · ฟรี',
     lead: 'ร่วมละศีลอดเพื่อพี่น้องกาซา แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาอ์ให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
-    ibDate: 'วัน & เวลา', ibDateV1: '26 กรกฎาคม 2569', ibDateV2: '15.00-20.30 น.',
-    ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ กรุงเทพมหานคร',
-    ibMap: 'ดูแผนที่', ibMapLink: 'https://maps.app.goo.gl/MeUdbtRPhB7mKBcb7',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'วัน & เวลา', ibDateV1: 'ศุกร์ 26 มิถุนายน 2569', ibDateV2: '15:30-20:15 น.',
+    ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ ศรีนครินทร์',
+    ibMap: 'ดูแผนที่',
     ibType: 'ประเภท', ibTypeV: 'เข้าร่วมฟรี ไม่มีค่าใช้จ่าย',
+    donateTitle: 'อุมมะตี เพื่อช่วยผู้ยากไร้ในปาเลสไตน์',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'บุฟเฟ่ต์จำกัด 500 ที่นั่ง',
+    contactTel: 'สอบถามเพิ่มเติม Tel. 061-7962074',
     formTitle: 'แบบฟอร์มลงทะเบียน',
     formSub: 'กรอกข้อมูลเพื่อสำรองที่นั่งเข้าร่วมงาน · ใช้เวลาไม่ถึง 1 นาที',
     fname: 'ชื่อ', fnamePh: 'ชื่อจริง', lname: 'นามสกุล', lnamePh: 'นามสกุล',
@@ -61,11 +73,18 @@ const T = {
     checkEmpty: 'ยังไม่มีรายชื่อผู้ลงทะเบียน',
   },
   en: {
+    campaign: '🎗️ Give 100 to 100',
     eyebrow: 'Register for the event · Free',
     lead: 'Break fast together for Gaza, share a meal of brotherhood, and join in dua for the oppressed. Register in advance to reserve your seat.',
-    ibDate: 'Date & Time', ibDateV1: '26 July 2026', ibDateV2: '15:00-20:30',
-    ibPlace: 'Location', ibPlaceV: 'Bangkok',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'Date & Time', ibDateV1: 'Friday, 26 June 2026', ibDateV2: '15:30-20:15',
+    ibPlace: 'Location', ibPlaceV: 'Sinthorn Steak House Srinakarin',
+    ibMap: 'View map',
     ibType: 'Admission', ibTypeV: 'Free entry, no charge',
+    donateTitle: 'Ummatee — helping those in need in Palestine',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'Buffet limited to 500 seats',
+    contactTel: 'Enquiries: Tel. 061-7962074',
     formTitle: 'Registration Form',
     formSub: 'Fill in your details to reserve a seat · takes less than a minute',
     fname: 'First Name', fnamePh: 'First name', lname: 'Last Name', lnamePh: 'Last name',
@@ -92,11 +111,18 @@ const T = {
     checkEmpty: 'No registrations yet',
   },
   ar: {
+    campaign: '🎗️ أعطِ 100 لـ 100',
     eyebrow: 'سجّل لحضور الفعالية · مجاناً',
     lead: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك وجبة الأخوّة، وادعُ للمستضعفين. سجّل مسبقاً لحجز مقعدك.',
-    ibDate: 'التاريخ والوقت', ibDateV1: '26 يوليو 2026', ibDateV2: '15:00-20:30',
-    ibPlace: 'المكان', ibPlaceV: 'بانكوك',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'التاريخ والوقت', ibDateV1: 'الجمعة 26 يونيو 2026', ibDateV2: '15:30-20:15',
+    ibPlace: 'المكان', ibPlaceV: 'Sinthorn Steak House Srinakarin',
+    ibMap: 'عرض الخريطة',
     ibType: 'الدخول', ibTypeV: 'مجاني بدون رسوم',
+    donateTitle: 'أمّتي — لمساعدة المحتاجين في فلسطين',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'البوفيه محدود بـ 500 مقعد',
+    contactTel: 'للاستعلام: Tel. 061-7962074',
     formTitle: 'نموذج التسجيل',
     formSub: 'املأ بياناتك لحجز مقعدك · يستغرق أقل من دقيقة',
     fname: 'الاسم', fnamePh: 'الاسم الأول', lname: 'اسم العائلة', lnamePh: 'اسم العائلة',
@@ -207,17 +233,31 @@ export default function Iftar() {
   }
 
   return (
-    <main className="page">
+    <main className="page gaza-page">
       <section className="iftar-hero">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
+          <img className="iftar-poster" src={POSTER_IMG} alt="Iftar For Gaza" loading="lazy" />
+          <span className="iftar-campaign">{t.campaign}</span>
           <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
           <h1><span className="moon">Iftar</span> For Gaza</h1>
+          <p className="iftar-tagline">{t.tagline}</p>
           <p className="lead">{t.lead}</p>
           <div className="info-boxes">
             <div className="info-box"><div className="ib-ic">📅</div><div className="ib-k">{t.ibDate}</div><div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={t.ibMapLink} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
+            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
             <div className="info-box"><div className="ib-ic">🎟️</div><div className="ib-k">{t.ibType}</div><div className="ib-v">{t.ibTypeV}</div></div>
+          </div>
+          <div className="iftar-donate">
+            <img className="iftar-donate-icon" src="/Logo-ibank.svg.png" alt="" />
+            <div className="iftar-donate-body">
+              <div className="iftar-donate-title">{t.donateTitle}</div>
+              <div className="iftar-donate-account">{t.donateAccount}</div>
+            </div>
+          </div>
+          <div className="iftar-extra">
+            <span>{t.seatLimit}</span>
+            <span>{t.contactTel}</span>
           </div>
         </div>
       </section>

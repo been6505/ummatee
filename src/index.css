@@ -445,6 +445,28 @@ footer{background:var(--black);color:rgba(255,255,255,.72);padding:64px 0 30px;m
 .iftar-hero h1 .moon{color:var(--gold-light)}
 .iftar-hero .lead{font-weight:450;opacity:.92;font-size:1.08rem;max-width:56ch;margin:0 auto 34px}
 
+/* ============ IFTAR FOR GAZA (orange/poster tone) ============ */
+.gaza-page .iftar-hero{
+  background:
+    radial-gradient(900px 500px at 85% -10%,rgba(255,200,120,.35),transparent 55%),
+    linear-gradient(150deg,#e8772b 0%,#f4a23a 55%,#e8772b 130%);
+}
+.gaza-page .iftar-poster{display:block;max-width:320px;width:100%;margin:0 auto 24px;border-radius:18px;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.gaza-page .iftar-campaign{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.92);color:#b5481c;padding:8px 22px;border-radius:999px;font-weight:800;font-size:.95rem;margin-bottom:14px}
+.gaza-page .iftar-eyebrow{background:rgba(0,0,0,.25)}
+.gaza-page .iftar-tagline{font-weight:700;font-size:1.1rem;opacity:.95;margin:-6px 0 18px}
+.gaza-page .iftar-hero h1 .moon{color:#fff}
+.gaza-page .info-box{background:rgba(0,0,0,.18);border-color:rgba(255,255,255,.25)}
+.gaza-page .info-box .ib-k{opacity:.85}
+.gaza-page .info-box .ib-link{background:rgba(255,255,255,.92);color:#b5481c}
+.gaza-page .info-box .ib-link:hover{background:#fff}
+.iftar-donate{display:flex;align-items:center;gap:14px;justify-content:center;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:14px 28px;margin:28px auto 0;max-width:480px}
+.iftar-donate-icon{width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.iftar-donate-body{text-align:left;line-height:1.4}
+.iftar-donate-title{font-size:.85rem;opacity:.9}
+.iftar-donate-account{font-size:1.4rem;font-weight:800;letter-spacing:1px}
+.iftar-extra{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin-top:18px;font-weight:600;font-size:.92rem;opacity:.95}
+
 /* ============ GIVE PAGE (blue tone) ============ */
 .give-page .iftar-hero{
   background:

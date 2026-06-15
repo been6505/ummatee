@@ -172,7 +172,7 @@ function DonateAccount({ icon, title, account }) {
     document.body.removeChild(el)
   }
   return (
-    <button type="button" className="iftar-donate" onClick={copy}>
+    <button type="button" className="iftar-donate" onClick={copy} dir="ltr">
       <img className="iftar-donate-icon" src={icon} alt="" />
       <div className="iftar-donate-body">
         <div className="iftar-donate-title">{title}</div>

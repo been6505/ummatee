@@ -15,9 +15,13 @@ const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZR
 const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
 
 // การ์ดกราฟที่เลือกประเภทได้ (โดนัท/แท่งนอน/แท่งตั้ง/เส้น) — ใช้ชุดกราฟกลางจาก AdminCharts
-function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true }) {
+function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true, topN }) {
   const [type, setType] = useState(types[0])
-  const cols = colors || legendColors(data.length)
+  const [showAll, setShowAll] = useState(false)
+  // ถ้ากำหนด topN และข้อมูลมากกว่านั้น ให้ตัดเหลือ topN จนกว่าจะกด "ดูทั้งหมด"
+  const canCollapse = topN != null && data.length > topN
+  const shown = canCollapse && !showAll ? data.slice(0, topN) : data
+  const cols = colors || legendColors(shown.length)
   return (
     <div className="admin-card admin-card-center">
       <div className="admin-card-head">
@@ -28,13 +32,18 @@ function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], s
         <p className="admin-empty">ไม่มีข้อมูล</p>
       ) : (
         <>
-          <Chart type={type} data={data} colors={cols} />
+          <Chart type={type} data={shown} colors={cols} />
           {showLegend && type === 'donut' && (
             <div className="admin-legend">
-              {data.map((d, i) => (
+              {shown.map((d, i) => (
                 <span key={d.label}><i style={{ background: cols[i % cols.length] }} /> {d.label}: {d.value}</span>
               ))}
             </div>
+          )}
+          {canCollapse && (
+            <button className="admin-clear" style={{ marginTop: 12 }} onClick={() => setShowAll((v) => !v)}>
+              {showAll ? `แสดงเฉพาะ Top ${topN}` : `ดูทั้งหมด (${data.length})`}
+            </button>
           )}
         </>
       )}
@@ -149,9 +158,9 @@ export default function AdminIftarDashboard() {
   const genderData = useMemo(() => countBy(regs, (r) => r.gender), [regs])
   const ageData = useMemo(() => countBy(regs, (r) => ageGroup(r.age)), [regs])
   const channelData = useMemo(() => countBy(regs, (r) => (r.channel || '').split(',').map((s) => s.trim()).filter(Boolean)), [regs])
-  const provinceData = useMemo(() => countBy(regs, (r) => r.province).slice(0, 10), [regs])
+  const provinceData = useMemo(() => countBy(regs, (r) => r.province), [regs])
   const expectData = useMemo(() => countBy(regs, (r) => (r.expect || '').split(',').map((s) => s.trim()).filter(Boolean)), [regs])
-  const jobData = useMemo(() => countBy(regs, (r) => r.job).slice(0, 10), [regs])
+  const jobData = useMemo(() => countBy(regs, (r) => r.job), [regs])
 
   // ยังไม่ล็อกอิน → แสดงฟอร์มล็อกอิน
   if (authLoading) return null
@@ -172,7 +181,7 @@ export default function AdminIftarDashboard() {
           <div className="admin-stat"><div className="v">{regs.length}</div><div className="l">ผู้ลงทะเบียนทั้งหมด</div></div>
           <div className="admin-stat"><div className="v">{genderData.find((g) => g.label === 'ชาย')?.value || 0}</div><div className="l">ชาย</div></div>
           <div className="admin-stat"><div className="v">{genderData.find((g) => g.label === 'หญิง')?.value || 0}</div><div className="l">หญิง</div></div>
-          <div className="admin-stat"><div className="v">{provinceData.length}</div><div className="l">จังหวัด (top)</div></div>
+          <div className="admin-stat"><div className="v">{provinceData.length}</div><div className="l">จำนวนจังหวัด</div></div>
         </div>
 
         {loading ? (
@@ -184,8 +193,8 @@ export default function AdminIftarDashboard() {
               <ChartCard title="ช่วงอายุ" data={ageData} types={['donut', 'column', 'hbar', 'line']} />
               <ChartCard title="รู้จักงานจากช่องทาง" data={channelData} types={['donut', 'hbar', 'column']} />
               <ChartCard title="สิ่งที่คาดหวังจากงาน" data={expectData} types={['donut', 'hbar', 'column']} />
-              <ChartCard title="จังหวัดที่พำนัก (Top 10)" data={provinceData} types={['hbar', 'column', 'donut', 'line']} />
-              <ChartCard title="อาชีพ (Top 10)" data={jobData} types={['hbar', 'column', 'donut']} />
+              <ChartCard title="จังหวัดที่พำนัก" data={provinceData} types={['hbar', 'column', 'donut', 'line']} topN={10} />
+              <ChartCard title="อาชีพ" data={jobData} types={['hbar', 'column', 'donut']} topN={10} />
             </div>
 
             <div className="admin-card" style={{ marginTop: 24 }}>

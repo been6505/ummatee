@@ -41,7 +41,7 @@ const T = {
 }
 
 // แถวบัญชีธนาคาร 1 แถว — แตะเพื่อคัดลอกเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
-function AccountRow({ a }) {
+function AccountRow({ a, lang }) {
   const [copied, setCopied] = useState(false)
   const copy = () => {
     const clean = a.raw.replace(/\s/g, '')
@@ -65,7 +65,7 @@ function AccountRow({ a }) {
     <FadeUp className="don-row" onClick={copy} dir="ltr">
       <div className="don-icon">{a.icon}</div>
       <div className="don-info">
-        <div className="don-name">{a.name}</div>
+        <div className="don-name">{lang === 'ar' ? a.en : a.name}</div>
         <div className="don-name-en">{a.en}</div>
       </div>
       <div className="don-acc" dir="ltr">{a.acc}</div>
@@ -102,7 +102,7 @@ export default function Donation() {
         <p className="don-hint">{t.hint}</p>
 
         <div className="bank-accounts">
-          {ACCOUNTS.map((a) => <AccountRow a={a} key={a.acc} />)}
+          {ACCOUNTS.map((a) => <AccountRow a={a} key={a.acc} lang={lang} />)}
         </div>
 
         <div className="trust-grid">

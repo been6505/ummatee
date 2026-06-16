@@ -62,13 +62,13 @@ function AccountRow({ a }) {
     document.body.removeChild(t)
   }
   return (
-    <FadeUp className="don-row" onClick={copy}>
+    <FadeUp className="don-row" onClick={copy} dir="ltr">
       <div className="don-icon">{a.icon}</div>
       <div className="don-info">
         <div className="don-name">{a.name}</div>
         <div className="don-name-en">{a.en}</div>
       </div>
-      <div className="don-acc">{a.acc}</div>
+      <div className="don-acc" dir="ltr">{a.acc}</div>
       <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? '✓' : <CopyIcon />}</div>
     </FadeUp>
   )

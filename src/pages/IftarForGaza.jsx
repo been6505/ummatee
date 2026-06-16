@@ -275,7 +275,7 @@ export default function Iftar() {
           <p className="iftar-tagline">{t.tagline}</p>
           <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
 
-          <img className="iftar-poster" src="/poster-iftar-gaza.png" alt="Iftar For Gaza" loading="lazy" />
+          <img className="iftar-poster" src="/iftargaza.png" alt="Iftar For Gaza" loading="lazy" />
 
           <p className="lead">{t.lead}</p>
 

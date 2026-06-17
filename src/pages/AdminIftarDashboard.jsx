@@ -260,7 +260,7 @@ export default function AdminIftarDashboard() {
                         <td>{r.fname} {r.lname}</td>
                         <td>{r.gender}</td>
                         <td>{r.age}</td>
-                        <td>{r.phone}</td>
+                        <td>{(r.phone || '').replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3')}</td>
                         <td>{r.email}</td>
                         <td>{r.job}</td>
                         <td>{r.province}</td>

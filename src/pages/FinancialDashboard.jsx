@@ -38,9 +38,17 @@ function AccountInfo({ account }) {
   )
 }
 
+const PROJECTS = [
+  { icon: '🌙', label: 'เลี้ยงละศีลอดวันละ 5,000 คน' },
+  { icon: '🥛', label: 'มอบอาหาร, น้ำดื่ม ทุกวันตลอดปี' },
+  { icon: '🏠', label: 'ร่วมอุปถัมภ์ 50 ครอบครัว ตลอดปี' },
+  { icon: '🚑', label: 'มอบรถพยาบาลช่วยด่วน 1 คัน' },
+]
+
 export default function FinancialDashboard() {
   const { data, loading } = useFinancialData()
   const [now, setNow] = useState(new Date())
+  const [activeProject, setActiveProject] = useState(0)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -103,6 +111,19 @@ export default function FinancialDashboard() {
             </div>
           </div>
         </header>
+
+        <div className="uc-projects">
+          {PROJECTS.map((p, i) => (
+            <button
+              key={i}
+              className={`uc-project-btn${activeProject === i ? ' active' : ''}`}
+              onClick={() => setActiveProject(i)}
+            >
+              <span className="uc-project-icon">{p.icon}</span>
+              <span className="uc-project-label">{p.label}</span>
+            </button>
+          ))}
+        </div>
 
         <div className="uc-stats">
           <div className="uc-stat">

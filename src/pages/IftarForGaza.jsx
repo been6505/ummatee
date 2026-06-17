@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
-import { collection, addDoc, getCountFromServer } from 'firebase/firestore'
+import { collection, addDoc, doc, getDoc } from 'firebase/firestore'
 import CopyIcon from '../components/CopyIcon.jsx'
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
@@ -208,8 +208,8 @@ export default function Iftar() {
   const [isFull, setIsFull] = useState(false)
 
   useEffect(() => {
-    getCountFromServer(collection(db, 'iftarRegs'))
-      .then((snap) => { if (snap.data().count >= 400) setIsFull(true) })
+    getDoc(doc(db, 'config', 'iftarMeta'))
+      .then((snap) => { if (snap.exists() && snap.data().isClosed) setIsFull(true) })
       .catch(() => {})
   }, [])
 

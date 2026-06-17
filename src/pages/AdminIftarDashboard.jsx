@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '../firebase.js'
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { collection, getDocs, orderBy, query, doc, getDoc, setDoc } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
@@ -95,6 +95,8 @@ export default function AdminIftarDashboard() {
   const [regs, setRegs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [isClosed, setIsClosed] = useState(false)
+  const [closedLoading, setClosedLoading] = useState(false)
 
   // โหลดข้อมูลหลังล็อกอิน: ลอง Google Sheet ก่อน ถ้าพลาดค่อยใช้ Firestore
   useEffect(() => {
@@ -128,6 +130,22 @@ export default function AdminIftarDashboard() {
 
     return () => { cancelled = true }
   }, [authed])
+
+  // โหลดสถานะปิดรับลงทะเบียน
+  useEffect(() => {
+    if (!authed) return
+    getDoc(doc(db, 'config', 'iftarMeta'))
+      .then((snap) => { if (snap.exists()) setIsClosed(!!snap.data().isClosed) })
+      .catch(() => {})
+  }, [authed])
+
+  const toggleClosed = async () => {
+    setClosedLoading(true)
+    const next = !isClosed
+    await setDoc(doc(db, 'config', 'iftarMeta'), { isClosed: next }, { merge: true }).catch(() => {})
+    setIsClosed(next)
+    setClosedLoading(false)
+  }
 
   // ตัวกรองและการเรียงลำดับของตารางรายชื่อ
   const [filterField, setFilterField] = useState('gender') // มิติที่เลือกกรอง (จัดเรียงโดย)
@@ -190,6 +208,13 @@ export default function AdminIftarDashboard() {
             <h1>📊 Iftar For Gaza — Dashboard</h1>
             <p>ข้อมูลผู้ลงทะเบียนเข้าร่วมงานทั้งหมด</p>
           </div>
+          <button
+            className={`admin-btn${isClosed ? ' admin-btn-danger' : ' admin-btn-primary'}`}
+            onClick={toggleClosed}
+            disabled={closedLoading}
+          >
+            {closedLoading ? '...' : isClosed ? '🔓 เปิดรับลงทะเบียน' : '🔒 ปิดรับลงทะเบียน'}
+          </button>
         </div>
 
         <div className="admin-stats">

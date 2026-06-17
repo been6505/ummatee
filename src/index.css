@@ -677,7 +677,8 @@ select.iftar-input option{color:#222;background:#fff}
 .admin-btn:hover{background:#EAF6EE}
 .admin-btn-primary{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(27,94,54,.5)}
 .admin-btn-primary:hover{filter:brightness(1.08)}
-.admin-btn-danger{padding:6px 12px;border-radius:8px;border:1px solid rgba(216,67,21,.3);background:#fff;color:#d84315;font-weight:700;font-size:.8rem;cursor:pointer}
+.admin-btn-danger{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(183,28,28,.5)}
+.admin-btn-danger:hover{filter:brightness(1.08)}
 .admin-btn-danger:hover{background:#fdeee9}
 
 .admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}

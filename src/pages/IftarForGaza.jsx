@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
-import { collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc, getCountFromServer } from 'firebase/firestore'
 import CopyIcon from '../components/CopyIcon.jsx'
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
@@ -205,6 +205,13 @@ export default function Iftar() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [successRef, setSuccessRef] = useState(null)
+  const [isFull, setIsFull] = useState(false)
+
+  useEffect(() => {
+    getCountFromServer(collection(db, 'iftarRegs'))
+      .then((snap) => { if (snap.data().count >= 400) setIsFull(true) })
+      .catch(() => {})
+  }, [])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const toggle = (list, setList, v) =>
@@ -297,7 +304,16 @@ export default function Iftar() {
       </section>
 
       <section className="iftar-stage" id="iftar-form">
-        {successRef ? (
+        {isFull ? (
+          <div className="iftar-full">
+            <div className="iftar-full-card">
+              <div className="iftar-full-icon">🚫</div>
+              <h2>ปิดรับลงทะเบียนแล้ว</h2>
+              <p>ขออภัย — ที่นั่งครบ 400 คนแล้ว ขอบคุณทุกท่านที่ให้ความสนใจ</p>
+              <p style={{ fontSize: '0.92rem', opacity: 0.7 }}>Registration is closed · تم إغلاق التسجيل</p>
+            </div>
+          </div>
+        ) : successRef ? (
           <div className="iftar-success">
             <div className="success-card">
               <div className="success-check">✓</div>

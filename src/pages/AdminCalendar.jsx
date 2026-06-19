@@ -44,11 +44,12 @@ export default function AdminCalendar() {
   const [status, setStatus] = useState('')
 
   useEffect(() => {
+    if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
     const unsub = onSnapshot(collection(db, 'contentPosts'), (snap) => {
       setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
     })
     return unsub
-  }, [])
+  }, [user])
 
   // โพสต์จัดกลุ่มตามวันที่ ใช้แสดงจุดบนปฏิทิน
   const byDate = useMemo(() => {

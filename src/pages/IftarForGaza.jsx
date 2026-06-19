@@ -3,6 +3,7 @@ import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
 import { collection, addDoc, doc, getDoc } from 'firebase/firestore'
+import { QRCodeSVG } from 'qrcode.react'
 import CopyIcon from '../components/CopyIcon.jsx'
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
@@ -28,11 +29,37 @@ const PROVINCES = [
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
 
+// บันทึกลง Firestore แบบ retry (สำรองข้อมูลให้ครบเสมอ เพราะหน้า admin อ่านจาก Firestore)
+// ลองซ้ำสูงสุด 3 ครั้ง หน่วงเพิ่มขึ้นเรื่อย ๆ — คืน true เมื่อสำเร็จ, false เมื่อพลาดทุกครั้ง
+async function saveToFirestore(saved, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await addDoc(collection(db, 'iftarRegs'), saved)
+      return true
+    } catch (e) {
+      if (i === attempts - 1) return false
+      await new Promise((r) => setTimeout(r, 600 * (i + 1)))
+    }
+  }
+  return false
+}
+
 // ลิงก์แผนที่ไปยังสถานที่จัดงาน (ใช้ร่วมกันทุกภาษา)
 const IB_MAP_LINK = 'https://maps.app.goo.gl/MeUdbtRPhB7mKBcb7'
 
 // ไฟล์โปสเตอร์ประชาสัมพันธ์งาน (วางไฟล์ไว้ที่ public/iftar-for-gaza-poster.jpg)
 const POSTER_IMG = '/iftar-for-gaza-poster.jpg'
+
+// เพดานจำนวนที่นั่ง — ถ้ายอดลงทะเบียนถึงค่านี้จะปิดรับอัตโนมัติ (ต้องตรงกับข้อความ seatLimit ในแต่ละภาษา)
+const SEAT_LIMIT = 400
+
+// จัดรูปแบบเบอร์เป็น 0##-###-#### (เบอร์ไทย 10 หลักขึ้นต้น 0) ก่อนบันทึกลง Sheet/Firestore
+// รูปแบบอื่น (เบอร์ต่างประเทศ/ไม่ครบ 10 หลัก) เก็บตามที่กรอก
+function formatPhone(raw) {
+  const digits = (raw || '').replace(/\D/g, '')
+  if (/^0\d{9}$/.test(digits)) return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3')
+  return (raw || '').trim()
+}
 
 const T = {
   th: {
@@ -67,6 +94,7 @@ const T = {
     successTitle: 'ลงทะเบียนสำเร็จ!',
     successP: 'ญะซากัลลอฮุค็อยรอน — ขอบคุณที่ร่วมเป็นส่วนหนึ่งของงาน Iftar For Gaza',
     successKeep: 'กรุณาบันทึกรหัสลงทะเบียนนี้ไว้ เพื่อใช้ยืนยันหน้างาน',
+    successEmail: 'เราได้ส่งอีเมลยืนยันไปที่ {email} แล้ว (อีเมลอัตโนมัติ ห้ามตอบกลับ)',
     successAgain: 'ลงทะเบียนเพิ่มอีกคน',
     checkToggle: '🔍 ตรวจสอบรายชื่อผู้ลงทะเบียน',
     checkSearch: 'ค้นหาด้วยชื่อ จังหวัด หรือรหัส IFG...',
@@ -105,6 +133,7 @@ const T = {
     successTitle: 'Registration Complete!',
     successP: 'Jazakallahu khairan — thank you for being part of Iftar For Gaza',
     successKeep: 'Please save this registration code to confirm at the event',
+    successEmail: 'A confirmation email has been sent to {email} (automated message, please do not reply)',
     successAgain: 'Register another person',
     checkToggle: '🔍 Check registered names',
     checkSearch: 'Search by name, province, or IFG code...',
@@ -143,6 +172,7 @@ const T = {
     successTitle: 'تم التسجيل بنجاح!',
     successP: 'جزاكم الله خيراً — شكراً لمشاركتكم في إفطار من أجل غزة',
     successKeep: 'يرجى حفظ رمز التسجيل هذا لتأكيد حضورك في الفعالية',
+    successEmail: 'تم إرسال رسالة تأكيد إلى {email} (رسالة تلقائية، يرجى عدم الرد)',
     successAgain: 'تسجيل شخص آخر',
     checkToggle: '🔍 التحقق من أسماء المسجلين',
     checkSearch: 'ابحث بالاسم أو المحافظة أو رمز IFG...',
@@ -208,8 +238,18 @@ export default function Iftar() {
   const [isFull, setIsFull] = useState(false)
 
   useEffect(() => {
+    // 1) ปิดด้วยมือจากแอดมิน + อ่าน seatLimit ที่แอดมินตั้งไว้ (ถ้ามี)
     getDoc(doc(db, 'config', 'iftarMeta'))
-      .then((snap) => { if (snap.exists() && snap.data().isClosed) setIsFull(true) })
+      .then((snap) => {
+        if (!snap.exists()) return
+        if (snap.data().isClosed) setIsFull(true)
+        const limit = snap.data().seatLimit || SEAT_LIMIT
+        // 2) ปิดอัตโนมัติเมื่อยอดถึงเพดาน (อ่าน count สาธารณะจาก Apps Script)
+        fetch(`${SHEET_ENDPOINT}?count=1`)
+          .then((r) => r.json())
+          .then((o) => { if (typeof o.count === 'number' && o.count >= limit) setIsFull(true) })
+          .catch(() => {})
+      })
       .catch(() => {})
   }, [])
 
@@ -231,7 +271,7 @@ export default function Iftar() {
     setSubmitting(true)
     const regData = {
       date: new Date().toLocaleString('th-TH'),
-      fname: f.fname.trim(), lname: f.lname.trim(), gender, age: f.age.trim(), phone: f.phone.trim(), email: f.email.trim(),
+      fname: f.fname.trim(), lname: f.lname.trim(), gender, age: f.age.trim(), phone: formatPhone(f.phone), email: f.email.trim(),
       job: (f.job === t.jobs[t.jobs.length - 1] ? f.jobOther : f.job).trim(), province: f.province.trim(),
       channel: channel.join(', '), expect: expect.join(', '), comment: f.comment.trim(),
     }
@@ -247,8 +287,9 @@ export default function Iftar() {
       if (!out.ref) throw new Error('no ref')
       const saved = { ref: out.ref, ...regData }
 
-      // สำรองลง Firestore (ถ้าพลาดไม่ถือว่าลงทะเบียนล้มเหลว เพราะข้อมูลหลักอยู่ในชีตแล้ว)
-      await addDoc(collection(db, 'iftarRegs'), saved).catch(() => { /* noop */ })
+      // สำรองลง Firestore แบบ retry — ให้บันทึกครบทั้ง Sheet (หลัก) และ Firestore (สำรอง) พร้อมกัน
+      // ถ้าพลาดทุกครั้งไม่ถือว่าลงทะเบียนล้มเหลว เพราะข้อมูลหลักอยู่ในชีตแล้ว
+      await saveToFirestore(saved)
 
       // เก็บสำเนาในเครื่อง (localStorage) ไว้ให้แผง "ตรวจสอบรายชื่อ" ใช้แสดง
       try {
@@ -258,7 +299,9 @@ export default function Iftar() {
       } catch (e) { /* noop */ }
 
       setSuccessRef(out.ref)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setTimeout(() => {
+        document.getElementById('iftar-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
     } catch (e) {
       setError(t.errSend)
     } finally {
@@ -282,7 +325,7 @@ export default function Iftar() {
           <p className="iftar-tagline">{t.tagline}</p>
           <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
 
-          <img className="iftar-poster" src="/iftargaza.png" alt="Iftar For Gaza" loading="lazy" />
+          <img className="iftar-poster" src="/poster-iftar.png" alt="Iftar For Gaza" loading="lazy" />
 
           <p className="lead">{t.lead}</p>
 
@@ -319,8 +362,14 @@ export default function Iftar() {
               <div className="success-check">✓</div>
               <h2>{t.successTitle}</h2>
               <p>{t.successP}</p>
+              <div className="success-qr">
+                <QRCodeSVG value={successRef} size={188} level="M" marginSize={2} />
+              </div>
               <div className="ref-pill">{successRef}</div>
               <p>{t.successKeep}</p>
+              {form.email.trim() && (
+                <p className="success-email-note">📧 {t.successEmail.replace('{email}', form.email.trim())}</p>
+              )}
               <button className="btn btn-primary" style={{ marginTop: 22, justifyContent: 'center' }} onClick={reset}>
                 {t.successAgain}
               </button>

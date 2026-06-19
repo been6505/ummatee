@@ -53,6 +53,35 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // อาสาสมัคร — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน
+    match /volunteerRegs/{id} {
+      allow create: if request.resource.data.fname is string && request.resource.data.fname.size() > 0
+        && request.resource.data.lname is string && request.resource.data.lname.size() > 0
+        && request.resource.data.phone is string && request.resource.data.phone.size() > 0;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Give2 — ส่งต่อของงาน "ให้" ครั้งที่ 6
+    match /give2Regs/{id} {
+      allow create: if request.resource.data.fname is string && request.resource.data.fname.size() > 0
+        && request.resource.data.lname is string && request.resource.data.lname.size() > 0
+        && request.resource.data.phone is string && request.resource.data.phone.size() > 0
+        && request.resource.data.types is list && request.resource.data.types.size() > 0;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // counter สำหรับ give2 ref code
+    match /config/give2Counter {
+      allow read, write: if true;
+    }
+
+    // สถิติหน้าบริจาค — จำกัดเฉพาะ doc 'donation' และ field ต้องเป็นตัวเลข
+    match /stats/donation {
+      allow create, update: if request.resource.data.keys().hasOnly(['views','copies'])
+        || request.resource.data.keys().hasAny(['views','copies']);
+      allow read: if isAdmin();
+    }
+
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
     match /{document=**} {
       allow read, write: if false;

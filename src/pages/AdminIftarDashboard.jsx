@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { db } from '../firebase.js'
-import { collection, getDocs, orderBy, query, doc, getDoc, setDoc } from 'firebase/firestore'
+import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 
 // แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
-// ดึงรายชื่อผู้ลงทะเบียนจาก Google Sheet เป็นหลัก (fallback เป็น Firestore) แล้วสรุปเป็นกราฟ + ตาราง
-
-// Apps Script Web App เดียวกับที่หน้าลงทะเบียนใช้ส่งข้อมูล (doGet คืนรายการจาก Sheet)
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
-// token ต้องตรงกับที่ตั้งไว้ใน doGet ของ Apps Script — ถ้าไม่ส่งหรือผิด จะได้ {"error":"unauthorized"}
-const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
+// ดึงรายชื่อผู้ลงทะเบียนจาก Firestore (admin ล็อกอินแล้วอ่านได้ตาม rules) แล้วสรุปเป็นกราฟ + ตาราง
 
 // การ์ดกราฟที่เลือกประเภทได้ (โดนัท/แท่งนอน/แท่งตั้ง/เส้น) — ใช้ชุดกราฟกลางจาก AdminCharts
 function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true, topN }) {
@@ -97,47 +92,49 @@ export default function AdminIftarDashboard() {
   const [search, setSearch] = useState('')
   const [isClosed, setIsClosed] = useState(false)
   const [closedLoading, setClosedLoading] = useState(false)
+  const [seatLimit, setSeatLimit] = useState(400)
+  const [seatInput, setSeatInput] = useState('')
+  const [seatSaving, setSeatSaving] = useState(false)
 
-  // โหลดข้อมูลหลังล็อกอิน: ลอง Google Sheet ก่อน ถ้าพลาดค่อยใช้ Firestore
+  // โหลดข้อมูลหลังล็อกอินจาก Firestore โดยตรง (admin ผ่าน rules อ่าน iftarRegs ได้)
+  // เรียงลำดับฝั่ง client เอง (ฟิลด์ date เป็นสตริงรูปแบบไทย ไม่เหมาะกับ orderBy ของ Firestore)
   useEffect(() => {
     if (!authed) return
     let cancelled = false
     setLoading(true)
-
-    const loadFromFirestore = () =>
-      getDocs(query(collection(db, 'iftarRegs'), orderBy('date', 'desc')))
-        .then((snap) => {
-          if (cancelled) return
-          setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-        })
-        .catch(() =>
-          getDocs(collection(db, 'iftarRegs')).then((snap) => {
-            if (cancelled) return
-            setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-          })
-        )
-
-    // ดึงจาก Google Sheet ก่อน (ข้อมูลหลัก) ถ้าไม่ได้ค่อย fallback ไป Firestore
-    fetch(`${SHEET_ENDPOINT}?token=${SHEET_TOKEN}`)
-      .then((res) => res.json())
-      .then((out) => {
+    getDocs(collection(db, 'iftarRegs'))
+      .then((snap) => {
         if (cancelled) return
-        if (!Array.isArray(out.rows)) throw new Error('bad response')
-        setRegs(out.rows.map((r, i) => ({ id: r.ref || i, ...r })).reverse())
+        setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       })
-      .catch(() => loadFromFirestore())
+      .catch(() => { if (!cancelled) setRegs([]) })
       .finally(() => !cancelled && setLoading(false))
 
     return () => { cancelled = true }
   }, [authed])
 
-  // โหลดสถานะปิดรับลงทะเบียน
+  // โหลดสถานะปิดรับ + จำนวนที่นั่ง
   useEffect(() => {
     if (!authed) return
     getDoc(doc(db, 'config', 'iftarMeta'))
-      .then((snap) => { if (snap.exists()) setIsClosed(!!snap.data().isClosed) })
+      .then((snap) => {
+        if (snap.exists()) {
+          setIsClosed(!!snap.data().isClosed)
+          if (snap.data().seatLimit) setSeatLimit(snap.data().seatLimit)
+        }
+      })
       .catch(() => {})
   }, [authed])
+
+  const saveSeatLimit = async () => {
+    const n = parseInt(seatInput)
+    if (!n || n < 1) return
+    setSeatSaving(true)
+    await setDoc(doc(db, 'config', 'iftarMeta'), { seatLimit: n }, { merge: true }).catch(() => {})
+    setSeatLimit(n)
+    setSeatInput('')
+    setSeatSaving(false)
+  }
 
   const toggleClosed = async () => {
     setClosedLoading(true)
@@ -208,13 +205,37 @@ export default function AdminIftarDashboard() {
             <h1>📊 Iftar For Gaza — Dashboard</h1>
             <p>ข้อมูลผู้ลงทะเบียนเข้าร่วมงานทั้งหมด</p>
           </div>
-          <button
-            className={`admin-btn${isClosed ? ' admin-btn-danger' : ' admin-btn-primary'}`}
-            onClick={toggleClosed}
-            disabled={closedLoading}
-          >
-            {closedLoading ? '...' : isClosed ? '🔓 เปิดรับลงทะเบียน' : '🔒 ปิดรับลงทะเบียน'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              className={`admin-btn${isClosed ? ' admin-btn-danger' : ' admin-btn-primary'}`}
+              onClick={toggleClosed}
+              disabled={closedLoading}
+            >
+              {closedLoading ? '...' : isClosed ? '🔓 เปิดรับลงทะเบียน' : '🔒 ปิดรับลงทะเบียน'}
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ fontSize: '0.85rem', opacity: 0.7, whiteSpace: 'nowrap' }}>
+                ที่นั่ง (ปัจจุบัน: {seatLimit})
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="จำนวน"
+                value={seatInput}
+                onChange={(e) => setSeatInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveSeatLimit() }}
+                style={{ width: 80, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--ink-soft, #ccc)', fontSize: '0.9rem' }}
+              />
+              <button
+                className="admin-btn admin-btn-primary"
+                onClick={saveSeatLimit}
+                disabled={seatSaving || !seatInput}
+                style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              >
+                {seatSaving ? '...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="admin-stats">
@@ -268,6 +289,7 @@ export default function AdminIftarDashboard() {
                 <table className="admin-table">
                   <thead>
                     <tr>
+                      <th className="admin-th-sort" style={{ width: 40 }}>#</th>
                       {[
                         ['ref', 'Ref'], ['fname', 'ชื่อ-นามสกุล'], ['gender', 'เพศ'], ['age', 'อายุ'], ['phone', 'เบอร์โทร'],
                         ['email', 'อีเมล'], ['job', 'อาชีพ'], ['province', 'จังหวัด'], ['channel', 'ช่องทาง'], ['date', 'วันที่ลงทะเบียน'],
@@ -279,8 +301,9 @@ export default function AdminIftarDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r) => (
+                    {filtered.map((r, i) => (
                       <tr key={r.id}>
+                        <td style={{ textAlign: 'center', opacity: 0.5, fontSize: '0.82rem' }}>{i + 1}</td>
                         <td>{r.ref || '-'}</td>
                         <td>{r.fname} {r.lname}</td>
                         <td>{r.gender}</td>

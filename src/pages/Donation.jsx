@@ -1,9 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ACCOUNTS } from '../data/accounts'
 import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import CopyIcon from '../components/CopyIcon.jsx'
 import Footer from '../components/Footer.jsx'
+import { db } from '../firebase.js'
+import { doc, setDoc, updateDoc, increment } from 'firebase/firestore'
+
+const statsRef = () => doc(db, 'stats', 'donation')
+
+function trackView() {
+  // views เป็น top-level field ใช้ setDoc+merge ได้ปกติ
+  setDoc(statsRef(), { views: increment(1) }, { merge: true }).catch(() => {})
+}
+
+function trackCopy(key) {
+  // updateDoc ถึงจะ handle dot-notation path ได้ถูกต้อง (nested field)
+  // ถ้า doc ยังไม่มี ให้ fallback setDoc สร้างใหม่
+  updateDoc(statsRef(), { [`copies.${key}`]: increment(1) })
+    .catch(() => setDoc(statsRef(), { copies: { [key]: increment(1) } }, { merge: true }).catch(() => {}))
+}
 
 // หน้าร่วมบริจาค — แสดงบัญชี ibank ทั้ง 8 บัญชี แตะคัดลอกเลขบัญชีได้
 // ข้อความแยกตามภาษา
@@ -43,23 +59,26 @@ const T = {
 // แถวบัญชีธนาคาร 1 แถว — แตะเพื่อคัดลอกเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
 function AccountRow({ a, lang }) {
   const [copied, setCopied] = useState(false)
-  const copy = () => {
-    const clean = a.raw.replace(/\s/g, '')
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(clean).catch(() => fallback(clean))
-    } else {
-      fallback(clean)
-    }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
-  }
-  // วิธีสำรองสำหรับเบราว์เซอร์เก่าที่ไม่มี navigator.clipboard
   const fallback = (text) => {
     const t = document.createElement('textarea')
     t.value = text; t.style.position = 'fixed'; t.style.opacity = '0'
     document.body.appendChild(t); t.select()
-    try { document.execCommand('copy') } catch (e) { /* noop */ }
+    let ok = false
+    try { ok = document.execCommand('copy') } catch (e) { /* noop */ }
     document.body.removeChild(t)
+    return ok
+  }
+  const copy = () => {
+    const clean = a.raw.replace(/\s/g, '')
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean)
+        .then(() => trackCopy(a.key))
+        .catch(() => { if (fallback(clean)) trackCopy(a.key) })
+    } else {
+      if (fallback(clean)) trackCopy(a.key)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1800)
   }
   return (
     <FadeUp className="don-row" onClick={copy} dir="ltr">
@@ -77,6 +96,7 @@ function AccountRow({ a, lang }) {
 export default function Donation() {
   const { lang } = useLang()
   const t = T[lang]
+  useEffect(() => { trackView() }, [])
   return (
     <main className="page">
       <section className="page-band">

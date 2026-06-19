@@ -26,6 +26,9 @@ const T = {
     fcDonTag: '💚 DONATE · บริจาค', fcDonTitle: 'ช่วยเหลือผู้ยากไร้',
     fcDonP: 'บริจาคผ่านบัญชีมูลนิธิอุมมะตี เลือกได้ทั้งซะกาต ช่วยในไทย ปาเลสไตน์ ซีเรีย และอาหารทั่วโลก',
     fcDonLink: 'ดูบัญชีบริจาค',
+    fcVolTag: '🤝 VOLUNTEER · อาสาสมัคร', fcVolTitle: 'เป็นส่วนหนึ่งของพวกเรา',
+    fcVolP: 'ร่วมเป็นอาสาสมัครมูลนิธิอุมมะตี ช่วยเหลือกิจกรรม งานมนุษยธรรม และการสนับสนุนชุมชน สมัครได้เลย',
+    fcVolLink: 'สมัครอาสาสมัคร',
     helpEyebrow: 'เราช่วยเหลืออะไรบ้าง', helpTitle: 'ความเมตตาที่ส่งถึงทุกชีวิต',
     help: [
       { e: '🍚', h: 'อาหาร', p: 'มื้ออาหารและน้ำสะอาดสำหรับผู้หิวโหยทั่วโลก' },
@@ -57,6 +60,9 @@ const T = {
     fcDonTag: '💚 DONATE', fcDonTitle: 'Help Those in Need',
     fcDonP: 'Donate via Ummatee Foundation accounts — zakat, aid for Thailand, Palestine, Syria, and food worldwide.',
     fcDonLink: 'View Donation Accounts',
+    fcVolTag: '🤝 VOLUNTEER', fcVolTitle: 'Join Our Team',
+    fcVolP: 'Become an Ummatee volunteer — help with events, humanitarian work, and community support. Register today.',
+    fcVolLink: 'Register as Volunteer',
     helpEyebrow: 'What We Do', helpTitle: 'Mercy That Reaches Every Life',
     help: [
       { e: '🍚', h: 'Food', p: 'Meals and clean water for the hungry around the world' },
@@ -88,6 +94,9 @@ const T = {
     fcDonTag: '💚 تبرّع', fcDonTitle: 'مساعدة المحتاجين',
     fcDonP: 'تبرّع عبر حسابات مؤسسة أمّتي — زكاة، إغاثة في تايلاند وفلسطين وسوريا، وإطعام حول العالم.',
     fcDonLink: 'عرض حسابات التبرع',
+    fcVolTag: '🤝 تطوّع', fcVolTitle: 'كن جزءاً منّا',
+    fcVolP: 'انضم إلى متطوعي مؤسسة أمّتي — ساعدنا في الفعاليات والعمل الإنساني ودعم المجتمع. سجّل الآن.',
+    fcVolLink: 'سجّل كمتطوع',
     helpEyebrow: 'مجالات عملنا', helpTitle: 'رحمةٌ تصل إلى كل حياة',
     help: [
       { e: '🍚', h: 'الطعام', p: 'وجبات ومياه نظيفة للجائعين حول العالم' },
@@ -108,27 +117,60 @@ export default function Home() {
   const t = T[lang]
   return (
     <main className="page">
-      <section className="hero">
-        <div className="hero-pattern"></div>
-        <div className="hero-glow"></div>
-        <div className="hero-slogan"></div>
-        <div className="hero-inner">
-
-          <span className="hero-eyebrow" ><span> </span>{t.eyebrow}</span>
-          <h1 className="hero-title">{t.title1}<br />{t.title2}<span className="accent">{t.titleAccent}</span>{t.title3}</h1>
-          <p className="hero-sub">{t.sub}</p>
-          <div className="hero-actions">
-            <a href="#" className="btn btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}>
-              <span className="ic"></span> <span>🇵🇸</span> {t.ctaIftar}
-            </a>
-            <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}>
-              <span className="ic">💚</span> {t.ctaDonate}
-            </a>
+      {/* ── Hero Feed ── */}
+      <section className="hero-feed">
+        <div className="hero-feed-brand">
+          <img src="/logo-trim.png" alt="Ummatee" className="hf-logo" />
+          <div className="hf-brand-text">
+            <div className="hf-brand-name">Ummatee Foundation</div>
+            <div className="hf-brand-sub">{t.eyebrow}</div>
           </div>
         </div>
-        <div className="hero-scroll">
 
-          <span className="line"></span>
+        <div className="hf-feed">
+          {/* Card 1 — Iftar For Gaza */}
+          <FadeUp className="hf-card">
+            <a href="#" onClick={(e) => { e.preventDefault(); go('iftar') }} className="hf-card-poster-link">
+              <img
+                src="/poster-iftar-gaza.png"
+                alt="Iftar For Gaza"
+                className="hf-poster"
+              />
+            </a>
+            <div className="hf-card-body">
+              <div className="hf-card-tags">
+                <span className="hf-tag hf-tag-green">🌙 EVENT</span>
+                <span className="hf-tag hf-tag-muted">🇵🇸 Gaza</span>
+              </div>
+              <h2 className="hf-card-title">{t.fcEventTitle}</h2>
+              <p className="hf-card-desc">{t.fcEventP}</p>
+              <a href="#" className="hf-card-btn hf-btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}>
+                {t.fcEventLink} →
+              </a>
+            </div>
+          </FadeUp>
+
+          {/* Card 2 — งาน ให้ */}
+          <FadeUp className="hf-card" delay={80}>
+            <a href="#" onClick={(e) => { e.preventDefault(); go('give') }} className="hf-card-poster-link">
+              <img
+                src="/721119853_1607959538003595_185415737813897318_n.jpg"
+                alt="งาน ให้ ครั้งที่ 6"
+                className="hf-poster"
+              />
+            </a>
+            <div className="hf-card-body">
+              <div className="hf-card-tags">
+                <span className="hf-tag hf-tag-purple">🤲 EVENT</span>
+                <span className="hf-tag hf-tag-muted">3–5 ก.ค. 2569</span>
+              </div>
+              <h2 className="hf-card-title">{lang === 'ar' ? 'العطاء — الدورة السادسة' : lang === 'en' ? 'GIVE — 6th Edition' : 'งาน "ให้" ครั้งที่ 6'}</h2>
+              <p className="hf-card-desc">{lang === 'ar' ? 'مهرجان العطاء — أكشاك طعام، محاضرات، وأنشطة عائلية. ثلاثة أيام كاملة.' : lang === 'en' ? 'A festival of giving — food stalls, talks, influencer meet-ups, and a fun kids zone. Three full days.' : 'เทศกาลแห่งการแบ่งปัน ออกร้านอาหาร ฟังบรรยาย และส่งต่อสิ่งของ ลานพลาซ่า อินดอร์สเตเดียมหัวหมาก'}</p>
+              <a href="#" className="hf-card-btn hf-btn-give" onClick={(e) => { e.preventDefault(); go('give') }}>
+                {lang === 'ar' ? 'اعرف أكثر ←' : lang === 'en' ? 'Learn More →' : 'ดูรายละเอียด →'}
+              </a>
+            </div>
+          </FadeUp>
         </div>
       </section>
 
@@ -152,8 +194,8 @@ export default function Home() {
             <p>{t.waysSub}</p>
             <div className="gold-rule"></div>
           </FadeUp>
-          {/* การ์ดทางลัด 2 ใบ: ลงทะเบียน Iftar / ไปหน้าบริจาค */}
-          <div className="focus-grid">
+          {/* การ์ดทางลัด 3 ใบ: ลงทะเบียน Iftar / บริจาค / อาสาสมัคร */}
+          <div className="focus-grid focus-grid-3">
             <FadeUp className="focus-card focus-iftar" onClick={() => go('iftar')}>
               <div className="fc-pattern hero-pattern"></div>
               <span className="fc-tag">{t.fcEventTag}</span>
@@ -167,6 +209,13 @@ export default function Home() {
               <h3>{t.fcDonTitle}</h3>
               <p>{t.fcDonP}</p>
               <span className="fc-link">{t.fcDonLink} <span className="arrow">→</span></span>
+            </FadeUp>
+            <FadeUp className="focus-card focus-volunteer" onClick={() => { window.location.href = '/volunteer/register' }}>
+              <div className="fc-pattern hero-pattern"></div>
+              <span className="fc-tag">{t.fcVolTag}</span>
+              <h3>{t.fcVolTitle}</h3>
+              <p>{t.fcVolP}</p>
+              <span className="fc-link">{t.fcVolLink} <span className="arrow">→</span></span>
             </FadeUp>
           </div>
         </div>

@@ -5,11 +5,14 @@ import { auth } from '../firebase.js'
 const LINKS = [
   { href: '/admin/dashboard', label: '🏠 หน้าหลัก' },
   { href: '/admin/event/iftar2026', label: '🇵🇸 Iftar For Gaza' },
+  { href: '/admin/register-event', label: '📷 เช็คอินหน้างาน' },
   { href: '/admin/missions/qurban2026', label: '🐑 Qurban 2026' },
   { href: '/admin/donations', label: '💰 เงินบริจาค' },
   { href: '/admin/calendar', label: '📅 ปฏิทิน' },
   { href: '/admin/shop', label: '🛍️ Um Shop' },
   { href: '/admin/financial-dashboard', label: '📊 แดชบอร์ดการเงิน' },
+  { href: '/admin/volunteer', label: '🤝 อาสาสมัคร' },
+  { href: '/admin/give', label: '🎁 ส่งต่อของ' },
 ]
 
 export default function AdminNav() {

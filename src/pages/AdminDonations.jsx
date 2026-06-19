@@ -45,13 +45,14 @@ export default function AdminDonations() {
   const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
+    if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (donations อ่านได้เฉพาะแอดมิน) — กัน permission-denied และตารางว่างหลังล็อกอินบนหน้า
     const qy = query(collection(db, 'donations'), orderBy('date', 'desc'))
     const unsub = onSnapshot(qy, (snap) => {
       setRecords(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setRecLoading(false)
     }, () => setRecLoading(false))
     return unsub
-  }, [])
+  }, [user])
 
   const accName = (acc) => ACCOUNTS.find((a) => a.acc === acc)?.name || acc
 

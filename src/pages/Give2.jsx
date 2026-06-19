@@ -1,0 +1,395 @@
+import { useState, useRef } from 'react'
+import { db, storage } from '../firebase.js'
+import { collection, doc, setDoc, runTransaction } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { QRCodeSVG } from 'qrcode.react'
+
+const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
+const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
+
+const TYPES = [
+  {
+    key: 'computer',
+    icon: '💻',
+    label: 'มอบคอมมือสองให้น้องได้เรียน',
+    desc: 'คอมพิวเตอร์ แล็ปท็อป แท็บเล็ต ที่ยังสามารถใช้งานได้',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+    bgDark: '#2d1b4e',
+  },
+  {
+    key: 'tools',
+    icon: '🍳',
+    label: 'มอบเครื่องมือทำอาชีพแก่ผู้ยากไร้',
+    desc: 'เครื่องปั้น เตาปิ้ง อุปกรณ์ครัว เครื่องมือช่าง เครื่องตัดผม ฯลฯ',
+    color: '#059669',
+    bg: '#ecfdf5',
+    bgDark: '#064e3b',
+  },
+]
+
+async function nextRef() {
+  const counterRef = doc(db, 'config', 'give2Counter')
+  let num = 1
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(counterRef)
+    num = snap.exists() ? (snap.data().count ?? 0) + 1 : 1
+    tx.set(counterRef, { count: num })
+  })
+  return `GIV-${String(num).padStart(4, '0')}`
+}
+
+async function uploadImages(files, refCode, onProgress) {
+  const urls = []
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const path = `give2/${refCode}/${Date.now()}_${file.name}`
+    const sRef = storageRef(storage, path)
+    await uploadBytes(sRef, file)
+    const url = await getDownloadURL(sRef)
+    urls.push(url)
+    onProgress(Math.round(((i + 1) / files.length) * 100))
+  }
+  return urls
+}
+
+// ── Success Screen ──────────────────────────────────────────────────
+function SuccessScreen({ refCode, fname }) {
+  return (
+    <main className="g2-success-page">
+      <div className="g2-success-wrap">
+        {/* decoration circles */}
+        <div className="g2-success-deco deco-a"></div>
+        <div className="g2-success-deco deco-b"></div>
+
+        <div className="g2-success-inner">
+          <div className="g2-success-badge">✅</div>
+          <h2 className="g2-success-title">
+            ญะซากัลลอฮุคอยรอน<br />
+            <span className="g2-success-name">{fname}</span>
+          </h2>
+          <p className="g2-success-msg">
+            ขอบคุณที่ร่วมส่งต่อสิ่งดี ๆ ให้แก่สังคม<br />
+            ทีมงานจะติดต่อกลับเพื่อนัดรับสิ่งของของคุณ
+          </p>
+
+          <div className="g2-success-qr-box">
+            <div className="g2-success-qr-label">QR Code ยืนยันการลงทะเบียน</div>
+            <div className="g2-success-qr">
+              <QRCodeSVG
+                value={`https://ummatee-app.web.app/give2/${refCode}`}
+                size={160}
+                bgColor="transparent"
+                fgColor="#3b0764"
+              />
+            </div>
+            <div className="g2-success-ref">{refCode}</div>
+          </div>
+
+          <div className="g2-success-note">
+            📞 ทีมงานจะโทรหาคุณเพื่อนัดรับสิ่งของ<br />กรุณาเก็บรหัส <strong>{refCode}</strong> ไว้เป็นหลักฐาน
+          </div>
+
+          <a className="g2-back-btn" href="/event/give-for-um">← กลับหน้างาน GIVE</a>
+        </div>
+      </div>
+    </main>
+  )
+}
+
+// ── Main Form ───────────────────────────────────────────────────────
+export default function Give2() {
+  const [form, setForm] = useState({ fname: '', lname: '', phone: '', types: [], detail: '' })
+  const [images, setImages] = useState([])
+  const [previews, setPreviews] = useState([])
+  const [errors, setErrors] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [uploadPct, setUploadPct] = useState(0)
+  const [done, setDone] = useState(null)
+  const [dragOver, setDragOver] = useState(false)
+  const fileRef = useRef()
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const toggleType = (key) => {
+    setForm((f) => {
+      const types = f.types.includes(key) ? f.types.filter((t) => t !== key) : [...f.types, key]
+      return { ...f, types }
+    })
+    setErrors((er) => ({ ...er, types: undefined }))
+  }
+
+  const addFiles = (picked) => {
+    const combined = [...images, ...Array.from(picked)].slice(0, 10)
+    setImages(combined)
+    setPreviews(combined.map((f) => URL.createObjectURL(f)))
+    setErrors((er) => ({ ...er, images: undefined }))
+  }
+
+  const onFiles = (e) => addFiles(e.target.files || [])
+
+  const onDrop = (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    addFiles(e.dataTransfer.files)
+  }
+
+  const removeImage = (i) => {
+    const imgs = images.filter((_, idx) => idx !== i)
+    setImages(imgs)
+    setPreviews(imgs.map((f) => URL.createObjectURL(f)))
+  }
+
+  const validate = () => {
+    const e = {}
+    if (!form.fname.trim()) e.fname = 'กรุณากรอกชื่อ'
+    if (!form.lname.trim()) e.lname = 'กรุณากรอกนามสกุล'
+    if (!form.phone.trim()) e.phone = 'กรุณากรอกเบอร์โทร'
+    if (form.types.length === 0) e.types = 'กรุณาเลือกประเภทสิ่งที่ต้องการให้อย่างน้อย 1 รายการ'
+    if (images.length < 3) e.images = `กรุณาอัพโหลดรูปอย่างน้อย 3 รูป (ตอนนี้มี ${images.length} รูป)`
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!validate()) {
+      document.querySelector('.g2-err')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setSubmitting(true)
+    try {
+      const refCode = await nextRef()
+      const imageUrls = await uploadImages(images, refCode, setUploadPct)
+
+      const typeLabels = form.types.map((k) => TYPES.find((t) => t.key === k)?.label).join(', ')
+      const payload = {
+        refCode, fname: form.fname.trim(), lname: form.lname.trim(),
+        phone: form.phone.trim(), types: form.types, typeLabels,
+        detail: form.detail.trim(), imageUrls, submittedAt: new Date().toISOString(),
+      }
+
+      await setDoc(doc(collection(db, 'give2Regs'), refCode), payload)
+
+      fetch(SHEET_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: SHEET_TOKEN, type: 'give2', ...payload }),
+      }).catch(() => {})
+
+      setDone({ refCode, fname: form.fname.trim() })
+    } catch (err) {
+      console.error(err)
+      setErrors({ submit: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' })
+    } finally {
+      setSubmitting(false)
+      setUploadPct(0)
+    }
+  }
+
+  if (done) return <SuccessScreen {...done} />
+
+  return (
+    <main className="g2-page">
+      {/* ── Hero ── */}
+      <section className="g2-hero">
+        <div className="g2-hero-blob blob-1"></div>
+        <div className="g2-hero-blob blob-2"></div>
+        <div className="g2-hero-inner">
+          <img src="/logo.png" alt="Ummatee" className="g2-hero-logo" />
+          <div className="g2-hero-tag">งาน "ให้" ครั้งที่ 6 · GIVE</div>
+          <h1 className="g2-hero-title">ส่งต่อของ<br />เพื่อสังคม</h1>
+          <p className="g2-hero-lead">
+            นำสิ่งของที่ไม่ได้ใช้แล้วมาส่งต่อให้ผู้ที่ต้องการ<br className="hide-sm" />
+            กรอกข้อมูล · อัพโหลดรูป · รอทีมงานติดต่อกลับ
+          </p>
+          {/* Steps */}
+          <div className="g2-steps">
+            <div className="g2-step"><div className="g2-step-num">1</div><div className="g2-step-label">ข้อมูลผู้บริจาค</div></div>
+            <div className="g2-step-line"></div>
+            <div className="g2-step"><div className="g2-step-num">2</div><div className="g2-step-label">เลือกประเภท</div></div>
+            <div className="g2-step-line"></div>
+            <div className="g2-step"><div className="g2-step-num">3</div><div className="g2-step-label">อัพโหลดรูป</div></div>
+          </div>
+        </div>
+      </section>
+
+      <form onSubmit={submit} noValidate>
+
+        {/* ── Band 1: ข้อมูลผู้บริจาค ── */}
+        <section className="g2-band band-1">
+          <div className="g2-band-header bh-purple">
+            <div className="g2-band-num">1</div>
+            <div>
+              <div className="g2-band-title">ข้อมูลผู้บริจาค</div>
+              <div className="g2-band-sub">ทีมงานจะใช้ข้อมูลนี้ติดต่อกลับเพื่อนัดรับสิ่งของ</div>
+            </div>
+          </div>
+          <div className="g2-band-body">
+            <div className="g2-row-2">
+              <div className="g2-field">
+                <label className="g2-label">ชื่อ <span className="g2-req">*</span></label>
+                <input
+                  className={`g2-input ${errors.fname ? 'err' : ''}`}
+                  value={form.fname}
+                  onChange={(e) => { set('fname', e.target.value); setErrors((er) => ({ ...er, fname: undefined })) }}
+                  placeholder="ชื่อจริง"
+                />
+                {errors.fname && <div className="g2-err">{errors.fname}</div>}
+              </div>
+              <div className="g2-field">
+                <label className="g2-label">นามสกุล <span className="g2-req">*</span></label>
+                <input
+                  className={`g2-input ${errors.lname ? 'err' : ''}`}
+                  value={form.lname}
+                  onChange={(e) => { set('lname', e.target.value); setErrors((er) => ({ ...er, lname: undefined })) }}
+                  placeholder="นามสกุล"
+                />
+                {errors.lname && <div className="g2-err">{errors.lname}</div>}
+              </div>
+            </div>
+            <div className="g2-field">
+              <label className="g2-label">เบอร์โทรศัพท์ <span className="g2-req">*</span></label>
+              <input
+                className={`g2-input ${errors.phone ? 'err' : ''}`}
+                value={form.phone}
+                onChange={(e) => { set('phone', e.target.value); setErrors((er) => ({ ...er, phone: undefined })) }}
+                placeholder="0xx-xxx-xxxx"
+                type="tel"
+              />
+              {errors.phone && <div className="g2-err">{errors.phone}</div>}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Band 2: ประเภทสิ่งของ ── */}
+        <section className="g2-band band-2">
+          <div className="g2-band-header bh-indigo">
+            <div className="g2-band-num">2</div>
+            <div>
+              <div className="g2-band-title">ประเภทสิ่งที่ต้องการให้ <span className="g2-req">*</span></div>
+              <div className="g2-band-sub">เลือกได้มากกว่า 1 ประเภท</div>
+            </div>
+          </div>
+          <div className="g2-band-body">
+            <div className="g2-type-cards">
+              {TYPES.map((t) => {
+                const sel = form.types.includes(t.key)
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    className={`g2-type-card ${sel ? 'sel' : ''}`}
+                    onClick={() => toggleType(t.key)}
+                    style={sel ? { '--tc': t.color, '--tb': t.bg } : {}}
+                  >
+                    <div className="g2-type-check">{sel ? '✓' : ''}</div>
+                    <div className="g2-type-emoji">{t.icon}</div>
+                    <div className="g2-type-body">
+                      <div className="g2-type-title">{t.label}</div>
+                      <div className="g2-type-desc">{t.desc}</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+            {errors.types && <div className="g2-err g2-err-block">{errors.types}</div>}
+            <div className="g2-field" style={{ marginTop: 20 }}>
+              <label className="g2-label">รายละเอียดเพิ่มเติม <span className="g2-opt">(ไม่บังคับ)</span></label>
+              <textarea
+                className="g2-input g2-textarea"
+                value={form.detail}
+                onChange={(e) => set('detail', e.target.value)}
+                rows={3}
+                placeholder="เช่น สภาพสิ่งของ ยี่ห้อ รุ่น หรือข้อมูลที่อยากแจ้งทีมงานเพิ่มเติม"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Band 3: รูปภาพ ── */}
+        <section className="g2-band band-3">
+          <div className="g2-band-header bh-violet">
+            <div className="g2-band-num">3</div>
+            <div>
+              <div className="g2-band-title">รูปภาพสิ่งของ <span className="g2-req">*</span></div>
+              <div className="g2-band-sub">อย่างน้อย 3 รูป · สูงสุด 10 รูป · JPG, PNG, WEBP</div>
+            </div>
+          </div>
+          <div className="g2-band-body">
+            {previews.length > 0 && (
+              <div className="g2-preview-grid">
+                {previews.map((src, i) => (
+                  <div className="g2-preview-item" key={i}>
+                    <img src={src} alt="" className="g2-preview-img" />
+                    <button type="button" className="g2-preview-remove" onClick={() => removeImage(i)} aria-label="ลบ">×</button>
+                    <div className="g2-preview-num">{i + 1}</div>
+                  </div>
+                ))}
+                {images.length < 10 && (
+                  <button type="button" className="g2-preview-add" onClick={() => fileRef.current?.click()}>
+                    <span className="g2-add-plus">+</span>
+                    <span>เพิ่มรูป</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {previews.length === 0 && (
+              <div
+                className={`g2-dropzone ${dragOver ? 'drag' : ''}`}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={onDrop}
+              >
+                <div className="g2-drop-icon">📷</div>
+                <div className="g2-drop-title">แตะหรือลากรูปมาวางที่นี่</div>
+                <div className="g2-drop-sub">เลือกได้ 3–10 รูป · JPG, PNG, WEBP · สูงสุด 10 MB ต่อรูป</div>
+                <div className="g2-drop-btn">เลือกรูปภาพ</div>
+              </div>
+            )}
+
+            <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onFiles} />
+
+            {images.length > 0 && (
+              <div className="g2-img-bar">
+                <div className="g2-img-bar-track">
+                  <div className="g2-img-bar-fill" style={{ width: `${(images.length / 10) * 100}%`, background: images.length >= 3 ? '#7c3aed' : '#f59e0b' }}></div>
+                </div>
+                <div className="g2-img-bar-label" style={{ color: images.length >= 3 ? '#7c3aed' : '#b45309' }}>
+                  {images.length}/10 รูป {images.length < 3 ? `(ต้องการอีก ${3 - images.length} รูป)` : '✓'}
+                </div>
+              </div>
+            )}
+            {errors.images && <div className="g2-err g2-err-block">{errors.images}</div>}
+          </div>
+        </section>
+
+        {/* ── Submit band ── */}
+        <section className="g2-band band-submit">
+          <div className="g2-band-body">
+            {errors.submit && <div className="g2-err g2-err-block" style={{ textAlign: 'center', marginBottom: 16 }}>{errors.submit}</div>}
+            {submitting && (
+              <div className="g2-upload-progress">
+                <div className="g2-upload-label">กำลังอัพโหลดรูปภาพ... {uploadPct}%</div>
+                <div className="g2-upload-track">
+                  <div className="g2-upload-fill" style={{ width: `${uploadPct}%` }}></div>
+                </div>
+              </div>
+            )}
+            <button className="g2-submit-btn" type="submit" disabled={submitting}>
+              {submitting ? (
+                <span className="g2-submit-loading"><span className="g2-spinner"></span> กำลังบันทึก...</span>
+              ) : (
+                'ส่งข้อมูล →'
+              )}
+            </button>
+            <p className="g2-submit-note">ทีมงานจะติดต่อกลับภายใน 1-2 วันทำการ เพื่อนัดรับสิ่งของ</p>
+          </div>
+        </section>
+
+      </form>
+    </main>
+  )
+}

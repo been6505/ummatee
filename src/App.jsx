@@ -44,7 +44,7 @@ const AdminGive = lazyWithReload(() => import('./pages/AdminGive.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
 const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2': 'give2', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/um-shop': 'shop', '/admin/shop': 'admin-shop', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/register-event': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give' }
-const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026', shop: '/um-shop' }
+const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', qurban: '/missions/qurban2026', shop: '/um-shop', volunteer: '/volunteer/register' }
 
 // อ่าน path ปัจจุบันจาก URL แล้วแปลงเป็นชื่อหน้า (ถ้าไม่รู้จักให้ไปหน้า home)
 const pageFromPath = () => PATH_TO_PAGE[window.location.pathname] || 'home'

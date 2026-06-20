@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react'
-import { db, storage } from '../firebase.js'
+import { useState, useEffect, useRef } from 'react'
+import { db } from '../firebase.js'
 import { collection, doc, setDoc, runTransaction } from 'firebase/firestore'
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { QRCodeSVG } from 'qrcode.react'
 
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
 const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
+const CLD_CLOUD = 'dei5jktuw'
+const CLD_PRESET = 'Ummatee'
 
 const TYPES = [
   {
@@ -15,7 +16,6 @@ const TYPES = [
     desc: 'คอมพิวเตอร์ แล็ปท็อป แท็บเล็ต ที่ยังสามารถใช้งานได้',
     color: '#7c3aed',
     bg: '#f5f3ff',
-    bgDark: '#2d1b4e',
   },
   {
     key: 'tools',
@@ -24,7 +24,6 @@ const TYPES = [
     desc: 'เครื่องปั้น เตาปิ้ง อุปกรณ์ครัว เครื่องมือช่าง เครื่องตัดผม ฯลฯ',
     color: '#059669',
     bg: '#ecfdf5',
-    bgDark: '#064e3b',
   },
 ]
 
@@ -39,29 +38,13 @@ async function nextRef() {
   return `GIV-${String(num).padStart(4, '0')}`
 }
 
-async function uploadImages(files, refCode, onProgress) {
-  const urls = []
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i]
-    const path = `give2/${refCode}/${Date.now()}_${file.name}`
-    const sRef = storageRef(storage, path)
-    await uploadBytes(sRef, file)
-    const url = await getDownloadURL(sRef)
-    urls.push(url)
-    onProgress(Math.round(((i + 1) / files.length) * 100))
-  }
-  return urls
-}
-
 // ── Success Screen ──────────────────────────────────────────────────
 function SuccessScreen({ refCode, fname }) {
   return (
     <main className="g2-success-page">
       <div className="g2-success-wrap">
-        {/* decoration circles */}
         <div className="g2-success-deco deco-a"></div>
         <div className="g2-success-deco deco-b"></div>
-
         <div className="g2-success-inner">
           <div className="g2-success-badge">✅</div>
           <h2 className="g2-success-title">
@@ -72,7 +55,6 @@ function SuccessScreen({ refCode, fname }) {
             ขอบคุณที่ร่วมส่งต่อสิ่งดี ๆ ให้แก่สังคม<br />
             ทีมงานจะติดต่อกลับเพื่อนัดรับสิ่งของของคุณ
           </p>
-
           <div className="g2-success-qr-box">
             <div className="g2-success-qr-label">QR Code ยืนยันการลงทะเบียน</div>
             <div className="g2-success-qr">
@@ -85,11 +67,9 @@ function SuccessScreen({ refCode, fname }) {
             </div>
             <div className="g2-success-ref">{refCode}</div>
           </div>
-
           <div className="g2-success-note">
             📞 ทีมงานจะโทรหาคุณเพื่อนัดรับสิ่งของ<br />กรุณาเก็บรหัส <strong>{refCode}</strong> ไว้เป็นหลักฐาน
           </div>
-
           <a className="g2-back-btn" href="/event/give-for-um">← กลับหน้างาน GIVE</a>
         </div>
       </div>
@@ -100,14 +80,66 @@ function SuccessScreen({ refCode, fname }) {
 // ── Main Form ───────────────────────────────────────────────────────
 export default function Give2() {
   const [form, setForm] = useState({ fname: '', lname: '', phone: '', types: [], detail: '' })
-  const [images, setImages] = useState([])
-  const [previews, setPreviews] = useState([])
+  const [imageUrls, setImageUrls] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
-  const [uploadPct, setUploadPct] = useState(0)
   const [done, setDone] = useState(null)
-  const [dragOver, setDragOver] = useState(false)
-  const fileRef = useRef()
+  const widgetRef = useRef(null)
+
+  // โหลด Cloudinary Upload Widget script
+  useEffect(() => {
+    if (window.cloudinary) return
+    const script = document.createElement('script')
+    script.src = 'https://upload-widget.cloudinary.com/global/all.js'
+    script.async = true
+    document.head.appendChild(script)
+  }, [])
+
+  const openWidget = () => {
+    if (!window.cloudinary) return
+    if (!widgetRef.current) {
+      widgetRef.current = window.cloudinary.createUploadWidget(
+        {
+          cloudName: CLD_CLOUD,
+          uploadPreset: CLD_PRESET,
+          sources: ['local', 'camera'],
+          multiple: true,
+          maxFiles: 10,
+          maxFileSize: 10_000_000,
+          resourceType: 'image',
+          clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+          language: 'en',
+          text: {
+            en: {
+              or: 'หรือ',
+              back: 'กลับ',
+              advanced: 'ขั้นสูง',
+              close: 'ปิด',
+              no_results: 'ไม่พบผลลัพธ์',
+              search_placeholder: 'ค้นหาไฟล์',
+              about_uw: 'เกี่ยวกับ Upload Widget',
+              menu: { files: 'ไฟล์ของฉัน', camera: 'กล้องถ่ายรูป' },
+              local: { browse: 'เลือกไฟล์', dd_title_single: 'ลากรูปมาวางที่นี่', dd_title_multi: 'ลากรูปมาวางที่นี่', drop_title_single: 'วางรูปที่นี่', drop_title_multiple: 'วางรูปที่นี่' },
+            },
+          },
+          styles: {
+            palette: { window: '#FFFFFF', windowBorder: '#e5e7eb', tabIcon: '#7c3aed', menuIcons: '#7c3aed', textDark: '#1f2937', textLight: '#ffffff', link: '#7c3aed', action: '#7c3aed', inactiveTabIcon: '#9ca3af', error: '#ef4444', inProgress: '#7c3aed', complete: '#059669', sourceBg: '#f9fafb' },
+            fonts: { default: null, "'Noto Sans Thai', sans-serif": { url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600', active: true } },
+          },
+        },
+        (error, result) => {
+          if (error) return
+          if (result.event === 'success') {
+            setImageUrls((prev) => [...prev, result.info.secure_url])
+            setErrors((er) => ({ ...er, images: undefined }))
+          }
+        }
+      )
+    }
+    widgetRef.current.open()
+  }
+
+  const removeImage = (i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i))
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -119,34 +151,13 @@ export default function Give2() {
     setErrors((er) => ({ ...er, types: undefined }))
   }
 
-  const addFiles = (picked) => {
-    const combined = [...images, ...Array.from(picked)].slice(0, 10)
-    setImages(combined)
-    setPreviews(combined.map((f) => URL.createObjectURL(f)))
-    setErrors((er) => ({ ...er, images: undefined }))
-  }
-
-  const onFiles = (e) => addFiles(e.target.files || [])
-
-  const onDrop = (e) => {
-    e.preventDefault()
-    setDragOver(false)
-    addFiles(e.dataTransfer.files)
-  }
-
-  const removeImage = (i) => {
-    const imgs = images.filter((_, idx) => idx !== i)
-    setImages(imgs)
-    setPreviews(imgs.map((f) => URL.createObjectURL(f)))
-  }
-
   const validate = () => {
     const e = {}
     if (!form.fname.trim()) e.fname = 'กรุณากรอกชื่อ'
     if (!form.lname.trim()) e.lname = 'กรุณากรอกนามสกุล'
     if (!form.phone.trim()) e.phone = 'กรุณากรอกเบอร์โทร'
     if (form.types.length === 0) e.types = 'กรุณาเลือกประเภทสิ่งที่ต้องการให้อย่างน้อย 1 รายการ'
-    if (images.length < 3) e.images = `กรุณาอัพโหลดรูปอย่างน้อย 3 รูป (ตอนนี้มี ${images.length} รูป)`
+    if (imageUrls.length < 1) e.images = 'กรุณาอัพโหลดรูปอย่างน้อย 1 รูป'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -160,8 +171,6 @@ export default function Give2() {
     setSubmitting(true)
     try {
       const refCode = await nextRef()
-      const imageUrls = await uploadImages(images, refCode, setUploadPct)
-
       const typeLabels = form.types.map((k) => TYPES.find((t) => t.key === k)?.label).join(', ')
       const payload = {
         refCode, fname: form.fname.trim(), lname: form.lname.trim(),
@@ -179,11 +188,9 @@ export default function Give2() {
 
       setDone({ refCode, fname: form.fname.trim() })
     } catch (err) {
-      console.error(err)
-      setErrors({ submit: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' })
+      setErrors({ submit: err?.message ? `เกิดข้อผิดพลาด: ${err.message}` : 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' })
     } finally {
       setSubmitting(false)
-      setUploadPct(0)
     }
   }
 
@@ -203,7 +210,6 @@ export default function Give2() {
             นำสิ่งของที่ไม่ได้ใช้แล้วมาส่งต่อให้ผู้ที่ต้องการ<br className="hide-sm" />
             กรอกข้อมูล · อัพโหลดรูป · รอทีมงานติดต่อกลับ
           </p>
-          {/* Steps */}
           <div className="g2-steps">
             <div className="g2-step"><div className="g2-step-num">1</div><div className="g2-step-label">ข้อมูลผู้บริจาค</div></div>
             <div className="g2-step-line"></div>
@@ -313,52 +319,41 @@ export default function Give2() {
             <div className="g2-band-num">3</div>
             <div>
               <div className="g2-band-title">รูปภาพสิ่งของ <span className="g2-req">*</span></div>
-              <div className="g2-band-sub">อย่างน้อย 3 รูป · สูงสุด 10 รูป · JPG, PNG, WEBP</div>
+              <div className="g2-band-sub">อย่างน้อย 1 รูป · สูงสุด 10 รูป · JPG, PNG, WEBP</div>
             </div>
           </div>
           <div className="g2-band-body">
-            {previews.length > 0 && (
-              <div className="g2-preview-grid">
-                {previews.map((src, i) => (
+            {/* Preview grid */}
+            {imageUrls.length > 0 && (
+              <div className="g2-preview-grid" style={{ marginBottom: 16 }}>
+                {imageUrls.map((url, i) => (
                   <div className="g2-preview-item" key={i}>
-                    <img src={src} alt="" className="g2-preview-img" />
+                    <img src={url} alt="" className="g2-preview-img" />
                     <button type="button" className="g2-preview-remove" onClick={() => removeImage(i)} aria-label="ลบ">×</button>
                     <div className="g2-preview-num">{i + 1}</div>
                   </div>
                 ))}
-                {images.length < 10 && (
-                  <button type="button" className="g2-preview-add" onClick={() => fileRef.current?.click()}>
-                    <span className="g2-add-plus">+</span>
-                    <span>เพิ่มรูป</span>
-                  </button>
-                )}
               </div>
             )}
 
-            {previews.length === 0 && (
-              <div
-                className={`g2-dropzone ${dragOver ? 'drag' : ''}`}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={onDrop}
-              >
-                <div className="g2-drop-icon">📷</div>
-                <div className="g2-drop-title">แตะหรือลากรูปมาวางที่นี่</div>
-                <div className="g2-drop-sub">เลือกได้ 3–10 รูป · JPG, PNG, WEBP · สูงสุด 10 MB ต่อรูป</div>
-                <div className="g2-drop-btn">เลือกรูปภาพ</div>
-              </div>
-            )}
+            {/* Upload button */}
+            <button
+              type="button"
+              className={`g2-cld-btn ${errors.images ? 'err' : ''}`}
+              onClick={openWidget}
+              disabled={imageUrls.length >= 10}
+            >
+              <span className="g2-cld-icon">📷</span>
+              <span>{imageUrls.length === 0 ? 'เลือกรูปภาพ' : `เพิ่มรูปอีก (${imageUrls.length}/10)`}</span>
+            </button>
 
-            <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={onFiles} />
-
-            {images.length > 0 && (
+            {imageUrls.length > 0 && (
               <div className="g2-img-bar">
                 <div className="g2-img-bar-track">
-                  <div className="g2-img-bar-fill" style={{ width: `${(images.length / 10) * 100}%`, background: images.length >= 3 ? '#7c3aed' : '#f59e0b' }}></div>
+                  <div className="g2-img-bar-fill" style={{ width: `${(imageUrls.length / 10) * 100}%`, background: '#7c3aed' }}></div>
                 </div>
-                <div className="g2-img-bar-label" style={{ color: images.length >= 3 ? '#7c3aed' : '#b45309' }}>
-                  {images.length}/10 รูป {images.length < 3 ? `(ต้องการอีก ${3 - images.length} รูป)` : '✓'}
+                <div className="g2-img-bar-label" style={{ color: '#7c3aed' }}>
+                  {imageUrls.length}/10 รูป ✓
                 </div>
               </div>
             )}
@@ -366,18 +361,10 @@ export default function Give2() {
           </div>
         </section>
 
-        {/* ── Submit band ── */}
+        {/* ── Submit ── */}
         <section className="g2-band band-submit">
           <div className="g2-band-body">
             {errors.submit && <div className="g2-err g2-err-block" style={{ textAlign: 'center', marginBottom: 16 }}>{errors.submit}</div>}
-            {submitting && (
-              <div className="g2-upload-progress">
-                <div className="g2-upload-label">กำลังอัพโหลดรูปภาพ... {uploadPct}%</div>
-                <div className="g2-upload-track">
-                  <div className="g2-upload-fill" style={{ width: `${uploadPct}%` }}></div>
-                </div>
-              </div>
-            )}
             <button className="g2-submit-btn" type="submit" disabled={submitting}>
               {submitting ? (
                 <span className="g2-submit-loading"><span className="g2-spinner"></span> กำลังบันทึก...</span>

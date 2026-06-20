@@ -3,6 +3,11 @@ import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import SocialLinks from '../components/SocialLinks.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag } from '@fortawesome/free-solid-svg-icons'
+
+// ไอคอน FA สำหรับ help grid — เรียงตามลำดับเดียวกับ t.help array
+const HELP_ICONS = [faUtensils, faMosque, faBookOpen, faHandshake]
 
 // หน้าแรกของเว็บ — hero, แถบสถิติ, การ์ดกิจกรรม 2 ใบ, สิ่งที่เราช่วยเหลือ และ CTA ท้ายหน้า
 // ข้อความทุกส่วนของหน้าแยกตามภาษา th/en/ar
@@ -120,7 +125,7 @@ export default function Home() {
       {/* ── Hero Feed ── */}
       <section className="hero-feed">
         <div className="hero-feed-brand">
-          <img src="/logo-trim.png" alt="Ummatee" className="hf-logo" />
+          
           <div className="hf-brand-text">
             <div className="hf-brand-name">Ummatee Foundation</div>
             <div className="hf-brand-sub">{t.eyebrow}</div>
@@ -139,8 +144,8 @@ export default function Home() {
             </a>
             <div className="hf-card-body">
               <div className="hf-card-tags">
-                <span className="hf-tag hf-tag-green">🌙 EVENT</span>
-                <span className="hf-tag hf-tag-muted">🇵🇸 Gaza</span>
+                <span className="hf-tag hf-tag-green"><FontAwesomeIcon icon={faMoon} /> EVENT</span>
+                <span className="hf-tag hf-tag-muted"><FontAwesomeIcon icon={faFlag} /> Gaza</span>
               </div>
               <h2 className="hf-card-title">{t.fcEventTitle}</h2>
               <p className="hf-card-desc">{t.fcEventP}</p>
@@ -161,13 +166,32 @@ export default function Home() {
             </a>
             <div className="hf-card-body">
               <div className="hf-card-tags">
-                <span className="hf-tag hf-tag-purple">🤲 EVENT</span>
+                <span className="hf-tag hf-tag-purple"><FontAwesomeIcon icon={faHandHoldingHeart} /> EVENT</span>
                 <span className="hf-tag hf-tag-muted">3–5 ก.ค. 2569</span>
               </div>
               <h2 className="hf-card-title">{lang === 'ar' ? 'العطاء — الدورة السادسة' : lang === 'en' ? 'GIVE — 6th Edition' : 'งาน "ให้" ครั้งที่ 6'}</h2>
               <p className="hf-card-desc">{lang === 'ar' ? 'مهرجان العطاء — أكشاك طعام، محاضرات، وأنشطة عائلية. ثلاثة أيام كاملة.' : lang === 'en' ? 'A festival of giving — food stalls, talks, influencer meet-ups, and a fun kids zone. Three full days.' : 'เทศกาลแห่งการแบ่งปัน ออกร้านอาหาร ฟังบรรยาย และส่งต่อสิ่งของ ลานพลาซ่า อินดอร์สเตเดียมหัวหมาก'}</p>
               <a href="#" className="hf-card-btn hf-btn-give" onClick={(e) => { e.preventDefault(); go('give') }}>
                 {lang === 'ar' ? 'اعرف أكثر ←' : lang === 'en' ? 'Learn More →' : 'ดูรายละเอียด →'}
+              </a>
+            </div>
+          </FadeUp>
+
+          {/* Card 3 — อาสาสมัคร */}
+          <FadeUp className="hf-card" delay={160}>
+            <div className="hf-card-gradient-hero hf-gradient-volunteer">
+              <span className="hf-gradient-icon"><FontAwesomeIcon icon={faHandSparkles} /></span>
+              <div className="hf-gradient-label">Volunteer</div>
+            </div>
+            <div className="hf-card-body">
+              <div className="hf-card-tags">
+                <span className="hf-tag hf-tag-teal"><FontAwesomeIcon icon={faHands} /> JOIN US</span>
+                <span className="hf-tag hf-tag-muted">งาน ให้ ครั้งที่ 6</span>
+              </div>
+              <h2 className="hf-card-title">{lang === 'en' ? 'Volunteer with Us' : lang === 'ar' ? 'تطوع معنا' : 'สมัครอาสาสมัคร'}</h2>
+              <p className="hf-card-desc">{lang === 'en' ? 'Join our volunteer team for GIVE 6th edition — help set up, guide guests, and make the event a success.' : lang === 'ar' ? 'انضم إلى فريق التطوع لنسخة العطاء السادسة وساعد في جعل الحدث ناجحاً.' : 'ร่วมเป็นทีมอาสาในงาน "ให้" ครั้งที่ 6 ช่วยเตรียมงาน ต้อนรับแขก และสร้างบรรยากาศที่อบอุ่น'}</p>
+              <a href="#" className="hf-card-btn hf-btn-volunteer" onClick={(e) => { e.preventDefault(); go('volunteer') }}>
+                {lang === 'en' ? 'Sign Up →' : lang === 'ar' ? 'سجّل الآن ←' : 'สมัครเลย →'}
               </a>
             </div>
           </FadeUp>
@@ -210,7 +234,7 @@ export default function Home() {
               <p>{t.fcDonP}</p>
               <span className="fc-link">{t.fcDonLink} <span className="arrow">→</span></span>
             </FadeUp>
-            <FadeUp className="focus-card focus-volunteer" onClick={() => { window.location.href = '/volunteer/register' }}>
+            <FadeUp className="focus-card focus-volunteer" onClick={() => go('volunteer')}>
               <div className="fc-pattern hero-pattern"></div>
               <span className="fc-tag">{t.fcVolTag}</span>
               <h3>{t.fcVolTitle}</h3>
@@ -231,7 +255,7 @@ export default function Home() {
           <div className="help-grid">
             {t.help.map((h, i) => (
               <FadeUp className="help-item" key={i}>
-                <div className="he">{h.e}</div>
+                <div className="he"><FontAwesomeIcon icon={HELP_ICONS[i]} /></div>
                 <h4>{h.h}</h4>
                 <p>{h.p}</p>
               </FadeUp>
@@ -247,8 +271,8 @@ export default function Home() {
             <h2>{t.ctaStripTitle}</h2>
             <p>{t.ctaStripP}</p>
             <div className="hero-actions">
-              <a href="#" className="btn btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}><span className="ic">🌙</span> {t.ctaStripIftar}</a>
-              <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><span className="ic">💚</span> {t.ctaStripDonate}</a>
+              <a href="#" className="btn btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}><FontAwesomeIcon icon={faMoon} /> {t.ctaStripIftar}</a>
+              <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><FontAwesomeIcon icon={faHeart} /> {t.ctaStripDonate}</a>
             </div>
           </FadeUp>
         </div>

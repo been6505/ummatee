@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMoon, faHandHoldingHeart, faHandSparkles, faCow, faFlag, faStore } from '@fortawesome/free-solid-svg-icons'
 
 // แถบเมนูหลักของเว็บ (desktop + drawer มือถือ) พร้อมตัวสลับภาษา TH/EN/AR
 // ภาษาที่รองรับทั้งหมด
@@ -12,9 +14,9 @@ const LANGS = [
 
 // ข้อความเมนูแยกตามภาษา (d* = ข้อความใน drawer มือถือ)
 const T = {
-  th: { home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza', give: 'งาน "ให้"', qurban: 'ภารกิจกุรบาน', shop: 'Um Shop', cta: 'บริจาคเลย', dHome: '🏠 หน้าหลัก', dDonation: '💚 ร่วมบริจาค', dIftar: 'ลงทะเบียน Iftar For Gaza', dGive: 'งาน "ให้" ครั้งที่ 6', dQurban: 'ภารกิจกุรบาน 1447', dShop: '🛍️ Um Shop' },
-  en: { home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza', give: 'GIVE Event', qurban: 'Qurban Mission', shop: 'Um Shop', cta: 'Donate Now', dHome: '🏠 Home', dDonation: '💚 Donate', dIftar: 'Register · Iftar For Gaza', dGive: 'GIVE Event · 6th Edition', dQurban: 'Qurban Mission 1447', dShop: '🛍️ Um Shop' },
-  ar: { home: 'الرئيسية', donation: 'تبرّع', iftar: 'إفطار من أجل غزة', give: 'فعالية "العطاء"', qurban: 'مهمة الأضاحي', shop: 'Um Shop', cta: 'تبرّع الآن', dHome: '🏠 الرئيسية', dDonation: '💚 تبرّع', dIftar: 'التسجيل · إفطار من أجل غزة', dGive: 'فعالية "العطاء" السادسة', dQurban: 'مهمة الأضاحي 1447', dShop: '🛍️ Um Shop' },
+  th: { home: 'หน้าหลัก', donation: 'ร่วมบริจาค', iftar: 'Iftar For Gaza', give: 'งาน "ให้"', qurban: 'ภารกิจกุรบาน', shop: 'Um Shop', volunteer: 'อาสาสมัคร', cta: 'บริจาคเลย', dHome: ' หน้าหลัก', dDonation: ' ร่วมบริจาค', dIftar: 'ลงทะเบียน Iftar For Gaza', dGive: 'งาน "ให้" ครั้งที่ 6', dQurban: 'ภารกิจกุรบาน 1447', dShop: ' Um Shop', dVolunteer: ' สมัครอาสาสมัคร' },
+  en: { home: 'Home', donation: 'Donate', iftar: 'Iftar For Gaza', give: 'GIVE Event', qurban: 'Qurban Mission', shop: 'Um Shop', volunteer: 'Volunteer', cta: 'Donate Now', dHome: ' Home', dDonation: ' Donate', dIftar: 'Register · Iftar For Gaza', dGive: 'GIVE Event · 6th Edition', dQurban: 'Qurban Mission 1447', dShop: ' Um Shop', dVolunteer: ' Volunteer' },
+  ar: { home: 'الرئيسية', donation: 'تبرّع', iftar: 'إفطار من أجل غزة', give: 'فعالية "العطاء"', qurban: 'مهمة الأضاحي', shop: 'Um Shop', volunteer: 'تطوّع', cta: 'تبرّع الآن', dHome: ' الرئيسية', dDonation: ' تبرّع', dIftar: 'التسجيل · إفطار من أجل غزة', dGive: 'فعالية "العطاء" السادسة', dQurban: 'مهمة الأضاحي 1447', dShop: ' Um Shop', dVolunteer: ' تطوّع' },
 }
 
 export default function Nav({ scrolled }) {
@@ -43,14 +45,13 @@ export default function Nav({ scrolled }) {
           <img src="/logo-trim.png" alt="UMMATEE มูลนิธิอุมมะตี" />
         </a>
         <ul className="nav-links">
-          
           <li><a href="#" onClick={(e) => link(e, 'home')}>{t.home}</a></li>
           <li><a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>
-           <li><a href="#" onClick={(e) => link(e, 'qurban')}><span>🐑</span> {t.qurban}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'shop')}><span>🛍️</span> {t.shop}</a></li>
-         
-          <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><span>🇵🇸</span> {t.iftar}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'give')}><span>🤲</span> {t.give}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'shop')}><FontAwesomeIcon icon={faStore} /> {t.shop}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><FontAwesomeIcon icon={faFlag} /> {t.iftar}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'give')}><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a></li>
+          <li><a href="#" onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a></li>
         </ul>
         <div className="nav-right">
           <div className="lang-switch">
@@ -80,17 +81,11 @@ export default function Nav({ scrolled }) {
         <button className="drawer-close" onClick={close} aria-label="close">×</button>
         <a href="#" onClick={(e) => link(e, 'home', true)}>{t.dHome}</a>
         <a href="#" onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>
-        <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"> <span>🇵🇸</span> {t.dIftar}</a>
-        <a href="#" onClick={(e) => link(e, 'give', true)}> <span>🤲</span> {t.dGive}</a>
-        <a href="#" onClick={(e) => link(e, 'qurban', true)}> <span>🐑</span> {t.dQurban}</a>
-        <a href="#" onClick={(e) => link(e, 'shop', true)}> {t.dShop}</a>
-        <div className="drawer-langs">
-          {LANGS.map((l) => (
-            <button key={l.code} className={`lang-opt ${l.code === lang ? 'active' : ''}`} onClick={() => chooseLang(l.code)}>
-              <span>{l.flag}</span> {l.label}
-            </button>
-          ))}
-        </div>
+        <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"><FontAwesomeIcon icon={faFlag} /> {t.dIftar}</a>
+        <a href="#" onClick={(e) => link(e, 'give', true)}><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.dGive}</a>
+        <a href="#" onClick={(e) => link(e, 'qurban', true)}><FontAwesomeIcon icon={faCow} /> {t.dQurban}</a>
+        <a href="#" onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>
+        <a href="#" onClick={(e) => link(e, 'volunteer', true)}><FontAwesomeIcon icon={faHandSparkles} /> {t.dVolunteer}</a>
       </div>
     </>
   )

@@ -1,6 +1,7 @@
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
+import { useNavigate } from '../navContext'
 
 const T = {
   th: {
@@ -108,6 +109,7 @@ const T = {
 }
 
 export default function GiveForUm() {
+  const go = useNavigate()
   const { lang } = useLang()
   const t = T[lang]
   return (
@@ -185,7 +187,7 @@ export default function GiveForUm() {
             ))}
           </div>
           <FadeUp style={{ textAlign: 'center', marginTop: 32 }}>
-            <a className="give-cta-btn donation-btn" href="/donation">{t.donateBtn}</a>
+            <a className="give-cta-btn donation-btn" href="#" onClick={(e) => { e.preventDefault(); go('donation') }}>{t.donateBtn}</a>
           </FadeUp>
         </div>
       </section>

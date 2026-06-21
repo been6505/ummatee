@@ -6,6 +6,8 @@ import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { Chart, ChartTypeSwitch, PALETTE } from '../components/AdminCharts.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 // แดชบอร์ดเงินบริจาค (/admin/donations) — บันทึกยอดบริจาคแยกตาม 8 บัญชี ibank ลง Firestore (collection: donations)
 // มีกราฟหลายแบบ ค้นหา/กรอง/เรียงได้ และเพิ่ม/ลบรายการได้
@@ -126,7 +128,7 @@ export default function AdminDonations() {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('desc') }
   }
-  const arrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '')
+  const arrow = (key) => sortKey === key ? <FontAwesomeIcon icon={sortDir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} /> : null
 
   return (
     <main className="admin-dash admin-qurban">

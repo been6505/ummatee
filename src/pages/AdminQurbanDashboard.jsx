@@ -4,6 +4,8 @@ import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useQurbanData } from '../data/qurbanData.js'
 import { Chart, ChartTypeSwitch, DonutChart, HBarChart, PALETTE, legendColors } from '../components/AdminCharts.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 // แดชบอร์ด admin สรุปภารกิจกุรบาน 2026 (/admin/missions/qurban2026) — ข้อมูลอ่านจาก Firestore (config/qurban2026)
 // เลือกประเภทกราฟได้ ค้นหา/กรอง/เรียงตารางได้ และขยายเต็มจอ — แก้ไขข้อมูลที่ /admin/missions/qurban2026/edit
@@ -78,7 +80,7 @@ export default function AdminQurbanDashboard() {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir(key === 'label' ? 'asc' : 'desc') }
   }
-  const arrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '')
+  const arrow = (key) => sortKey === key ? <FontAwesomeIcon icon={sortDir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} /> : null
 
   const countryData = COUNTRIES.map((c) => ({ label: c.n, value: c.v }))
 

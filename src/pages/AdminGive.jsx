@@ -4,6 +4,8 @@ import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { db } from '../firebase.js'
 import { collection, getDocs, orderBy, query } from 'firebase/firestore'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPhone, faGift, faLaptop, faUtensils } from '@fortawesome/free-solid-svg-icons'
 
 const TYPE_LABELS = {
   computer: 'คอมมือสองเพื่อน้อง',
@@ -18,7 +20,7 @@ function ItemCard({ item }) {
         <div>
           <div className="give-admin-ref">{item.refCode}</div>
           <div className="give-admin-name">{item.fname} {item.lname}</div>
-          <div className="give-admin-phone">📞 {item.phone}</div>
+          <div className="give-admin-phone"><FontAwesomeIcon icon={faPhone} /> {item.phone}</div>
           <div className="give-admin-types">
             {(item.types || []).map((k) => (
               <span key={k} className={`give-type-chip ${k}`}>{TYPE_LABELS[k] || k}</span>
@@ -75,7 +77,7 @@ export default function AdminGive() {
       <AdminNav />
       <div className="admin-wrap">
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ marginBottom: 4 }}>🎁 ส่งต่อของ — งานให้ ครั้งที่ 6</h2>
+          <h2 style={{ marginBottom: 4 }}><FontAwesomeIcon icon={faGift} /> ส่งต่อของ — งานให้ ครั้งที่ 6</h2>
           <p style={{ color: 'var(--ink-soft)' }}>รายการสิ่งของที่ผู้บริจาคลงทะเบียนส่งมอบ</p>
         </div>
 
@@ -87,19 +89,19 @@ export default function AdminGive() {
           </div>
           <div className="admin-stat">
             <div className="v">{computers.length}</div>
-            <div className="l">💻 คอมมือสอง</div>
+            <div className="l"><FontAwesomeIcon icon={faLaptop} /> คอมมือสอง</div>
           </div>
           <div className="admin-stat">
             <div className="v">{tools.length}</div>
-            <div className="l">🍳 เครื่องมือทำอาชีพ</div>
+            <div className="l"><FontAwesomeIcon icon={faUtensils} /> เครื่องมือทำอาชีพ</div>
           </div>
         </div>
 
         {/* Tab filter */}
         <div className="give-admin-tabs">
           <button className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>ทั้งหมด ({items.length})</button>
-          <button className={tab === 'computer' ? 'active' : ''} onClick={() => setTab('computer')}>💻 คอมมือสอง ({computers.length})</button>
-          <button className={tab === 'tools' ? 'active' : ''} onClick={() => setTab('tools')}>🍳 เครื่องมือทำอาชีพ ({tools.length})</button>
+          <button className={tab === 'computer' ? 'active' : ''} onClick={() => setTab('computer')}><FontAwesomeIcon icon={faLaptop} /> คอมมือสอง ({computers.length})</button>
+          <button className={tab === 'tools' ? 'active' : ''} onClick={() => setTab('tools')}><FontAwesomeIcon icon={faUtensils} /> เครื่องมือทำอาชีพ ({tools.length})</button>
         </div>
 
         {fetching && <p style={{ color: 'var(--ink-soft)', textAlign: 'center', padding: '40px 0' }}>กำลังโหลด...</p>}

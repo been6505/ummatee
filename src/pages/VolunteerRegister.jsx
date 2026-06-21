@@ -3,6 +3,8 @@ import { db } from '../firebase.js'
 import { collection, addDoc } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 import Footer from '../components/Footer.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faEnvelope } from '@fortawesome/free-solid-svg-icons'
 
 const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
 
@@ -142,7 +144,7 @@ export default function VolunteerRegister() {
         {successRef ? (
           <div className="iftar-success">
             <div className="success-card">
-              <div className="success-check">✓</div>
+              <div className="success-check"><FontAwesomeIcon icon={faCheck} /></div>
               <h2>ลงทะเบียนสำเร็จ!</h2>
               <p>ญะซากัลลอฮุค็อยรอน — ขอบคุณที่สมัครเป็นอาสาสมัครกับมูลนิธิอุมมะตี</p>
               <div className="success-qr">
@@ -151,7 +153,7 @@ export default function VolunteerRegister() {
               <div className="ref-pill">{successRef}</div>
               <p>กรุณาบันทึกรหัสอาสาสมัครนี้ไว้เพื่อใช้อ้างอิง</p>
               {form.email.trim() && (
-                <p className="success-email-note">📧 ทีมงานจะติดต่อกลับทาง {form.email.trim()}</p>
+                <p className="success-email-note"><FontAwesomeIcon icon={faEnvelope} /> ทีมงานจะติดต่อกลับทาง {form.email.trim()}</p>
               )}
               <button className="btn btn-primary" style={{ marginTop: 22, justifyContent: 'center' }} onClick={reset}>
                 ลงทะเบียนเพิ่มอีกคน

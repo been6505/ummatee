@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase.js'
 import { collection, doc, setDoc, runTransaction } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLaptop, faUtensils, faCircleCheck, faPhone, faCamera, faCheck, faXmark, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
 const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
 const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
@@ -11,7 +13,7 @@ const CLD_PRESET = 'Ummatee'
 const TYPES = [
   {
     key: 'computer',
-    icon: '💻',
+    icon: faLaptop,
     label: 'มอบคอมมือสองให้น้องได้เรียน',
     desc: 'คอมพิวเตอร์ แล็ปท็อป แท็บเล็ต ที่ยังสามารถใช้งานได้',
     color: '#7c3aed',
@@ -19,7 +21,7 @@ const TYPES = [
   },
   {
     key: 'tools',
-    icon: '🍳',
+    icon: faUtensils,
     label: 'มอบเครื่องมือทำอาชีพแก่ผู้ยากไร้',
     desc: 'เครื่องปั้น เตาปิ้ง อุปกรณ์ครัว เครื่องมือช่าง เครื่องตัดผม ฯลฯ',
     color: '#059669',
@@ -46,7 +48,7 @@ function SuccessScreen({ refCode, fname }) {
         <div className="g2-success-deco deco-a"></div>
         <div className="g2-success-deco deco-b"></div>
         <div className="g2-success-inner">
-          <div className="g2-success-badge">✅</div>
+          <div className="g2-success-badge"><FontAwesomeIcon icon={faCircleCheck} /></div>
           <h2 className="g2-success-title">
             ญะซากัลลอฮุคอยรอน<br />
             <span className="g2-success-name">{fname}</span>
@@ -68,9 +70,9 @@ function SuccessScreen({ refCode, fname }) {
             <div className="g2-success-ref">{refCode}</div>
           </div>
           <div className="g2-success-note">
-            📞 ทีมงานจะโทรหาคุณเพื่อนัดรับสิ่งของ<br />กรุณาเก็บรหัส <strong>{refCode}</strong> ไว้เป็นหลักฐาน
+            <FontAwesomeIcon icon={faPhone} /> ทีมงานจะโทรหาคุณเพื่อนัดรับสิ่งของ<br />กรุณาเก็บรหัส <strong>{refCode}</strong> ไว้เป็นหลักฐาน
           </div>
-          <a className="g2-back-btn" href="/event/give-for-um">← กลับหน้างาน GIVE</a>
+          <a className="g2-back-btn" href="/event/give-for-um"><FontAwesomeIcon icon={faArrowLeft} /> กลับหน้างาน GIVE</a>
         </div>
       </div>
     </main>
@@ -204,6 +206,7 @@ export default function Give2() {
         <div className="g2-hero-blob blob-2"></div>
         <div className="g2-hero-inner">
           <img src="/logo.png" alt="Ummatee" className="g2-hero-logo" />
+          
           <div className="g2-hero-tag">งาน "ให้" ครั้งที่ 6 · GIVE</div>
           <h1 className="g2-hero-title">ส่งต่อของ<br />เพื่อสังคม</h1>
           <p className="g2-hero-lead">
@@ -220,15 +223,17 @@ export default function Give2() {
         </div>
       </section>
 
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={submit} noValidate className="g2-form-card">
 
         {/* ── Band 1: ข้อมูลผู้บริจาค ── */}
         <section className="g2-band band-1">
           <div className="g2-band-header bh-purple">
-            <div className="g2-band-num">1</div>
-            <div>
-              <div className="g2-band-title">ข้อมูลผู้บริจาค</div>
-              <div className="g2-band-sub">ทีมงานจะใช้ข้อมูลนี้ติดต่อกลับเพื่อนัดรับสิ่งของ</div>
+            <div className="g2-band-header-inner">
+              <div className="g2-band-num">1</div>
+              <div>
+                <div className="g2-band-title">ข้อมูลผู้บริจาค</div>
+                <div className="g2-band-sub">ทีมงานจะใช้ข้อมูลนี้ติดต่อกลับเพื่อนัดรับสิ่งของ</div>
+              </div>
             </div>
           </div>
           <div className="g2-band-body">
@@ -271,10 +276,12 @@ export default function Give2() {
         {/* ── Band 2: ประเภทสิ่งของ ── */}
         <section className="g2-band band-2">
           <div className="g2-band-header bh-indigo">
-            <div className="g2-band-num">2</div>
-            <div>
-              <div className="g2-band-title">ประเภทสิ่งที่ต้องการให้ <span className="g2-req">*</span></div>
-              <div className="g2-band-sub">เลือกได้มากกว่า 1 ประเภท</div>
+            <div className="g2-band-header-inner">
+              <div className="g2-band-num">2</div>
+              <div>
+                <div className="g2-band-title">ประเภทสิ่งที่ต้องการให้ <span className="g2-req">*</span></div>
+                <div className="g2-band-sub">เลือกได้มากกว่า 1 ประเภท</div>
+              </div>
             </div>
           </div>
           <div className="g2-band-body">
@@ -289,8 +296,8 @@ export default function Give2() {
                     onClick={() => toggleType(t.key)}
                     style={sel ? { '--tc': t.color, '--tb': t.bg } : {}}
                   >
-                    <div className="g2-type-check">{sel ? '✓' : ''}</div>
-                    <div className="g2-type-emoji">{t.icon}</div>
+                    <div className="g2-type-check">{sel ? <FontAwesomeIcon icon={faCheck} /> : ''}</div>
+                    <div className="g2-type-emoji"><FontAwesomeIcon icon={t.icon} /></div>
                     <div className="g2-type-body">
                       <div className="g2-type-title">{t.label}</div>
                       <div className="g2-type-desc">{t.desc}</div>
@@ -316,10 +323,12 @@ export default function Give2() {
         {/* ── Band 3: รูปภาพ ── */}
         <section className="g2-band band-3">
           <div className="g2-band-header bh-violet">
-            <div className="g2-band-num">3</div>
-            <div>
-              <div className="g2-band-title">รูปภาพสิ่งของ <span className="g2-req">*</span></div>
-              <div className="g2-band-sub">อย่างน้อย 1 รูป · สูงสุด 10 รูป · JPG, PNG, WEBP</div>
+            <div className="g2-band-header-inner">
+              <div className="g2-band-num">3</div>
+              <div>
+                <div className="g2-band-title">รูปภาพสิ่งของ <span className="g2-req">*</span></div>
+                <div className="g2-band-sub">อย่างน้อย 1 รูป · สูงสุด 10 รูป · JPG, PNG, WEBP</div>
+              </div>
             </div>
           </div>
           <div className="g2-band-body">
@@ -329,7 +338,7 @@ export default function Give2() {
                 {imageUrls.map((url, i) => (
                   <div className="g2-preview-item" key={i}>
                     <img src={url} alt="" className="g2-preview-img" />
-                    <button type="button" className="g2-preview-remove" onClick={() => removeImage(i)} aria-label="ลบ">×</button>
+                    <button type="button" className="g2-preview-remove" onClick={() => removeImage(i)} aria-label="ลบ"><FontAwesomeIcon icon={faXmark} /></button>
                     <div className="g2-preview-num">{i + 1}</div>
                   </div>
                 ))}
@@ -343,7 +352,7 @@ export default function Give2() {
               onClick={openWidget}
               disabled={imageUrls.length >= 10}
             >
-              <span className="g2-cld-icon">📷</span>
+              <span className="g2-cld-icon"><FontAwesomeIcon icon={faCamera} /></span>
               <span>{imageUrls.length === 0 ? 'เลือกรูปภาพ' : `เพิ่มรูปอีก (${imageUrls.length}/10)`}</span>
             </button>
 
@@ -353,7 +362,7 @@ export default function Give2() {
                   <div className="g2-img-bar-fill" style={{ width: `${(imageUrls.length / 10) * 100}%`, background: '#7c3aed' }}></div>
                 </div>
                 <div className="g2-img-bar-label" style={{ color: '#7c3aed' }}>
-                  {imageUrls.length}/10 รูป ✓
+                  {imageUrls.length}/10 รูป <FontAwesomeIcon icon={faCheck} />
                 </div>
               </div>
             )}

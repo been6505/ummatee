@@ -2,6 +2,8 @@ import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { useQurbanData } from '../data/qurbanData.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faGlobe, faCow, faDrumstickBite, faBox } from '@fortawesome/free-solid-svg-icons'
 
 // หน้า public สรุปภารกิจกุรบาน 1447/2026 — สถิติรวม รายละเอียดราย missions และโดนัทชาร์ต 100 วัว
 // ข้อความแยกตามภาษา
@@ -10,10 +12,10 @@ const T = {
     eyebrow: 'ภารกิจกุรบาน · Qurban Help Worldwide',
     h1a: 'กุรบาน ', lead: 'ผู้ยากไร้ทั่วโลก 2569 — ส่งต่อเนื้อกุรบานถึงพี่น้องผู้ยากไร้ใน 31 ประเทศทั่วโลก',
     stats: [
-      { e: '🌍', l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
-      { e: '🐄', l: 'วัว', v: '279', u: 'ตัว' },
-      { e: '🐑', l: 'แกะ', v: '17', u: 'ตัว' },
-      { e: '📦', l: 'รวมทั้งหมด', v: '1,948', u: 'ส่วน' },
+      { e: faGlobe, l: 'ประเทศที่ได้รับ', v: '31', u: 'ประเทศ' },
+      { e: faCow, l: 'วัว', v: '279', u: 'ตัว' },
+      { e: faDrumstickBite, l: 'แกะ', v: '17', u: 'ตัว' },
+      { e: faBox, l: 'รวมทั้งหมด', v: '1,948', u: 'ส่วน' },
     ],
     chartEyebrow: 'สัดส่วนวัวกุรบาน 100 ตัว ทั่วโลก', chartTitle: '31 ประเทศที่ได้รับความช่วยเหลือ',
     donutUnit: 'วัว / cow',
@@ -28,10 +30,10 @@ const T = {
     eyebrow: 'Qurban Mission · Qurban Help Worldwide',
     h1a: 'Qurban ', lead: 'For the needy worldwide 2026 — delivering qurban meat to our brothers and sisters in 31 countries',
     stats: [
-      { e: '🌍', l: 'Recipient Countries', v: '31', u: 'countries' },
-      { e: '🐄', l: 'Cows', v: '279', u: 'cows' },
-      { e: '🐑', l: 'Sheep', v: '17', u: 'sheep' },
-      { e: '📦', l: 'Total', v: '1,948', u: 'portions' },
+      { e: faGlobe, l: 'Recipient Countries', v: '31', u: 'countries' },
+      { e: faCow, l: 'Cows', v: '279', u: 'cows' },
+      { e: faDrumstickBite, l: 'Sheep', v: '17', u: 'sheep' },
+      { e: faBox, l: 'Total', v: '1,948', u: 'portions' },
     ],
     chartEyebrow: 'Distribution of 100 Qurban Cows Worldwide', chartTitle: '31 Countries Receiving Aid',
     donutUnit: 'cows',
@@ -46,10 +48,10 @@ const T = {
     eyebrow: 'مهمة الأضاحي · حول العالم',
     h1a: 'الأضاحي ', lead: 'للمحتاجين حول العالم 2026 — إيصال لحوم الأضاحي إلى إخواننا في 31 دولة',
     stats: [
-      { e: '🌍', l: 'الدول المستفيدة', v: '31', u: 'دولة' },
-      { e: '🐄', l: 'الأبقار', v: '279', u: 'بقرة' },
-      { e: '🐑', l: 'الأغنام', v: '17', u: 'رأساً' },
-      { e: '📦', l: 'الإجمالي', v: '1,948', u: 'حصة' },
+      { e: faGlobe, l: 'الدول المستفيدة', v: '31', u: 'دولة' },
+      { e: faCow, l: 'الأبقار', v: '279', u: 'بقرة' },
+      { e: faDrumstickBite, l: 'الأغنام', v: '17', u: 'رأساً' },
+      { e: faBox, l: 'الإجمالي', v: '1,948', u: 'حصة' },
     ],
     chartEyebrow: 'توزيع 100 بقرة أضاحي حول العالم', chartTitle: '31 دولة مستفيدة من المساعدات',
     donutUnit: 'بقرة',
@@ -131,7 +133,7 @@ export default function Qurban2026() {
       <section className="iftar-hero">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
-          <span className="iftar-eyebrow"><span>🐑</span> {t.eyebrow}</span>
+          <span className="iftar-eyebrow"><FontAwesomeIcon icon={faDrumstickBite} /> {t.eyebrow}</span>
           <h1>{t.h1a}<span className="accent">1447</span></h1>
           <p className="lead">{t.lead}</p>
         </div>
@@ -142,7 +144,7 @@ export default function Qurban2026() {
           <div className="help-grid">
             {stats.map((s, i) => (
               <FadeUp className="help-item" key={i}>
-                <div className="he">{s.e}</div>
+                <div className="he"><FontAwesomeIcon icon={s.e} /></div>
                 <h4>{s.v} <span style={{ fontSize: '1rem', fontWeight: 400 }}>{s.u}</span></h4>
                 <p>{s.l}</p>
               </FadeUp>
@@ -174,7 +176,7 @@ export default function Qurban2026() {
               <p>{t.thai}</p>
             </FadeUp>
             <FadeUp className="help-item">
-              <div className="he">🌍</div>
+              <div className="he"><FontAwesomeIcon icon={faGlobe} /></div>
               <h4>{q.categories.worldwide} <span style={{ fontSize: '0.6em', fontWeight: 400 }}>{t.cow}</span></h4>
               <p>{t.world}</p>
             </FadeUp>

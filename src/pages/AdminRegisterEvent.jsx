@@ -6,6 +6,8 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import jsQR from 'jsqr'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faTriangleExclamation, faCamera, faMosque } from '@fortawesome/free-solid-svg-icons'
 
 // เสียงบี๊บสั้นสังเคราะห์ด้วย Web Audio API (ไม่ต้องโหลดไฟล์เสียง)
 function beep(type = 'ok') {
@@ -169,8 +171,8 @@ export default function AdminRegisterEvent() {
   const R = result
   const statusCard = R && {
     loading: { cls: 'rc-load', icon: '⏳', title: 'กำลังตรวจสอบ...', sub: R.ref },
-    ok: { cls: 'rc-ok', icon: '✓', title: 'เช็คอินสำเร็จ', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · ${R.ref}` : R.ref },
-    already: { cls: 'rc-warn', icon: '⚠️', title: 'เช็คอินไปแล้ว', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · เมื่อ ${R.reg.checkedInAt || '-'}` : R.ref },
+    ok: { cls: 'rc-ok', icon: <FontAwesomeIcon icon={faCheck} />, title: 'เช็คอินสำเร็จ', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · ${R.ref}` : R.ref },
+    already: { cls: 'rc-warn', icon: <FontAwesomeIcon icon={faTriangleExclamation} />, title: 'เช็คอินไปแล้ว', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · เมื่อ ${R.reg.checkedInAt || '-'}` : R.ref },
     notfound: { cls: 'rc-err', icon: '✕', title: 'ไม่พบรหัสนี้', sub: R.ref },
     error: { cls: 'rc-err', icon: '✕', title: 'เกิดข้อผิดพลาด', sub: R.msg },
   }[R.status]
@@ -181,7 +183,7 @@ export default function AdminRegisterEvent() {
       {showWelcome && (
         <div className="scan-welcome-overlay" onClick={() => setShowWelcome(false)}>
           <div className="scan-welcome-card">
-            <div className="scan-welcome-icon">🕌</div>
+            <div className="scan-welcome-icon"><FontAwesomeIcon icon={faMosque} /></div>
             <div className="scan-welcome-title">ยินดีต้อนรับเข้าสู่งาน</div>
             <div className="scan-welcome-event">Iftar For Gaza</div>
             <div className="scan-welcome-name">{showWelcome.fname} {showWelcome.lname}</div>
@@ -192,7 +194,7 @@ export default function AdminRegisterEvent() {
 
       <header className="scan-head">
         <div>
-          <h1>📷 เช็คอินหน้างาน</h1>
+          <h1><FontAwesomeIcon icon={faCamera} /> เช็คอินหน้างาน</h1>
           <p>Iftar For Gaza — สแกน QR ของผู้มาร่วมงาน</p>
         </div>
         <div className="scan-count"><b>{count}</b><span>เช็คอินรอบนี้</span></div>

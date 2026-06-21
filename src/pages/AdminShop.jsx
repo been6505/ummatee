@@ -3,15 +3,30 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useProducts, addProduct, updateProduct, deleteProduct, csvToList } from '../data/shop.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCaretUp, faCaretDown, faImage, faXmark, faSpinner } from '@fortawesome/free-solid-svg-icons'
 
 // จัดการสินค้า Um Shop (/admin/shop) — เพิ่ม/แก้ไข/ลบสินค้า หลายรายการ พร้อมค้นหา/กรอง/เรียง
-// รูปภาพใช้เป็น URL (วางลิงก์รูป เช่นจาก Firebase Storage/Imgur/Drive ที่แชร์แบบสาธารณะ) — รองรับหลายรูปต่อสินค้า
+
+const CLOUDINARY_CLOUD = 'dei5jktuw'
+const CLOUDINARY_PRESET = 'Ummatee'
+
+const SHOP_CATEGORIES = ['หมวก', 'เสื้อ', 'กระบอกน้ำ', 'กระเป๋า', 'สติกเกอร์']
 
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 
+async function uploadToCloudinary(file) {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('upload_preset', CLOUDINARY_PRESET)
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd })
+  if (!res.ok) throw new Error('upload failed')
+  return (await res.json()).secure_url
+}
+
 const EMPTY_FORM = {
   name: '', price: '', stock: '', category: '', description: '',
-  colors: '', sizes: '', images: '',
+  colors: '', sizes: '', images: [],
 }
 
 export default function AdminShop() {
@@ -21,6 +36,7 @@ export default function AdminShop() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [status, setStatus] = useState('')
+  const [uploading, setUploading] = useState(false)
 
   // ค้นหา/กรอง/เรียง
   const [search, setSearch] = useState('')
@@ -29,7 +45,8 @@ export default function AdminShop() {
   const [sortDir, setSortDir] = useState('asc')
 
   const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category).filter(Boolean))
+    const fromProducts = products.map((p) => p.category).filter(Boolean)
+    const set = new Set([...SHOP_CATEGORIES, ...fromProducts])
     return [...set]
   }, [products])
 
@@ -55,7 +72,24 @@ export default function AdminShop() {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('asc') }
   }
-  const arrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '')
+  const arrow = (key) => sortKey === key ? <FontAwesomeIcon icon={sortDir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} /> : null
+
+  const uploadImages = async (e) => {
+    const files = [...e.target.files]
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await Promise.all(files.map(uploadToCloudinary))
+      setForm((f) => ({ ...f, images: [...f.images, ...urls] }))
+    } catch (err) {
+      setStatus('อัพโหลดไม่สำเร็จ: ' + err.message)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeImage = (i) => setForm((f) => ({ ...f, images: f.images.filter((_, j) => j !== i) }))
 
   const startEdit = (p) => {
     setEditId(p.id)
@@ -67,7 +101,7 @@ export default function AdminShop() {
       description: p.description || '',
       colors: (p.colors || []).join(', '),
       sizes: (p.sizes || []).join(', '),
-      images: (p.images || []).join('\n'),
+      images: p.images || [],
     })
     setStatus('')
   }
@@ -85,7 +119,7 @@ export default function AdminShop() {
         description: form.description.trim(),
         colors: csvToList(form.colors),
         sizes: csvToList(form.sizes),
-        images: String(form.images || '').split('\n').map((s) => s.trim()).filter(Boolean),
+        images: form.images,
       }
       if (editId) await updateProduct(editId, payload)
       else await addProduct(payload)
@@ -126,7 +160,10 @@ export default function AdminShop() {
               <input type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
             </label>
             <label>หมวดหมู่
-              <input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="เช่น เสื้อผ้า" />
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="">— เลือกหมวดหมู่ —</option>
+                {SHOP_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </label>
             <label>สี (คั่นด้วย ,)
               <input type="text" value={form.colors} onChange={(e) => setForm({ ...form, colors: e.target.value })} placeholder="ดำ, ขาว, เขียว" />
@@ -139,9 +176,25 @@ export default function AdminShop() {
             <label style={{ gridColumn: '1 / -1' }}>รายละเอียดสินค้า
               <textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </label>
-            <label style={{ gridColumn: '1 / -1' }}>ลิงก์รูปภาพ (หนึ่งลิงก์ต่อบรรทัด — รูปแรกใช้เป็นรูปหลัก)
-              <textarea rows="3" value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} placeholder={'https://...\nhttps://...'} />
-            </label>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปภาพสินค้า (รูปแรกเป็นรูปหลัก)</div>
+              <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
+                <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
+                {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูปภาพสินค้า'}
+                <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
+              </label>
+              {form.images.length > 0 && (
+                <div className="admin-media-preview" style={{ marginTop: 10 }}>
+                  {form.images.map((url, i) => (
+                    <div key={i} className="admin-media-thumb">
+                      <img src={url} alt="" />
+                      {i === 0 && <span className="admin-media-main">หลัก</span>}
+                      <button type="button" className="admin-media-remove" onClick={() => removeImage(i)}><FontAwesomeIcon icon={faXmark} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มสินค้า'}</button>

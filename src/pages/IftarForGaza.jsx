@@ -5,6 +5,8 @@ import { db } from '../firebase.js'
 import { collection, addDoc, doc, getDoc } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 import CopyIcon from '../components/CopyIcon.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
 // ตัวเลือกช่องทางที่รู้จักงาน
@@ -96,7 +98,7 @@ const T = {
     successKeep: 'กรุณาบันทึกรหัสลงทะเบียนนี้ไว้ เพื่อใช้ยืนยันหน้างาน',
     successEmail: 'เราได้ส่งอีเมลยืนยันไปที่ {email} แล้ว (อีเมลอัตโนมัติ ห้ามตอบกลับ)',
     successAgain: 'ลงทะเบียนเพิ่มอีกคน',
-    checkToggle: '🔍 ตรวจสอบรายชื่อผู้ลงทะเบียน',
+    checkToggle: 'ตรวจสอบรายชื่อผู้ลงทะเบียน',
     checkSearch: 'ค้นหาด้วยชื่อ จังหวัด หรือรหัส IFG...',
     checkCount: (n) => `ผู้ลงทะเบียนทั้งหมด ${n} คน`,
     checkEmpty: 'ยังไม่มีรายชื่อผู้ลงทะเบียน',
@@ -135,7 +137,7 @@ const T = {
     successKeep: 'Please save this registration code to confirm at the event',
     successEmail: 'A confirmation email has been sent to {email} (automated message, please do not reply)',
     successAgain: 'Register another person',
-    checkToggle: '🔍 Check registered names',
+    checkToggle: 'Check registered names',
     checkSearch: 'Search by name, province, or IFG code...',
     checkCount: (n) => `${n} registered in total`,
     checkEmpty: 'No registrations yet',
@@ -174,7 +176,7 @@ const T = {
     successKeep: 'يرجى حفظ رمز التسجيل هذا لتأكيد حضورك في الفعالية',
     successEmail: 'تم إرسال رسالة تأكيد إلى {email} (رسالة تلقائية، يرجى عدم الرد)',
     successAgain: 'تسجيل شخص آخر',
-    checkToggle: '🔍 التحقق من أسماء المسجلين',
+    checkToggle: 'التحقق من أسماء المسجلين',
     checkSearch: 'ابحث بالاسم أو المحافظة أو رمز IFG...',
     checkCount: (n) => `إجمالي المسجلين ${n}`,
     checkEmpty: 'لا توجد تسجيلات بعد',
@@ -334,7 +336,7 @@ export default function Iftar() {
           <div className="info-boxes">
             <div className="info-box"><div className="ib-ic">   <span className="ib-k">{t.ibDate}</span></div>
               <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibPlace}</span> </div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer">📍 {t.ibMap}</a></div>
+            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibPlace}</span> </div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer"><FontAwesomeIcon icon={faLocationDot} /> {t.ibMap}</a></div>
             <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibType}</span></div><div className="ib-v"><p>{t.seatLimit}</p>{t.ibTypeV}</div></div>
           </div>
           <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
@@ -359,7 +361,7 @@ export default function Iftar() {
         ) : successRef ? (
           <div className="iftar-success">
             <div className="success-card">
-              <div className="success-check">✓</div>
+              <div className="success-check"><FontAwesomeIcon icon={faCheck} /></div>
               <h2>{t.successTitle}</h2>
               <p>{t.successP}</p>
               <div className="success-qr">
@@ -368,7 +370,7 @@ export default function Iftar() {
               <div className="ref-pill">{successRef}</div>
               <p>{t.successKeep}</p>
               {form.email.trim() && (
-                <p className="success-email-note">📧 {t.successEmail.replace('{email}', form.email.trim())}</p>
+                <p className="success-email-note"><FontAwesomeIcon icon={faEnvelope} /> {t.successEmail.replace('{email}', form.email.trim())}</p>
               )}
               <button className="btn btn-primary" style={{ marginTop: 22, justifyContent: 'center' }} onClick={reset}>
                 {t.successAgain}
@@ -514,7 +516,7 @@ function CheckPanel({ t }) {
 
   return (
     <div className="check-block">
-      <button className="check-toggle" onClick={toggle}>{t.checkToggle}</button>
+      <button className="check-toggle" onClick={toggle}><FontAwesomeIcon icon={faMagnifyingGlass} /> {t.checkToggle}</button>
       {open && (
         <div className="check-panel">
           <input className="iftar-input check-search" type="text" placeholder={t.checkSearch} value={query} onChange={(e) => setQuery(e.target.value)} />

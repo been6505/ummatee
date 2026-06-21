@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { signOut } from 'firebase/auth'
 import { auth } from '../firebase.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faHouse, faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faChartBar, faHandshake, faGift, faBars, faXmark, faScrewdriverWrench, faEarthAsia } from '@fortawesome/free-solid-svg-icons'
 
 const LINKS = [
-  { href: '/admin/dashboard', label: '🏠 หน้าหลัก' },
-  { href: '/admin/event/iftar2026', label: '🇵🇸 Iftar For Gaza' },
-  { href: '/admin/register-event', label: '📷 เช็คอินหน้างาน' },
-  { href: '/admin/missions/qurban2026', label: '🐑 Qurban 2026' },
-  { href: '/admin/donations', label: '💰 เงินบริจาค' },
-  { href: '/admin/calendar', label: '📅 ปฏิทิน' },
-  { href: '/admin/shop', label: '🛍️ Um Shop' },
-  { href: '/admin/financial-dashboard', label: '📊 แดชบอร์ดการเงิน' },
-  { href: '/admin/volunteer', label: '🤝 อาสาสมัคร' },
-  { href: '/admin/give', label: '🎁 ส่งต่อของ' },
+  { href: '/admin/dashboard', icon: faHouse, label: 'หน้าหลัก' },
+  { href: '/admin/event/iftar2026', icon: faFlag, label: 'Iftar For Gaza' },
+  { href: '/admin/register-event', icon: faCamera, label: 'เช็คอินหน้างาน' },
+  { href: '/admin/missions/qurban2026', icon: faCow, label: 'Qurban 2026' },
+  { href: '/admin/donations', icon: faMoneyBill, label: 'เงินบริจาค' },
+  { href: '/admin/calendar', icon: faCalendar, label: 'ปฏิทิน' },
+  { href: '/admin/shop', icon: faBagShopping, label: 'Um Shop' },
+  { href: '/admin/financial-dashboard', icon: faChartBar, label: 'แดชบอร์ดการเงิน' },
+  { href: '/admin/volunteer', icon: faHandshake, label: 'อาสาสมัคร' },
+  { href: '/admin/give', icon: faGift, label: 'ส่งต่อของ' },
+  { href: '/admin/missions', icon: faEarthAsia, label: 'ภารกิจ' },
 ]
 
 export default function AdminNav() {
@@ -27,7 +30,7 @@ export default function AdminNav() {
     <>
       <nav className="admin-nav">
         <div className="admin-nav-brand">
-          🛠️ Admin
+          <FontAwesomeIcon icon={faScrewdriverWrench} /> Admin
         </div>
 
         {/* Desktop Menu */}
@@ -38,7 +41,7 @@ export default function AdminNav() {
               href={l.href}
               className={path === l.href ? 'active' : ''}
             >
-              {l.label}
+              <FontAwesomeIcon icon={l.icon} /> {l.label}
             </a>
           ))}
 
@@ -61,7 +64,7 @@ export default function AdminNav() {
           onClick={() => setOpen(true)}
           aria-label="เปิดเมนู"
         >
-          ☰
+          <FontAwesomeIcon icon={faBars} />
         </button>
       </nav>
 
@@ -72,7 +75,7 @@ export default function AdminNav() {
           onClick={() => setOpen(false)}
           aria-label="ปิดเมนู"
         >
-          ×
+          <FontAwesomeIcon icon={faXmark} />
         </button>
 
         {LINKS.map((l) => (
@@ -82,7 +85,7 @@ export default function AdminNav() {
             className={path === l.href ? 'active' : ''}
             onClick={() => setOpen(false)}
           >
-            {l.label}
+            <FontAwesomeIcon icon={l.icon} /> {l.label}
           </a>
         ))}
 

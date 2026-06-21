@@ -12,17 +12,29 @@ service cloud.firestore {
         ];
     }
 
+    // ── helper: ฟิลด์ optional ถ้ามีต้องเป็น string ไม่เกินความยาวที่กำหนด ──
+    function optStr(d, k, max) {
+      return !(k in d) || (d[k] is string && d[k].size() <= max);
+    }
+
     // ── ตรวจรูปแบบฟอร์มลงทะเบียน Iftar กันสแปม/เอกสารขยะ ──
-    // จำกัดจำนวนฟิลด์ และให้ฟิลด์สำคัญเป็น string ความยาวสมเหตุสมผล
+    // จำกัดจำนวนฟิลด์ + คุมความยาวทุกฟิลด์ (กันยัด junk ขนาดใหญ่เปลือง quota)
     function validIftarReg() {
       let d = request.resource.data;
-      return d.size() <= 16
+      return d.size() <= 14
         && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
         && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
         && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
-        && (!('email' in d) || (d.email is string && d.email.size() <= 200))
-        && (!('comment' in d) || (d.comment is string && d.comment.size() <= 1000))
-        && (!('province' in d) || (d.province is string && d.province.size() <= 100));
+        && optStr(d, 'email', 200)
+        && optStr(d, 'comment', 1000)
+        && optStr(d, 'province', 100)
+        && optStr(d, 'gender', 30)
+        && optStr(d, 'age', 10)
+        && optStr(d, 'job', 100)
+        && optStr(d, 'channel', 300)
+        && optStr(d, 'expect', 300)
+        && optStr(d, 'date', 60)
+        && optStr(d, 'ref', 40);
     }
 
     // ลงทะเบียน Iftar — ส่งฟอร์มได้ทุกคน (มีการตรวจรูปแบบ) แต่อ่าน/แก้/ลบเฉพาะแอดมิน
@@ -53,33 +65,70 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // อาสาสมัคร — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน
+    // อาสาสมัคร — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน (คุมจำนวน+ความยาวฟิลด์)
+    function validVolunteerReg() {
+      let d = request.resource.data;
+      return d.size() <= 16
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'fnameEn', 100)
+        && optStr(d, 'lnameEn', 100)
+        && optStr(d, 'email', 200)
+        && optStr(d, 'age', 10)
+        && optStr(d, 'province', 100)
+        && optStr(d, 'expect', 1000)
+        && optStr(d, 'skills', 1000)
+        && optStr(d, 'note', 1000);
+    }
     match /volunteerRegs/{id} {
-      allow create: if request.resource.data.fname is string && request.resource.data.fname.size() > 0
-        && request.resource.data.lname is string && request.resource.data.lname.size() > 0
-        && request.resource.data.phone is string && request.resource.data.phone.size() > 0;
+      allow create: if validVolunteerReg();
       allow read, update, delete: if isAdmin();
     }
 
-    // Give2 — ส่งต่อของงาน "ให้" ครั้งที่ 6
+    // Give2 — ส่งต่อของงาน "ให้" ครั้งที่ 6 (คุมจำนวน+ความยาว+ขนาด list)
+    function validGive2Reg() {
+      let d = request.resource.data;
+      return d.size() <= 12
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && d.types is list && d.types.size() > 0 && d.types.size() <= 5
+        && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        && optStr(d, 'typeLabels', 300)
+        && optStr(d, 'detail', 2000)
+        && optStr(d, 'refCode', 40)
+        && optStr(d, 'submittedAt', 60);
+    }
     match /give2Regs/{id} {
-      allow create: if request.resource.data.fname is string && request.resource.data.fname.size() > 0
-        && request.resource.data.lname is string && request.resource.data.lname.size() > 0
-        && request.resource.data.phone is string && request.resource.data.phone.size() > 0
-        && request.resource.data.types is list && request.resource.data.types.size() > 0;
+      allow create: if validGive2Reg();
       allow read, update, delete: if isAdmin();
     }
 
-    // counter สำหรับ give2 ref code
+    // counter สำหรับ give2 ref code — อ่านได้ทุกคน แต่ write ต้องเป็น { count: int >= 0 } เท่านั้น
     match /config/give2Counter {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0;
     }
 
-    // สถิติหน้าบริจาค — จำกัดเฉพาะ doc 'donation' และ field ต้องเป็นตัวเลข
+    // สถิติหน้าบริจาค — hasOnly(['views','copies']) ครอบคลุมทุกกรณีแล้ว (subset ของสอง field นี้) ไม่ต้องการ hasAny
     match /stats/donation {
-      allow create, update: if request.resource.data.keys().hasOnly(['views','copies'])
-        || request.resource.data.keys().hasAny(['views','copies']);
+      allow create, update: if request.resource.data.keys().hasOnly(['views', 'copies']);
       allow read: if isAdmin();
+    }
+
+    // นับผู้เข้าชมเว็บไซต์ — ทุกคนเพิ่มยอด views ได้ (เฉพาะ field views) แต่อ่านได้เฉพาะ admin
+    match /stats/site {
+      allow create, update: if request.resource.data.keys().hasOnly(['views']);
+      allow read: if isAdmin();
+    }
+
+    // มีเดียประจำภารกิจ — ทุกคนอ่านได้ (หน้า /missions) แก้ไขได้เฉพาะแอดมิน
+    match /missionMedia/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน

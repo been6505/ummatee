@@ -5,6 +5,8 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faHandshake, faDownload } from '@fortawesome/free-solid-svg-icons'
 
 function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true, topN }) {
   const [type, setType] = useState(types[0])
@@ -157,10 +159,10 @@ export default function AdminVolunteer() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1>🤝 อาสาสมัคร Ummatee</h1>
+            <h1><FontAwesomeIcon icon={faHandshake} /> อาสาสมัคร Ummatee</h1>
             <p>ข้อมูลผู้สมัครอาสาสมัครทั้งหมด</p>
           </div>
-          <button className="admin-btn admin-btn-primary" onClick={exportCSV}>⬇ Export CSV</button>
+          <button className="admin-btn admin-btn-primary" onClick={exportCSV}><FontAwesomeIcon icon={faDownload} /> Export CSV</button>
         </div>
 
         <div className="admin-stats">

@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '../firebase.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faLock } from '@fortawesome/free-solid-svg-icons'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -25,7 +27,7 @@ export default function AdminLogin() {
   return (
     <main className="admin-login">
       <form className="admin-login-box" onSubmit={submit}>
-        <h2>🔒 Admin Login</h2>
+        <h2><FontAwesomeIcon icon={faLock} /> Admin Login</h2>
         <p>หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</p>
         <input
           type="email"

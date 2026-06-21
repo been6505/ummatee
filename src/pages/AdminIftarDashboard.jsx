@@ -5,6 +5,8 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChartBar, faLock, faLockOpen } from '@fortawesome/free-solid-svg-icons'
 
 // แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
 // ดึงรายชื่อผู้ลงทะเบียนจาก Firestore (admin ล็อกอินแล้วอ่านได้ตาม rules) แล้วสรุปเป็นกราฟ + ตาราง
@@ -202,7 +204,7 @@ export default function AdminIftarDashboard() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1>📊 Iftar For Gaza — Dashboard</h1>
+            <h1><FontAwesomeIcon icon={faChartBar} /> Iftar For Gaza — Dashboard</h1>
             <p>ข้อมูลผู้ลงทะเบียนเข้าร่วมงานทั้งหมด</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -211,7 +213,7 @@ export default function AdminIftarDashboard() {
               onClick={toggleClosed}
               disabled={closedLoading}
             >
-              {closedLoading ? '...' : isClosed ? '🔓 เปิดรับลงทะเบียน' : '🔒 ปิดรับลงทะเบียน'}
+              {closedLoading ? '...' : isClosed ? <><FontAwesomeIcon icon={faLockOpen} /> เปิดรับลงทะเบียน</> : <><FontAwesomeIcon icon={faLock} /> ปิดรับลงทะเบียน</>}
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <label style={{ fontSize: '0.85rem', opacity: 0.7, whiteSpace: 'nowrap' }}>
@@ -252,8 +254,8 @@ export default function AdminIftarDashboard() {
             <div className="admin-grid-3">
               <ChartCard title="เพศ" data={genderData} colors={PALETTE} types={['donut', 'column', 'hbar']} />
               <ChartCard title="ช่วงอายุ" data={ageData} types={['donut', 'column', 'hbar', 'line']} />
-              <ChartCard title="รู้จักงานจากช่องทาง" data={channelData} types={['donut', 'hbar', 'column']} />
-              <ChartCard title="สิ่งที่คาดหวังจากงาน" data={expectData} types={['donut', 'hbar', 'column']} />
+              <ChartCard title="รู้จักงานจากช่องทาง" data={channelData} types={['hbar', 'column', 'donut', 'line']} topN={10} />
+              <ChartCard title="สิ่งที่คาดหวังจากงาน" data={expectData} types={['hbar', 'column', 'donut', 'line']} topN={10} />
               <ChartCard title="จังหวัดที่พำนัก" data={provinceData} types={['hbar', 'column', 'donut', 'line']} topN={10} />
               <ChartCard title="อาชีพ" data={jobData} types={['hbar', 'column', 'donut']} topN={10} />
             </div>

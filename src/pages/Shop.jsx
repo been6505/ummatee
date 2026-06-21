@@ -3,6 +3,8 @@ import { useProducts } from '../data/shop.js' // hook ดึงรายกา�
 import FadeUp from '../components/FadeUp.jsx' // คอมโพเนนต์ wrapper ทำ animation เลื่อนขึ้นตอนแสดงผล
 import Footer from '../components/Footer.jsx' // ส่วน Footer ท้ายหน้า
 import { useLang } from '../i18n.jsx' // hook อ่านภาษาปัจจุบันของผู้ใช้ (th/en/ar)
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBagShopping, faLink, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าร้านค้า Um Shop (/um-shop) — แสดงสินค้าทั้งหมด ค้นหา/กรองหมวดหมู่/เรียงราคา และแชร์รูปสินค้าลงโซเชียลได้
 // คลิกที่สินค้าเพื่อเปิดหน้ารายละเอียดขนาดใหญ่ พร้อมแกลเลอรีรูปและปุ่ม "สนใจสินค้า" ไปที่ LINE
@@ -73,10 +75,10 @@ function ProductCard({ p, t, onOpen }) { // การ์ดสินค้าห
   return ( // ส่วนแสดงผลของการ์ดสินค้า
     <FadeUp className="shop-card" id={p.id} onClick={() => onOpen(p)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
       <div className="shop-img"> {/* ส่วนแสดงรูปภาพของการ์ด */}
-        {img ? <img src={img} alt={p.name} loading="lazy" /> : <div className="shop-img-ph">🛍️</div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
+        {img ? <img src={img} alt={p.name} loading="lazy" /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
         {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" แสดงเมื่อ stock <= 0 */}
         <button className="shop-share" onClick={share} title={t.share} aria-label={t.share}> {/* ปุ่มแชร์ลิงก์สินค้า */}
-          {shared ? '✓' : '🔗'} {/* แสดง ✓ ชั่วคราวหลังคัดลอกลิงก์ ไม่งั้นแสดงไอคอนลิงก์ */}
+          {shared ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faLink} />}
         </button>
       </div>
       <div className="shop-body"> {/* ส่วนข้อมูลข้อความของการ์ด */}
@@ -113,7 +115,7 @@ function ProductDetail({ p, t, onClose }) { // หน้าต่างราย
             <div className="shop-modal-main"> {/* รูปหลักที่กำลังแสดง */}
               {images[active] // ถ้ามีรูปในตำแหน่ง active
                 ? <img src={images[active]} alt={p.name} /> // แสดงรูปนั้น
-                : <div className="shop-img-ph">🛍️</div>} {/* ถ้าไม่มีรูปเลย แสดงไอคอนแทน */}
+                : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* ถ้าไม่มีรูปเลย แสดงไอคอนแทน */}
               {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" ทับบนรูปหลัก */}
             </div>
             {images.length > 1 && ( // แสดงแถวรูปย่อย เฉพาะเมื่อมีรูปมากกว่า 1 รูป

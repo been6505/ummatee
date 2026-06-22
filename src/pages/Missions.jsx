@@ -13,7 +13,7 @@ import { faCopy, faCheck, faArrowRight, faPlay, faChevronLeft, faChevronRight, f
 // หน้า "ภารกิจ" (/missions) — รวมทุกโครงการของอุมมะตี พร้อมรูป/วิดีโอ และบัญชีบริจาคของแต่ละโครงการ
 // รูป/วิดีโอดึงสดจาก Firestore (missionMedia) — แอดมินอัปเดตเองได้
 const T = {
-  th: { eyebrow: 'ภารกิจของเรา · Our Missions', h1: 'ภารกิจ', lead: 'ทุกโครงการของมูลนิธิอุมมะตี — ส่งต่อความช่วยเหลือถึงมือผู้รับเต็มจำนวน พร้อมภาพและวิดีโอการทำงานจริง', donate: 'บริจาคโครงการนี้', copied: 'คัดลอกแล้ว', acc: 'เลขบัญชี', noMedia: 'เร็ว ๆ นี้ — กำลังอัปเดตภาพและวิดีโอ' },
+  th: { eyebrow: 'ภารกิจของเรา · Our Missions', h1: 'ภารกิจ', lead: 'ทุกโครงการของมูลนิธิอุมมะตี — ส่งต่อความช่วยเหลือถึงมือผู้รับเต็มจำนวน ', donate: 'บริจาคโครงการนี้', copied: 'คัดลอกแล้ว', acc: 'เลขบัญชี', noMedia: 'เร็ว ๆ นี้ — กำลังอัปเดตภาพและวิดีโอ' },
   en: { eyebrow: 'Our Missions', h1: 'Missions', lead: "Every Ummatee project — aid delivered in full to recipients, with real photos and videos of our work", donate: 'Donate to this project', copied: 'Copied', acc: 'Account', noMedia: 'Coming soon — photos and videos being updated' },
   ar: { eyebrow: 'مهماتنا · Our Missions', h1: 'المهمات', lead: 'كل مشاريع مؤسسة أمّتي — المساعدات تصل كاملة للمستحقين، مع صور وفيديوهات حقيقية من عملنا', donate: 'تبرّع لهذا المشروع', copied: 'تم النسخ', acc: 'الحساب', noMedia: 'قريباً — يتم تحديث الصور والفيديوهات' },
 }
@@ -38,16 +38,24 @@ function fallbackCopy(text) {
 
 function MissionCarousel({ items, name, accent }) {
   const [idx, setIdx] = useState(0)
+  const [paused, setPaused] = useState(false)
   const total = items.length
   const prev = () => setIdx((i) => (i - 1 + total) % total)
   const next = () => setIdx((i) => (i + 1) % total)
-  const cur = items[idx]
+
+  useEffect(() => {
+    if (total <= 1 || paused) return
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 3500)
+    return () => clearInterval(t)
+  }, [total, paused])
+  const safeIdx = idx < total ? idx : 0  // กัน idx ค้างเกินขอบเขตเมื่อแอดมินลบรูป
+  const cur = items[safeIdx]
   return (
     <div className="mission-carousel">
-      <div className="mission-carousel-stage">
+      <div className="mission-carousel-stage" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onTouchStart={() => setPaused(true)} onTouchEnd={() => setTimeout(() => setPaused(false), 2000)}>
         {isVideo(cur)
-          ? <video key={idx} src={cur} controls preload="metadata" playsInline className="mission-carousel-media" />
-          : <img key={idx} src={cur} alt={name} loading="lazy" className="mission-carousel-media" />}
+          ? <video key={safeIdx} src={cur} controls preload="metadata" playsInline className="mission-carousel-media" onPlay={() => setPaused(true)} onPause={() => setPaused(false)} />
+          : <img key={safeIdx} src={cur} alt={name} loading="lazy" className="mission-carousel-media" />}
         {isVideo(cur) && <span className="mission-media-play"><FontAwesomeIcon icon={faPlay} /></span>}
         {total > 1 && (
           <>
@@ -59,7 +67,7 @@ function MissionCarousel({ items, name, accent }) {
       {total > 1 && (
         <div className="mission-carousel-dots">
           {items.map((_, i) => (
-            <button key={i} className={`mission-dot${i === idx ? ' active' : ''}`} style={{ '--accent': accent }} onClick={() => setIdx(i)} aria-label={`ภาพ ${i + 1}`} />
+            <button key={i} className={`mission-dot${i === safeIdx ? ' active' : ''}`} style={{ '--accent': accent }} onClick={() => setIdx(i)} aria-label={`ภาพ ${i + 1}`} />
           ))}
         </div>
       )}

@@ -1,10 +1,66 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import SocialLinks from '../components/SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag } from '@fortawesome/free-solid-svg-icons'
+import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay } from '@fortawesome/free-solid-svg-icons'
+import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
+
+const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
+
+const GAZA = MISSIONS.find((m) => m.key === 'gaza')
+
+function GazaCarousel({ items, lang, go }) {
+  const [idx, setIdx] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const total = items.length
+  const prev = () => setIdx((i) => (i - 1 + total) % total)
+  const next = () => setIdx((i) => (i + 1) % total)
+  useEffect(() => {
+    if (total <= 1 || paused) return
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 3500)
+    return () => clearInterval(t)
+  }, [total, paused])
+  if (!total) return null
+  const safeIdx = idx < total ? idx : 0  // กัน idx ค้างเกินขอบเขตเมื่อจำนวนรูปลดลง
+  const cur = items[safeIdx]
+  const tx = GAZA[lang] || GAZA.th
+  return (
+    <div className="hm-gaza-wrap">
+      {/* ซ้าย: carousel 1:1 */}
+      <div className="hm-gaza-left">
+        <div className="hm-gaza-stage"
+          onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}
+          onTouchStart={() => setPaused(true)} onTouchEnd={() => setTimeout(() => setPaused(false), 2000)}>
+          {isVideo(cur)
+            ? <video key={idx} src={cur} controls preload="metadata" playsInline className="hm-gaza-media" onPlay={() => setPaused(true)} onPause={() => setPaused(false)} />
+            : <img key={idx} src={cur} alt="Gaza" loading="lazy" className="hm-gaza-media" />}
+          {isVideo(cur) && <span className="hm-gaza-play"><FontAwesomeIcon icon={faPlay} /></span>}
+          {total > 1 && <>
+            <button className="hm-gaza-btn hm-gaza-prev" onClick={prev}><FontAwesomeIcon icon={faChevronLeft} /></button>
+            <button className="hm-gaza-btn hm-gaza-next" onClick={next}><FontAwesomeIcon icon={faChevronRight} /></button>
+          </>}
+        </div>
+        {total > 1 && (
+          <div className="hm-gaza-dots">
+            {items.map((_, i) => <button key={i} className={`hm-gaza-dot${i === safeIdx ? ' active' : ''}`} onClick={() => setIdx(i)} />)}
+          </div>
+        )}
+      </div>
+      {/* ขวา: พื้นขาว + ข้อความ */}
+      <div className="hm-gaza-right">
+        <div className="hm-gaza-tag"><FontAwesomeIcon icon={GAZA.icon} /> GAZA</div>
+        <h3 className="hm-gaza-title">{tx.name}</h3>
+        <p className="hm-gaza-desc">{tx.desc}</p>
+        <button className="hm-gaza-cta" onClick={() => go('missions')}>
+          {lang === 'ar' ? 'عرض الصور والفيديوهات' : lang === 'en' ? 'View photos & videos' : 'ดูภาพและวิดีโอ'} <FontAwesomeIcon icon={faArrowRight} />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ไอคอน FA สำหรับ help grid — เรียงตามลำดับเดียวกับ t.help array
 const HELP_ICONS = [faUtensils, faMosque, faBookOpen, faHandshake]
@@ -18,8 +74,8 @@ const T = {
     sub: 'เราเชื่อมพี่น้องผู้มีจิตศรัทธาเข้ากับผู้ยากไร้ ผู้ประสบภัย และผู้ที่รอคอยความช่วยเหลือ ทั้งในประเทศไทยและทั่วโลก ทุกการให้ของคุณ คือสะพานแห่งความเมตตา',
     ctaIftar: 'ลงทะเบียนเข้าร่วมงาน Iftar For Gaza', ctaDonate: 'ร่วมบริจาคช่วยเหลือผู้ยากไร้',
     stats: [
-      { n: '8', l: 'โครงการช่วยเหลือ' },
-      { n: '12+', l: 'ประเทศที่เข้าถึง' },
+      { n: '7', l: 'โครงการช่วยเหลือ' },
+      { n: '31+', l: 'ประเทศที่เข้าถึง' },
       { n: '100%', l: 'ส่งต่อถึงมือผู้รับ' },
       { n: '24/7', l: 'พร้อมรับบริจาค' },
     ],
@@ -45,6 +101,7 @@ const T = {
     ctaStripP: 'เลือกหนทางของคุณ — มาร่วมงาน Iftar For Gaza หรือเริ่มบริจาคได้ทันที',
     ctaStripIftar: 'ลงทะเบียน Iftar For Gaza', ctaStripDonate: 'ร่วมบริจาค',
     followTitle: 'ติดตามอุมมะตีได้ทุกช่องทาง', followP: 'อัปเดตภารกิจช่วยเหลือและกิจกรรมล่าสุดของเราได้ที่โซเชียลมีเดียทุกแพลตฟอร์ม',
+    missionsEyebrow: 'MISSIONS · ภารกิจ', missionsTitle: 'ทุกโครงการของเรา', missionsCta: 'ดูภาพและวิดีโอทุกภารกิจ',
   },
   en: {
     eyebrow: 'Ummatee Foundation · Ummatee Thailand',
@@ -52,8 +109,8 @@ const T = {
     sub: 'We connect generous hearts with the poor, disaster victims, and those waiting for help — in Thailand and around the world. Every gift you give is a bridge of mercy.',
     ctaIftar: 'Register for Iftar For Gaza', ctaDonate: 'Donate to Help Those in Need',
     stats: [
-      { n: '8', l: 'Aid Programs' },
-      { n: '12+', l: 'Countries Reached' },
+      { n: '7', l: 'Aid Programs' },
+      { n: '31+', l: 'Countries Reached' },
       { n: '100%', l: 'Delivered in Full' },
       { n: '24/7', l: 'Open for Donations' },
     ],
@@ -79,6 +136,7 @@ const T = {
     ctaStripP: 'Choose your path — join Iftar For Gaza or start donating right away',
     ctaStripIftar: 'Register · Iftar For Gaza', ctaStripDonate: 'Donate',
     followTitle: 'Follow Ummatee Everywhere', followP: 'Stay updated on our latest aid missions and activities on every platform',
+    missionsEyebrow: 'MISSIONS', missionsTitle: 'All Our Projects', missionsCta: 'View photos & videos of every mission',
   },
   ar: {
     eyebrow: 'مؤسسة أمّتي · تايلاند',
@@ -86,8 +144,8 @@ const T = {
     sub: 'نصل بين أصحاب القلوب الرحيمة وبين الفقراء والمنكوبين ومن ينتظرون العون، في تايلاند وحول العالم. كل عطاءٍ منك جسرٌ من الرحمة.',
     ctaIftar: 'سجّل في إفطار من أجل غزة', ctaDonate: 'تبرّع لمساعدة المحتاجين',
     stats: [
-      { n: '8', l: 'برامج إغاثية' },
-      { n: '+12', l: 'دولة نصل إليها' },
+      { n: '7', l: 'برامج إغاثية' },
+      { n: '+31', l: 'دولة نصل إليها' },
       { n: '100%', l: 'تصل كاملةً للمستحقين' },
       { n: '24/7', l: 'نستقبل تبرعاتكم' },
     ],
@@ -113,6 +171,7 @@ const T = {
     ctaStripP: 'اختر طريقك — انضم إلى إفطار من أجل غزة أو ابدأ التبرع فوراً',
     ctaStripIftar: 'سجّل · إفطار من أجل غزة', ctaStripDonate: 'تبرّع',
     followTitle: 'تابع أمّتي على كل المنصات', followP: 'تابع آخر مهماتنا الإغاثية وأنشطتنا على جميع وسائل التواصل الاجتماعي',
+    missionsEyebrow: 'المهمات', missionsTitle: 'كل مشاريعنا', missionsCta: 'عرض صور وفيديوهات كل مهمة',
   },
 }
 
@@ -120,6 +179,22 @@ export default function Home() {
   const go = useNavigate()
   const { lang } = useLang()
   const t = T[lang]
+  const [gazaMedia, setGazaMedia] = useState([])
+  // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก
+  // (Home โหลดทันทีไม่ lazy จึงต้องเลี่ยง static import เหมือนตัวนับผู้เข้าชมใน App.jsx)
+  useEffect(() => {
+    let unsub = () => {}
+    let cancelled = false
+    Promise.all([import('../firebase.js'), import('firebase/firestore')])
+      .then(([{ db }, { doc, onSnapshot }]) => {
+        if (cancelled) return
+        unsub = onSnapshot(doc(db, 'missionMedia', 'gaza'), (d) => {
+          setGazaMedia(d.exists() ? (d.data().media || []) : [])
+        }, () => {})
+      })
+      .catch(() => {})
+    return () => { cancelled = true; unsub() }
+  }, [])
   return (
     <main className="page">
       {/* ── Hero Feed ── */}
@@ -207,6 +282,33 @@ export default function Home() {
               <div className="stat-label">{s.l}</div>
             </FadeUp>
           ))}
+        </div>
+      </section>
+
+      {/* ── แทบดำ: ภารกิจทั้งหมด ── */}
+      <section className="hm-missions-band">
+        <div className="hm-missions-inner">
+          <FadeUp className="hm-missions-head">
+            <span className="hm-missions-eyebrow">{t.missionsEyebrow}</span>
+            <h2 className="hm-missions-title">{t.missionsTitle}</h2>
+          </FadeUp>
+          <GazaCarousel items={gazaMedia} lang={lang} go={go} />
+          <div className="hm-missions-scroll">
+            {[...MISSIONS, QURBAN_CARD].map((m) => {
+              const tx = m[lang] || m.th
+              return (
+                <button key={m.key} className="hm-mission-chip" style={{ '--accent': m.accent }} onClick={() => go('missions')}>
+                  <span className="hm-chip-icon"><FontAwesomeIcon icon={m.icon} /></span>
+                  <span className="hm-chip-name">{tx.name}</span>
+                </button>
+              )
+            })}
+          </div>
+          <FadeUp>
+            <button className="hm-missions-cta" onClick={() => go('missions')}>
+              {t.missionsCta} <FontAwesomeIcon icon={faArrowRight} />
+            </button>
+          </FadeUp>
         </div>
       </section>
 

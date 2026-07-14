@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
@@ -7,18 +8,7 @@ import useAdminAuth from '../useAdminAuth.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner } from '@fortawesome/free-solid-svg-icons'
 
-const CLOUDINARY_CLOUD = 'dei5jktuw'
-const CLOUDINARY_PRESET = 'Ummatee'
-
-async function uploadToCloudinary(file) {
-  const fd = new FormData()
-  fd.append('file', file)
-  fd.append('upload_preset', CLOUDINARY_PRESET)
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`, { method: 'POST', body: fd })
-  if (!res.ok) throw new Error('upload failed')
-  const j = await res.json()
-  return { url: j.secure_url, type: j.resource_type }
-}
+import { uploadToCloudinary } from '../utils/cloudinary.js'
 
 const PLATFORM_OPEN = {
   facebook: 'https://www.facebook.com/',
@@ -125,7 +115,7 @@ export default function AdminCalendar() {
     if (!files.length) return
     setUploading(true)
     try {
-      const results = await Promise.all(files.map(uploadToCloudinary))
+      const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'auto')))
       setForm((f) => ({ ...f, mediaUrls: [...f.mediaUrls, ...results.map((r) => r.url)] }))
     } catch (err) {
       setStatus('อัพโหลดไม่สำเร็จ: ' + err.message)
@@ -192,7 +182,7 @@ export default function AdminCalendar() {
   const dayPosts = byDate[selected] || []
   const selDate = new Date(selected)
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -368,5 +358,5 @@ export default function AdminCalendar() {
         </div>
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

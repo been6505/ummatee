@@ -24,5 +24,25 @@ export const addProduct = (data) => addDoc(collection(db, 'products'), { ...data
 export const updateProduct = (id, data) => updateDoc(doc(db, 'products', id), data)
 export const deleteProduct = (id) => deleteDoc(doc(db, 'products', id))
 
-// แปลงข้อความ comma-separated เป็น array (ใช้กับ colors/sizes)
-export const csvToList = (str) => String(str || '').split(',').map((s) => s.trim()).filter(Boolean)
+// โปรโมชั่นส่วนลด Um Shop — เก็บใน Firestore collection "shopPromotions" (แอดมินเท่านั้นที่เห็น/จัดการ)
+// โครงสร้าง: { label, type: 'percent' | 'amount', value }
+export function usePromotions() {
+  const [promotions, setPromotions] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'shopPromotions'), (snap) => {
+      setPromotions(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      setLoading(false)
+    }, () => setLoading(false))
+    return unsub
+  }, [])
+
+  return { promotions, loading }
+}
+
+export const addPromotion = (data) => addDoc(collection(db, 'shopPromotions'), data)
+export const deletePromotion = (id) => deleteDoc(doc(db, 'shopPromotions', id))
+
+// ฟังก์ชันราคา/ส่วนลด (pure) ย้ายไป pricing.js — re-export ให้หน้าที่เคย import จากที่นี่ใช้ได้เหมือนเดิม
+export { applyPromotion, hasDiscount, effectivePrice, discountPercent, csvToList, groupProductsByName, SHOP_SIZES_BY_CATEGORY, dedupeSortSizes } from './pricing.js'

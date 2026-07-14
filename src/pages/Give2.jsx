@@ -3,10 +3,11 @@ import { db } from '../firebase.js'
 import { collection, doc, setDoc, runTransaction } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faLaptop, faUtensils, faCircleCheck, faPhone, faCamera, faCheck, faXmark, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { faLaptop, faUtensils, faCircleCheck, faPhone, faCamera, faCheck, faXmark, faArrowLeft, faHandHoldingHeart, faBoxOpen } from '@fortawesome/free-solid-svg-icons'
 
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
-const SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
+import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN } from '../utils/endpoints.js'
+
+import { formatPhone } from '../utils/formatPhone.js'
 const CLD_CLOUD = 'dei5jktuw'
 const CLD_PRESET = 'Ummatee'
 
@@ -15,17 +16,9 @@ const TYPES = [
     key: 'computer',
     icon: faLaptop,
     label: 'มอบคอมมือสองให้น้องได้เรียน',
-    desc: 'คอมพิวเตอร์ แล็ปท็อป แท็บเล็ต ที่ยังสามารถใช้งานได้',
+    desc: 'รับเฉพาะ Notebook และ Tablet ที่ยังสามารถใช้งานได้',
     color: '#7c3aed',
     bg: '#f5f3ff',
-  },
-  {
-    key: 'tools',
-    icon: faUtensils,
-    label: 'มอบเครื่องมือทำอาชีพแก่ผู้ยากไร้',
-    desc: 'เครื่องปั้น เตาปิ้ง อุปกรณ์ครัว เครื่องมือช่าง เครื่องตัดผม ฯลฯ',
-    color: '#059669',
-    bg: '#ecfdf5',
   },
 ]
 
@@ -79,9 +72,46 @@ function SuccessScreen({ refCode, fname }) {
   )
 }
 
+// ── Role Selection ──────────────────────────────────────────────────
+function RoleSelect({ onSelect }) {
+  return (
+    <main className="g2-page">
+      <section className="g2-hero">
+        <div className="g2-hero-blob blob-1"></div>
+        <div className="g2-hero-blob blob-2"></div>
+        <div className="g2-hero-inner">
+          <img src="/logo.png" alt="Ummatee" className="g2-hero-logo" />
+          <div className="g2-hero-tag"> มูลนิธิอุมมะตี · มอบคอมมือสองให้น้องได้เรียน</div>
+          <h1 className="g2-hero-title">คุณต้องการ<br />ทำอะไร?</h1>
+          <p className="g2-hero-lead">เลือกว่าคุณต้องการส่งมอบสิ่งของ หรือต้องการรับสิ่งของ</p>
+        </div>
+      </section>
+      <div className="g2-role-cards">
+        <button className="g2-role-card g2-role-give" onClick={() => onSelect('give')}>
+          <div className="g2-role-icon"><FontAwesomeIcon icon={faHandHoldingHeart} /></div>
+          <h3>พี่ต้องการส่งมอบ</h3>
+          <p>มอบคอมมือสอง อุปกรณ์ประกอบอาชีพ หรือสิ่งของที่ไม่ได้ใช้แล้ว</p>
+          <div className="g2-role-arrow">เริ่มลงทะเบียน →</div>
+        </button>
+        <button className="g2-role-card g2-role-receive" onClick={() => { window.location.href = '/event/give-for-um/receive/computer' }}>
+          <div className="g2-role-icon"><FontAwesomeIcon icon={faBoxOpen} /></div>
+          <h3>ผมต้องการรับ</h3>
+          <p>ลงทะเบียนรับคอมมือสอง อุปกรณ์ประกอบอาชีพ หรือสิ่งของบริจาค</p>
+          <div className="g2-role-arrow">เริ่มลงทะเบียน →</div>
+        </button>
+      </div>
+      <div style={{ textAlign: 'center', padding: '0 0 40px' }}>
+        <a className="g2-back-btn" href="#/event/give-for-um"><FontAwesomeIcon icon={faArrowLeft} /> กลับหน้างาน GIVE</a>
+      </div>
+    </main>
+  )
+}
+
 // ── Main Form ───────────────────────────────────────────────────────
 export default function Give2() {
-  const [form, setForm] = useState({ fname: '', lname: '', phone: '', types: [], detail: '' })
+  const [role, setRole] = useState('give')
+  const [form, setForm] = useState({ fname: '', lname: '', phone: '', email: '', types: [], detail: '', canAttend: null })
+  const [qty, setQty] = useState({ notebook: 0, tablet: 0 })
   const [imageUrls, setImageUrls] = useState([])
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -158,7 +188,10 @@ export default function Give2() {
     if (!form.fname.trim()) e.fname = 'กรุณากรอกชื่อ'
     if (!form.lname.trim()) e.lname = 'กรุณากรอกนามสกุล'
     if (!form.phone.trim()) e.phone = 'กรุณากรอกเบอร์โทร'
-    if (form.types.length === 0) e.types = 'กรุณาเลือกประเภทสิ่งที่ต้องการให้อย่างน้อย 1 รายการ'
+    else if (!/^[0-9+\-\s]{6,15}$/.test(form.phone.trim())) e.phone = 'เบอร์โทรไม่ถูกต้อง'
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'อีเมลไม่ถูกต้อง'
+    if (qty.notebook === 0 && qty.tablet === 0) e.types = 'กรุณาระบุจำนวนอย่างน้อย 1 เครื่อง'
+    if (form.canAttend === null) e.canAttend = 'กรุณาเลือกว่าสะดวกมามอบในงานหรือไม่'
     if (imageUrls.length < 1) e.images = 'กรุณาอัพโหลดรูปอย่างน้อย 1 รูป'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -173,11 +206,13 @@ export default function Give2() {
     setSubmitting(true)
     try {
       const refCode = await nextRef()
-      const typeLabels = form.types.map((k) => TYPES.find((t) => t.key === k)?.label).join(', ')
+      const types = []; if (qty.notebook > 0) types.push('notebook'); if (qty.tablet > 0) types.push('tablet')
+      const typeLabels = types.map((k) => `${k} ${qty[k]} เครื่อง`).join(', ')
       const payload = {
         refCode, fname: form.fname.trim(), lname: form.lname.trim(),
-        phone: form.phone.trim(), types: form.types, typeLabels,
-        detail: form.detail.trim(), imageUrls, submittedAt: new Date().toISOString(),
+        phone: formatPhone(form.phone), email: form.email.trim(), types, typeLabels,
+        notebookQty: qty.notebook, tabletQty: qty.tablet,
+        detail: form.detail.trim(), canAttend: form.canAttend, imageUrls, submittedAt: new Date().toISOString(),
       }
 
       await setDoc(doc(collection(db, 'give2Regs'), refCode), payload)
@@ -186,7 +221,7 @@ export default function Give2() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: SHEET_TOKEN, type: 'give2', ...payload }),
-      }).catch(() => {})
+      }).catch(() => { })
 
       setDone({ refCode, fname: form.fname.trim() })
     } catch (err) {
@@ -198,6 +233,38 @@ export default function Give2() {
 
   if (done) return <SuccessScreen {...done} />
 
+  if (!role) return (
+    <main className="g2-page">
+      <section className="g2-hero">
+        <div className="g2-hero-blob blob-1"></div>
+        <div className="g2-hero-blob blob-2"></div>
+        <div className="g2-hero-inner">
+          <img src="/logo.png" alt="Ummatee" className="g2-hero-logo" />
+          <div className="g2-hero-tag">งาน "ให้" ครั้งที่ 6 · คอมมือสอง</div>
+          <h1 className="g2-hero-title">คอมมือสอง<br />เพื่อน้องได้เรียน</h1>
+          <p className="g2-hero-lead">รับเฉพาะ <strong>Notebook</strong> และ <strong>Tablet</strong> ที่ยังใช้งานได้</p>
+        </div>
+      </section>
+      <div className="g2-role-cards">
+        <button className="g2-role-card g2-role-give" onClick={() => setRole('give')}>
+          <div className="g2-role-icon"><FontAwesomeIcon icon={faHandHoldingHeart} /></div>
+          <h3>ผู้ให้</h3>
+          <p>มอบ Notebook หรือ Tablet มือสองที่ยังใช้งานได้</p>
+          <div className="g2-role-arrow">ลงทะเบียนมอบ →</div>
+        </button>
+        <button className="g2-role-card g2-role-receive" onClick={() => { window.location.href = '/event/give-for-um/receive/computer' }}>
+          <div className="g2-role-icon"><FontAwesomeIcon icon={faBoxOpen} /></div>
+          <h3>ผู้รับ</h3>
+          <p>ลงทะเบียนรับคอมมือสองสำหรับนักเรียนและผู้สนใจ</p>
+          <div className="g2-role-arrow">ลงทะเบียนรับ →</div>
+        </button>
+      </div>
+      <div style={{ textAlign: 'center', padding: '0 0 40px' }}>
+        <a className="g2-back-btn" href="/event/give-for-um"><FontAwesomeIcon icon={faArrowLeft} /> กลับหน้างาน GIVE</a>
+      </div>
+    </main>
+  )
+
   return (
     <main className="g2-page">
       {/* ── Hero ── */}
@@ -206,11 +273,24 @@ export default function Give2() {
         <div className="g2-hero-blob blob-2"></div>
         <div className="g2-hero-inner">
           <img src="/logo.png" alt="Ummatee" className="g2-hero-logo" />
-          
-          <div className="g2-hero-tag">งาน "ให้" ครั้งที่ 6 · GIVE</div>
-          <h1 className="g2-hero-title">ส่งต่อของ<br />เพื่อสังคม</h1>
+
+          <div className="g2-hero-tag">มูลนิธิอุมมะตี · คอมมือสองเพื่อน้อง
+            ได้เรียน
+          </div>
+          <h1 className="g2-hero-title">มอบคอมมือสอง<br />ให้น้องได้เรียน</h1>
+          <h2>รับเฉพาะ Notebook  , Tablet<br></br> ที่ยังงานได้</h2>
+          <br />
+          <h4 className="g2-hero-sub">
+            สเปค Notebook ขึ้นต่ำ :<br></br>
+            CPU Core i3 <br />RAM 8GB<br /> SSD  Storage 128GB </h4>
+          <div className="g2-step-line"></div>
+          <h4 className="g2-hero-sub">
+            สเปค Tablet ขึ้นต่ำ :
+            <br />RAM 8GB<br /> SSD  Storage 128GB </h4>
+
           <p className="g2-hero-lead">
-            นำสิ่งของที่ไม่ได้ใช้แล้วมาส่งต่อให้ผู้ที่ต้องการ<br className="hide-sm" />
+
+            <br className="hide-sm" /><br></br>
             กรอกข้อมูล · อัพโหลดรูป · รอทีมงานติดต่อกลับ
           </p>
           <div className="g2-steps">
@@ -259,50 +339,70 @@ export default function Give2() {
                 {errors.lname && <div className="g2-err">{errors.lname}</div>}
               </div>
             </div>
-            <div className="g2-field">
-              <label className="g2-label">เบอร์โทรศัพท์ <span className="g2-req">*</span></label>
-              <input
-                className={`g2-input ${errors.phone ? 'err' : ''}`}
-                value={form.phone}
-                onChange={(e) => { set('phone', e.target.value); setErrors((er) => ({ ...er, phone: undefined })) }}
-                placeholder="0xx-xxx-xxxx"
-                type="tel"
-              />
-              {errors.phone && <div className="g2-err">{errors.phone}</div>}
+            <div className="g2-row-2">
+              <div className="g2-field">
+                <label className="g2-label">เบอร์โทรศัพท์ <span className="g2-req">*</span></label>
+                <input
+                  className={`g2-input ${errors.phone ? 'err' : ''}`}
+                  value={form.phone}
+                  onChange={(e) => { set('phone', e.target.value); setErrors((er) => ({ ...er, phone: undefined })) }}
+                  placeholder="0xx-xxx-xxxx"
+                  type="tel"
+                />
+                {errors.phone && <div className="g2-err">{errors.phone}</div>}
+              </div>
+              <div className="g2-field">
+                <label className="g2-label">อีเมล</label>
+                <input
+                  className={`g2-input ${errors.email ? 'err' : ''}`}
+                  value={form.email}
+                  onChange={(e) => { set('email', e.target.value); setErrors((er) => ({ ...er, email: undefined })) }}
+                  placeholder="example@email.com"
+                  type="email"
+                  autoComplete="email"
+                />
+                {errors.email && <div className="g2-err">{errors.email}</div>}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ── Band 2: ประเภทสิ่งของ ── */}
+        {/* ── Band 2: ประเภทและจำนวน ── */}
         <section className="g2-band band-2">
           <div className="g2-band-header bh-indigo">
             <div className="g2-band-header-inner">
               <div className="g2-band-num">2</div>
               <div>
-                <div className="g2-band-title">ประเภทสิ่งที่ต้องการให้ <span className="g2-req">*</span></div>
-                <div className="g2-band-sub">เลือกได้มากกว่า 1 ประเภท</div>
+                <div className="g2-band-title">ประเภทและจำนวน <span className="g2-req">*</span></div>
+                <div className="g2-band-sub">ระบุจำนวนที่ต้องการมอบ (0 = ไม่มอบ)</div>
               </div>
             </div>
           </div>
           <div className="g2-band-body">
             <div className="g2-type-cards">
-              {TYPES.map((t) => {
-                const sel = form.types.includes(t.key)
+              {[
+                { key: 'notebook', label: 'Notebook', color: '#7c3aed', bg: '#f5f3ff' },
+                { key: 'tablet', label: 'Tablet', color: '#0891b2', bg: '#ecfeff' },
+              ].map((t) => {
+                const n = qty[t.key]
+                const sel = n > 0
                 return (
-                  <button
+                  <div
                     key={t.key}
-                    type="button"
                     className={`g2-type-card ${sel ? 'sel' : ''}`}
-                    onClick={() => toggleType(t.key)}
                     style={sel ? { '--tc': t.color, '--tb': t.bg } : {}}
                   >
                     <div className="g2-type-check">{sel ? <FontAwesomeIcon icon={faCheck} /> : ''}</div>
-                    <div className="g2-type-emoji"><FontAwesomeIcon icon={t.icon} /></div>
+                    <div className="g2-type-emoji"><FontAwesomeIcon icon={faLaptop} /></div>
                     <div className="g2-type-body">
                       <div className="g2-type-title">{t.label}</div>
-                      <div className="g2-type-desc">{t.desc}</div>
                     </div>
-                  </button>
+                    <div className="g2-qty-row" onClick={(e) => e.stopPropagation()}>
+                      <button type="button" className="g2-qty-btn" onClick={() => setQty((q) => ({ ...q, [t.key]: Math.max(0, q[t.key] - 1) }))}>−</button>
+                      <span className="g2-qty-num">{n}</span>
+                      <button type="button" className="g2-qty-btn" onClick={() => setQty((q) => ({ ...q, [t.key]: Math.min(20, q[t.key] + 1) }))}>+</button>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -314,8 +414,47 @@ export default function Give2() {
                 value={form.detail}
                 onChange={(e) => set('detail', e.target.value)}
                 rows={3}
-                placeholder="เช่น สภาพสิ่งของ ยี่ห้อ รุ่น หรือข้อมูลที่อยากแจ้งทีมงานเพิ่มเติม"
+                placeholder="เช่น ยี่ห้อ รุ่น สภาพการใช้งาน อายุการใช้งาน"
               />
+            </div>
+
+            {/* ── ถามการเข้างาน ── */}
+            <div className="g2-field g2-attend-field">
+              <label className="g2-label">สะดวกมอบในงานให้ วันที่ 3, 4, 5 กรกฎาคม 2569 ไหมครับ? <span className="g2-req">*</span></label>
+              <div className="g2-attend-chips">
+                <button
+                  type="button"
+                  className={`g2-attend-chip${form.canAttend === true ? ' attend-yes' : ''}`}
+                  onClick={() => { set('canAttend', true); setErrors((er) => ({ ...er, canAttend: undefined })) }}
+                >
+                  ✓ สะดวกมามอบ
+                </button>
+                <button
+                  type="button"
+                  className={`g2-attend-chip${form.canAttend === false ? ' attend-no' : ''}`}
+                  onClick={() => { set('canAttend', false); setErrors((er) => ({ ...er, canAttend: undefined })) }}
+                >
+                  ✕ ไม่สะดวกมามอบ
+                </button>
+              </div>
+              {errors.canAttend && <div className="g2-err">{errors.canAttend}</div>}
+              {form.canAttend === false && (
+                <div className="g2-attend-addr-box">
+                  <div className="g2-attend-addr-title">📍 ที่อยู่สำหรับนัดรับสิ่งของ</div>
+                  <div className="g2-attend-addr-title">มูลนิธิอุมมะตี UMMATEE THAILAND</div>
+                  <div className="g2-attend-addr-text">183 ซอย กรุงเทพกรีฑา 7 แขวงหัวหมาก บางกะปิ กรุงเทพมหานคร 10240</div>
+                  <iframe
+                    title="แผนที่อุมมะตี"
+                    src="https://maps.google.com/maps?q=183+ซอย+กรุงเทพกรีฑา+7+หัวหมาก+บางกะปิ+กรุงเทพมหานคร+10240&output=embed&hl=th"
+                    width="100%"
+                    height="220"
+                    style={{ border: 0, borderRadius: 12, marginTop: 12, display: 'block' }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </section>

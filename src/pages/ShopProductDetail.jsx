@@ -1,0 +1,356 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useProducts, hasDiscount, discountPercent, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY } from '../data/shop.js'
+import { addToCart, useCartCount } from '../data/cart.js'
+import Footer from '../components/Footer.jsx'
+import { useLang } from '../i18n.jsx'
+import { useNavigate } from '../navContext'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faBagShopping, faArrowLeft, faMinus, faPlus, faCartPlus, faCheck, faCartShopping } from '@fortawesome/free-solid-svg-icons'
+import { faLine } from '@fortawesome/free-brands-svg-icons'
+
+// หน้ารายละเอียดสินค้า (/um-shop/:productId) — แกลเลอรีหลายรูป + ปุ่มเพิ่ม/ลดจำนวน + แถบล่างลอย (แชท LINE / เพิ่มตะกร้า / ราคา)
+// รองรับค้นหาสินค้าทั้งจาก productId (um001, um002, ...) หรือ Firestore doc id (สินค้าเก่าก่อนมี productId)
+
+import { optImg } from '../utils/cloudinaryUrl.js'
+const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
+const LINE_URL = 'https://line.me/R/ti/p/@745bvvgx'
+
+const T = {
+  th: {
+    back: 'กลับไปหน้าร้านค้า', color: 'สี', size: 'ขนาด', type: 'ประเภท', stock: 'คงเหลือ', out: 'สินค้าหมด',
+    pickColor: 'กรุณาเลือกสี', pickSize: 'กรุณาเลือกขนาด', pickType: 'กรุณาเลือกประเภท',
+    qty: 'จำนวน', addToCart: 'เพิ่มลงตะกร้า', added: 'เพิ่มลงตะกร้าแล้ว ✓', chat: 'ทักไลน์', viewCart: 'ดูตะกร้าสินค้า',
+    notFound: 'ไม่พบสินค้านี้', notFoundDesc: 'สินค้าอาจถูกลบหรือย้ายไปแล้ว',
+  },
+  en: {
+    back: 'Back to shop', color: 'Color', size: 'Size', type: 'Type', stock: 'In stock', out: 'Out of stock',
+    pickColor: 'Please select a color', pickSize: 'Please select a size', pickType: 'Please select a type',
+    qty: 'Quantity', addToCart: 'Add to cart', added: 'Added to cart ✓', chat: 'Chat on LINE', viewCart: 'View cart',
+    notFound: 'Product not found', notFoundDesc: 'This product may have been removed or moved.',
+  },
+  ar: {
+    back: 'العودة للمتجر', color: 'اللون', size: 'المقاس', type: 'النوع', stock: 'المتوفر', out: 'غير متوفر',
+    pickColor: 'يرجى اختيار اللون', pickSize: 'يرجى اختيار المقاس', pickType: 'يرجى اختيار النوع',
+    qty: 'الكمية', addToCart: 'أضف إلى السلة', added: 'أُضيف إلى السلة ✓', chat: 'تواصل عبر LINE', viewCart: 'عرض السلة',
+    notFound: 'المنتج غير موجود', notFoundDesc: 'ربما تمت إزالة هذا المنتج أو نقله.',
+  },
+}
+
+export default function ShopProductDetail({ productId }) {
+  const { lang } = useLang()
+  const t = T[lang] || T.th
+  const go = useNavigate()
+  const cartCount = useCartCount()
+  const { products, loading } = useProducts()
+
+  // สินค้าที่แอดมินปิดการแสดงผล (active === false) เข้าถึงตรงด้วยลิงก์ไม่ได้เช่นกัน — สินค้าเก่าที่ไม่มีฟิลด์นี้ถือว่าเปิดอยู่
+  const linkedProduct = useMemo(
+    () => products.find((p) => p.active !== false && (p.productId === productId || p.id === productId)),
+    [products, productId]
+  )
+
+  // สินค้าชื่อเดียวกัน (คนละสี/ขนาด คนละ doc) — ถ้ามีมากกว่า 1 ให้เลือก "สี" คือเลือก doc ไหนกันแน่
+  const groupVariants = useMemo(
+    () => (linkedProduct ? products.filter((p) => p.active !== false && (p.name || '').trim() === (linkedProduct.name || '').trim()) : []),
+    [products, linkedProduct]
+  )
+  const hasVariantGroup = groupVariants.length > 1
+
+  const [activeImage, setActiveImage] = useState(0)
+  const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
+  const [selVariantId, setSelVariantId] = useState(null) // doc ที่เลือกอยู่ (โหมดกลุ่มหลาย doc)
+  const [selColor, setSelColor] = useState('') // สีที่เลือก (โหมด doc เดียวมีหลายสีในฟิลด์เดียว — ของเดิม)
+  const [selSize, setSelSize] = useState('')
+  const [selType, setSelType] = useState('') // ประเภท (แขนสั้น/แขนยาว/เด็กเล็ก) — คนละ doc กันในกลุ่มเดียวกัน เหมือนสี
+  const [variantError, setVariantError] = useState('')
+
+  // เปลี่ยนสินค้า (URL เปลี่ยน) → เริ่มต้นใหม่ที่ variant ตรงกับลิงก์ที่เปิดมา
+  useEffect(() => {
+    setSelVariantId(linkedProduct?.id || null)
+    setActiveImage(0)
+    setQty(1)
+    setSelColor('')
+    setSelSize('')
+    setSelType(linkedProduct?.type || '')
+    setVariantError('')
+  }, [linkedProduct?.id])
+
+  const product = hasVariantGroup
+    ? (groupVariants.find((p) => p.id === selVariantId) || linkedProduct)
+    : linkedProduct
+
+  // ป้ายชื่อสี ของแต่ละ variant (doc) ในกลุ่ม — ใช้ colors ของ doc นั้นถ้ามี ไม่งั้น fallback เป็นรหัสสินค้า/ลำดับ
+  const variantLabel = (v, i) => (v.colors?.length ? v.colors.join('/') : (v.productId || `ตัวเลือกที่ ${i + 1}`))
+
+  // ประเภท — มีให้เลือกก็ต่อเมื่อ doc ในกลุ่มเดียวกันมีมากกว่า 1 ประเภทจริง (เช่น แขนสั้น/แขนยาว/เด็กเล็ก)
+  const typesUnion = useMemo(() => [...new Set(groupVariants.map((v) => v.type).filter(Boolean))], [groupVariants])
+  const hasTypes = typesUnion.length > 1
+  // ตัวเลือกสี/variant ต้องกรองด้วยประเภทที่เลือกก่อน — กันไม่ให้ "แขนสั้นสีดำ" กับ "แขนยาวสีดำ" (คนละ doc) ขึ้นเป็นชิปสีซ้ำกัน
+  const variantsForType = useMemo(
+    () => (hasTypes && selType ? groupVariants.filter((v) => v.type === selType) : groupVariants),
+    [groupVariants, hasTypes, selType]
+  )
+
+  // ตัดชิปสีซ้ำออก — สินค้าบางกลุ่ม (เช่นเสื้อ) มีหลาย doc สีเดียวกันแต่ต่างขนาด/ล็อต ไม่ต้องขึ้นชิปซ้ำ
+  // ต้องอยู่เหนือ early return ของ loading/not-found เสมอ ไม่งั้นจำนวน hook ที่เรียกจะไม่เท่ากันระหว่าง render (React error #310)
+  const dedupedGroupVariants = useMemo(() => {
+    const seen = new Set()
+    return variantsForType.filter((v, i) => {
+      const label = variantLabel(v, i)
+      if (seen.has(label)) return false
+      seen.add(label)
+      return true
+    })
+  }, [variantsForType])
+  const dedupedColors = useMemo(() => [...new Set(product?.colors || [])], [product])
+  // ขนาด — หมวดหมู่ที่มีลิสต์มาตรฐาน (เสื้อ: S,M,L,XL,2XL,3XL) โชว์ครบทุกไซซ์เสมอ แม้สินค้าเก่าที่ยังไม่มี sizeStock
+  // (แค่ปิดปุ่มไม่ได้ถ้าไม่รู้สต็อกแยกไซซ์) ไซซ์ไหนหมด (มี sizeStock แล้วและ =0) ปิดปุ่มแทนการซ่อนไปเลย
+  const dedupedSizes = useMemo(() => {
+    return SHOP_SIZES_BY_CATEGORY[product?.category] || dedupeSortSizes(product?.sizes, product?.category)
+  }, [product])
+
+  const backToShop = (e) => { e.preventDefault(); go('shop') }
+  const viewCart = () => go('shop-cart')
+
+  if (loading) return null
+
+  if (!linkedProduct) {
+    return (
+      <main className="page">
+        <section className="section"><div className="wrap" style={{ textAlign: 'center', padding: '80px 0' }}>
+          <h2>{t.notFound}</h2>
+          <p style={{ color: 'var(--ink-soft)', marginBottom: 20 }}>{t.notFoundDesc}</p>
+          <a href="/um-shop" onClick={backToShop} className="shop-interest-btn" style={{ background: 'var(--green-mid)' }}>
+            <FontAwesomeIcon icon={faArrowLeft} /> {t.back}
+          </a>
+        </div></section>
+        <Footer />
+      </main>
+    )
+  }
+
+  const images = product.images?.length ? product.images : []
+  const hasSizes = dedupedSizes.length > 0
+  // ไซซ์นี้ยังมีของไหม — ใช้ข้อมูลสต็อกที่แม่นสุดที่มี: sizeStock (จำนวนแยกไซซ์เป๊ะๆ) ถ้ามี
+  // ไม่มีก็ดูจากลิสต์ "sizes" ที่ doc นี้บันทึกไว้ว่าเปิดขายไซซ์ไหนบ้าง (เช่น เด็กเล็กอาจไม่มี XL/2XL/3XL เลย)
+  // ถ้าไม่มีข้อมูลอะไรเลยจริงๆ ค่อย fallback เป็นเปิดให้เลือกได้หมด (กันปิดมั่วตอนไม่รู้ข้อมูล)
+  const isSizeAvailable = (sz) => {
+    if (product.sizeStock) return (Number(product.sizeStock[sz]) || 0) > 0
+    if (product.sizes?.length) return product.sizes.includes(sz)
+    return true
+  }
+  // สต็อกที่ใช้จริง — ถ้าเลือกไซซ์แล้วและสินค้ามี sizeStock ให้ใช้ของไซซ์นั้นเป๊ะๆ (เหมือน Shopee ที่ตัวเลข "คงเหลือ"/จำนวนซื้อสูงสุด เปลี่ยนตามตัวเลือกที่กด)
+  // ไม่งั้น fallback เป็น stock รวมของสินค้าเหมือนเดิม (สินค้าที่ไม่มีไซซ์ หรือยังไม่ได้เลือกไซซ์)
+  const effectiveStock = (hasSizes && selSize && product.sizeStock) ? (Number(product.sizeStock[selSize]) || 0) : product.stock
+  const outOfStock = (effectiveStock ?? 0) <= 0
+  const maxQty = Number.isFinite(effectiveStock) && effectiveStock > 0 ? effectiveStock : 99
+
+  const dec = () => setQty((q) => Math.max(1, q - 1))
+  const inc = () => setQty((q) => Math.min(maxQty, q + 1))
+
+  const hasColors = hasVariantGroup || (product.colors?.length || 0) > 0
+  const selectedLabel = hasVariantGroup ? variantLabel(product, groupVariants.indexOf(product)) : null
+
+  const selectVariant = (v) => {
+    setSelVariantId(v.id)
+    setActiveImage(0)
+    setQty(1)
+    setSelSize('')
+    setVariantError('')
+  }
+
+  // เปลี่ยนประเภท (แขนสั้น/แขนยาว/เด็กเล็ก) — พยายามคงสีเดิมไว้ถ้าประเภทใหม่มีสีเดียวกัน ไม่งั้นเลือกตัวแรกที่ยังมีของ
+  const selectType = (typ) => {
+    setSelType(typ)
+    const candidates = groupVariants.filter((v) => v.type === typ)
+    const matchByColor = selectedLabel && candidates.find((v, i) => variantLabel(v, i) === selectedLabel)
+    const next = matchByColor || candidates.find((v) => (v.stock ?? 0) > 0) || candidates[0]
+    if (next) { setSelVariantId(next.id); setActiveImage(0); setQty(1) }
+    setSelSize('')
+    setVariantError('')
+  }
+
+  const handleAddToCart = () => {
+    if (outOfStock) return
+    // สินค้าที่มีตัวเลือก ต้องเลือกก่อนเพิ่มลงตะกร้า — ไม่งั้นแอดมินไม่รู้ว่าลูกค้าต้องการแบบไหน
+    if (hasTypes && !selType) { setVariantError(t.pickType); return }
+    if (hasVariantGroup && !selVariantId) { setVariantError(t.pickColor); return }
+    if (!hasVariantGroup && (product.colors?.length || 0) > 0 && !selColor) { setVariantError(t.pickColor); return }
+    if (hasSizes && !selSize) { setVariantError(t.pickSize); return }
+    if (hasSizes && selSize && !isSizeAvailable(selSize)) { setVariantError(t.pickSize); return }
+    setVariantError('')
+    const colorForCart = hasVariantGroup
+      ? variantLabel(product, groupVariants.findIndex((v) => v.id === product.id))
+      : selColor
+    addToCart(product, qty, { color: colorForCart, size: selSize })
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1800)
+  }
+
+  return (
+    <>
+    <main className="page shop-detail-page">
+      <section className="section">
+        <div className="wrap">
+          <a href="/um-shop" onClick={backToShop} className="shop-detail-back">
+            <FontAwesomeIcon icon={faArrowLeft} /> {t.back}
+          </a>
+
+          <div className="shop-detail-body">
+            <div className="shop-modal-gallery">
+              <div className="shop-modal-main">
+                {images[activeImage]
+                  ? <img src={optImg(images[activeImage], 900)} alt={product.name} />
+                  : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>}
+                {outOfStock && <span className="shop-badge-out">{t.out}</span>}
+                {!outOfStock && hasDiscount(product) && <span className="shop-badge-discount">-{discountPercent(product)}%</span>}
+              </div>
+              {images.length > 1 && (
+                <div className="shop-modal-thumbs">
+                  {images.map((img, i) => (
+                    <button
+                      key={i}
+                      className={`shop-modal-thumb ${i === activeImage ? 'active' : ''}`}
+                      onClick={() => setActiveImage(i)}
+                      aria-label={`รูปที่ ${i + 1}`}
+                    >
+                      <img src={optImg(img, 160)} alt="" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="shop-modal-info">
+              {product.category && <span className="shop-cat">{product.category}</span>}
+              <h1 className="shop-modal-name">{product.name}</h1>
+              {product.price != null && ( // ราคา — ในเนื้อหา (ไม่ใช่แถบปุ่มลอย) โชว์ราคาเต็มขีดฆ่าคู่กับราคาลด (anchoring effect) ให้เห็นว่าลดจริง
+                hasDiscount(product)
+                  ? <div className="shop-modal-price"><span className="shop-price-old">{THB(product.price)}</span> {THB(product.discountPrice)}</div>
+                  : <div className="shop-modal-price">{THB(product.price)}</div>
+              )}
+              {product.description && <p className="shop-modal-desc">{product.description}</p>}
+              {hasTypes && ( // ชิปเลือกประเภท (แขนสั้น/แขนยาว/เด็กเล็ก) — เลือกก่อนสี เพราะกรองสีที่ขึ้นตามประเภทที่เลือก
+                <div className="shop-meta-row">
+                  <span className="shop-meta-label">{t.type}:</span>
+                  <div className="variant-chip-wrap">
+                    {typesUnion.map((typ) => (
+                      <button key={typ} type="button" className={`variant-chip ${selType === typ ? 'selected' : ''}`}
+                        onClick={() => selectType(typ)}>{typ}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {hasColors && ( // ชิปเลือกสี — ย้ายมาไว้เหนือแถวจำนวน ให้เลือกตัวเลือกทั้งหมดต่อเนื่องกันก่อนกดเพิ่มลงตะกร้า
+                <div className="shop-meta-row">
+                  <span className="shop-meta-label">{t.color}:</span>
+                  <div className="variant-chip-wrap">
+                    {hasVariantGroup
+                      ? dedupedGroupVariants.map((v, i) => {
+                          const outOfStockV = (v.stock ?? 0) <= 0
+                          const isSelected = variantLabel(v, i) === selectedLabel
+                          return (
+                            <button
+                              key={v.id} type="button"
+                              className={`variant-chip ${isSelected ? 'selected' : ''} ${outOfStockV ? 'disabled' : ''}`}
+                              disabled={outOfStockV}
+                              onClick={() => selectVariant(v)}
+                            >{variantLabel(v, i)}</button>
+                          )
+                        })
+                      : dedupedColors.map((c) => (
+                          <button key={c} type="button" className={`variant-chip ${selColor === c ? 'selected' : ''}`}
+                            onClick={() => { setSelColor(c); setVariantError('') }}>{c}</button>
+                        ))}
+                  </div>
+                </div>
+              )}
+              {hasSizes && (
+                <div className="shop-meta-row">
+                  <span className="shop-meta-label">{t.size}:</span>
+                  <div className="variant-chip-wrap">
+                    {dedupedSizes.map((sz) => {
+                      const available = isSizeAvailable(sz)
+                      return (
+                        <button
+                          key={sz} type="button" disabled={!available}
+                          className={`variant-chip ${selSize === sz ? 'selected' : ''} ${!available ? 'disabled' : ''}`}
+                          onClick={() => { setSelSize(sz); setQty(1); setVariantError('') }}
+                        >{sz}</button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+              {variantError && <p style={{ color: '#dc2626', fontSize: '.88rem', margin: '6px 0 0' }}>{variantError}</p>}
+              {effectiveStock != null && (
+                <div className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {effectiveStock}</div>
+              )}
+
+              {!outOfStock && (
+                <div className="shop-qty-row">
+                  <span className="shop-meta-label">{t.qty}:</span>
+                  <div className="shop-qty-stepper">
+                    <button type="button" onClick={dec} disabled={qty <= 1} aria-label="ลดจำนวน"><FontAwesomeIcon icon={faMinus} /></button>
+                    <span>{qty}</span>
+                    <button type="button" onClick={inc} disabled={qty >= maxQty} aria-label="เพิ่มจำนวน"><FontAwesomeIcon icon={faPlus} /></button>
+                  </div>
+                </div>
+              )}
+
+              {/* จอกว้าง — แถบราคา/ปุ่มเดียวกัน วางไว้ในพื้นที่ว่างท้ายคอลัมน์ข้อมูล (margin-top:auto ดันลงล่างสุดของการ์ด) แทนแถบลอยแบบมือถือ */}
+              <div className="shop-detail-inline-bar">
+                <div className="shop-detail-bar-price">
+                  <span className="shop-detail-bar-price-now">{THB(hasDiscount(product) ? product.discountPrice : product.price)}</span>
+                </div>
+                <div className="shop-detail-inline-actions">
+                  <a href={LINE_URL} target="_blank" rel="noopener noreferrer" className="shop-detail-inline-line" aria-label={t.chat}>
+                    <FontAwesomeIcon icon={faLine} /> {t.chat}
+                  </a>
+                  <button type="button" className="shop-detail-inline-cart" onClick={handleAddToCart} disabled={outOfStock}>
+                    <FontAwesomeIcon icon={added ? faCheck : faCartPlus} />
+                    {outOfStock ? t.out : added ? t.added : t.addToCart}
+                  </button>
+                  <button type="button" className="shop-detail-inline-viewcart" onClick={viewCart} aria-label={t.viewCart}>
+                    <FontAwesomeIcon icon={faCartShopping} />
+                    {cartCount > 0 && <span className="shop-detail-cart-badge">{cartCount}</span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    {/* แถบล่างลอย แบบ Shopee — ทักไลน์ / เพิ่มลงตะกร้า / ราคาตัวใหญ่หนา แทนปุ่มเพิ่มตะกร้าเดิมในเนื้อหา
+        อยู่นอก <main className="page"> โดยตั้งใจ — .page มี CSS animation ที่ทิ้ง transform ค้างไว้ (matrix identity แทนที่จะเป็น none)
+        ทำให้กลายเป็น containing block ของ position:fixed ลูกข้างใน เลื่อนตามเนื้อหาแทนที่จะติดขอบจอจริง
+        อยู่ก่อน Footer เสมอ — บนจอกว้างจะไม่ fixed แล้ว (ดู shop.css) เลยต้องอยู่ตำแหน่งนี้พอดีเพื่อให้ติดขอบล่างการ์ดสินค้า ไม่ใช่ลอยทับ Footer */}
+    <div className="shop-detail-bar">
+      <div className="shop-detail-bar-price">
+        <span className="shop-detail-bar-price-now">{THB(hasDiscount(product) ? product.discountPrice : product.price)}</span>
+      </div>
+      <a href={LINE_URL} target="_blank" rel="noopener noreferrer" className="shop-detail-bar-line" aria-label={t.chat}>
+        <FontAwesomeIcon icon={faLine} />
+        <span>{t.chat}</span>
+      </a>
+      <button
+        type="button"
+        className="shop-detail-bar-cart"
+        onClick={handleAddToCart}
+        disabled={outOfStock}
+      >
+        <FontAwesomeIcon icon={added ? faCheck : faCartPlus} />
+        {outOfStock ? t.out : added ? t.added : t.addToCart}
+      </button>
+      <button type="button" className="shop-detail-bar-viewcart" onClick={viewCart} aria-label={t.viewCart}>
+        <FontAwesomeIcon icon={faCartShopping} />
+        {cartCount > 0 && <span className="shop-detail-cart-badge">{cartCount}</span>}
+      </button>
+    </div>
+    <Footer />
+    </>
+  )
+}

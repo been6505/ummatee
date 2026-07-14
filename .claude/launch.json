@@ -5,7 +5,7 @@
       "name": "ummatee",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 5173
+      "port": 4323
     },
     {
       "name": "ummatee-prod",

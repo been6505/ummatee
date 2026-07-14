@@ -16,6 +16,20 @@ export const DEFAULT_FINANCIAL = {
 
 export const FINANCIAL_DOC_REF = doc(db, 'config', 'financialDashboard')
 
+// แปลงข้อมูลดิบจาก Firestore ให้ปลอดภัยเสมอ — บังคับ poor/perPerson/raised เป็นตัวเลขจำกัด (finite)
+// กัน null / string / NaN ที่อาจหลุดมาจากการแก้ doc มือ ไม่ให้ทำให้ .toLocaleString() พังทั้งหน้า (จอขาวบนทีวี)
+function sanitize(raw) {
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+  return {
+    ...DEFAULT_FINANCIAL,
+    ...raw,
+    poor: num(raw?.poor ?? DEFAULT_FINANCIAL.poor),
+    perPerson: num(raw?.perPerson ?? DEFAULT_FINANCIAL.perPerson),
+    raised: num(raw?.raised ?? DEFAULT_FINANCIAL.raised),
+    account: { ...DEFAULT_FINANCIAL.account, ...(raw?.account || {}) },
+  }
+}
+
 // อ่านข้อมูลแดชบอร์ดการเงินแบบเรียลไทม์จาก Firestore (config/financialDashboard)
 export function useFinancialData() {
   const [data, setData] = useState(DEFAULT_FINANCIAL)
@@ -23,8 +37,7 @@ export function useFinancialData() {
 
   useEffect(() => {
     const unsub = onSnapshot(FINANCIAL_DOC_REF, (snap) => {
-      if (snap.exists()) setData({ ...DEFAULT_FINANCIAL, ...snap.data(), account: { ...DEFAULT_FINANCIAL.account, ...(snap.data().account || {}) } })
-      else setData(DEFAULT_FINANCIAL)
+      setData(snap.exists() ? sanitize(snap.data()) : DEFAULT_FINANCIAL)
       setLoading(false)
     }, () => setLoading(false))
     return unsub
@@ -35,7 +48,7 @@ export function useFinancialData() {
 
 export async function fetchFinancialData() {
   const snap = await getDoc(FINANCIAL_DOC_REF)
-  return snap.exists() ? { ...DEFAULT_FINANCIAL, ...snap.data() } : DEFAULT_FINANCIAL
+  return snap.exists() ? sanitize(snap.data()) : DEFAULT_FINANCIAL
 }
 
 export async function saveFinancialData(data) {

@@ -1,0 +1,284 @@
+:root{
+  --green-deep:#1B5E36;
+  --green-mid:#2E7D52;
+  --gold:#C9A84C;
+  --gold-light:#E8C96A;
+  --black:#1D1D1F;
+  --paper:#FAF8F2;
+  --ink-soft:#5b6660;
+  --radius:18px;
+  --shadow-card:0 18px 50px -22px rgba(27,94,54,.35);
+  /* Semantic tokens — used by admin/give2/shop pages */
+  --bg:#FAF8F2;
+  --ink:#1D1D1F;
+  --surface:#ffffff;
+  --border:#e5e7eb;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans Thai','Poppins',system-ui,sans-serif;
+  font-weight:500;
+  color:var(--black);
+  background:var(--paper);
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* Mobile first: top bar */
+.admin-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  width: 100%;
+  height: auto;
+  background: linear-gradient(135deg, var(--green-mid), var(--green-deep));
+  color: #fff;
+  box-shadow: 0 4px 16px -8px rgba(27,94,54,.45);
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+}
+
+.admin-nav-brand {
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-nav-links {
+  display: none;
+}
+
+/* ปุ่มปิด sidebar (ในแถบแบรนด์) / ปุ่มลอยเปิดกลับ — ใช้เฉพาะเดสก์ท็อป ซ่อนบนมือถือเสมอ */
+.admin-nav-collapse-btn,
+.admin-nav-reopen-btn {
+  display: none;
+}
+
+.admin-nav-toggle {
+  display: block;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.admin-nav-links a,
+.admin-drawer a {
+  text-decoration: none;
+  color: inherit;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.admin-nav-links a:hover,
+.admin-drawer a:hover {
+  background: rgba(255,255,255,.1);
+}
+
+.admin-nav-links a.active,
+.admin-drawer a.active {
+  background: rgba(255,255,255,.18);
+  font-weight: 600;
+}
+
+.admin-nav-user {
+  font-size: .82rem;
+  opacity: .75;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-nav-logout {
+  border: none;
+  background: var(--gold);
+  color: var(--green-deep);
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.admin-nav-logout:hover {
+  background: var(--gold-light);
+}
+
+/* Drawer */
+.admin-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(280px, 86vw);
+  height: 100vh;
+  height: 100dvh; /* กัน address bar มือถือบังเนื้อหาล่าง */
+  background: linear-gradient(165deg, var(--green-mid), var(--green-deep));
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto; /* เลื่อนได้เมื่อเมนูยาวเกินจอ (เช่น มือถือแนวนอน) */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  transform: translateX(100%);
+  transition: transform .3s ease;
+  z-index: 9999;
+}
+
+.admin-drawer.show {
+  transform: translateX(0);
+}
+
+/* ฉากหลังทึบแสง — แตะเพื่อปิด drawer */
+.admin-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease, visibility .3s ease;
+  z-index: 9998;
+}
+.admin-drawer-backdrop.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.drawer-close {
+  align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+}
+
+/* Grouped nav items */
+.an-item{text-decoration:none;color:inherit;padding:8px 12px;border-radius:8px;display:block}
+.an-item:hover{background:rgba(255,255,255,.1)}
+.an-item.active{background:rgba(255,255,255,.18);font-weight:600}
+.an-group-btn{display:flex;align-items:center;gap:8px;width:100%;border:none;background:transparent;color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit;font-size:inherit;text-align:left}
+.an-group-btn:hover{background:rgba(255,255,255,.1)}
+.an-group-active>.an-group-btn{background:rgba(255,255,255,.08)}
+.an-chevron{font-size:.65em;margin-left:auto;transition:transform .2s}
+.an-chevron.open{transform:rotate(180deg)}
+.an-group-children{display:flex;flex-direction:column;gap:2px;padding:4px 0 4px 28px}
+.an-child{text-decoration:none;color:inherit;padding:6px 12px;border-radius:6px;font-size:.88rem;opacity:.85}
+.an-child:hover{background:rgba(255,255,255,.1);opacity:1}
+.an-child.active{background:rgba(255,255,255,.18);font-weight:600;opacity:1}
+
+/* Desktop — top bar → left sidenav */
+@media (min-width: 769px) {
+  .admin-nav {
+    position: fixed;
+    top: 0; left: 0; right: auto;
+    width: 240px;
+    height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 0;
+    background: linear-gradient(180deg, var(--green-mid), var(--green-deep));
+    box-shadow: 4px 0 16px -8px rgba(27,94,54,.45);
+    overflow: hidden;
+    transform: translateX(0);
+    transition: transform .25s ease;
+  }
+  .admin-nav-brand {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    flex-shrink: 0;
+  }
+  .admin-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 10px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .admin-nav-toggle {
+    display: none;
+  }
+  /* บนเดสก์ท็อป sidebar เป็นแบบถาวร — ไม่ใช้ drawer/backdrop ของมือถือ */
+  .admin-drawer,
+  .admin-drawer-backdrop {
+    display: none;
+  }
+  .admin-dash {
+    padding: 32px 16px 32px 256px;
+    transition: padding-left .25s ease;
+  }
+
+  /* ปุ่มปิด sidebar — อยู่ในแถบแบรนด์ */
+  .admin-nav-collapse-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .admin-nav-collapse-btn:hover {
+    background: rgba(255,255,255,.22);
+  }
+
+  /* ปุ่มลอยเปิด sidebar กลับ — ซ่อนไว้จนกว่า sidebar จะถูกปิด */
+  .admin-nav-reopen-btn {
+    display: none;
+    position: fixed;
+    top: 18px;
+    left: 14px;
+    z-index: 101;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--green-mid), var(--green-deep));
+    color: #fff;
+    box-shadow: 0 6px 18px -8px rgba(27,94,54,.6);
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .admin-nav-reopen-btn:hover {
+    filter: brightness(1.1);
+  }
+
+  /* สถานะปิด — เลื่อน sidebar ออกนอกจอ, คืนพื้นที่ให้เนื้อหา, โชว์ปุ่มลอยเปิดกลับ */
+  html.admin-nav-collapsed .admin-nav {
+    transform: translateX(-100%);
+  }
+  html.admin-nav-collapsed .admin-dash {
+    padding-left: 16px;
+  }
+  html.admin-nav-collapsed .admin-nav-reopen-btn {
+    display: flex;
+  }
+}
+
+

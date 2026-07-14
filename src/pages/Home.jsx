@@ -10,6 +10,27 @@ import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
+function PosterCarousel({ images, alt, onClick }) {
+  const [idx, setIdx] = useState(0)
+  const total = images.length
+  useEffect(() => {
+    if (total <= 1) return
+    const t = setInterval(() => setIdx((i) => (i + 1) % total), 4000)
+    return () => clearInterval(t)
+  }, [total])
+  const safeIdx = idx < total ? idx : 0
+  return (
+    <a href="#" onClick={(e) => { e.preventDefault(); onClick() }} className="hf-card-poster-link hf-poster-carousel">
+      <img src={images[safeIdx]} alt={alt} className="hf-poster" />
+      {total > 1 && (
+        <div className="hf-poster-dots">
+          {images.map((_, i) => <span key={i} className={`hf-poster-dot${i === safeIdx ? ' active' : ''}`} />)}
+        </div>
+      )}
+    </a>
+  )
+}
+
 const GAZA = MISSIONS.find((m) => m.key === 'gaza')
 
 function GazaCarousel({ items, lang, go }) {
@@ -83,11 +104,11 @@ const T = {
     waysSub: 'ไม่ว่าจะเป็นการมาร่วมแบ่งปันมื้ออาหารกับพี่น้อง หรือการบริจาคเพื่อหล่อเลี้ยงชีวิต — ทุกก้าวเล็ก ๆ ของคุณสร้างความเปลี่ยนแปลงที่ยิ่งใหญ่',
     fcEventTag: '🌙 EVENT · กิจกรรม', fcEventTitle: 'Iftar For Gaza',
     fcEventP: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารและดุอาอ์ให้พี่น้องผู้ถูกกดขี่ ลงทะเบียนเข้าร่วมงานฟรี',
-    fcEventLink: 'ลงทะเบียนเข้าร่วมงาน',
+    fcEventLink: 'ชมภาพและวิดีโอจากงาน',
     fcDonTag: '💚 DONATE · บริจาค', fcDonTitle: 'ช่วยเหลือผู้ยากไร้',
     fcDonP: 'บริจาคผ่านบัญชีมูลนิธิอุมมะตี เลือกได้ทั้งซะกาต ช่วยในไทย ปาเลสไตน์ ซีเรีย และอาหารทั่วโลก',
     fcDonLink: 'ดูบัญชีบริจาค',
-    fcVolTag: '🤝 VOLUNTEER · อาสาสมัคร', fcVolTitle: 'เป็นส่วนหนึ่งของพวกเรา',
+    fcVolTag: '🤝 VOLUNTEER · อาสาสมัคร', fcVolTitle: 'เป็นส่วนหนึ่งกับเรา',
     fcVolP: 'ร่วมเป็นอาสาสมัครมูลนิธิอุมมะตี ช่วยเหลือกิจกรรม งานมนุษยธรรม และการสนับสนุนชุมชน สมัครได้เลย',
     fcVolLink: 'สมัครอาสาสมัคร',
     helpEyebrow: 'เราช่วยเหลืออะไรบ้าง', helpTitle: 'ความเมตตาที่ส่งถึงทุกชีวิต',
@@ -180,23 +201,49 @@ export default function Home() {
   const { lang } = useLang()
   const t = T[lang]
   const [gazaMedia, setGazaMedia] = useState([])
+  const [announcement, setAnnouncement] = useState(null)
+  const [dismissedAt, setDismissedAt] = useState(() => localStorage.getItem('umAnnouncementDismissed') || '')
   // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก
   // (Home โหลดทันทีไม่ lazy จึงต้องเลี่ยง static import เหมือนตัวนับผู้เข้าชมใน App.jsx)
   useEffect(() => {
-    let unsub = () => {}
+    let unsub1 = () => {}
+    let unsub2 = () => {}
     let cancelled = false
     Promise.all([import('../firebase.js'), import('firebase/firestore')])
       .then(([{ db }, { doc, onSnapshot }]) => {
         if (cancelled) return
-        unsub = onSnapshot(doc(db, 'missionMedia', 'gaza'), (d) => {
+        unsub1 = onSnapshot(doc(db, 'missionMedia', 'gaza'), (d) => {
           setGazaMedia(d.exists() ? (d.data().media || []) : [])
+        }, () => {})
+        unsub2 = onSnapshot(doc(db, 'config', 'announcement'), (d) => {
+          setAnnouncement(d.exists() ? d.data() : null)
         }, () => {})
       })
       .catch(() => {})
-    return () => { cancelled = true; unsub() }
+    return () => { cancelled = true; unsub1(); unsub2() }
   }, [])
+
+  // ปิดแบนเนอร์ได้ต่อเครื่อง — เก็บ updatedAt ของประกาศที่ปิดไว้ ถ้าแอดมินแก้ประกาศใหม่ (updatedAt เปลี่ยน) จะกลับมาแสดงอีกครั้ง
+  const showAnnouncement = announcement?.enabled && announcement?.text && String(announcement.updatedAt || '') !== dismissedAt
+  const dismissAnnouncement = () => {
+    const key = String(announcement?.updatedAt || '')
+    localStorage.setItem('umAnnouncementDismissed', key)
+    setDismissedAt(key)
+  }
+
   return (
     <main className="page">
+      {showAnnouncement && (
+        <div className="site-announcement">
+          <span className="site-announcement-text">
+            {announcement.text}
+            {announcement.linkUrl && (
+              <a href={announcement.linkUrl} className="site-announcement-link">{announcement.linkText || 'ดูเพิ่มเติม'}</a>
+            )}
+          </span>
+          <button type="button" className="site-announcement-close" onClick={dismissAnnouncement} aria-label="ปิดประกาศ">×</button>
+        </div>
+      )}
       {/* ── Hero Feed ── */}
       <section className="hero-feed">
         <div className="hero-feed-brand">
@@ -210,13 +257,11 @@ export default function Home() {
         <div className="hf-feed">
           {/* Card 1 — Iftar For Gaza */}
           <FadeUp className="hf-card">
-            <a href="#" onClick={(e) => { e.preventDefault(); go('iftar') }} className="hf-card-poster-link">
-              <img
-                src="/poster-iftar-gaza.png"
-                alt="Iftar For Gaza"
-                className="hf-poster"
-              />
-            </a>
+            <PosterCarousel
+              images={['/poster-iftar-gaza.webp', '/poster-line1.webp', '/poster-line2.webp']}
+              alt="Iftar For Gaza"
+              onClick={() => go('iftar')}
+            />
             <div className="hf-card-body">
               <div className="hf-card-tags">
                 <span className="hf-tag hf-tag-green"><FontAwesomeIcon icon={faMoon} /> EVENT</span>

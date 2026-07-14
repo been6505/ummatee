@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
@@ -57,7 +58,7 @@ export default function AdminQurbanEdit() {
     }
   }
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -135,5 +136,5 @@ export default function AdminQurbanEdit() {
         </div>
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

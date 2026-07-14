@@ -1,0 +1,81 @@
+import { useCart, setItemQty, removeFromCart } from '../data/cart.js'
+import { useNavigate } from '../navContext'
+import Footer from '../components/Footer.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMinus, faPlus, faTrash, faCartShopping, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+
+// หน้าตะกร้าสินค้า (/um-shop/cart) — แสดงรายการที่เพิ่มไว้ ปรับจำนวน/ลบได้ พร้อมราคารวม แล้วไปหน้ายืนยันการสั่งซื้อ
+import { optImg } from '../utils/cloudinaryUrl.js'
+const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
+
+export default function ShopCart() {
+  const items = useCart()
+  const go = useNavigate()
+
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0)
+
+  return (
+    <main className="page">
+      <section className="page-band">
+        <div className="fc-pattern hero-pattern"></div>
+        <div className="inner">
+          <span className="badge"><FontAwesomeIcon icon={faCartShopping} /> ตะกร้าสินค้า</span>
+          <h1>ตะกร้าของคุณ</h1>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="wrap">
+          <a href="/um-shop" onClick={(e) => { e.preventDefault(); go('shop') }} className="shop-detail-back">
+            <FontAwesomeIcon icon={faArrowLeft} /> เลือกซื้อสินค้าเพิ่ม
+          </a>
+
+          {items.length === 0 ? (
+            <p style={{ textAlign: 'center', color: 'var(--ink-soft)', padding: '60px 0' }}>ยังไม่มีสินค้าในตะกร้า</p>
+          ) : (
+            <div className="cart-layout">
+              <div className="cart-items">
+                {items.map((i) => (
+                  <div key={i.id} className="cart-row">
+                    <div className="cart-row-img">
+                      {i.image ? <img src={optImg(i.image, 220)} alt={i.name} /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faCartShopping} /></div>}
+                    </div>
+                    <div className="cart-row-info">
+                      <div className="cart-row-name">{i.name}</div>
+                      {(i.colors || i.sizes) && (
+                        <div className="order-item-variant">
+                          {[i.colors && `สี: ${i.colors}`, i.sizes && `ขนาด: ${i.sizes}`].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                      <div className="cart-row-price">{THB(i.price)}</div>
+                    </div>
+                    <div className="shop-qty-stepper">
+                      <button type="button" onClick={() => setItemQty(i.id, i.qty - 1)} aria-label="ลดจำนวน"><FontAwesomeIcon icon={faMinus} /></button>
+                      <span>{i.qty}</span>
+                      <button type="button" onClick={() => setItemQty(i.id, i.qty + 1)} aria-label="เพิ่มจำนวน"><FontAwesomeIcon icon={faPlus} /></button>
+                    </div>
+                    <div className="cart-row-subtotal">{THB(i.price * i.qty)}</div>
+                    <button type="button" className="cart-row-remove" onClick={() => removeFromCart(i.id)} aria-label="ลบสินค้า">
+                      <FontAwesomeIcon icon={faTrash} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="cart-summary">
+                <div className="cart-summary-row cart-summary-total">
+                  <span>ราคารวม</span>
+                  <span>{THB(total)}</span>
+                </div>
+                <button type="button" className="shop-addcart-btn" style={{ width: '100%' }} onClick={() => go('shop-checkout')}>
+                  ทำการสั่งซื้อ
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+      <Footer />
+    </main>
+  )
+}

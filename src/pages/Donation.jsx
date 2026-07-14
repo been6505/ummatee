@@ -7,20 +7,25 @@ import Footer from '../components/Footer.jsx'
 import { db } from '../firebase.js'
 import { doc, setDoc, updateDoc, increment } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faShieldHalved, faScroll, faHandPointer, faHeart, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faShieldHalved, faScroll, faHandPointer, faHeart, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 
 const statsRef = () => doc(db, 'stats', 'donation')
 
 function trackView() {
   // views เป็น top-level field ใช้ setDoc+merge ได้ปกติ
-  setDoc(statsRef(), { views: increment(1) }, { merge: true }).catch(() => {})
+  // เดิม catch เงียบสนิท — ถ้าเขียนล้ม (permission/App Check/network) จะไม่มีทางรู้เลยว่าสถิติทำไมไม่ขึ้น
+  setDoc(statsRef(), { views: increment(1) }, { merge: true })
+    .catch((e) => console.error('trackView failed:', e.code || e.message))
 }
 
 function trackCopy(key) {
   // updateDoc ถึงจะ handle dot-notation path ได้ถูกต้อง (nested field)
   // ถ้า doc ยังไม่มี ให้ fallback setDoc สร้างใหม่
   updateDoc(statsRef(), { [`copies.${key}`]: increment(1) })
-    .catch(() => setDoc(statsRef(), { copies: { [key]: increment(1) } }, { merge: true }).catch(() => {}))
+    .catch((e1) =>
+      setDoc(statsRef(), { copies: { [key]: increment(1) } }, { merge: true })
+        .catch((e2) => console.error('trackCopy failed:', e1.code || e1.message, '/', e2.code || e2.message))
+    )
 }
 
 // หน้าร่วมบริจาค — แสดงบัญชี ibank ทั้ง 8 บัญชี แตะคัดลอกเลขบัญชีได้
@@ -61,6 +66,7 @@ const T = {
 // แถวบัญชีธนาคาร 1 แถว — แตะเพื่อคัดลอกเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
 function AccountRow({ a, lang }) {
   const [copied, setCopied] = useState(false)
+  const [failed, setFailed] = useState(false)
   const fallback = (text) => {
     const t = document.createElement('textarea')
     t.value = text; t.style.position = 'fixed'; t.style.opacity = '0'
@@ -70,17 +76,29 @@ function AccountRow({ a, lang }) {
     document.body.removeChild(t)
     return ok
   }
+  // แสดง "คัดลอกแล้ว" เฉพาะเมื่อคัดลอกสำเร็จจริง — ถ้าไม่สำเร็จต้องไม่หลอกผู้บริจาคว่าคัดลอกได้
+  // (คลิปบอร์ดจะยังเป็นค่าเก่า ถ้าโดนวางในแอปธนาคารอาจโอนผิดบัญชี)
+  // ถ้าคัดลอกไม่สำเร็จจริง (สิทธิ์คลิปบอร์ดโดนบล็อก ฯลฯ) ต้องมี feedback ให้เห็น ไม่ใช่ปล่อยเงียบเหมือนปุ่มไม่ทำงาน
   const copy = () => {
     const clean = a.raw.replace(/\s/g, '')
+    const onSuccess = () => {
+      trackCopy(a.key)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    }
+    const onFail = () => {
+      setFailed(true)
+      setTimeout(() => setFailed(false), 2200)
+    }
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(clean)
-        .then(() => trackCopy(a.key))
-        .catch(() => { if (fallback(clean)) trackCopy(a.key) })
+        .then(onSuccess)
+        .catch(() => { if (fallback(clean)) onSuccess(); else onFail() })
+    } else if (fallback(clean)) {
+      onSuccess()
     } else {
-      if (fallback(clean)) trackCopy(a.key)
+      onFail()
     }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
   }
   return (
     <FadeUp className="don-row" onClick={copy} dir="ltr">
@@ -90,7 +108,13 @@ function AccountRow({ a, lang }) {
         <div className="don-name-en">{a.en}</div>
       </div>
       <div className="don-acc" dir="ltr">{a.acc}</div>
-      <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? <FontAwesomeIcon icon={faCheck} /> : <CopyIcon />}</div>
+      {failed ? (
+        <div className="don-copy failed" title="คัดลอกไม่สำเร็จ — กรุณาลองใหม่หรือจดเลขบัญชีเอง">
+          <FontAwesomeIcon icon={faTriangleExclamation} />
+        </div>
+      ) : (
+        <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? <FontAwesomeIcon icon={faCheck} /> : <CopyIcon />}</div>
+      )}
     </FadeUp>
   )
 }

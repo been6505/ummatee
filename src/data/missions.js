@@ -15,7 +15,7 @@ export const MISSIONS = [
   },
   {
     key: 'gaza', icon: faFlag, acc: 'palestine', accent: '#C9302C',
-    th: { name: 'กาซ่า', desc: 'ส่งมอบอาหารและน้ำดื่มประจำสัปดาห์ พร้อมการมอบในวันสำคัญแก่พี่น้องในกาซ่า' },
+    th: { name: 'กาซ่า', desc: 'ส่งมอบอาหารและน้ำดื่มประจำสัปดาห์ และวันสำคัญแก่พี่น้องในกาซ่า' },
     en: { name: 'Gaza', desc: 'Weekly food and drinking water delivery, plus special-occasion distributions to our brothers and sisters in Gaza' },
     ar: { name: 'غزة', desc: 'توزيع أسبوعي للطعام ومياه الشرب، إضافة إلى توزيعات في المناسبات لإخواننا في غزة' },
   },

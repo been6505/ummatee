@@ -1,12 +1,32 @@
 import { useState, useEffect } from 'react'
+import { formatPhone } from '../utils/formatPhone.js'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
-import { collection, addDoc, doc, getDoc } from 'firebase/firestore'
+import { collection, addDoc, doc, getDoc, setDoc, increment } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 import CopyIcon from '../components/CopyIcon.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass, faClipboardList } from '@fortawesome/free-solid-svg-icons'
+
+const IFTAR_POSTERS = ['/poster-iftar.webp', '/poster-line1.webp', '/poster-line2.webp']
+
+function IftarPosterCarousel() {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % IFTAR_POSTERS.length), 4000)
+    return () => clearInterval(t)
+  }, [])
+  const safeIdx = idx < IFTAR_POSTERS.length ? idx : 0
+  return (
+    <div className="iftar-poster-carousel">
+      <img className="iftar-poster" src={IFTAR_POSTERS[safeIdx]} alt="Iftar For Gaza" loading="lazy" />
+      <div className="iftar-poster-dots">
+        {IFTAR_POSTERS.map((_, i) => <span key={i} className={`iftar-poster-dot${i === safeIdx ? ' active' : ''}`} />)}
+      </div>
+    </div>
+  )
+}
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
 // ตัวเลือกช่องทางที่รู้จักงาน
@@ -29,7 +49,7 @@ const PROVINCES = [
 ]
 
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
+import { IFTAR_SHEET_ENDPOINT as SHEET_ENDPOINT } from '../utils/endpoints.js'
 
 // บันทึกลง Firestore แบบ retry (สำรองข้อมูลให้ครบเสมอ เพราะหน้า admin อ่านจาก Firestore)
 // ลองซ้ำสูงสุด 3 ครั้ง หน่วงเพิ่มขึ้นเรื่อย ๆ — คืน true เมื่อสำเร็จ, false เมื่อพลาดทุกครั้ง
@@ -57,11 +77,6 @@ const SEAT_LIMIT = 400
 
 // จัดรูปแบบเบอร์เป็น 0##-###-#### (เบอร์ไทย 10 หลักขึ้นต้น 0) ก่อนบันทึกลง Sheet/Firestore
 // รูปแบบอื่น (เบอร์ต่างประเทศ/ไม่ครบ 10 หลัก) เก็บตามที่กรอก
-function formatPhone(raw) {
-  const digits = (raw || '').replace(/\D/g, '')
-  if (/^0\d{9}$/.test(digits)) return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3')
-  return (raw || '').trim()
-}
 
 const T = {
   th: {
@@ -91,7 +106,7 @@ const T = {
     comment: 'ข้อเสนอแนะเพิ่มเติม', commentPh: 'อยากบอกอะไรกับทีมงาน...',
     submit: 'ยืนยันการลงทะเบียน', submitting: 'กำลังบันทึก...',
     errFname: 'กรุณากรอกชื่อ', errLname: 'กรุณากรอกนามสกุล', errPhone: 'กรุณากรอกเบอร์โทรศัพท์',
-    errPhoneBad: 'เบอร์โทรศัพท์ไม่ถูกต้อง', errEmail: 'รูปแบบอีเมลไม่ถูกต้อง',
+    errPhoneBad: 'เบอร์โทรศัพท์ไม่ถูกต้อง', errEmail: 'รูปแบบอีเมลไม่ถูกต้อง', errNameEmail: 'ช่องชื่อ/นามสกุล ไม่ใช่อีเมล — กรุณากรอกชื่อจริง',
     errSend: 'ส่งข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
     successTitle: 'ลงทะเบียนสำเร็จ!',
     successP: 'ญะซากัลลอฮุค็อยรอน — ขอบคุณที่ร่วมเป็นส่วนหนึ่งของงาน Iftar For Gaza',
@@ -130,7 +145,7 @@ const T = {
     comment: 'Additional comments', commentPh: 'Anything you want to tell the team...',
     submit: 'Confirm Registration', submitting: 'Saving...',
     errFname: 'Please enter your first name', errLname: 'Please enter your last name', errPhone: 'Please enter your phone number',
-    errPhoneBad: 'Invalid phone number', errEmail: 'Invalid email format',
+    errPhoneBad: 'Invalid phone number', errEmail: 'Invalid email format', errNameEmail: 'Name fields are not for email — please enter your real name',
     errSend: 'Submission failed. Please check your internet connection and try again.',
     successTitle: 'Registration Complete!',
     successP: 'Jazakallahu khairan — thank you for being part of Iftar For Gaza',
@@ -169,7 +184,7 @@ const T = {
     comment: 'ملاحظات إضافية', commentPh: 'ما الذي تود إخبار الفريق به...',
     submit: 'تأكيد التسجيل', submitting: 'جارٍ الحفظ...',
     errFname: 'يرجى إدخال الاسم', errLname: 'يرجى إدخال اسم العائلة', errPhone: 'يرجى إدخال رقم الهاتف',
-    errPhoneBad: 'رقم الهاتف غير صحيح', errEmail: 'صيغة البريد الإلكتروني غير صحيحة',
+    errPhoneBad: 'رقم الهاتف غير صحيح', errEmail: 'صيغة البريد الإلكتروني غير صحيحة', errNameEmail: 'حقل الاسم ليس للبريد الإلكتروني — يرجى إدخال اسمك الحقيقي',
     errSend: 'فشل الإرسال. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
     successTitle: 'تم التسجيل بنجاح!',
     successP: 'جزاكم الله خيراً — شكراً لمشاركتكم في إفطار من أجل غزة',
@@ -186,22 +201,28 @@ const T = {
 // กล่องเลขบัญชีบริจาค — แตะเพื่อคัดลอกเฉพาะเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
 function DonateAccount({ icon, title, account }) {
   const [copied, setCopied] = useState(false)
+  // แสดง "คัดลอกแล้ว" + นับสถิติ เฉพาะเมื่อคัดลอกสำเร็จจริง — เดิมนับ/แสดงผลสำเร็จแม้คัดลอกจริงจะล้มเหลว
   const copy = () => {
     const clean = account.replace(/\s/g, '')
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(clean).catch(() => fallbackCopy(clean))
-    } else {
-      fallbackCopy(clean)
+    const onSuccess = () => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+      setDoc(doc(db, 'stats', 'iftar'), { copies: increment(1) }, { merge: true }).catch(() => {})
     }
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean).then(onSuccess).catch(() => { if (fallbackCopy(clean)) onSuccess() })
+    } else if (fallbackCopy(clean)) {
+      onSuccess()
+    }
   }
   const fallbackCopy = (text) => {
     const el = document.createElement('textarea')
     el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
     document.body.appendChild(el); el.select()
-    try { document.execCommand('copy') } catch (e) { /* noop */ }
+    let ok = false
+    try { ok = document.execCommand('copy') } catch (e) { /* noop */ }
     document.body.removeChild(el)
+    return ok
   }
   return (
     <button type="button" className="iftar-donate" onClick={copy} dir="ltr">
@@ -265,7 +286,9 @@ export default function Iftar() {
     setError('')
     // ตรวจช่องบังคับ: ชื่อ นามสกุล เบอร์โทร (และรูปแบบเบอร์/อีเมล)
     if (!f.fname.trim()) return setError(t.errFname)
+    if (/@/.test(f.fname.trim())) return setError(t.errNameEmail)
     if (!f.lname.trim()) return setError(t.errLname)
+    if (/@/.test(f.lname.trim())) return setError(t.errNameEmail)
     if (!f.phone.trim()) return setError(t.errPhone)
     if (!/^[0-9+\-\s]{6,15}$/.test(f.phone.trim())) return setError(t.errPhoneBad)
     if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return setError(t.errEmail)
@@ -285,6 +308,7 @@ export default function Iftar() {
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(regData),
       })
+      if (!res.ok) throw new Error(`server error ${res.status}`)
       const out = await res.json()
       if (!out.ref) throw new Error('no ref')
       const saved = { ref: out.ref, ...regData }
@@ -327,29 +351,36 @@ export default function Iftar() {
           <p className="iftar-tagline">{t.tagline}</p>
           <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
 
-          <img className="iftar-poster" src="/poster-iftar.png" alt="Iftar For Gaza" loading="lazy" />
+          <IftarPosterCarousel />
 
           <p className="lead">{t.lead}</p>
 
-
-          <span className="iftar-campaign">{t.campaign}</span>
-          <div className="info-boxes">
-            <div className="info-box"><div className="ib-ic">   <span className="ib-k">{t.ibDate}</span></div>
-              <div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibPlace}</span> </div><div className="ib-v">{t.ibPlaceV}</div><a className="ib-link" href={IB_MAP_LINK} target="_blank" rel="noopener noreferrer"><FontAwesomeIcon icon={faLocationDot} /> {t.ibMap}</a></div>
-            <div className="info-box"><div className="ib-ic"> <span className="ib-k">{t.ibType}</span></div><div className="ib-v"><p>{t.seatLimit}</p>{t.ibTypeV}</div></div>
+          <div className="iftar-live" style={{ padding: '24px 0' }}>
+            <div className="iftar-live-card">
+              <h2>🔴 LIVE — Iftar For Gaza 2026</h2>
+              <div className="iftar-live-embed">
+                <iframe
+                  src="https://www.youtube.com/embed/ZqFHlNyB_kM?autoplay=1"
+                  title="Iftar For Gaza 2026 Live"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <p>ร่วมรับชมงาน Iftar For Gaza 2026 · ถ่ายทอดสด</p>
+              <a href="https://www.youtube.com/live/ZqFHlNyB_kM" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ justifyContent: 'center', marginTop: 12 }}>
+                ▶️ ดูบน YouTube
+              </a>
+            </div>
           </div>
+
           <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
-          <div className="iftar-extra">
-
-
-
-          </div>
         </div>
       </section>
 
       <section className="iftar-stage" id="iftar-form">
-        {isFull ? (
+        {/* ฟอร์มลงทะเบียนซ่อนไว้ — งานจบแล้ว */}
+        {false && (isFull ? (
           <div className="iftar-full">
             <div className="iftar-full-card">
               <div className="iftar-full-icon">🚫</div>
@@ -387,22 +418,22 @@ export default function Iftar() {
                 <div className="iftar-row">
                   <div className="iftar-field">
                     <label className="iftar-label">{t.fname} <span className="req">*</span></label>
-                    <input className="iftar-input" type="text" placeholder={t.fnamePh} value={form.fname} onChange={set('fname')} />
+                    <input className="iftar-input" type="text" placeholder={t.fnamePh} value={form.fname} onChange={set('fname')} autoComplete="given-name" />
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.lname} <span className="req">*</span></label>
-                    <input className="iftar-input" type="text" placeholder={t.lnamePh} value={form.lname} onChange={set('lname')} />
+                    <input className="iftar-input" type="text" placeholder={t.lnamePh} value={form.lname} onChange={set('lname')} autoComplete="family-name" />
                   </div>
                 </div>
 
                 <div className="iftar-row">
                   <div className="iftar-field">
                     <label className="iftar-label">{t.phone} <span className="req">*</span></label>
-                    <input className="iftar-input" type="tel" placeholder={t.phonePh} maxLength={15} value={form.phone} onChange={set('phone')} />
+                    <input className="iftar-input" type="tel" placeholder={t.phonePh} maxLength={15} value={form.phone} onChange={set('phone')} autoComplete="tel" />
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.email}</label>
-                    <input className="iftar-input" type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} />
+                    <input className="iftar-input" type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoComplete="email" />
                   </div>
                 </div>
 
@@ -483,7 +514,7 @@ export default function Iftar() {
 
             <CheckPanel t={t} />
           </>
-        )}
+        ))}
       </section>
 
       <Footer />

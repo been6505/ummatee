@@ -1,0 +1,110 @@
+import { useEffect, useState } from 'react'
+import { effectivePrice } from './pricing.js'
+
+// ตะกร้าสินค้า Um Shop — เก็บใน localStorage ฝั่งเครื่องผู้ใช้ (ยังไม่มีระบบชำระเงิน/เช็คเอาท์)
+// โครงสร้างแต่ละรายการ: { id, productId, name, price, image, qty }
+
+const CART_KEY = 'umShopCart'
+const CART_EVENT = 'umShopCart:updated'
+
+export function getCart() {
+  try {
+    return JSON.parse(localStorage.getItem(CART_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveCart(items) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items))
+  window.dispatchEvent(new CustomEvent(CART_EVENT, { detail: items }))
+}
+
+// เพิ่มสินค้าลงตะกร้า — สินค้าเดียวกันแต่คนละสี/ขนาด นับเป็นคนละรายการ (แยกด้วย variant)
+// ถ้ามีรายการเดิม (สินค้า+สี+ขนาดตรงกัน) ให้บวกจำนวนเพิ่ม (ไม่เกิน stock ถ้าระบุไว้)
+export function addToCart(product, qty = 1, variant = {}) {
+  const items = getCart()
+  const color = variant.color || ''
+  const size = variant.size || ''
+  const lineId = [product.id, color, size].join('|')
+  const existing = items.find((i) => i.id === lineId)
+  const maxQty = Number.isFinite(product.stock) ? product.stock : Infinity
+  if (existing) {
+    existing.qty = Math.min(existing.qty + qty, maxQty)
+  } else {
+    items.push({
+      id: lineId,
+      productDocId: product.id, // doc id จริงใน Firestore — ใช้ตัดสต็อกตอนสร้างออเดอร์
+      productId: product.productId || '',
+      name: product.name || '',
+      price: effectivePrice(product), // ใช้ราคาส่วนลดถ้ามี ไม่งั้นราคาเต็ม — ตะกร้า/เช็คเอาท์ต้องคิดราคาจริงที่ลูกค้าต้องจ่าย
+      image: product.images?.[0] || '',
+      // สี/ขนาดที่ลูกค้าเลือก — แสดงในตะกร้า/สรุป/ออเดอร์ (ฟิลด์ชื่อเดิม colors/sizes เพื่อให้หน้าแสดงผลเดิมใช้ได้)
+      colors: color,
+      sizes: size,
+      stock: Number.isFinite(product.stock) ? product.stock : null, // เก็บไว้ให้หน้าตะกร้า cap จำนวนตอนกด +
+      qty: Math.min(qty, maxQty),
+    })
+  }
+  saveCart(items)
+  return items
+}
+
+export function cartCount() {
+  return getCart().reduce((sum, i) => sum + (i.qty || 0), 0)
+}
+
+export function cartTotal() {
+  return getCart().reduce((sum, i) => sum + (i.price || 0) * (i.qty || 0), 0)
+}
+
+// ตั้งจำนวนสินค้าชิ้นหนึ่งตรงๆ (ใช้ในหน้าตะกร้า) — qty <= 0 จะลบออกจากตะกร้า, ไม่เกิน stock ที่บันทึกไว้
+export function setItemQty(id, qty) {
+  let items = getCart()
+  if (qty <= 0) {
+    items = items.filter((i) => i.id !== id)
+  } else {
+    const item = items.find((i) => i.id === id)
+    if (item) item.qty = Number.isFinite(item.stock) && item.stock > 0 ? Math.min(qty, item.stock) : qty
+  }
+  saveCart(items)
+  return items
+}
+
+export function removeFromCart(id) {
+  const items = getCart().filter((i) => i.id !== id)
+  saveCart(items)
+  return items
+}
+
+export function clearCart() {
+  saveCart([])
+}
+
+export function useCart() {
+  const [items, setItems] = useState(getCart())
+  useEffect(() => {
+    const update = () => setItems(getCart())
+    window.addEventListener(CART_EVENT, update)
+    window.addEventListener('storage', update)
+    return () => {
+      window.removeEventListener(CART_EVENT, update)
+      window.removeEventListener('storage', update)
+    }
+  }, [])
+  return items
+}
+
+export function useCartCount() {
+  const [count, setCount] = useState(cartCount())
+  useEffect(() => {
+    const update = () => setCount(cartCount())
+    window.addEventListener(CART_EVENT, update)
+    window.addEventListener('storage', update)
+    return () => {
+      window.removeEventListener(CART_EVENT, update)
+      window.removeEventListener('storage', update)
+    }
+  }, [])
+  return count
+}

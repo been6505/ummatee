@@ -8,6 +8,22 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email in [
+          'akasitlove@gmail.com',
+          'ummatee.thailand@gmail.com',
+          'ummatee.volunteer@gmail.com'
+        ];
+    }
+
+    // ── แอดมินตัวจริง ไม่รวมบัญชีอาสาสมัคร ──
+    // ใช้กับคอลเลกชันที่หน้าซึ่งอาสาสมัครเข้าถึงได้ (/admin/dashboard, /admin/event/iftar2026,
+    // /admin/qrcode, /admin/give — ดู VOLUNTEER_ALLOWED ใน src/useAdminRole.js) ไม่จำเป็นต้องใช้
+    // เช่น ยอดเงินบริจาครายรายการ, แผนคอนเทนต์, ข้อมูล PII ของอาสาสมัคร/ร้านค้า B2UM คนอื่น
+    // เพราะบัญชี ummatee.volunteer@gmail.com ตั้งใจให้แชร์กับทีมอาสาสมัครกลุ่มกว้าง ความน่าเชื่อถือ
+    // ต่ำกว่าแอดมินตัวจริง จึงไม่ควรเข้าถึงข้อมูลนอกขอบเขตหน้าที่ได้ผ่าน Firestore SDK โดยตรง
+    function isFullAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'akasitlove@gmail.com',
           'ummatee.thailand@gmail.com'
         ];
     }
@@ -49,52 +65,161 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // บันทึกเงินบริจาค — เฉพาะแอดมิน
+    // บันทึกเงินบริจาค — เฉพาะแอดมินตัวจริง (ไม่ใช่ขอบเขตงานอาสาสมัคร)
     match /donations/{id} {
-      allow read, write: if isAdmin();
+      allow read, write: if isFullAdmin();
     }
 
-    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมิน
+    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมินตัวจริง
     match /contentPosts/{id} {
-      allow read, write: if isAdmin();
+      allow read, write: if isFullAdmin();
     }
 
-    // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะแอดมิน
+    // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะแอดมินตัวจริง
     match /products/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isFullAdmin();
+      // ตอนสั่งซื้อ (guest checkout ไม่ล็อกอิน) ต้องตัดสต็อกได้ — อนุญาตแก้ได้แค่ stock (รวม) และ sizeStock (แยกต่อไซซ์ เฉพาะสินค้าเสื้อ)
+      // ห้ามเพิ่ม/ติดลบ (กันสั่งซื้อปลอมเพิ่มสต็อกให้ตัวเอง หรือทำสต็อกติดลบ) ฟิลด์อื่นแก้ได้เฉพาะแอดมิน
+      // sizeStock ตรวจได้แค่ว่าเป็น map เท่านั้น (Firestore rules ตรวจ diff ของ map แบบละเอียดทำยาก) — พึ่ง invariant ของ stock รวมที่บังคับลดลงเสมอเป็นเกราะหลัก
+      allow update: if isFullAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'sizeStock'])
+            && request.resource.data.stock is int
+            && resource.data.stock is int
+            && request.resource.data.stock >= 0
+            && request.resource.data.stock < resource.data.stock
+            && (!('sizeStock' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.sizeStock is map));
     }
 
-    // อาสาสมัคร — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน (คุมจำนวน+ความยาวฟิลด์)
+    // ประวัติการเคลื่อนไหวสต็อก Um Shop — บันทึกทุกครั้งที่ตัด/รับเข้า อ่านได้เฉพาะแอดมิน
+    // guest checkout สร้างได้เฉพาะรายการ type 'order' ที่เป็นค่าติดลบ (ตัดสต็อก) เท่านั้น
+    // ส่วนรับเข้าคลัง (stock-in) ต้องเป็นแอดมินเท่านั้น
+    function validStockMovement() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['productId', 'productCode', 'productName', 'qty', 'type', 'reason', 'orderCode', 'at'])
+        && d.productId is string && d.productId.size() > 0 && d.productId.size() <= 100
+        && optStr(d, 'productCode', 30)
+        && optStr(d, 'productName', 200)
+        && d.qty is int && d.qty != 0 && d.qty >= -100000 && d.qty <= 100000
+        && d.type in ['order', 'stock-in']
+        && optStr(d, 'reason', 300)
+        && optStr(d, 'orderCode', 20)
+        && d.at is number;
+    }
+    match /stockMovements/{id} {
+      allow create: if isFullAdmin()
+        || (validStockMovement() && request.resource.data.type == 'order' && request.resource.data.qty < 0);
+      allow read, list, update, delete: if isFullAdmin();
+    }
+
+    // โปรโมชั่นส่วนลด Um Shop — ใช้เฉพาะฝั่งแอดมินตอนตั้งราคาส่วนลด ไม่มีหน้าไหนฝั่งลูกค้าต้องอ่าน
+    match /shopPromotions/{id} {
+      allow read, write: if isFullAdmin();
+    }
+
+    // คำสั่งซื้อ Um Shop — สั่งซื้อได้โดยไม่ต้องล็อกอิน (guest checkout)
+    // อ่านทีละรายการได้ทุกคน (เข้าผ่านลิงก์ติดตามคำสั่งซื้อที่เดา id ยาก) แต่ list ทั้งคอลเลกชันได้เฉพาะแอดมินตัวจริง
+    function validOrderCreate() {
+      let d = request.resource.data;
+      return d.size() <= 9
+        && d.orderCode is string && d.orderCode.size() <= 20
+        && d.items is list && d.items.size() > 0 && d.items.size() <= 50
+        && d.itemsTotal is number && d.itemsTotal >= 0
+        && d.shippingFee is number && d.shippingFee >= 0
+        && d.total is number && d.total == d.itemsTotal + d.shippingFee
+        && d.customer is map
+        && d.customer.firstName is string && d.customer.firstName.size() > 0 && d.customer.firstName.size() <= 100
+        && d.customer.lastName is string && d.customer.lastName.size() > 0 && d.customer.lastName.size() <= 100
+        && d.customer.phone is string && d.customer.phone.size() > 0 && d.customer.phone.size() <= 20
+        && optStr(d.customer, 'email', 200)
+        && d.customer.address is string && d.customer.address.size() > 0 && d.customer.address.size() <= 500
+        && d.status == 'pending_payment'
+        && d.paymentProofUrl == null
+        && d.createdAt is number;
+    }
+    match /orders/{id} {
+      allow create: if validOrderCreate();
+      allow get: if true;
+      allow list: if isFullAdmin();
+      // แอดมินตัวจริงแก้ไขได้ทุกฟิลด์ (เปลี่ยนสถานะ/แนบรูปแพ็ค/อัปเดตการจัดส่ง) — ลูกค้าแก้ได้ 2 เคส (เฉพาะตอนยังไม่ยืนยันจ่ายเงิน):
+      allow update: if isFullAdmin()
+        || (resource.data.status == 'pending_payment'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['paymentProofUrl', 'paymentProofAt', 'paymentDeclaredAt']));
+      allow delete: if isFullAdmin();
+    }
+
+    // ตัวนับเลขที่คำสั่งซื้อ ORD-0001, ORD-0002, ... — อนุญาตเพิ่มทีละ 1 เท่านั้น
+    match /config/shopOrderCounter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // อาสาสมัคร — Firestore เป็นที่เก็บหลัก (ส่งฟอร์มได้ทุกคน) อ่าน/ลบเฉพาะแอดมิน
+    // ใช้ hasOnly() ระบุฟิลด์ที่อนุญาตแบบเป๊ะ (ไม่ใช่แค่นับจำนวน) กันฟิลด์แปลกปลอมหลุดเข้ามา
+    // และคุมความยาวทุกฟิลด์ที่เคยไม่ได้เช็ค (type/token/date/gender/channel/ref)
     function validVolunteerReg() {
       let d = request.resource.data;
-      return d.size() <= 16
+      return d.keys().hasOnly([
+          'ref', 'type', 'token', 'date', 'fname', 'lname', 'fnameEn', 'lnameEn',
+          'phone', 'email', 'age', 'gender', 'province', 'channel', 'expect',
+          'skills', 'missions', 'giveProjects', 'giveDates', 'note',
+          'sheetSynced', 'syncAttempts'
+        ])
         && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
         && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
         && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'ref', 30)
+        && optStr(d, 'type', 30)
+        && optStr(d, 'token', 100)
+        && optStr(d, 'date', 100)
         && optStr(d, 'fnameEn', 100)
         && optStr(d, 'lnameEn', 100)
         && optStr(d, 'email', 200)
         && optStr(d, 'age', 10)
+        && optStr(d, 'gender', 20)
         && optStr(d, 'province', 100)
+        && optStr(d, 'channel', 50)
         && optStr(d, 'expect', 1000)
         && optStr(d, 'skills', 1000)
-        && optStr(d, 'note', 1000);
+        && optStr(d, 'missions', 1000)
+        && optStr(d, 'giveProjects', 500)
+        && optStr(d, 'giveDates', 500)
+        && optStr(d, 'note', 1000)
+        && (!('sheetSynced' in d) || d.sheetSynced is bool)
+        && (!('syncAttempts' in d) || (d.syncAttempts is int && d.syncAttempts >= 0 && d.syncAttempts <= 20));
     }
     match /volunteerRegs/{id} {
       allow create: if validVolunteerReg();
-      allow read, update, delete: if isAdmin();
+      allow get, list, delete: if isFullAdmin();
+      // แอดมินแก้ได้ทุกฟิลด์ — ใครก็ได้ (รวมเบราว์เซอร์ของผู้สมัครเอง) อัปเดตได้เฉพาะสถานะซิงก์ชีต
+      // เท่านั้น (ไม่ใช่ PII) เพื่อให้ backup ไป Sheet สำเร็จ/ล้มเหลวแล้วอัปเดตกลับได้โดยไม่ต้องล็อกอิน
+      allow update: if isFullAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sheetSynced', 'syncAttempts']);
+    }
+
+    // ตัวนับเลขอ้างอิงอาสาสมัคร UMV-0001, UMV-0002, ... (แยกจาก Sheet row เพื่อไม่ให้พึ่ง Apps Script)
+    match /config/volunteerRefCounter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
     }
 
     // Give2 — ส่งต่อของงาน "ให้" ครั้งที่ 6 (คุมจำนวน+ความยาว+ขนาด list)
     function validGive2Reg() {
       let d = request.resource.data;
-      return d.size() <= 12
+      return d.size() <= 14
         && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
         && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
         && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
         && d.types is list && d.types.size() > 0 && d.types.size() <= 5
         && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        && optStr(d, 'email', 200)
         && optStr(d, 'typeLabels', 300)
         && optStr(d, 'detail', 2000)
         && optStr(d, 'refCode', 40)
@@ -105,17 +230,55 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // counter สำหรับ give2 ref code — อ่านได้ทุกคน แต่ write ต้องเป็น { count: int >= 0 } เท่านั้น
-    match /config/give2Counter {
+    // Give2Cook — มอบเครื่องมือประกอบอาชีพ
+    function validGive2CookReg() {
+      let d = request.resource.data;
+      return d.size() <= 12
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && d.refCode is string && d.refCode.size() <= 20
+        && d.types is list && d.types.size() > 0 && d.types.size() <= 10
+        && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        && optStr(d, 'email', 200)
+        && optStr(d, 'detail', 2000)
+        && optStr(d, 'typeLabels', 500)
+        && optStr(d, 'submittedAt', 60);
+    }
+    match /give2CookRegs/{id} {
+      allow create: if validGive2CookReg();
+      allow read, update, delete: if isAdmin();
+    }
+    // ตัวนับ ref code — อนุญาตเพิ่มทีละ 1 เท่านั้น (ป้องกันการรีเซ็ตหรือข้ามค่า)
+    match /config/give2CookCounter {
       allow read: if true;
-      allow create, update: if request.resource.data.keys().hasOnly(['count'])
-        && request.resource.data.count is int
-        && request.resource.data.count >= 0;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
     }
 
-    // สถิติหน้าบริจาค — hasOnly(['views','copies']) ครอบคลุมทุกกรณีแล้ว (subset ของสอง field นี้) ไม่ต้องการ hasAny
+    // counter สำหรับ give2 ref code — อนุญาตเพิ่มทีละ 1 เท่านั้น
+    match /config/give2Counter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // สถิติหน้าบริจาค — Firestore Rules ประเมิน request.resource.data.keys() ผิดพลาดเมื่อ field ที่แก้ไข
+    // ใช้ FieldValue.increment() ร่วมกับ hasOnly() ที่มีมากกว่า 1 field ในลิสต์ (พิสูจน์แล้วด้วยการทดสอบเขียนจริง
+    // — เขียนไม่ได้แม้ field/ข้อมูลถูกต้องทุกอย่าง) ต้องใช้ diff().affectedKeys() แทนสำหรับ update เพื่อเลี่ยงบั๊กนี้
     match /stats/donation {
-      allow create, update: if request.resource.data.keys().hasOnly(['views', 'copies']);
+      allow create: if request.resource.data.keys().hasOnly(['views', 'copies']);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'copies']);
+      allow read: if isAdmin();
+    }
+
+    // สถิติหน้า Iftar — นับจำนวนกดคัดลอกเลขบัญชี
+    match /stats/iftar {
+      allow create, update: if request.resource.data.keys().hasOnly(['copies']);
       allow read: if isAdmin();
     }
 
@@ -125,10 +288,40 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    // มีเดียประจำภารกิจ — ทุกคนอ่านได้ (หน้า /missions) แก้ไขได้เฉพาะแอดมิน
+    // B2UM ร้านค้า — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน
+    match /b2umRegs/{id} {
+      allow create: if request.resource.data.size() <= 8
+        && request.resource.data.fname is string && request.resource.data.fname.size() <= 100
+        && request.resource.data.lname is string && request.resource.data.lname.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 20
+        && request.resource.data.shopName is string && request.resource.data.shopName.size() <= 200;
+      allow read, update, delete: if isFullAdmin();
+    }
+
+    // Give Receive — ลงทะเบียนรับคอมมือสอง / อุปกรณ์ประกอบอาชีพ
+    match /giveReceiveRegs/{id} {
+      allow create: if request.resource.data.size() <= 13
+        && request.resource.data.fname is string && request.resource.data.fname.size() <= 100
+        && request.resource.data.lname is string && request.resource.data.lname.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 20
+        && request.resource.data.type is string && request.resource.data.type.size() <= 20
+        && optStr(request.resource.data, 'email', 200)
+        && optStr(request.resource.data, 'address', 500)
+        && optStr(request.resource.data, 'reason', 2000)
+        && optStr(request.resource.data, 'wantedItems', 500);
+      // อ่านทีละรายการ (สแกน QR RCV-{id}) และแก้เฉพาะ received/receivedAt ได้ทุกแอดมิน
+      // แต่ list ทั้งคอลเลกชัน (ดึง PII ผู้รับทั้งหมดทีเดียว) และลบ เฉพาะแอดมินตัวจริง
+      allow get: if isAdmin();
+      allow list, delete: if isFullAdmin();
+      allow update: if isFullAdmin()
+        || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['received', 'receivedAt']));
+    }
+
+    // มีเดียประจำภารกิจ — ทุกคนอ่านได้ (หน้า /missions) แก้ไขได้เฉพาะแอดมินตัวจริง
     match /missionMedia/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isFullAdmin();
     }
 
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน

@@ -1,0 +1,18 @@
+import { useIsVolunteer } from '../useAdminRole.js'
+
+export default function VolunteerGuard({ children }) {
+  const isVolunteer = useIsVolunteer()
+  if (!isVolunteer) return children
+
+  return (
+    <main className="admin-login">
+      <div className="admin-login-box">
+        <h2>⚠️ ไม่มีสิทธิ์เข้าถึง</h2>
+        <p>บัญชีของคุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+        <a href="/admin/dashboard" style={{ display: 'block', padding: 12, background: 'var(--green-deep)', color: '#fff', borderRadius: 10, textDecoration: 'none', fontWeight: 700, textAlign: 'center' }}>
+          กลับหน้าหลัก
+        </a>
+      </div>
+    </main>
+  )
+}

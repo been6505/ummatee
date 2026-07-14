@@ -1,0 +1,245 @@
+/* ============ ADMIN DASHBOARD ============ */
+.admin-login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));padding:24px}
+.admin-login-box{background:#fff;border-radius:16px;padding:36px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.admin-login-box h2{margin-bottom:8px}
+.admin-login-box p{color:var(--ink-soft);margin-bottom:20px;font-size:.92rem}
+.admin-login-box input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:10px;font-size:1rem;margin-bottom:14px;box-sizing:border-box}
+.admin-login-box button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--green-deep);color:#fff;font-weight:700;font-size:1rem;cursor:pointer}
+.admin-login-box button:hover{background:var(--green-mid)}
+.admin-login-role-btn{display:flex;align-items:center;gap:16px;width:100%;padding:18px 20px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;transition:all .2s;color:#333}
+.admin-login-role-btn:hover{border-color:var(--green-mid);background:rgba(46,125,82,.05);color:var(--green-deep)}
+.admin-error{color:#e8194a;font-size:.86rem;margin-bottom:12px}
+
+.admin-dash{min-height:100vh;background:linear-gradient(180deg,#EAF6EE 0%,#F4F9F5 280px,#F4F9F5 100%);font-family:inherit}
+/* padding แยกตามจอ — เดิมประกาศ padding-left รวมกันไว้ที่นี่ (ไม่มี media query) แล้วมาอยู่หลังกฎเดสก์ท็อป
+   ใน cascade ทำให้ทับ padding-left:256px ของ sidebar เสมอไม่ว่าจอกว้างแค่ไหน (เนื้อหาไปซ้อนใต้ sidebar) */
+@media (max-width: 768px) {
+  .admin-dash { padding: 72px 16px 32px; }
+}
+.admin-wrap{max-width:1200px;margin:0 auto}
+.admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.admin-head h1{font-size:1.6rem;margin-bottom:4px;color:var(--green-deep)}
+.admin-head p{color:var(--ink-soft)}
+.admin-logout{border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:600}
+.admin-logout:hover{background:rgba(46,125,82,.08)}
+
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.admin-stat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
+.admin-stat .v{font-size:2rem;font-weight:800;color:var(--green-deep)}
+.admin-stat .l{color:var(--ink-soft);font-size:.86rem;margin-top:4px}
+
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+/* กริดกราฟแบบ 3 คอลัมน์ (หน้า admin iftar) — ย่อเป็น 2 และ 1 คอลัมน์บนจอเล็ก */
+.admin-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.admin-grid-3 .admin-card{padding:12px}
+.admin-grid-3 button{display:none}
+@media (max-width:1000px){.admin-grid-3{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.admin-grid-3{grid-template-columns:1fr}}
+/* มือถือ: จัดหัวการ์ดกราฟ (ชื่อ + ปุ่มเลือกชนิด) และข้อความให้อยู่กึ่งกลาง */
+@media (max-width:640px){
+  .admin-grid-3 .admin-card-head{flex-direction:column;align-items:center;text-align:center;justify-content:center}
+  .admin-grid-3 .admin-card-head h4{text-align:center;width:100%}
+  .admin-grid-3 .admin-chart-switch{justify-content:center}
+  .admin-grid-3 .admin-legend{justify-content:center;text-align:center}
+  .admin-grid-3 .admin-empty{text-align:center;width:100%}
+}
+.admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
+.admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
+.admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}
+/* การ์ดผู้เข้าชมเว็บไซต์ (หน้า admin/dashboard) */
+.admin-visitors-card{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,var(--green-deep) 0%,var(--green-mid) 100%);border:none;color:#fff;box-shadow:0 12px 32px -12px rgba(27,94,54,.45)}
+.admin-visitors-icon{font-size:2.6rem;width:72px;height:72px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:18px;flex-shrink:0}
+.admin-visitors-num{font-size:2.6rem;font-weight:900;line-height:1.05;color:#fff}
+.admin-visitors-label{font-size:1rem;font-weight:700;color:rgba(255,255,255,.95);margin-top:2px}
+.admin-visitors-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:4px}
+/* กราฟพรีวิวในหน้า admin/financial-dashboard */
+.fin-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.fin-chart{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:16px;border:1px solid rgba(46,125,82,.12);border-radius:12px}
+.fin-chart-title{font-weight:800;color:var(--green-deep);font-size:1rem}
+.fin-chart-legend{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--ink-soft);font-weight:600}
+.fin-chart-legend span{display:flex;align-items:center;gap:8px}
+.fin-chart-legend i{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
+.admin-account-preview{margin-top:14px;display:flex;flex-direction:column;gap:6px;font-size:.92rem;color:var(--ink-soft);background:rgba(46,125,82,.05);border:1px solid rgba(46,125,82,.12);border-radius:10px;padding:14px}
+.admin-account-preview b{color:var(--green-deep)}
+.admin-empty{color:var(--ink-soft);font-size:.9rem}
+
+.admin-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:.88rem}
+.admin-bar-label{flex:0 0 110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-bar-track{flex:1;height:14px;background:#eee;border-radius:8px;overflow:hidden}
+.admin-bar-fill{height:100%;border-radius:8px}
+.admin-bar-value{flex:0 0 32px;text-align:right;font-weight:700}
+
+.admin-donut{width:160px;height:160px;margin-bottom:14px}
+.admin-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:.86rem}
+.admin-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+.admin-table-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.admin-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.admin-search{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;min-width:50px}
+.admin-select{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;background:#fff;cursor:pointer}
+.admin-select-icon{display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#6b7280}
+.admin-select-icon .admin-select{border:none;padding:10px 4px;background:transparent}
+.admin-select-icon svg{flex-shrink:0}
+.admin-clear{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.86rem;background:#fff;cursor:pointer;color:var(--ink-soft)}
+.admin-clear:hover{background:#f0f0f0}
+.admin-table-wrap{overflow-x:auto}
+.admin-table{width:100%;border-collapse:collapse;font-size:.86rem;white-space:nowrap}
+.admin-table th,.admin-table td{padding:8px 12px;border-bottom:1px solid #eee;text-align:left}
+.admin-table th{background:#f4f6f5;position:sticky;top:0}
+.admin-th-sort{cursor:pointer;user-select:none}
+.admin-th-sort:hover{background:#e9ecea}
+.admin-table tbody tr:hover{background:#fafafa}
+.admin-link-card{display:block;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
+.admin-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+
+/* หน้า admin Qurban — ตัวอักษรใหญ่และหนาขึ้นเป็นพิเศษ อ่านง่าย */
+.admin-qurban .admin-head h1{font-size:2rem;font-weight:800}
+.admin-qurban .admin-head p{font-size:1.05rem;font-weight:600}
+.admin-qurban .admin-stat .v{font-size:2.4rem}
+.admin-qurban .admin-stat .l{font-size:1rem;font-weight:600}
+.admin-qurban .admin-card h4{font-size:1.15rem;font-weight:800}
+.admin-qurban .admin-bar-row{font-size:1rem;font-weight:600}
+.admin-qurban .admin-bar-label{flex:0 0 130px}
+.admin-qurban .admin-bar-value{flex:0 0 40px}
+
+/* ปุ่มและฟอร์มแก้ไขข้อมูล admin */
+.admin-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;background:#fff;border:1px solid rgba(27,94,54,.2);color:var(--green-deep);font-weight:700;text-decoration:none;font-size:.9rem;cursor:pointer;transition:background .15s,box-shadow .15s}
+.admin-btn:hover{background:#EAF6EE}
+.admin-btn-primary{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(27,94,54,.5)}
+.admin-btn-primary:hover{filter:brightness(1.08)}
+.admin-btn-danger{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(183,28,28,.5)}
+.admin-btn-danger:hover{filter:brightness(1.08)}
+.admin-btn-danger:hover{background:#fdeee9}
+
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+.admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-form-grid input,.admin-table-edit input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.admin-form-grid input:focus,.admin-table-edit input:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-table-edit input[type="text"]{width:100%}
+
+@media (max-width:640px){
+  .admin-form-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+}
+
+/* ฟอร์มสินค้า Um Shop — บังคับ 3 คอลัมน์ตายตัว (ไม่ auto-fit) ให้จัดเรียงเป็นแถวตามที่ตั้งใจ */
+.admin-form-grid-3col{grid-template-columns:repeat(3, 1fr)}
+@media (max-width:700px){
+  .admin-form-grid-3col{grid-template-columns:1fr 1fr}
+}
+/* ส่วนรายละเอียดสินค้า + รูปภาพสินค้า ในฟอร์ม Um Shop — บังคับ 1 แถว 2 คอลัมน์เท่ากัน (ซ้าย-ขวา) แทน auto-fit หลายคอลัมน์ */
+.admin-form-grid-2col{grid-template-columns:1fr 1fr}
+@media (max-width:700px){
+  .admin-form-grid-2col{grid-template-columns:1fr}
+}
+
+@media (max-width:460px){
+  .admin-form-grid-3col{grid-template-columns:1fr}
+}
+
+/* ชิปเลือกขนาดด่วน (เสื้อ) — กดเพื่อเพิ่ม/เอาออกจากช่องขนาดแบบ comma list */
+.size-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.size-chip{padding:5px 12px;border-radius:8px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-soft);font-family:inherit;transition:all .15s}
+.size-chip:hover{border-color:var(--green-mid)}
+.size-chip.selected{background:var(--green-mid);border-color:var(--green-mid);color:#fff}
+
+/* แถวกรอกจำนวนสต็อกแยกต่อไซซ์ (เสื้อ) — ให้ปิดปุ่มไซซ์เฉพาะตัวที่หมดในหน้า public ได้ */
+.size-stock-rows{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.size-stock-row{display:flex;align-items:center;gap:8px}
+.size-stock-row .size-chip{cursor:default;min-width:44px;text-align:center}
+.size-stock-input{width:80px;padding:6px 8px;border-radius:8px;border:1px solid #ddd;font-size:.85rem;font-family:inherit}
+.size-stock-remove{border:none;background:none;color:#d84315;cursor:pointer;padding:4px 6px;font-size:.85rem}
+.size-stock-remove:hover{opacity:.7}
+.size-stock-total{font-size:.8rem;font-weight:700;color:var(--green-deep);margin-top:2px}
+
+/* โหมดเต็มจอของแดชบอร์ด */
+.admin-full .admin-wrap{max-width:none}
+
+/* ทุกหน้า admin/shop/* (จัดการสินค้า/คำสั่งซื้อ/รายละเอียดคำสั่งซื้อ/คลัง/ยอดขาย) — ขยายพื้นที่เนื้อหาเต็มความกว้างที่เหลือ (หลัง sidebar)
+   .admin-dash หัก padding-left ให้ sidebar ไว้แล้ว ใช้ width:100% ของ container นี้ (ไม่ใช่ 100vw) จึงชนกับ sidebar ไม่ได้ */
+.admin-shop-wide .admin-wrap{max-width:none;width:100%;margin:0}
+
+/* หัวการ์ด + ปุ่มสลับประเภทกราฟ + ตัวกรอง */
+.admin-head-actions{display:flex;gap:10px;flex-wrap:wrap}
+.admin-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.admin-card-head h4{margin:0}
+.admin-chart-switch{display:flex;gap:4px;background:#f0f4f1;border-radius:10px;padding:3px}
+.admin-chart-switch button{border:none;background:transparent;padding:5px 12px;border-radius:8px;font-size:.78rem;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit}
+.admin-chart-switch button.active{background:#fff;color:var(--green-deep);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.admin-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.admin-filters input,.admin-filters select{padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:.85rem;font-family:inherit;background:#fff}
+.admin-filters input:focus,.admin-filters select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-form-grid select{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+
+/* กราฟแท่งตั้ง */
+.admin-columns{display:flex;align-items:flex-end;gap:10px;padding:8px 4px;overflow-x:auto;width:100%}
+.admin-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px;flex:1}
+.admin-col-bar{width:100%;max-width:46px;border-radius:6px 6px 0 0;transition:height .3s}
+.admin-col-value{font-size:.7rem;font-weight:700;color:var(--ink-soft);white-space:nowrap}
+.admin-col-label{font-size:.7rem;color:var(--ink-soft);text-align:center;word-break:break-word;max-width:80px}
+
+/* กราฟเส้น */
+.admin-line-chart{width:100%;height:auto}
+.admin-hbars{width:100%}
+
+/* ปฏิทินคอนเทนต์ */
+.admin-cal-layout{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;align-items:start}
+.admin-cal-side{display:flex;flex-direction:column;gap:24px}
+.admin-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.admin-cal-head h4{margin:0;font-size:1.1rem}
+.admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.admin-cal-dow{text-align:center;font-size:.75rem;font-weight:700;color:var(--ink-soft);padding:6px 0}
+.admin-cal-day{position:relative;aspect-ratio:1;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
+.admin-cal-day:hover{background:#EAF6EE}
+.admin-cal-day.today{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.admin-cal-day.sel{background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;border-color:transparent}
+.admin-cal-hijri{font-size:.6rem;font-weight:500;color:var(--ink-soft);line-height:1;opacity:.8}
+.admin-cal-day.sel .admin-cal-hijri,.admin-cal-day.today .admin-cal-hijri{color:#fff;opacity:.75}
+.admin-cal-hijri-header{font-size:.72rem;color:var(--ink-soft);margin-top:2px}
+.admin-cal-dots{display:flex;gap:3px;align-items:center}
+.admin-cal-dots i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.admin-cal-dots em{font-style:normal;font-size:.6rem;font-weight:700}
+/* อัพโหลดมีเดีย */
+.admin-upload-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;border:1.5px dashed var(--green-mid);background:#f5fbf7;color:var(--green-deep);font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s}
+.admin-upload-btn:hover{background:#e8f7ed}
+.admin-media-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.admin-media-thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid #ddd}
+.admin-media-thumb img,.admin-media-thumb video{width:100%;height:100%;object-fit:cover}
+.admin-media-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.admin-media-main{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:.55rem;font-weight:700;text-align:center;padding:2px 0}
+/* มีเดียในการ์ดโพสต์ */
+.admin-post-media{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-media-item{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #eee}
+/* ปุ่มแชร์แต่ละ platform */
+.admin-post-share{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-share-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;border:none;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.admin-post-share-btn:hover{opacity:.85}
+.admin-cal-legend{display:flex;gap:14px;margin-top:12px;font-size:.78rem;color:var(--ink-soft);flex-wrap:wrap}
+.admin-cal-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+
+/* ฟอร์มเพิ่มโพสต์ */
+.admin-cal-form{display:flex;flex-direction:column;gap:12px}
+.admin-cal-form label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-form input,.admin-cal-form select,.admin-cal-form textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.92rem;font-family:inherit;background:#fff;resize:vertical}
+.admin-cal-form input:focus,.admin-cal-form select:focus,.admin-cal-form textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-cal-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.admin-cal-platforms{display:flex;gap:8px;flex-wrap:wrap}
+.admin-cal-platforms button{padding:6px 14px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);transition:all .12s}
+
+/* การ์ดโพสต์ในวันที่เลือก */
+.admin-post{border:1px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fafcfa}
+.admin-post-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.admin-post-top strong{font-size:.92rem}
+.admin-post-status{font-size:.7rem;font-weight:700;color:#fff;padding:3px 10px;border-radius:999px}
+.admin-post-text{font-size:.85rem;color:var(--ink-soft);margin:6px 0;white-space:pre-wrap}
+.admin-post-platforms{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-platforms span{font-size:.68rem;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px}
+.admin-post-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.admin-post-actions .admin-btn,.admin-post-actions .admin-btn-danger{font-size:.78rem;padding:5px 12px}
+
+@media (max-width:900px){
+  .admin-cal-layout{grid-template-columns:1fr}
+}
+.admin-qurban .admin-legend{font-size:.98rem;font-weight:600}
+.admin-qurban .admin-table{font-size:1rem}
+.admin-qurban .admin-table td{font-weight:600}
+.admin-qurban .admin-table th{font-weight:800;font-size:1rem}

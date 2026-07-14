@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { db } from '../firebase.js'
-import { collection, getDocs } from 'firebase/firestore'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
+import { watchVolunteerRegs, retrySync } from '../data/volunteer.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHandshake, faDownload } from '@fortawesome/free-solid-svg-icons'
+import { faHandshake, faDownload, faRotate, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 
 function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true, topN }) {
   const [type, setType] = useState(types[0])
@@ -67,11 +67,25 @@ function ageGroup(ageStr) {
   return '50+'
 }
 
+function splitList(str) {
+  return (str || '').split(/,\s*/).map(s => s.trim()).filter(Boolean)
+}
+
+function dateLabel(dateStr) {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d)) return dateStr
+  return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 const FILTER_FIELDS = [
   { key: 'gender', label: 'เพศ', get: (r) => [r.gender] },
   { key: 'province', label: 'จังหวัด', get: (r) => [r.province] },
   { key: 'age', label: 'ช่วงอายุ', get: (r) => [ageGroup(r.age)] },
   { key: 'channel', label: 'ช่องทาง', get: (r) => [r.channel] },
+  { key: 'skills', label: 'ตำแหน่ง', get: (r) => splitList(r.skills) },
+  { key: 'missions', label: 'ภารกิจ', get: (r) => splitList(r.missions) },
+  { key: 'date', label: 'วันที่สมัคร', get: (r) => [dateLabel(r.date)] },
 ]
 
 export default function AdminVolunteer() {
@@ -84,20 +98,53 @@ export default function AdminVolunteer() {
   const [filterValue, setFilterValue] = useState('')
   const [sortKey, setSortKey] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
+  const [loadError, setLoadError] = useState(false)
+
+  const [syncing, setSyncing] = useState({})
 
   useEffect(() => {
     if (!authed) return
-    let cancelled = false
     setLoading(true)
-    getDocs(collection(db, 'volunteerRegs'))
-      .then((snap) => {
-        if (cancelled) return
-        setRegs(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-      })
-      .catch(() => { if (!cancelled) setRegs([]) })
-      .finally(() => !cancelled && setLoading(false))
-    return () => { cancelled = true }
+    // อ่านข้อมูลอาสาสมัครจาก Firestore แบบ real-time (คุมสิทธิ์ด้วย isFullAdmin() ใน firestore.rules) —
+    // เดิมอ่านผ่าน Apps Script doGet ด้วย token ที่ฝังใน client bundle ซึ่งใครก็ดึง PII ออกไปได้
+    // โดยไม่ต้องล็อกอินเว็บเลย (ดู security memory) — endpoint นั้นถูกปิดแล้วฝั่ง Apps Script
+    // onSnapshot แทน getDocs ครั้งเดียว เพื่อให้เห็นผู้สมัครใหม่ทันทีโดยไม่ต้อง reload หน้า
+    const unsub = watchVolunteerRegs(
+      (rows) => {
+        setRegs(rows.map((r) => ({
+          id: r.id,
+          ref: r.ref || '',
+          date: r.date || '',
+          fname: r.fname || '',
+          lname: r.lname || '',
+          fnameEn: r.fnameEn || '',
+          lnameEn: r.lnameEn || '',
+          gender: r.gender || '',
+          age: r.age || '',
+          province: r.province || '',
+          phone: r.phone || '',
+          email: r.email || '',
+          channel: r.channel || '',
+          skills: r.skills || '',
+          missions: r.missions || '',
+          giveProjects: r.giveProjects || '',
+          giveDates: r.giveDates || '',
+          expect: r.expect || '',
+          note: r.note || '',
+          sheetSynced: r.sheetSynced !== false,
+        })))
+        setLoading(false)
+      },
+      () => { setRegs([]); setLoadError(true); setLoading(false) }
+    )
+    return unsub
   }, [authed])
+
+  const doRetrySync = async (r) => {
+    setSyncing((s) => ({ ...s, [r.id]: true }))
+    await retrySync(r)
+    setSyncing((s) => ({ ...s, [r.id]: false }))
+  }
 
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
@@ -130,10 +177,10 @@ export default function AdminVolunteer() {
   }, [regs, search, filterField, filterValue, sortKey, sortDir])
 
   const exportCSV = () => {
-    const cols = ['ลำดับ', 'Ref', 'ชื่อ', 'นามสกุล', 'First Name', 'Last Name', 'เพศ', 'อายุ', 'จังหวัด', 'เบอร์โทร', 'อีเมล', 'ช่องทาง', 'ความคาดหวัง', 'ทักษะ', 'ข้อความ', 'วันที่']
+    const cols = ['ลำดับ', 'Ref', 'ชื่อ', 'นามสกุล', 'First Name', 'Last Name', 'เพศ', 'อายุ', 'จังหวัด', 'เบอร์โทร', 'อีเมล', 'ช่องทาง', 'ตำแหน่ง', 'ภารกิจ', 'โครงการ', 'วันที่สะดวก', 'ความคาดหวัง', 'ข้อความ', 'วันที่']
     const rows = filtered.map((r, i) => [
       i + 1, r.ref, r.fname, r.lname, r.fnameEn, r.lnameEn, r.gender, r.age,
-      r.province, r.phone, r.email, r.channel, r.expect, r.skills, r.note, r.date,
+      r.province, r.phone, r.email, r.channel, r.skills, r.missions, r.giveProjects, r.giveDates, r.expect, r.note, r.date,
     ])
     const csv = [cols, ...rows].map((r) => r.map((c) => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -152,8 +199,10 @@ export default function AdminVolunteer() {
   const ageData = countBy(regs, (r) => ageGroup(r.age))
   const channelData = countBy(regs, (r) => r.channel)
   const provinceData = countBy(regs, (r) => r.province)
+  const skillsData = countBy(regs, (r) => splitList(r.skills))
+  const missionsData = countBy(regs, (r) => splitList(r.missions))
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash">
       <AdminNav />
       <div className="admin-wrap">
@@ -181,8 +230,15 @@ export default function AdminVolunteer() {
               <ChartCard title="ช่วงอายุ" data={ageData} types={['donut', 'column', 'hbar', 'line']} />
               <ChartCard title="ช่องทางการรับรู้" data={channelData} types={['donut', 'hbar', 'column']} />
               <ChartCard title="จังหวัด (Top 10)" data={provinceData} types={['hbar', 'column', 'donut']} topN={10} />
+              <ChartCard title="ตำแหน่งที่สนใจ" data={skillsData} types={['hbar', 'column', 'donut']} />
+              <ChartCard title="ภารกิจที่สนใจ" data={missionsData} types={['donut', 'hbar', 'column']} />
             </div>
 
+            {loadError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 16px', marginTop: 16, color: '#dc2626', fontSize: '.9rem' }}>
+                ⚠️ โหลดข้อมูลไม่ได้ — กรุณาตรวจสอบการเชื่อมต่อหรือลองใหม่อีกครั้ง
+              </div>
+            )}
             <div className="admin-card" style={{ marginTop: 24 }}>
               <div className="admin-table-head">
                 <h4>รายชื่อผู้สมัคร ({filtered.length})</h4>
@@ -209,56 +265,63 @@ export default function AdminVolunteer() {
                 </div>
               </div>
 
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>#</th>
-                      {[
-                        ['ref', 'Ref'],
-                        ['fname', 'ชื่อ-นามสกุล / Name'],
-                        ['gender', 'เพศ'],
-                        ['age', 'อายุ'],
-                        ['province', 'จังหวัด'],
-                        ['phone', 'เบอร์โทร'],
-                        ['email', 'อีเมล'],
-                        ['channel', 'ช่องทาง'],
-                        ['expect', 'ความคาดหวัง'],
-                        ['skills', 'ทักษะ'],
-                        ['date', 'วันที่สมัคร'],
-                      ].map(([key, label]) => (
-                        <th key={key} className="admin-th-sort" onClick={() => toggleSort(key)}>
-                          {label} {sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length === 0 ? (
-                      <tr><td colSpan={12} style={{ textAlign: 'center', opacity: 0.5, padding: 32 }}>ไม่มีข้อมูล</td></tr>
-                    ) : filtered.map((r, i) => (
-                      <tr key={r.id}>
-                        <td style={{ textAlign: 'center', opacity: 0.5, fontSize: '0.82rem' }}>{i + 1}</td>
-                        <td><span style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>{r.ref || '-'}</span></td>
-                        <td>{r.fname} {r.lname}{r.fnameEn && <span style={{ display: 'block', fontSize: '0.78rem', opacity: 0.55 }}>{r.fnameEn} {r.lnameEn}</span>}</td>
-                        <td>{r.gender}</td>
-                        <td>{r.age}</td>
-                        <td>{r.province}</td>
-                        <td>{r.phone}</td>
-                        <td>{r.email}</td>
-                        <td style={{ fontSize: '0.82rem' }}>{r.channel}</td>
-                        <td style={{ maxWidth: 200, whiteSpace: 'normal', fontSize: '0.82rem' }}>{r.expect}</td>
-                        <td>{r.skills}</td>
-                        <td>{r.date}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {filtered.length === 0 ? (
+                <p style={{ textAlign: 'center', opacity: 0.5, padding: 32 }}>ไม่มีข้อมูล</p>
+              ) : (
+                <div className="vol-card-list">
+                  {filtered.map((r, i) => (
+                    <div key={r.id} className="vol-card">
+                      <div className="vol-card-row1">
+                        <div className="vol-card-num">{i + 1}</div>
+                        <div className="vol-card-main">
+                          <div className="vol-card-name">
+                            {r.fname} {r.lname}
+                            {r.fnameEn && <span className="vol-card-en">{r.fnameEn} {r.lnameEn}</span>}
+                          </div>
+                          <div className="vol-card-ref">
+                            {r.ref || '-'}
+                            {!r.sheetSynced && (
+                              <button
+                                type="button"
+                                className="vol-sync-badge"
+                                onClick={() => doRetrySync(r)}
+                                disabled={!!syncing[r.id]}
+                                title="ยังไม่ได้สำรองข้อมูลไป Google Sheet — กดเพื่อลองใหม่ (ข้อมูลปลอดภัยอยู่ใน Firebase แล้ว)"
+                              >
+                                <FontAwesomeIcon icon={syncing[r.id] ? faRotate : faTriangleExclamation} spin={!!syncing[r.id]} />
+                                {syncing[r.id] ? ' กำลังซิงก์...' : ' ยังไม่สำรองไป Sheet — ลองใหม่'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="vol-card-info">
+                          <span>{r.gender} · {r.age} ปี</span>
+                          <span>{r.province}</span>
+                        </div>
+                        <div className="vol-card-info">
+                          <span>{r.phone}</span>
+                          <span>{r.email}</span>
+                        </div>
+                        <div className="vol-card-meta">{(() => { const p = Date.parse(r.date); if (isNaN(p)) return r.date; const d = new Date(p); if (d.getFullYear() > 2400) d.setFullYear(d.getFullYear() - 543); return d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) })()}</div>
+                      </div>
+                      {(r.skills || r.missions || r.giveProjects || r.giveDates || r.expect || r.note) && (
+                        <div className="vol-card-row2">
+                          {r.skills && <div><b>ตำแหน่งที่สนใจ:</b> {r.skills}</div>}
+                          {r.missions && <div><b>ภารกิจ:</b> {r.missions}</div>}
+                          {r.giveProjects && <div><b>โครงการ:</b> {r.giveProjects}</div>}
+                          {r.giveDates && <div><b>วันที่มาร่วม:</b> {r.giveDates.split(',').map(d => { const p = Date.parse(d.trim()); return isNaN(p) ? d.trim() : new Date(p).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) }).join(', ')}</div>}
+                          {r.expect && <div><b>ความคาดหวัง:</b> {r.expect}</div>}
+                          {r.note && <div><b>ข้อความ:</b> {r.note}</div>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

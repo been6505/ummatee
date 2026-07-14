@@ -2,7 +2,7 @@ import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 import SocialLinks from './SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCow, faHandHoldingHeart, faHandSparkles, faEnvelope } from '@fortawesome/free-solid-svg-icons'
+import { faCow, faHandHoldingHeart, faHandSparkles, faEnvelope, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 
 // ส่วนท้ายเว็บ (โลโก้ เมนูลัด ช่องทางติดต่อ) ใช้ร่วมกันทุกหน้า public
 // ข้อความแยกตามภาษา
@@ -64,6 +64,7 @@ export default function Footer() {
           <div className="foot-col">
             <h5>{t.contact}</h5>
             <a href='mailto:ummatee.thailand@gmail.com'><FontAwesomeIcon icon={faEnvelope} /> ummatee.thailand@gmail.com</a>
+            <a href='https://maps.app.goo.gl/VhoiyQSM5brDhSD17' target='_blank' rel='noopener noreferrer'><FontAwesomeIcon icon={faLocationDot} /> Office Ummatee Thailand</a>
             <SocialLinks variant="footer" />
           </div>
         </div>

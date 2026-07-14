@@ -84,6 +84,7 @@ const FILTER_FIELDS = [
   { key: 'age', label: 'ช่วงอายุ', get: (r) => [ageGroup(r.age)] },
   { key: 'channel', label: 'รู้จักงาน', get: (r) => (r.channel || '').split(',').map((s) => s.trim()).filter(Boolean) },
   { key: 'expect', label: 'สิ่งที่คาดหวัง', get: (r) => (r.expect || '').split(',').map((s) => s.trim()).filter(Boolean) },
+  { key: 'status', label: 'สถานะเช็คอิน', get: (r) => [r.checkedIn ? 'เช็คอินแล้ว' : 'ยังไม่มา'] },
 ]
 
 export default function AdminIftarDashboard() {
@@ -242,6 +243,7 @@ export default function AdminIftarDashboard() {
 
         <div className="admin-stats">
           <div className="admin-stat"><div className="v">{regs.length}</div><div className="l">ผู้ลงทะเบียนทั้งหมด</div></div>
+          <div className="admin-stat"><div className="v" style={{ color: '#2E7D52' }}>{regs.filter((r) => r.checkedIn).length}</div><div className="l">เช็คอินแล้ว</div></div>
           <div className="admin-stat"><div className="v">{genderData.find((g) => g.label === 'ชาย')?.value || 0}</div><div className="l">ชาย</div></div>
           <div className="admin-stat"><div className="v">{genderData.find((g) => g.label === 'หญิง')?.value || 0}</div><div className="l">หญิง</div></div>
           <div className="admin-stat"><div className="v">{provinceData.length}</div><div className="l">จำนวนจังหวัด</div></div>
@@ -294,7 +296,7 @@ export default function AdminIftarDashboard() {
                       <th className="admin-th-sort" style={{ width: 40 }}>#</th>
                       {[
                         ['ref', 'Ref'], ['fname', 'ชื่อ-นามสกุล'], ['gender', 'เพศ'], ['age', 'อายุ'], ['phone', 'เบอร์โทร'],
-                        ['email', 'อีเมล'], ['job', 'อาชีพ'], ['province', 'จังหวัด'], ['channel', 'ช่องทาง'], ['date', 'วันที่ลงทะเบียน'],
+                        ['email', 'อีเมล'], ['job', 'อาชีพ'], ['province', 'จังหวัด'], ['channel', 'ช่องทาง'], ['date', 'วันที่ลงทะเบียน'], ['checkedIn', 'สถานะ'],
                       ].map(([key, label]) => (
                         <th key={key} className="admin-th-sort" onClick={() => toggleSort(key)}>
                           {label} {sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}
@@ -316,6 +318,13 @@ export default function AdminIftarDashboard() {
                         <td>{r.province}</td>
                         <td>{r.channel}</td>
                         <td>{r.date}</td>
+                        <td>
+                          {r.checkedIn
+                            ? <span style={{ color: '#2E7D52', fontWeight: 700 }}>✓ มาแล้ว</span>
+                            : <span style={{ color: '#999' }}>ยังไม่มา</span>
+                          }
+                          {r.checkedInAt && <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{r.checkedInAt}</div>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

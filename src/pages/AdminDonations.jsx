@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
@@ -130,7 +131,7 @@ export default function AdminDonations() {
   }
   const arrow = (key) => sortKey === key ? <FontAwesomeIcon icon={sortDir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} /> : null
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -259,5 +260,5 @@ export default function AdminDonations() {
         )}
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { db } from '../firebase.js'
-import { collection, addDoc } from 'firebase/firestore'
 import { QRCodeSVG } from 'qrcode.react'
 import Footer from '../components/Footer.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faEnvelope } from '@fortawesome/free-solid-svg-icons'
 
-const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
+import { GIVE_SHEET_TOKEN } from '../utils/endpoints.js'
+import { registerVolunteer } from '../data/volunteer.js'
 
 const AGES = Array.from({ length: 83 }, (_, i) => i + 18)
 
@@ -24,19 +23,7 @@ const PROVINCES = [
 
 const CHANNELS = ['Facebook', 'Instagram', 'LINE', 'TikTok', 'Threads', 'Twitter', 'เพื่อน/ครอบครัว', 'อื่นๆ']
 
-function formatPhone(raw) {
-  const digits = (raw || '').replace(/\D/g, '')
-  if (/^0\d{9}$/.test(digits)) return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3')
-  return (raw || '').trim()
-}
-
-async function saveToFirestore(data, attempts = 3) {
-  for (let i = 0; i < attempts; i++) {
-    try { await addDoc(collection(db, 'volunteerRegs'), data); return true }
-    catch (e) { if (i === attempts - 1) return false; await new Promise(r => setTimeout(r, 600 * (i + 1))) }
-  }
-  return false
-}
+import { formatPhone } from '../utils/formatPhone.js'
 
 function Chip({ label, active, onClick }) {
   return (
@@ -46,17 +33,29 @@ function Chip({ label, active, onClick }) {
   )
 }
 
-const EMPTY = { fname: '', lname: '', fnameEn: '', lnameEn: '', phone: '', email: '', age: '', province: '', expect: '', skills: '', note: '' }
+const SKILL_OPTIONS = ['แนะนำนิทรรศการ', 'ถ่ายภาพ/วิดีโอ', 'ลงทะเบียน', 'ขายสินค้า', 'Backstage', 'จุดรับบริจาค', 'Workshop', 'อื่นๆ']
+const MISSION_OPTIONS = [
+  { key: 'give', label: 'งาน Give ให้ ครั้งที่ 6', sub: '3-5 ก.ค. · 14:00-21:00 น.' },
+]
+const GIVE_PROJECTS = ['คอมมือสอง', 'อุปกรณ์ประกอบอาชีพ']
+const GIVE_DATES = ['1 ก.ค.', '2 ก.ค.', '3 ก.ค.', '4 ก.ค.', '5 ก.ค.']
+
+const EMPTY = { fname: '', lname: '', fnameEn: '', lnameEn: '', phone: '', email: '', age: '', province: '', expect: '', note: '' }
 
 export default function VolunteerRegister() {
   const [form, setForm] = useState(EMPTY)
   const [gender, setGender] = useState('')
   const [channel, setChannel] = useState('')
+  const [skills, setSkills] = useState([])
+  const [missions, setMissions] = useState([])
+  const [giveProjects, setGiveProjects] = useState([])
+  const [giveDates, setGiveDates] = useState([])
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [successRef, setSuccessRef] = useState(null)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const toggleList = (list, setList, v) => setList(list.includes(v) ? list.filter(x => x !== v) : [...list, v])
 
   const submit = async () => {
     setError('')
@@ -64,19 +63,19 @@ export default function VolunteerRegister() {
     if (!form.lname.trim()) return setError('กรุณากรอกนามสกุล')
     if (!form.phone.trim()) return setError('กรุณากรอกเบอร์โทรศัพท์')
     if (!/^[0-9+\-\s]{6,15}$/.test(form.phone.trim())) return setError('เบอร์โทรศัพท์ไม่ถูกต้อง')
-    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setError('รูปแบบอีเมลไม่ถูกต้อง')
+    if (!form.email.trim()) return setError('กรุณากรอกอีเมล')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setError('รูปแบบอีเมลไม่ถูกต้อง')
     if (!form.age) return setError('กรุณาเลือกอายุ')
     if (!gender) return setError('กรุณาเลือกเพศ')
-    if (!form.fnameEn.trim()) return setError('กรุณากรอกชื่อภาษาอังกฤษ')
-    if (!form.lnameEn.trim()) return setError('กรุณากรอกนามสกุลภาษาอังกฤษ')
     if (!form.province) return setError('กรุณาเลือกจังหวัด')
     if (!channel) return setError('กรุณาเลือกช่องทางที่รู้จักอุมมะตี')
-    if (!form.skills.trim()) return setError('กรุณากรอกทักษะ/ความสามารถพิเศษ')
-    if (!form.expect.trim()) return setError('กรุณากรอกสิ่งที่คาดหวัง')
+    if (skills.length === 0) return setError('กรุณาเลือกตำแหน่งอย่างน้อย 1 อย่าง')
+    if (missions.length === 0) return setError('กรุณาเลือกภารกิจที่สนใจอย่างน้อย 1 งาน')
 
     setSubmitting(true)
     const regData = {
       type: 'volunteer',
+      token: GIVE_SHEET_TOKEN,
       date: new Date().toLocaleString('th-TH'),
       fname: form.fname.trim(),
       lname: form.lname.trim(),
@@ -89,29 +88,25 @@ export default function VolunteerRegister() {
       province: form.province,
       channel,
       expect: form.expect.trim(),
-      skills: form.skills.trim(),
+      skills: skills.join(', '),
+      missions: missions.map(k => MISSION_OPTIONS.find(m => m.key === k)?.label).join(', '),
+      giveProjects: giveProjects.join(', '),
+      giveDates: giveDates.join(', '),
       note: form.note.trim(),
     }
 
     try {
-      const res = await fetch(VOLUNTEER_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(regData),
-      })
-      const out = await res.json()
-      if (!out.ref) throw new Error('no ref')
-      const saved = { ref: out.ref, ...regData }
-
-      await saveToFirestore(saved)
+      // Firestore คือที่เก็บหลัก — ต้องเขียนสำเร็จก่อนถึงจะถือว่าสมัครสำเร็จ (Sheet เป็นแค่สำรอง/ส่งอีเมล
+      // ในพื้นหลัง ไม่บล็อกและไม่ทำให้การสมัครล้มเหลวถ้า Sheet ช้าหรือล่ม)
+      const { ref } = await registerVolunteer(regData)
 
       try {
         const regs = JSON.parse(localStorage.getItem('volunteerRegs') || '[]')
-        regs.push(saved)
+        regs.push({ ref, ...regData })
         localStorage.setItem('volunteerRegs', JSON.stringify(regs))
       } catch (e) { /* noop */ }
 
-      setSuccessRef(out.ref)
+      setSuccessRef(ref)
       setTimeout(() => {
         document.getElementById('volunteer-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 50)
@@ -123,7 +118,7 @@ export default function VolunteerRegister() {
   }
 
   const reset = () => {
-    setForm(EMPTY); setGender(''); setChannel(''); setError(''); setSuccessRef(null)
+    setForm(EMPTY); setGender(''); setChannel(''); setSkills([]); setMissions([]); setGiveProjects([]); setGiveDates([]); setError(''); setSuccessRef(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -133,10 +128,13 @@ export default function VolunteerRegister() {
       <section className="iftar-hero" style={{ paddingBottom: 40 }}>
         <div className="fc-pattern hero-pattern" />
         <div className="inner">
-          <img src="/logo.png" alt="Ummatee" style={{ height: 250, display: 'block', margin: '0 auto 10px', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.35))' }} />
+          <img src="/logo.png" alt="Ummatee" style={{ height: 80, display: 'block', margin: '0 auto 10px', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.35))' }} />
           <h1> อาสาสมัคร<br /><span className="moon">Ummatee</span></h1>
           <p className="iftar-tagline">ร่วมเป็นส่วนหนึ่งของการช่วยเหลือ</p>
-          <p className="lead">ลงทะเบียนเพื่อเข้าร่วมเป็นอาสาสมัครมูลนิธิอุมมะตี ช่วยเหลือกิจกรรม งานมนุษยธรรม และการสนับสนุนชุมชน</p>
+          <p className="lead">ช่วยเหลือกิจกรรมด้านมนุษยธรรม</p>
+          <div className="vol-gallery">
+            <img src="/give-event.webp" alt="งาน ให้" loading="lazy" style={{ height: '80%', display: 'block', margin: '0 auto 10px', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,.35))' }} />
+          </div>
         </div>
       </section>
 
@@ -179,11 +177,11 @@ export default function VolunteerRegister() {
 
               <div className="iftar-row">
                 <div className="iftar-field">
-                  <label className="iftar-label">First Name (English) <span className="req">*</span></label>
+                  <label className="iftar-label">First Name (English)</label>
                   <input className="iftar-input" type="text" placeholder="First name" value={form.fnameEn} onChange={set('fnameEn')} />
                 </div>
                 <div className="iftar-field">
-                  <label className="iftar-label">Last Name (English) <span className="req">*</span></label>
+                  <label className="iftar-label">Last Name (English)</label>
                   <input className="iftar-input" type="text" placeholder="Last name" value={form.lnameEn} onChange={set('lnameEn')} />
                 </div>
               </div>
@@ -194,7 +192,7 @@ export default function VolunteerRegister() {
                   <input className="iftar-input" type="tel" placeholder="08X-XXX-XXXX" maxLength={15} value={form.phone} onChange={set('phone')} />
                 </div>
                 <div className="iftar-field">
-                  <label className="iftar-label">อีเมล</label>
+                  <label className="iftar-label">อีเมล <span className="req">*</span></label>
                   <input className="iftar-input" type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} />
                 </div>
               </div>
@@ -202,11 +200,11 @@ export default function VolunteerRegister() {
               <div className="iftar-row">
                 <div className="iftar-field">
                   <label className="iftar-label">เพศ <span className="req">*</span></label>
-                  <div className="chip-wrap">
-                    {['ชาย', 'หญิง'].map((g) => (
-                      <Chip key={g} label={g} active={gender === g} onClick={() => setGender(gender === g ? '' : g)} />
-                    ))}
-                  </div>
+                  <select className="iftar-input" value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <option value="" disabled>เลือกเพศ</option>
+                    <option value="ชาย">ชาย</option>
+                    <option value="หญิง">หญิง</option>
+                  </select>
                 </div>
                 <div className="iftar-field">
                   <label className="iftar-label">อายุ <span className="req">*</span></label>
@@ -227,22 +225,58 @@ export default function VolunteerRegister() {
 
               <div className="iftar-field">
                 <label className="iftar-label">รู้จักอุมมะตีจากช่องทางใด <span className="req">*</span></label>
+                <select className="iftar-input" value={channel} onChange={(e) => setChannel(e.target.value)}>
+                  <option value="" disabled>เลือกช่องทาง</option>
+                  {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              
+
+              <div className="iftar-field">
+                <label className="iftar-label">ตำแหน่งที่สนใจ (เลือกได้มากกว่า 1) <span className="req">*</span></label>
                 <div className="chip-wrap">
-                  {CHANNELS.map((c) => (
-                    <Chip key={c} label={c} active={channel === c} onClick={() => setChannel(channel === c ? '' : c)} />
+                  {SKILL_OPTIONS.map((s) => (
+                    <Chip key={s} label={s} active={skills.includes(s)} onClick={() => toggleList(skills, setSkills, s)} />
                   ))}
                 </div>
               </div>
 
               <div className="iftar-field">
-                <label className="iftar-label">สิ่งที่คาดหวังจากการเป็น Ummatee Volunteer <span className="req">*</span></label>
+                <label className="iftar-label">สนใจร่วมภารกิจในงาน (เลือกได้มากกว่า 1) <span className="req">*</span></label>
+                <div className="chip-wrap">
+                  {MISSION_OPTIONS.map((m) => (
+                    <Chip key={m.key} label={m.label + ' (' + m.sub + ')'} active={missions.includes(m.key)} onClick={() => toggleList(missions, setMissions, m.key)} />
+                  ))}
+                </div>
+              </div>
+
+              {missions.includes('give') && (
+                <>
+                <div className="iftar-field">
+                  <label className="iftar-label">สนใจร่วมทำงานในโครงการ (ไม่บังคับ)</label>
+                  <div className="chip-wrap">
+                    {GIVE_PROJECTS.map((p) => (
+                      <Chip key={p} label={p} active={giveProjects.includes(p)} onClick={() => toggleList(giveProjects, setGiveProjects, p)} />
+                    ))}
+                  </div>
+                </div>
+                <div className="iftar-field">
+                  <label className="iftar-label">วันที่สะดวกมาร่วมอาสา (เลือกได้มากกว่า 1)</label>
+                  <div className="chip-wrap">
+                    {GIVE_DATES.map((d) => (
+                      <Chip key={d} label={d} active={giveDates.includes(d)} onClick={() => toggleList(giveDates, setGiveDates, d)} />
+                    ))}
+                  </div>
+                </div>
+                </>
+              )}
+
+              <div className="iftar-field">
+                <label className="iftar-label">สิ่งที่คาดหวังจากการเป็น Ummatee Volunteer</label>
                 <textarea className="iftar-input" rows={3} placeholder="เช่น อยากช่วยเหลือผู้ที่ต้องการความช่วยเหลือ อยากเรียนรู้งานมนุษยธรรม..." value={form.expect} onChange={set('expect')} />
               </div>
 
-              <div className="iftar-field">
-                <label className="iftar-label">ทักษะ / ความสามารถพิเศษ <span className="req">*</span></label>
-                <input className="iftar-input" type="text" placeholder="เช่น ถ่ายภาพ, ออกแบบ, ภาษาอาหรับ, ขับรถ..." value={form.skills} onChange={set('skills')} />
-              </div>
 
               <div className="iftar-field">
                 <label className="iftar-label">ข้อความเพิ่มเติม</label>

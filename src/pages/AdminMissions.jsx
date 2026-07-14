@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
@@ -11,17 +12,7 @@ import { faImage, faXmark, faSpinner, faVideo } from '@fortawesome/free-solid-sv
 // จัดการรูป/วิดีโอของแต่ละภารกิจ (/admin/missions) — อัปโหลดขึ้น Cloudinary แล้วเก็บ URL ใน Firestore (missionMedia/{key})
 // แสดงผลทันทีที่หน้า /missions
 
-const CLOUDINARY_CLOUD = 'dei5jktuw'
-const CLOUDINARY_PRESET = 'Ummatee'
-
-async function uploadToCloudinary(file) {
-  const fd = new FormData()
-  fd.append('file', file)
-  fd.append('upload_preset', CLOUDINARY_PRESET)
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`, { method: 'POST', body: fd })
-  if (!res.ok) throw new Error('upload failed')
-  return (await res.json()).secure_url
-}
+import { uploadToCloudinary } from '../utils/cloudinary.js'
 
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
@@ -58,8 +49,8 @@ export default function AdminMissions() {
     setUploading(key)
     setStatus('')
     try {
-      const urls = await Promise.all(files.map(uploadToCloudinary))
-      const next = [...(mediaMap[key] || []), ...urls]
+      const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'auto')))
+      const next = [...(mediaMap[key] || []), ...results.map((r) => r.url)]
       await save(key, next)
     } catch (err) {
       setStatus('อัพโหลดไม่สำเร็จ: ' + err.message)
@@ -74,7 +65,7 @@ export default function AdminMissions() {
     await save(key, next)
   }
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -123,5 +114,5 @@ export default function AdminMissions() {
         </div>
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

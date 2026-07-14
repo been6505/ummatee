@@ -1,30 +1,29 @@
 import { useMemo, useState } from 'react' // ใช้ useMemo สำหรับคำนวณค่าที่แคชไว้ และ useState สำหรับ state
-import { useProducts } from '../data/shop.js' // hook ดึงรายการสินค้าจาก Firestore
+import { useProducts, hasDiscount, discountPercent, groupProductsByName, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY, effectivePrice } from '../data/shop.js' // hook ดึงรายการสินค้าจาก Firestore + ตัวช่วยคำนวณราคาส่วนลด/รวมกลุ่มสินค้าชื่อเดียวกัน
 import FadeUp from '../components/FadeUp.jsx' // คอมโพเนนต์ wrapper ทำ animation เลื่อนขึ้นตอนแสดงผล
 import Footer from '../components/Footer.jsx' // ส่วน Footer ท้ายหน้า
 import { useLang } from '../i18n.jsx' // hook อ่านภาษาปัจจุบันของผู้ใช้ (th/en/ar)
+import { useNavigate } from '../navContext' // ฟังก์ชันเปลี่ยนหน้าแบบ SPA (ไป /um-shop/:productId)
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBagShopping, faLink, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าร้านค้า Um Shop (/um-shop) — แสดงสินค้าทั้งหมด ค้นหา/กรองหมวดหมู่/เรียงราคา และแชร์รูปสินค้าลงโซเชียลได้
-// คลิกที่สินค้าเพื่อเปิดหน้ารายละเอียดขนาดใหญ่ พร้อมแกลเลอรีรูปและปุ่ม "สนใจสินค้า" ไปที่ LINE
+// คลิกที่สินค้าเพื่อไปหน้ารายละเอียดสินค้า (/um-shop/:productId) พร้อมแกลเลอรีรูป เลือกจำนวน และเพิ่มลงตะกร้า
 
-const LINE_URL = 'https://line.me/R/ti/p/@745bvvgx' // ลิงก์บัญชี LINE OA ของมูลนิธิ ใช้เปิดแชทตอนกด "สนใจสินค้า"
-
+import { optImg } from '../utils/cloudinaryUrl.js'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH') // ฟังก์ชันแปลงตัวเลขเป็นรูปแบบราคาบาท เช่น ฿1,234
 
 const T = { // อ็อบเจกต์เก็บข้อความแปลภาษา แยกตามภาษา (th/en/ar)
   th: { // ข้อความภาษาไทย
-    badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
+    badge: 'Um Shop', // ป้าย badge บนหัวหน้า
     h1: 'สินค้าจากมูลนิธิอุมมะตี', // หัวข้อใหญ่
     p: 'เลือกซื้อสินค้าเพื่อสนับสนุนภารกิจของมูลนิธิ — รายได้นำไปช่วยเหลือผู้ยากไร้', // คำบรรยายใต้หัวข้อ
     searchPh: 'ค้นหาสินค้า...', // placeholder ของช่องค้นหา
     allCat: 'ทุกหมวดหมู่', // ตัวเลือก "ทุกหมวดหมู่" ใน dropdown
     sortNew: 'ใหม่ล่าสุด', sortPriceAsc: 'ราคา: ต่ำ-สูง', sortPriceDesc: 'ราคา: สูง-ต่ำ', sortName: 'ชื่อสินค้า A-Z', // ตัวเลือกการเรียงลำดับ
     color: 'สี', size: 'ขนาด', stock: 'คงเหลือ', out: 'สินค้าหมด', share: 'แชร์', shared: 'คัดลอกลิงก์แล้ว ✓', // ป้ายข้อความย่อยต่างๆ
+    fromPrice: 'จาก', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'ยังไม่มีสินค้าในขณะนี้', // ข้อความตอนไม่มีสินค้า
-    interested: 'สนใจสินค้า', close: 'ปิด', // ปุ่ม "สนใจสินค้า" และปุ่ม "ปิด"
-    lineMsg: (name) => `สนใจสินค้า: ${name}`, // ข้อความที่ส่งไปทาง LINE พร้อมชื่อสินค้า
   },
   en: { // ข้อความภาษาอังกฤษ
     badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
@@ -34,9 +33,8 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     allCat: 'All categories', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'Newest', sortPriceAsc: 'Price: low to high', sortPriceDesc: 'Price: high to low', sortName: 'Name A-Z', // ตัวเลือกการเรียงลำดับ
     color: 'Color', size: 'Size', stock: 'In stock', out: 'Out of stock', share: 'Share', shared: 'Link copied ✓', // ป้ายข้อความย่อยต่างๆ
+    fromPrice: 'From', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'No products available yet', // ข้อความตอนไม่มีสินค้า
-    interested: 'I\'m interested', close: 'Close', // ปุ่ม "สนใจสินค้า" และปุ่ม "ปิด"
-    lineMsg: (name) => `Interested in: ${name}`, // ข้อความที่ส่งไปทาง LINE พร้อมชื่อสินค้า
   },
   ar: { // ข้อความภาษาอาหรับ
     badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
@@ -46,20 +44,21 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     allCat: 'كل الفئات', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'الأحدث', sortPriceAsc: 'السعر: من الأقل', sortPriceDesc: 'السعر: من الأعلى', sortName: 'الاسم أ-ي', // ตัวเลือกการเรียงลำดับ
     color: 'اللون', size: 'المقاس', stock: 'المتوفر', out: 'غير متوفر', share: 'مشاركة', shared: 'تم نسخ الرابط ✓', // ป้ายข้อความย่อยต่างๆ
+    fromPrice: 'من', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'لا توجد منتجات حالياً', // ข้อความตอนไม่มีสินค้า
-    interested: 'مهتم بالمنتج', close: 'إغلاق', // ปุ่ม "สนใจสินค้า" และปุ่ม "ปิด"
-    lineMsg: (name) => `مهتم بـ: ${name}`, // ข้อความที่ส่งไปทาง LINE พร้อมชื่อสินค้า
   },
 }
 
-function ProductCard({ p, t, onOpen }) { // การ์ดสินค้าหนึ่งใบในตะแกรงสินค้า — p คือข้อมูลสินค้า, t คือข้อความแปลภาษา, onOpen เรียกเมื่อคลิกเพื่อเปิดรายละเอียด
+function ProductCard({ g, t, onOpen }) { // การ์ดสินค้าหนึ่งใบในตะแกรงสินค้า — g คือกลุ่มสินค้าชื่อเดียวกัน (อาจมีหลายสี/ขนาดคนละ doc), t คือข้อความแปลภาษา, onOpen เรียกเมื่อคลิกเพื่อเปิดรายละเอียด
   const [shared, setShared] = useState(false) // state บอกว่าพึ่งคัดลอกลิงก์แชร์ไปหรือยัง (เพื่อแสดงเครื่องหมาย ✓ ชั่วคราว)
-  const img = p.images?.[0] // รูปภาพแรกของสินค้า (ใช้แสดงในการ์ด)
+  const { primary, variants, totalStock, minPrice, maxPrice, anyDiscount } = g
+  const img = variants.find((v) => v.images?.length)?.images?.[0] // ใช้รูปแรกที่เจอในกลุ่ม (เผื่อ variant แรกสุดยังไม่อัพรูป)
+  const multiVariant = variants.length > 1
 
   const share = async (e) => { // ฟังก์ชันแชร์สินค้า เมื่อกดปุ่มแชร์บนการ์ด
     e.stopPropagation() // กันไม่ให้ event ลอยไปกระตุ้น onClick ของการ์ด (ซึ่งจะเปิดหน้ารายละเอียด)
-    const url = `${window.location.origin}/um-shop#${p.id}` // สร้างลิงก์ตรงไปยังสินค้านี้
-    const shareData = { title: p.name, text: `${p.name} ${p.price ? THB(p.price) : ''}`, url } // ข้อมูลที่จะส่งให้ Web Share API
+    const url = `${window.location.origin}/um-shop/${primary.productId || primary.id}` // สร้างลิงก์ตรงไปยังหน้ารายละเอียดสินค้านี้
+    const shareData = { title: primary.name, text: `${primary.name} ${minPrice ? THB(minPrice) : ''}`, url } // ข้อมูลที่จะส่งให้ Web Share API
     if (navigator.share) { // ถ้าเบราว์เซอร์รองรับ Web Share API (มักเป็นมือถือ)
       try { await navigator.share(shareData); return } catch { /* cancelled */ } // เปิดหน้าต่างแชร์ของระบบ ถ้าผู้ใช้กดยกเลิกก็ไม่ทำอะไรต่อ
     }
@@ -70,89 +69,70 @@ function ProductCard({ p, t, onOpen }) { // การ์ดสินค้าห
     } catch { /* noop */ } // ถ้าคัดลอกไม่สำเร็จ ก็ไม่ทำอะไร
   }
 
-  const outOfStock = (p.stock ?? 0) <= 0 // ตรวจว่าสินค้าหมดสต็อกหรือไม่ (stock เป็น 0 หรือไม่มีค่า)
+  const outOfStock = totalStock <= 0 // หมดสต็อกก็ต่อเมื่อทุก variant ในกลุ่มหมดพร้อมกัน
+  const maxDiscountPercent = anyDiscount ? Math.max(...variants.filter(hasDiscount).map(discountPercent)) : 0
+  // variant ที่ราคาต่ำสุด (คือตัวที่กำหนด minPrice) — ใช้หาราคาเต็มเดิมของมันมาขีดฆ่าคู่กัน (anchoring effect)
+  const cheapestVariant = variants.reduce((a, b) => (effectivePrice(a) <= effectivePrice(b) ? a : b))
+  // รวมสี/ขนาดจากทุก variant ในกลุ่ม ไว้โชว์คร่าวๆ ในการ์ด (เลือกจริงในหน้ารายละเอียด)
+  const colorsUnion = [...new Set(variants.flatMap((v) => v.colors || []))]
+  // หมวดหมู่ที่มีลิสต์ไซซ์มาตรฐาน (เสื้อ) โชว์ครบทุกไซซ์เรียงตามลำดับเดียวกับหน้ารายละเอียด แทนการรวมแบบไม่เรียงลำดับ
+  const sizesUnion = SHOP_SIZES_BY_CATEGORY[primary.category] || dedupeSortSizes(variants.flatMap((v) => v.sizes || []), primary.category)
+  // รวมสต็อกต่อไซซ์จากทุก variant ในกลุ่ม — ไซซ์ไหนรวมแล้ว 0 ให้แสดงจางลง (แต่ยังคงอยู่ ไม่ซ่อน)
+  // ถ้า doc ไหนไม่มี sizeStock (ยังไม่ได้กรอกสต็อกแยกไซซ์) ใช้ลิสต์ "sizes" ที่เปิดขายแทนเป็นสัญญาณหยาบๆ (ไซซ์ที่ไม่อยู่ในนั้นถือว่าไม่มี)
+  const sizeStockUnion = {}
+  let hasSizeStockData = false
+  variants.forEach((v) => {
+    if (v.sizeStock) {
+      hasSizeStockData = true
+      Object.entries(v.sizeStock).forEach(([sz, qty]) => { sizeStockUnion[sz] = (sizeStockUnion[sz] || 0) + (Number(qty) || 0) })
+    } else if (v.sizes?.length) {
+      hasSizeStockData = true
+      v.sizes.forEach((sz) => { sizeStockUnion[sz] = (sizeStockUnion[sz] || 0) + 1 })
+    }
+  })
 
   return ( // ส่วนแสดงผลของการ์ดสินค้า
-    <FadeUp className="shop-card" id={p.id} onClick={() => onOpen(p)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
+    <FadeUp className="shop-card" id={primary.id} onClick={() => onOpen(primary)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
       <div className="shop-img"> {/* ส่วนแสดงรูปภาพของการ์ด */}
-        {img ? <img src={img} alt={p.name} loading="lazy" /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
-        {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" แสดงเมื่อ stock <= 0 */}
+        {img ? <img src={optImg(img, 500)} alt={primary.name} loading="lazy" /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
+        {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" แสดงเมื่อทุก variant หมด */}
+        {!outOfStock && anyDiscount && <span className="shop-badge-discount">-{maxDiscountPercent}%</span>} {/* ป้ายเปอร์เซ็นต์ส่วนลดสูงสุดในกลุ่ม */}
+        {multiVariant && <span className="shop-badge-variants">{variants.length} ตัวเลือก</span>} {/* บอกว่ามีให้เลือกหลายสี/ขนาด */}
         <button className="shop-share" onClick={share} title={t.share} aria-label={t.share}> {/* ปุ่มแชร์ลิงก์สินค้า */}
           {shared ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faLink} />}
         </button>
       </div>
       <div className="shop-body"> {/* ส่วนข้อมูลข้อความของการ์ด */}
-        {p.category && <span className="shop-cat">{p.category}</span>} {/* แท็กหมวดหมู่สินค้า ถ้ามี */}
-        <h4 className="shop-name">{p.name}</h4> {/* ชื่อสินค้า */}
-        {p.price != null && <div className="shop-price">{THB(p.price)}</div>} {/* ราคาสินค้า ถ้ามีการตั้งราคา */}
-        {p.description && <p className="shop-desc">{p.description}</p>} {/* คำอธิบายสินค้า ถ้ามี */}
-        {p.colors?.length > 0 && ( // แสดงแถวสี ถ้าสินค้ามีตัวเลือกสี
-          <div className="shop-meta-row"><span className="shop-meta-label">{t.color}:</span> {p.colors.join(', ')}</div> // รวมรายชื่อสีด้วยจุลภาค
+        {primary.category && <span className="shop-cat">{primary.category}</span>} {/* แท็กหมวดหมู่สินค้า ถ้ามี */}
+        <h4 className="shop-name">{primary.name}</h4> {/* ชื่อสินค้า */}
+        {minPrice != null && ( // ราคาสินค้า — มีส่วนลดจริงโชว์ราคาเต็มขีดฆ่าคู่กับราคาลด (anchoring effect) ราคาต่างกันในกลุ่มให้โชว์ "จาก" ราคาต่ำสุด
+          <div className="shop-price">
+            {hasDiscount(cheapestVariant) && <span className="shop-price-old">{THB(cheapestVariant.price)}</span>}
+            {minPrice !== maxPrice && t.fromPrice + ' '}{THB(minPrice)}
+          </div>
         )}
-        {p.sizes?.length > 0 && ( // แสดงแถวขนาด ถ้าสินค้ามีตัวเลือกขนาด
-          <div className="shop-meta-row"><span className="shop-meta-label">{t.size}:</span> {p.sizes.join(', ')}</div> // รวมรายชื่อขนาดด้วยจุลภาค
+
+        {colorsUnion.length > 0 && ( // แสดงแถวสี ถ้ามีตัวเลือกสี (รวมทุก variant)
+          <div className="shop-meta-row"><span className="shop-meta-label">{t.color}:</span> {colorsUnion.join(', ')}</div>
         )}
-        {p.stock != null && ( // แสดงจำนวนคงเหลือ ถ้ามีการระบุ stock
-          <div className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {p.stock}</div> // เพิ่มคลาส "out" ถ้าสินค้าหมด เพื่อให้ CSS เปลี่ยนสี
+        {sizesUnion.length > 0 && ( // แสดงแถวขนาด ครบทุกไซซ์มาตรฐาน — ไซซ์ไหนหมด (สต็อกรวม 0) แสดงจางลงแทนการซ่อน
+          <div className="shop-meta-row">
+            <span className="shop-meta-label">{t.size}:</span>{' '}
+            {sizesUnion.map((sz, i) => {
+              const dim = hasSizeStockData && (sizeStockUnion[sz] || 0) <= 0
+              return (
+                <span key={sz} style={dim ? { opacity: .4 } : undefined}>
+                  {sz}{i < sizesUnion.length - 1 ? ', ' : ''}
+                </span>
+              )
+            })}
+          </div>
         )}
+        {primary.description && <p className="shop-desc">{primary.description}</p>} {/* คำอธิบายสินค้า ถ้ามี */}
+
+        <div className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {totalStock}</div> {/* รวมสต็อกทุก variant ในกลุ่ม */}
       </div>
     </FadeUp>
-  )
-}
-
-function ProductDetail({ p, t, onClose }) { // หน้าต่างรายละเอียดสินค้าแบบ modal — p คือสินค้าที่เลือก, onClose เรียกเมื่อปิด modal
-  const images = p.images?.length ? p.images : [] // รายการรูปภาพทั้งหมดของสินค้า (ถ้าไม่มีให้เป็น array เปล่า)
-  const [active, setActive] = useState(0) // index ของรูปที่กำลังแสดงอยู่ในแกลเลอรี
-  const outOfStock = (p.stock ?? 0) <= 0 // ตรวจว่าสินค้าหมดสต็อกหรือไม่
-  const lineHref = `${LINE_URL}?text=${encodeURIComponent(t.lineMsg(p.name))}` // ลิงก์เปิด LINE พร้อมข้อความที่กรอกไว้ล่วงหน้า ระบุชื่อสินค้า
-
-  return ( // ส่วนแสดงผลของ modal รายละเอียดสินค้า
-    <div className="shop-modal-backdrop" onClick={onClose}> {/* พื้นหลังมืดครอบทั้งจอ — คลิกพื้นหลังเพื่อปิด modal */}
-      <div className="shop-modal" onClick={(e) => e.stopPropagation()}> {/* กล่อง modal — กันคลิกภายในไม่ให้ทะลุไปปิด modal */}
-        <button className="shop-modal-close" onClick={onClose} aria-label={t.close}>×</button> {/* ปุ่มปิด modal มุมขวาบน */}
-        <div className="shop-modal-body"> {/* เนื้อหา modal แบ่งเป็น 2 คอลัมน์ */}
-          <div className="shop-modal-gallery"> {/* คอลัมน์ซ้าย: แกลเลอรีรูปภาพ */}
-            <div className="shop-modal-main"> {/* รูปหลักที่กำลังแสดง */}
-              {images[active] // ถ้ามีรูปในตำแหน่ง active
-                ? <img src={images[active]} alt={p.name} /> // แสดงรูปนั้น
-                : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* ถ้าไม่มีรูปเลย แสดงไอคอนแทน */}
-              {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" ทับบนรูปหลัก */}
-            </div>
-            {images.length > 1 && ( // แสดงแถวรูปย่อย เฉพาะเมื่อมีรูปมากกว่า 1 รูป
-              <div className="shop-modal-thumbs"> {/* แถวรูปย่อยให้คลิกเปลี่ยนรูปหลัก */}
-                {images.map((img, i) => ( // วนสร้างปุ่มรูปย่อยสำหรับทุกรูป
-                  <button
-                    key={i} // ใช้ index เป็น key เพราะรูปไม่มี id เฉพาะ
-                    className={`shop-modal-thumb ${i === active ? 'active' : ''}`} // ใส่คลาส active ให้รูปที่กำลังเลือกอยู่
-                    onClick={() => setActive(i)} // คลิกแล้วเปลี่ยนรูปหลักไปเป็นรูปนี้
-                  >
-                    <img src={img} alt="" /> {/* รูปย่อย ไม่ต้องมี alt เพราะเป็นภาพตกแต่ง/ตัวเลือก */}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="shop-modal-info"> {/* คอลัมน์ขวา: รายละเอียดสินค้าและปุ่มติดต่อ */}
-            {p.category && <span className="shop-cat">{p.category}</span>} {/* แท็กหมวดหมู่ ถ้ามี */}
-            <h2 className="shop-modal-name">{p.name}</h2> {/* ชื่อสินค้า (ตัวใหญ่) */}
-            {p.price != null && <div className="shop-modal-price">{THB(p.price)}</div>} {/* ราคาสินค้า ถ้ามี */}
-            {p.description && <p className="shop-modal-desc">{p.description}</p>} {/* คำอธิบายสินค้าแบบเต็ม */}
-            {p.colors?.length > 0 && ( // แสดงแถวสี ถ้ามีตัวเลือกสี
-              <div className="shop-meta-row"><span className="shop-meta-label">{t.color}:</span> {p.colors.join(', ')}</div>
-            )}
-            {p.sizes?.length > 0 && ( // แสดงแถวขนาด ถ้ามีตัวเลือกขนาด
-              <div className="shop-meta-row"><span className="shop-meta-label">{t.size}:</span> {p.sizes.join(', ')}</div>
-            )}
-            {p.stock != null && ( // แสดงจำนวนคงเหลือ ถ้ามีการระบุ
-              <div className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {p.stock}</div>
-            )}
-            <a className="shop-interest-btn" href={lineHref} target="_blank" rel="noopener noreferrer"> {/* ปุ่ม "สนใจสินค้า" เปิดแชท LINE แท็บใหม่ */}
-              💬 {t.interested}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -160,29 +140,36 @@ export default function Shop() { // คอมโพเนนต์หลัก�
   const { lang } = useLang() // ภาษาปัจจุบันของผู้ใช้
   const t = T[lang] || T.th // ข้อความแปลภาษาตามภาษาปัจจุบัน ถ้าไม่พบให้ใช้ภาษาไทยเป็นค่าเริ่มต้น
   const { products, loading } = useProducts() // ดึงรายการสินค้าทั้งหมดและสถานะกำลังโหลดจาก Firestore
+  const go = useNavigate() // เปลี่ยนหน้าไปหน้ารายละเอียดสินค้า
 
   const [search, setSearch] = useState('') // ข้อความค้นหาที่ผู้ใช้พิมพ์
   const [category, setCategory] = useState('all') // หมวดหมู่ที่เลือกกรอง (เริ่มต้น = ทั้งหมด)
   const [sort, setSort] = useState('new') // ลำดับการเรียงสินค้า (เริ่มต้น = ใหม่ล่าสุด)
-  const [selected, setSelected] = useState(null) // สินค้าที่ถูกเลือกเพื่อเปิดดูรายละเอียด (null = ไม่ได้เปิด modal)
+  const openDetail = (p) => go('shop-detail', p.productId || p.id) // ไปหน้ารายละเอียดสินค้า (/um-shop/:productId)
+
+  // สินค้าที่แอดมินปิดการแสดงผล (active === false) จะไม่แสดงในหน้าร้านสาธารณะ — สินค้าเก่าที่ไม่มีฟิลด์นี้ถือว่าเปิดอยู่
+  const visibleProducts = useMemo(() => products.filter((p) => p.active !== false), [products])
 
   const categories = useMemo(() => { // คำนวณรายชื่อหมวดหมู่ทั้งหมดที่มีในสินค้า (คำนวณใหม่เมื่อ products เปลี่ยน)
-    const set = new Set(products.map((p) => p.category).filter(Boolean)) // เก็บหมวดหมู่ที่ไม่ซ้ำกัน (ตัดค่าว่าง/undefined ออก)
+    const set = new Set(visibleProducts.map((p) => p.category).filter(Boolean)) // เก็บหมวดหมู่ที่ไม่ซ้ำกัน (ตัดค่าว่าง/undefined ออก)
     return [...set] // แปลง Set เป็น array เพื่อใช้ render
-  }, [products])
+  }, [visibleProducts])
 
-  const filtered = useMemo(() => { // คำนวณรายการสินค้าที่ผ่านการค้นหา/กรอง/เรียงลำดับ (คำนวณใหม่เมื่อ dependency เปลี่ยน)
+  // รวมสินค้าชื่อเดียวกัน (คนละสี/ขนาด คนละ doc) ให้เป็นการ์ดเดียวก่อนกรอง/เรียง
+  const groups = useMemo(() => groupProductsByName(visibleProducts), [visibleProducts])
+
+  const filtered = useMemo(() => { // คำนวณกลุ่มสินค้าที่ผ่านการค้นหา/กรอง/เรียงลำดับ (คำนวณใหม่เมื่อ dependency เปลี่ยน)
     const s = search.trim().toLowerCase() // ข้อความค้นหา ตัดช่องว่างและแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์
-    return products
-      .filter((p) => (category === 'all' ? true : p.category === category)) // กรองตามหมวดหมู่ที่เลือก (ถ้าเลือก "ทั้งหมด" ให้ผ่านทุกตัว)
-      .filter((p) => !s || [p.name, p.description, p.category].some((x) => (x || '').toLowerCase().includes(s))) // กรองตามคำค้นหา จากชื่อ/คำอธิบาย/หมวดหมู่
-      .sort((a, b) => { // เรียงลำดับสินค้าตามตัวเลือกที่ผู้ใช้เลือก
-        if (sort === 'priceAsc') return (a.price || 0) - (b.price || 0) // ราคาน้อยไปมาก
-        if (sort === 'priceDesc') return (b.price || 0) - (a.price || 0) // ราคามากไปน้อย
+    return groups
+      .filter((g) => (category === 'all' ? true : g.primary.category === category)) // กรองตามหมวดหมู่ที่เลือก (ถ้าเลือก "ทั้งหมด" ให้ผ่านทุกตัว)
+      .filter((g) => !s || [g.name, g.primary.description, g.primary.category].some((x) => (x || '').toLowerCase().includes(s))) // กรองตามคำค้นหา จากชื่อ/คำอธิบาย/หมวดหมู่
+      .sort((a, b) => { // เรียงลำดับกลุ่มสินค้าตามตัวเลือกที่ผู้ใช้เลือก
+        if (sort === 'priceAsc') return a.minPrice - b.minPrice // ราคาน้อยไปมาก (ใช้ราคาต่ำสุดในกลุ่ม)
+        if (sort === 'priceDesc') return b.minPrice - a.minPrice // ราคามากไปน้อย (ใช้ราคาต่ำสุดในกลุ่ม)
         if (sort === 'name') return (a.name || '').localeCompare(b.name || '') // เรียงตามชื่อ A-Z
-        return (b.createdAt || 0) - (a.createdAt || 0) // ค่าเริ่มต้น: ใหม่ล่าสุดก่อน (เรียงตามวันที่สร้างจากมากไปน้อย)
+        return (b.primary.createdAt || 0) - (a.primary.createdAt || 0) // ค่าเริ่มต้น: ใหม่ล่าสุดก่อน (เรียงตามวันที่สร้างจากมากไปน้อย)
       })
-  }, [products, search, category, sort])
+  }, [groups, search, category, sort])
 
   return ( // ส่วนแสดงผลของหน้า Shop ทั้งหมด
     <main className="page"> {/* คอนเทนเนอร์หลักของหน้า */}
@@ -217,6 +204,9 @@ export default function Shop() { // คอมโพเนนต์หลัก�
               <option value="priceDesc">{t.sortPriceDesc}</option> {/* เรียงราคาสูงไปต่ำ */}
               <option value="name">{t.sortName}</option> {/* เรียงตามชื่อ A-Z */}
             </select>
+            <button type="button" className="shop-myorders-btn" onClick={() => go('shop-my-orders')}>
+              📦 คำสั่งซื้อของฉัน
+            </button>
           </div>
 
           {!loading && filtered.length === 0 && ( // ถ้าโหลดเสร็จแล้วและไม่มีสินค้าที่ตรงตามเงื่อนไข ให้แสดงข้อความว่างเปล่า
@@ -224,12 +214,10 @@ export default function Shop() { // คอมโพเนนต์หลัก�
           )}
 
           <div className="shop-grid"> {/* ตะแกรงแสดงการ์ดสินค้าทั้งหมด */}
-            {filtered.map((p) => <ProductCard key={p.id} p={p} t={t} onOpen={setSelected} />)} {/* แสดงการ์ดสินค้าทุกตัวที่ผ่านการกรอง คลิกแล้วตั้ง selected เพื่อเปิด modal */}
+            {filtered.map((g) => <ProductCard key={g.key} g={g} t={t} onOpen={openDetail} />)} {/* แสดงการ์ดกลุ่มสินค้าทุกกลุ่มที่ผ่านการกรอง คลิกแล้วไปหน้ารายละเอียด */}
           </div>
         </div>
       </section>
-
-      {selected && <ProductDetail p={selected} t={t} onClose={() => setSelected(null)} />} {/* แสดง modal รายละเอียดสินค้า เมื่อมีสินค้าถูกเลือก */}
 
       <Footer /> {/* ส่วนท้ายหน้า */}
     </main>

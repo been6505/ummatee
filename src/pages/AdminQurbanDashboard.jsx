@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
@@ -84,7 +85,7 @@ export default function AdminQurbanDashboard() {
 
   const countryData = COUNTRIES.map((c) => ({ label: c.n, value: c.v }))
 
-  return (
+  return (<VolunteerGuard>
     <main className={`admin-dash admin-qurban ${full ? 'admin-full' : ''}`}>
       <AdminNav />
       <div className="admin-wrap">
@@ -208,5 +209,5 @@ export default function AdminQurbanDashboard() {
 
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

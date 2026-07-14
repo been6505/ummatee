@@ -2,12 +2,12 @@
 // ของผู้มาร่วมงาน แล้ว mark checkedIn ใน Firestore (เฉพาะแอดมิน)
 import { useEffect, useRef, useState } from 'react'
 import { db } from '../firebase.js'
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, runTransaction } from 'firebase/firestore'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import jsQR from 'jsqr'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faTriangleExclamation, faCamera, faMosque } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faTriangleExclamation, faCamera, faMosque, faGift } from '@fortawesome/free-solid-svg-icons'
 
 // เสียงบี๊บสั้นสังเคราะห์ด้วย Web Audio API (ไม่ต้องโหลดไฟล์เสียง)
 function beep(type = 'ok') {
@@ -35,7 +35,7 @@ function beep(type = 'ok') {
   } catch (_) {}
 }
 
-export default function AdminRegisterEvent() {
+export default function AdminQRcode() {
   const { user, loading } = useAdminAuth()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -44,6 +44,8 @@ export default function AdminRegisterEvent() {
   const lastRef = useRef('')
   const busyRef = useRef(false)
 
+  const [mode, setMode] = useState('iftar') // 'iftar' | 'give'
+  const modeRef = useRef('iftar') // ให้ loop สแกน (tick) อ่านค่า mode ล่าสุดเสมอ ไม่ค้างค่าเก่าใน closure
   const [scanning, setScanning] = useState(false)
   const [camError, setCamError] = useState('')
   const [result, setResult] = useState(null) // { status, ref, reg }
@@ -75,16 +77,22 @@ export default function AdminRegisterEvent() {
         setResult({ status: 'notfound', ref })
         beep('err')
       } else {
-        const d = snap.docs[0]
-        const reg = { id: d.id, ...d.data() }
-        if (reg.checkedIn) {
+        const docRef = doc(db, 'iftarRegs', snap.docs[0].id)
+        // อ่าน+เช็ค checkedIn+เขียนใน transaction เดียวกัน กันสองเครื่องสแกน QR เดียวกันพร้อมกัน
+        // ที่หน้างาน (หลายจุดเช็คอิน) จนทั้งคู่เห็น checkedIn:false ก่อนใครเขียนเสร็จแล้วเช็คอินซ้ำ
+        let reg, already
+        await runTransaction(db, async (tx) => {
+          const fresh = await tx.get(docRef)
+          reg = { id: fresh.id, ...fresh.data() }
+          already = !!reg.checkedIn
+          if (!already) {
+            tx.update(docRef, { checkedIn: true, checkedInAt: new Date().toLocaleString('th-TH') })
+          }
+        })
+        if (already) {
           setResult({ status: 'already', ref, reg })
           beep('err')
         } else {
-          await updateDoc(doc(db, 'iftarRegs', d.id), {
-            checkedIn: true,
-            checkedInAt: new Date().toLocaleString('th-TH'),
-          })
           setResult({ status: 'ok', ref, reg })
           setCount((c) => c + 1)
           addToRecent(reg, ref)
@@ -98,6 +106,74 @@ export default function AdminRegisterEvent() {
     } catch (e) {
       setResult({ status: 'error', ref, msg: e.message })
       beep('err')
+    } finally {
+      busyRef.current = false
+      setTimeout(() => { lastRef.current = '' }, 3000)
+    }
+  }
+
+  // ค้นหา refCode ใน give2Regs/give2CookRegs หรือ RCV-{id} ใน giveReceiveRegs แล้ว mark delivered/received
+  const checkInGive = async (val) => {
+    if (!val || busyRef.current) return
+    busyRef.current = true
+    setResult({ status: 'loading', ref: val })
+    try {
+      // Receiver QR: "RCV-{firestoreId}"
+      if (val.startsWith('RCV-')) {
+        const id = val.slice(4)
+        const docRef = doc(db, 'giveReceiveRegs', id)
+        let reg, already, notfound
+        await runTransaction(db, async (tx) => {
+          const fresh = await tx.get(docRef)
+          if (!fresh.exists()) { notfound = true; return }
+          reg = { id: fresh.id, ...fresh.data() }
+          already = !!reg.received
+          if (!already) tx.update(docRef, { received: true, receivedAt: new Date().toLocaleString('th-TH') })
+        })
+        if (notfound) {
+          setResult({ status: 'notfound', ref: val }); beep('err')
+        } else if (already) {
+          setResult({ status: 'already', ref: val, reg }); beep('err')
+        } else {
+          setResult({ status: 'ok', ref: val, reg })
+          setCount((c) => c + 1)
+          addToRecent(reg, val)
+          beep('ok')
+          if (navigator.vibrate) navigator.vibrate(120)
+        }
+      } else {
+        // Donor QR: refCode in give2Regs or give2CookRegs
+        const [snap1, snap2] = await Promise.all([
+          getDocs(query(collection(db, 'give2Regs'), where('refCode', '==', val))),
+          getDocs(query(collection(db, 'give2CookRegs'), where('refCode', '==', val))),
+        ])
+        const hit = !snap1.empty ? snap1.docs[0] : !snap2.empty ? snap2.docs[0] : null
+        const colName = !snap1.empty ? 'give2Regs' : 'give2CookRegs'
+        if (!hit) {
+          setResult({ status: 'notfound', ref: val }); beep('err')
+        } else {
+          const docRef = doc(db, colName, hit.id)
+          // อ่าน+เช็ค delivered+เขียนใน transaction เดียวกัน กันสองเครื่องสแกน QR เดียวกันพร้อมกัน
+          let reg, already
+          await runTransaction(db, async (tx) => {
+            const fresh = await tx.get(docRef)
+            reg = { id: fresh.id, ...fresh.data() }
+            already = !!reg.delivered
+            if (!already) tx.update(docRef, { delivered: true, deliveredAt: new Date().toLocaleString('th-TH') })
+          })
+          if (already) {
+            setResult({ status: 'already', ref: val, reg }); beep('err')
+          } else {
+            setResult({ status: 'ok', ref: val, reg })
+            setCount((c) => c + 1)
+            addToRecent(reg, val)
+            beep('ok')
+            if (navigator.vibrate) navigator.vibrate(120)
+          }
+        }
+      }
+    } catch (e) {
+      setResult({ status: 'error', ref: val, msg: e.message }); beep('err')
     } finally {
       busyRef.current = false
       setTimeout(() => { lastRef.current = '' }, 3000)
@@ -118,7 +194,8 @@ export default function AdminRegisterEvent() {
         const val = code.data.trim()
         if (val && val !== lastRef.current) {
           lastRef.current = val
-          checkIn(val)
+          if (modeRef.current === 'give') checkInGive(val)
+          else checkIn(val)
         }
       }
     }
@@ -169,10 +246,20 @@ export default function AdminRegisterEvent() {
   if (!user) return <AdminLogin />
 
   const R = result
+  const isGive = mode === 'give'
+  const alreadyLabel = isGive
+    ? (R?.ref?.startsWith('RCV-') ? 'รับมอบไปแล้ว' : 'ส่งมอบไปแล้ว')
+    : 'เช็คอินไปแล้ว'
+  const alreadyAt = isGive
+    ? (R?.reg?.receivedAt || R?.reg?.deliveredAt || '-')
+    : (R?.reg?.checkedInAt || '-')
+  const okLabel = isGive
+    ? (R?.ref?.startsWith('RCV-') ? 'บันทึกรับมอบสำเร็จ' : 'บันทึกส่งมอบสำเร็จ')
+    : 'เช็คอินสำเร็จ'
   const statusCard = R && {
     loading: { cls: 'rc-load', icon: '⏳', title: 'กำลังตรวจสอบ...', sub: R.ref },
-    ok: { cls: 'rc-ok', icon: <FontAwesomeIcon icon={faCheck} />, title: 'เช็คอินสำเร็จ', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · ${R.ref}` : R.ref },
-    already: { cls: 'rc-warn', icon: <FontAwesomeIcon icon={faTriangleExclamation} />, title: 'เช็คอินไปแล้ว', sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · เมื่อ ${R.reg.checkedInAt || '-'}` : R.ref },
+    ok: { cls: 'rc-ok', icon: <FontAwesomeIcon icon={faCheck} />, title: okLabel, sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · ${R.ref}` : R.ref },
+    already: { cls: 'rc-warn', icon: <FontAwesomeIcon icon={faTriangleExclamation} />, title: alreadyLabel, sub: R.reg ? `${R.reg.fname} ${R.reg.lname} · เมื่อ ${alreadyAt}` : R.ref },
     notfound: { cls: 'rc-err', icon: '✕', title: 'ไม่พบรหัสนี้', sub: R.ref },
     error: { cls: 'rc-err', icon: '✕', title: 'เกิดข้อผิดพลาด', sub: R.msg },
   }[R.status]
@@ -195,10 +282,25 @@ export default function AdminRegisterEvent() {
       <header className="scan-head">
         <div>
           <h1><FontAwesomeIcon icon={faCamera} /> เช็คอินหน้างาน</h1>
-          <p>Iftar For Gaza — สแกน QR ของผู้มาร่วมงาน</p>
+          <p>{mode === 'give' ? 'ส่งต่อของ — สแกน QR ผู้บริจาค/ผู้รับ' : 'Iftar For Gaza — สแกน QR ของผู้มาร่วมงาน'}</p>
         </div>
-        <div className="scan-count"><b>{count}</b><span>เช็คอินรอบนี้</span></div>
+        <div className="scan-count"><b>{count}</b><span>{mode === 'give' ? 'รอบนี้' : 'เช็คอินรอบนี้'}</span></div>
       </header>
+
+      <div style={{ display: 'flex', gap: 8, padding: '0 16px 12px', justifyContent: 'center' }}>
+        <button
+          onClick={() => { setMode('iftar'); modeRef.current = 'iftar'; lastRef.current = ''; setResult(null); setCount(0) }}
+          style={{ flex: 1, maxWidth: 180, padding: '8px 16px', borderRadius: 99, border: 'none', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer', background: mode === 'iftar' ? '#15803d' : '#e5e7eb', color: mode === 'iftar' ? '#fff' : '#374151' }}
+        >
+          <FontAwesomeIcon icon={faMosque} /> Iftar Check-in
+        </button>
+        <button
+          onClick={() => { setMode('give'); modeRef.current = 'give'; lastRef.current = ''; setResult(null); setCount(0) }}
+          style={{ flex: 1, maxWidth: 180, padding: '8px 16px', borderRadius: 99, border: 'none', fontWeight: 700, fontSize: '.85rem', cursor: 'pointer', background: mode === 'give' ? '#7c3aed' : '#e5e7eb', color: mode === 'give' ? '#fff' : '#374151' }}
+        >
+          <FontAwesomeIcon icon={faGift} /> ส่งต่อของ
+        </button>
+      </div>
 
       <div className="scan-stage">
         <video ref={videoRef} className="scan-video" muted playsInline />
@@ -225,13 +327,13 @@ export default function AdminRegisterEvent() {
       <div className="scan-manual">
         <input
           className="scan-input"
-          placeholder="หรือพิมพ์รหัส IFG เอง..."
+          placeholder={mode === 'give' ? 'พิมพ์ refCode ผู้บริจาค หรือ RCV-{id} ผู้รับ...' : 'หรือพิมพ์รหัส IFG เอง...'}
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && manual.trim()) { checkIn(manual.trim()); setManual('') } }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && manual.trim()) { const fn = mode === 'give' ? checkInGive : checkIn; fn(manual.trim()); setManual('') } }}
         />
-        <button className="scan-manual-btn" onClick={() => { if (manual.trim()) { checkIn(manual.trim()); setManual('') } }}>
-          เช็คอิน
+        <button className="scan-manual-btn" onClick={() => { if (manual.trim()) { const fn = mode === 'give' ? checkInGive : checkIn; fn(manual.trim()); setManual('') } }}>
+          {mode === 'give' ? 'ยืนยัน' : 'เช็คอิน'}
         </button>
       </div>
 

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useFinancialData, saveFinancialData, DEFAULT_FINANCIAL } from '../data/financialData.js'
 import { DonutChart } from '../components/AdminCharts.jsx'
 import { ACCOUNTS } from '../data/accounts.js'
+import ScreenCaptureOCR from '../components/ScreenCaptureOCR.jsx'
 
 // ชื่อธนาคารคงที่สำหรับทุกบัญชีของมูลนิธิ (ibank)
 const BANK_NAME = 'ธนาคารอิสลามแห่งประเทศไทย (ibank)'
@@ -18,6 +20,7 @@ export default function AdminFinancialDashboard() {
   const { data, loading: dataLoading } = useFinancialData()
   const [form, setForm] = useState(DEFAULT_FINANCIAL)
   const [status, setStatus] = useState('')
+  const [prevAmount, setPrevAmount] = useState(0)
 
   useEffect(() => {
     if (!dataLoading) setForm(data)
@@ -52,13 +55,15 @@ export default function AdminFinancialDashboard() {
     { label: 'รอความช่วยเหลือ', value: helpRemaining },
   ]
 
-  const save = async () => {
+  // บันทึกลง Firestore — ใช้ร่วมกันทั้งปุ่ม "บันทึก" และ auto-save จาก OCR Realtime
+  // ส่ง raisedOverride เมื่อต้องการบันทึกยอดใหม่ทันที (ไม่ต้องรอ state form.raised อัปเดต)
+  const persist = async (raisedOverride) => {
     setStatus('กำลังบันทึก...')
     try {
       await saveFinancialData({
         poor: Number(form.poor) || 0,
         perPerson: Number(form.perPerson) || 0,
-        raised: Number(form.raised) || 0,
+        raised: Number(raisedOverride ?? form.raised) || 0,
         account: form.account,
       })
       setStatus('บันทึกสำเร็จ ✓')
@@ -68,7 +73,9 @@ export default function AdminFinancialDashboard() {
     }
   }
 
-  return (
+  const save = () => persist()
+
+  return (<VolunteerGuard>
     <main className="admin-dash">
       <AdminNav />
       <div className="admin-wrap">
@@ -104,6 +111,39 @@ export default function AdminFinancialDashboard() {
           </div>
         </div>
 
+
+        <div className="admin-card" style={{ marginBottom: 24 }}>
+          <h4>💰 ยอดเงินเก่า (สำหรับหักลบ)</h4>
+          <p style={{ fontSize: 13, opacity: 0.7, margin: '0 0 12px' }}>
+            ใส่ยอดเงินเก่าไว้ — เมื่อ OCR อ่านยอดใหม่จากจอ ระบบจะคำนวณ <b>ยอดใหม่ − ยอดเก่า</b> แล้วใส่เป็นยอดบริจาคให้อัตโนมัติ
+          </p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ flex: 1, minWidth: 200 }}>ยอดเงินเก่า (บาท)
+              <input type="number" min="0" value={prevAmount} onChange={(e) => setPrevAmount(Number(e.target.value) || 0)} />
+            </label>
+            <div style={{ fontSize: 14, opacity: 0.7, paddingTop: 20 }}>
+              ยอดปัจจุบัน: <b>{fmt(raised)}</b> บาท
+              {prevAmount > 0 && <> · เก่า: <b>{fmt(prevAmount)}</b> บาท</>}
+            </div>
+          </div>
+          {prevAmount > 0 && (
+            <div style={{ marginTop: 8, fontSize: 13, color: '#2E7D52' }}>
+              ✓ เมื่อ OCR อ่านยอดใหม่ ระบบจะคำนวณ: ยอดจากจอ − {fmt(prevAmount)} = ยอดบริจาค
+            </div>
+          )}
+        </div>
+
+        <ScreenCaptureOCR
+          onExtracted={(amt) => {
+            const final = prevAmount > 0 ? Math.max(amt - prevAmount, 0) : amt
+            setNum('raised', final)
+          }}
+          onAutoSave={async (amt) => {
+            const final = prevAmount > 0 ? Math.max(amt - prevAmount, 0) : amt
+            setNum('raised', final)
+            await persist(final)
+          }}
+        />
 
         <div className="admin-card" style={{ marginBottom: 24 }}>
           <h4>ข้อมูลการช่วยเหลือ</h4>
@@ -154,5 +194,5 @@ export default function AdminFinancialDashboard() {
         </div>
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

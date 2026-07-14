@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -25,7 +25,24 @@ export default function Nav({ scrolled }) {
   const t = T[lang]
   const [open, setOpen] = useState(false)
   const [langOpen, setLangOpen] = useState(false)
+  const [navVis, setNavVis] = useState(null) // null = ยังไม่โหลด (แสดงทุกรายการไปก่อนกันเมนูกระพริบหาย) — key ไหนเป็น false = ซ่อน
   const close = () => setOpen(false)
+  const show = (key) => navVis?.[key] !== false
+
+  // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก (Nav โหลดทันทีไม่ lazy)
+  useEffect(() => {
+    let unsub = () => {}
+    let cancelled = false
+    Promise.all([import('../firebase.js'), import('firebase/firestore')])
+      .then(([{ db }, { doc, onSnapshot }]) => {
+        if (cancelled) return
+        unsub = onSnapshot(doc(db, 'config', 'navVisibility'), (d) => {
+          setNavVis(d.exists() ? d.data() : {})
+        }, () => {})
+      })
+      .catch(() => {})
+    return () => { cancelled = true; unsub() }
+  }, [])
   // คลิกลิงก์: กัน reload หน้า แล้วใช้ go() เปลี่ยนหน้าแบบ SPA (ปิด drawer ด้วยถ้าระบุ)
   const link = (e, p, alsoClose) => {
     e.preventDefault()
@@ -46,13 +63,13 @@ export default function Nav({ scrolled }) {
         </a>
         <ul className="nav-links">
           <li><a href="#" onClick={(e) => link(e, 'home')}>{t.home}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'missions')}><FontAwesomeIcon icon={faEarthAsia} /> {t.missions}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'shop')}><FontAwesomeIcon icon={faStore} /> {t.shop}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><FontAwesomeIcon icon={faFlag} /> {t.iftar}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'give')} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a></li>
-          <li><a href="#" onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a></li>
+          {show('donation') && <li><a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>}
+          {show('missions') && <li><a href="#" onClick={(e) => link(e, 'missions')}><FontAwesomeIcon icon={faEarthAsia} /> {t.missions}</a></li>}
+          {show('qurban') && <li><a href="#" onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a></li>}
+          {show('shop') && <li><a href="#" onClick={(e) => link(e, 'shop')}><FontAwesomeIcon icon={faStore} /> {t.shop}</a></li>}
+          {show('iftar') && <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><FontAwesomeIcon icon={faFlag} /> {t.iftar}</a></li>}
+          {show('give') && <li><a href="#" onClick={(e) => link(e, 'give')} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a></li>}
+          {show('volunteer') && <li><a href="#" onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a></li>}
         </ul>
         <div className="nav-right">
           <div className="lang-switch">
@@ -81,14 +98,14 @@ export default function Nav({ scrolled }) {
       <div className={`nav-drawer ${open ? 'open' : ''}`}>
         <button className="drawer-close" onClick={close} aria-label="close">×</button>
         <a href="#" onClick={(e) => link(e, 'home', true)}>{t.dHome}</a>
-        <a href="#" onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>
-        <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"><FontAwesomeIcon icon={faFlag} /> {t.dIftar}</a>
-        <a href="#" onClick={(e) => link(e, 'give', true)} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.dGive}</a>
-        <a href="#" onClick={(e) => link(e, 'volunteer', true)}><FontAwesomeIcon icon={faHandSparkles} /> {t.dVolunteer}</a>
-        <a href="#" onClick={(e) => link(e, 'missions', true)}><FontAwesomeIcon icon={faEarthAsia} /> {t.dMissions}</a>
-        <a href="#" onClick={(e) => link(e, 'qurban', true)}><FontAwesomeIcon icon={faCow} /> {t.dQurban}</a>
-        <a href="#" onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>
-        
+        {show('donation') && <a href="#" onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>}
+        {show('iftar') && <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"><FontAwesomeIcon icon={faFlag} /> {t.dIftar}</a>}
+        {show('give') && <a href="#" onClick={(e) => link(e, 'give', true)} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.dGive}</a>}
+        {show('volunteer') && <a href="#" onClick={(e) => link(e, 'volunteer', true)}><FontAwesomeIcon icon={faHandSparkles} /> {t.dVolunteer}</a>}
+        {show('missions') && <a href="#" onClick={(e) => link(e, 'missions', true)}><FontAwesomeIcon icon={faEarthAsia} /> {t.dMissions}</a>}
+        {show('qurban') && <a href="#" onClick={(e) => link(e, 'qurban', true)}><FontAwesomeIcon icon={faCow} /> {t.dQurban}</a>}
+        {show('shop') && <a href="#" onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>}
+
       </div>
     </>
   )

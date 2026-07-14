@@ -20,20 +20,22 @@ const T = {
 
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
+// คืน Promise<boolean> ว่าคัดลอกสำเร็จจริงหรือไม่ — ผู้เรียกต้องเช็คก่อนแสดงว่า "คัดลอกแล้ว"
 function copyToClipboard(text) {
   const clean = String(text).replace(/\s/g, '')
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(clean).catch(() => fallbackCopy(clean))
-  } else {
-    fallbackCopy(clean)
+    return navigator.clipboard.writeText(clean).then(() => true).catch(() => fallbackCopy(clean))
   }
+  return Promise.resolve(fallbackCopy(clean))
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea')
   ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
   document.body.appendChild(ta); ta.select()
-  try { document.execCommand('copy') } catch (e) { /* noop */ }
+  let ok = false
+  try { ok = document.execCommand('copy') } catch (e) { /* noop */ }
   document.body.removeChild(ta)
+  return ok
 }
 
 function MissionCarousel({ items, name, accent }) {
@@ -82,9 +84,11 @@ function MissionCard({ m, media, lang, t }) {
   const items = media || []
   const onCopy = () => {
     if (!acc) return
-    copyToClipboard(acc.raw)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1800)
+    copyToClipboard(acc.raw).then((ok) => {
+      if (!ok) return
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
   }
   return (
     <FadeUp className="mission-card">

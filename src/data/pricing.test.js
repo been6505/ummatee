@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyPromotion, hasDiscount, effectivePrice, discountPercent } from './pricing.js'
+import { applyPromotion, hasDiscount, effectivePrice, discountPercent, groupProductsByName, dedupeSortSizes } from './pricing.js'
 
 // เทสต์ logic เงินทั้งหมดของ Um Shop — กันพังเงียบๆ เวลาแก้โค้ด
 // รัน: npm test
@@ -71,5 +71,70 @@ describe('การคิดยอดออเดอร์ (ตรรกะเ�
       { price: 99.99, qty: 2 },
     ])
     expect(total).toBe(214.6 + 199.98 + 50)
+  })
+})
+
+describe('groupProductsByName — รวมสินค้าชื่อเดียวกัน (คนละสี = คนละ doc) เป็นกลุ่มเดียว', () => {
+  const products = [
+    { id: 'a', name: 'เสื้อ um', price: 250, discountPrice: 225, stock: 10, createdAt: 2 },
+    { id: 'b', name: 'เสื้อ um', price: 250, stock: 5, createdAt: 1 },
+    { id: 'c', name: 'กระเป๋า', price: 379, stock: 47, createdAt: 3 },
+  ]
+
+  it('รวมชื่อเดียวกันเป็นกลุ่มเดียว และเรียง variant ตาม createdAt', () => {
+    const groups = groupProductsByName(products)
+    expect(groups).toHaveLength(2)
+    const shirt = groups.find((g) => g.name === 'เสื้อ um')
+    expect(shirt.variants.map((v) => v.id)).toEqual(['b', 'a']) // createdAt 1 มาก่อน
+    expect(shirt.primary.id).toBe('b')
+  })
+
+  it('totalStock / minPrice / maxPrice / anyDiscount ถูกต้อง', () => {
+    const shirt = groupProductsByName(products).find((g) => g.name === 'เสื้อ um')
+    expect(shirt.totalStock).toBe(15)
+    expect(shirt.minPrice).toBe(225) // ราคาหลังส่วนลดของ doc a
+    expect(shirt.maxPrice).toBe(250)
+    expect(shirt.anyDiscount).toBe(true)
+  })
+
+  it('ชื่อว่าง ใช้ id เป็น key — ไม่ถูกจับกลุ่มรวมกันมั่ว', () => {
+    const groups = groupProductsByName([
+      { id: 'x', name: '', price: 10, stock: 1 },
+      { id: 'y', name: '', price: 20, stock: 1 },
+    ])
+    expect(groups).toHaveLength(2)
+  })
+
+  it('stock ไม่ใช่ตัวเลข ไม่ทำให้ totalStock เป็น NaN', () => {
+    const groups = groupProductsByName([
+      { id: 'x', name: 'ของ', price: 10, stock: 'เยอะ' },
+      { id: 'y', name: 'ของ', price: 10, stock: 3 },
+    ])
+    expect(groups[0].totalStock).toBe(3)
+  })
+})
+
+describe('dedupeSortSizes — ตัดไซซ์ซ้ำ + เรียงตามลำดับมาตรฐานของหมวดหมู่', () => {
+  it('หมวดเสื้อ: เรียง S,M,L,XL,... เสมอ ไม่ว่าบันทึกมาลำดับไหน', () => {
+    expect(dedupeSortSizes(['XL', 'S', '2XL', 'M', 'L'], 'เสื้อ')).toEqual(['S', 'M', 'L', 'XL', '2XL'])
+  })
+
+  it('ตัดค่าซ้ำ + ตัดช่องว่างรอบข้าง', () => {
+    expect(dedupeSortSizes(['S', ' S ', 'M', 'M'], 'เสื้อ')).toEqual(['S', 'M'])
+  })
+
+  it('ไซซ์แปลกที่ไม่อยู่ในลิสต์มาตรฐาน ต่อท้ายไม่หาย', () => {
+    const out = dedupeSortSizes(['พิเศษ', 'S'], 'เสื้อ')
+    expect(out[0]).toBe('S')
+    expect(out).toContain('พิเศษ')
+  })
+
+  it('หมวดที่ไม่มีลิสต์มาตรฐาน — แค่ตัดซ้ำ ไม่เรียงใหม่', () => {
+    expect(dedupeSortSizes(['500ml', '350ml', '500ml'], 'กระบอกน้ำ')).toEqual(['500ml', '350ml'])
+  })
+
+  it('ไม่มีข้อมูล — คืน array ว่าง ไม่ crash', () => {
+    expect(dedupeSortSizes(undefined, undefined)).toEqual([])
+    expect(dedupeSortSizes([], 'เสื้อ')).toEqual([])
   })
 })

@@ -28,9 +28,15 @@ export function addToCart(product, qty = 1, variant = {}) {
   const size = variant.size || ''
   const lineId = [product.id, color, size].join('|')
   const existing = items.find((i) => i.id === lineId)
-  const maxQty = Number.isFinite(product.stock) ? product.stock : Infinity
+  // สินค้าที่มีสต็อกแยกต่อไซซ์ ใช้จำนวนของไซซ์ที่เลือกเป็นเพดาน — ไม่ใช่สต็อกรวมทุกไซซ์
+  // (ไม่งั้นเลือกไซซ์ S ที่เหลือ 2 แต่กด + ได้ถึงสต็อกรวม แล้วไปพังตอนเช็คเอาท์แทน)
+  const lineStock = (product.sizeStock && size)
+    ? (Number(product.sizeStock[size]) || 0)
+    : (Number.isFinite(product.stock) ? product.stock : null)
+  const maxQty = lineStock ?? Infinity
   if (existing) {
     existing.qty = Math.min(existing.qty + qty, maxQty)
+    existing.stock = lineStock // อัปเดตเพดานล่าสุด เผื่อสต็อกเปลี่ยนตั้งแต่หยิบครั้งแรก
   } else {
     items.push({
       id: lineId,
@@ -42,7 +48,7 @@ export function addToCart(product, qty = 1, variant = {}) {
       // สี/ขนาดที่ลูกค้าเลือก — แสดงในตะกร้า/สรุป/ออเดอร์ (ฟิลด์ชื่อเดิม colors/sizes เพื่อให้หน้าแสดงผลเดิมใช้ได้)
       colors: color,
       sizes: size,
-      stock: Number.isFinite(product.stock) ? product.stock : null, // เก็บไว้ให้หน้าตะกร้า cap จำนวนตอนกด +
+      stock: lineStock, // เพดานจำนวนของรายการนี้ (ต่อไซซ์ถ้ามี) — หน้าตะกร้าใช้ cap ตอนกด +
       qty: Math.min(qty, maxQty),
     })
   }

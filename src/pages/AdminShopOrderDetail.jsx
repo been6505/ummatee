@@ -8,6 +8,7 @@ import {
   uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, confirmDelivered, setTrackingNumber,
   addDeliveredImages,
 } from '../data/orders.js'
+import { useProducts, effectivePrice } from '../data/shop.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { notifyLineOrderStatus } from '../utils/lineNotify.js'
 import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard } from '../components/OrderShared.jsx'
@@ -27,6 +28,19 @@ const SHIP_STATUS_PRESETS = [
 export default function AdminShopOrderDetail({ orderId }) {
   const { user, loading: authLoading } = useAdminAuth()
   const { order, loading, error } = useOrder(orderId)
+  const { products } = useProducts()
+
+  // ราคาต่อชิ้นในออเดอร์มาจากฝั่งลูกค้า (client) — เทียบกับราคาสินค้าปัจจุบัน ถ้าไม่ตรงให้เตือนแอดมินก่อนยืนยันรับเงิน
+  // (ราคาอาจต่างเพราะแอดมินเพิ่งแก้ราคา/โปรฯ หลังลูกค้าสั่ง — ไม่ใช่การโกงเสมอไป แต่ควรเช็คยอดโอนกับราคาที่ถูกต้อง)
+  const priceMismatches = (order?.items || []).flatMap((it) => {
+    const p = products.find((x) => x.id === (it.productDocId || it.id))
+    if (!p) return []
+    const current = effectivePrice(p)
+    if (current > 0 && Number(it.price) !== current) {
+      return [{ name: it.name || it.productId, orderPrice: Number(it.price), currentPrice: current }]
+    }
+    return []
+  })
 
   const [uploadingProof, setUploadingProof] = useState(false)
   const [uploadingPacked, setUploadingPacked] = useState(false)
@@ -164,6 +178,17 @@ export default function AdminShopOrderDetail({ orderId }) {
             {actionStatus && (
               <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: '.88rem' }}>
                 {actionStatus}
+              </div>
+            )}
+
+            {priceMismatches.length > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: '.88rem' }}>
+                <strong>⚠️ ราคาในออเดอร์ไม่ตรงกับราคาสินค้าปัจจุบัน</strong> — ตรวจยอดโอนให้ดีก่อนยืนยันรับเงิน
+                <ul style={{ margin: '6px 0 0 18px' }}>
+                  {priceMismatches.map((m, i) => (
+                    <li key={i}>{m.name}: ในออเดอร์ ฿{m.orderPrice.toLocaleString('th-TH')} / ราคาปัจจุบัน ฿{m.currentPrice.toLocaleString('th-TH')}</li>
+                  ))}
+                </ul>
               </div>
             )}
 

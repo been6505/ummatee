@@ -125,6 +125,7 @@ export default function AdminShop() {
 
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
+  const [origStock, setOrigStock] = useState(null) // snapshot สต็อกตอนเปิดฟอร์มแก้ไข — ใช้เช็คว่าแอดมินแตะสต็อกไหม
   const [status, setStatus] = useState('')
   const [uploading, setUploading] = useState(false)
 
@@ -242,9 +243,12 @@ export default function AdminShop() {
       images: p.images || [],
       promoId: '',
     })
+    // จำค่าสต็อกตอนเปิดฟอร์ม — ถ้าแอดมินไม่ได้แก้ จะไม่เขียนทับตอนบันทึก
+    // (กันเคสเปิดฟอร์มค้างไว้ → ลูกค้าสั่งซื้อ (สต็อกโดนตัดแล้ว) → แอดมินกดบันทึก → สต็อกเด้งกลับค่าเก่า)
+    setOrigStock({ stock: p.stock ?? '', sizeStock: JSON.stringify(p.sizeStock || {}) })
     setStatus('')
   }
-  const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
+  const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM); setOrigStock(null) }
 
   const save = async () => {
     if (!form.name.trim()) { setStatus('กรุณากรอกชื่อสินค้า'); return }
@@ -274,6 +278,14 @@ export default function AdminShop() {
       if (form.promoId) {
         const promo = promotions.find((p) => p.id === form.promoId)
         if (promo) payload.discountPrice = applyPromotion(priceNum, promo)
+      }
+      // แก้ไขสินค้าเดิมโดยไม่ได้แตะสต็อกเลย → ไม่เขียนฟิลด์สต็อกทับ กันชนกับออเดอร์ที่ตัดสต็อกไประหว่างเปิดฟอร์มค้างไว้
+      if (editId && origStock
+          && String(form.stock) === String(origStock.stock)
+          && JSON.stringify(sizeStockClean ?? {}) === (hasSizeStock ? origStock.sizeStock : JSON.stringify({}))) {
+        delete payload.stock
+        delete payload.sizeStock
+        if (hasSizeStock) delete payload.sizes // sizes ของเสื้อคำนวณจาก sizeStock — ไม่แตะ sizeStock ก็ไม่แตะ sizes
       }
       if (editId) await updateProduct(editId, payload)
       else await addProduct(payload)

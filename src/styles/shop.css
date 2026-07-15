@@ -15,7 +15,7 @@
 .admin-form-grid textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;resize:vertical}
 .admin-shop-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover}
 .admin-shop-top-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;margin-bottom:24px}
-@media(max-width:860px){.admin-shop-top-grid{grid-template-columns:1fr}}
+@media (max-width:860px){.admin-shop-top-grid{grid-template-columns:1fr}}
 .shop-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:28px}
 .shop-search{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
 .shop-search:focus{outline:2px solid var(--green-mid);border-color:transparent}
@@ -149,14 +149,14 @@
 .uc-account-ic{margin-right:4px}
 .uc-footer{display:flex;flex-wrap:wrap;gap:clamp(12px,1.6vw,24px);justify-content:center;align-items:center;background:var(--green-deep);color:#fff;padding:14px 24px;font-size:clamp(.82rem,.95vw,.95rem);font-weight:600;text-align:center}
 /* แท็บเล็ตแนวนอน / จอเล็ก: ลดคอลัมน์ stat เป็น 3 และ bottom เป็น 1 */
-@media (max-width: 1100px){
+@media (max-width:1100px){
   .uc-stats{grid-template-columns:repeat(3,1fr)}
   .uc-stat{border-bottom:1px solid rgba(255,255,255,.15)}
   .uc-stat:nth-child(3n){border-right:none}
   .uc-bottom{grid-template-columns:1fr}
 }
 /* แท็บเล็ตแนวตั้ง / มือถือใหญ่ */
-@media (max-width: 760px){
+@media (max-width:760px){
   .uc-header{flex-direction:column;align-items:center;text-align:center}
   .uc-brand{flex-direction:column;text-align:center}
   .uc-time-box{width:100%;justify-content:center}
@@ -176,7 +176,7 @@
   .uc-stat:nth-child(even){border-right:none}
 }
 
-@media (max-width: 900px){ /* ปรับขนาดบนมือถือ/หน้าจอแคบ */
+@media (max-width:900px){ /* ปรับขนาดบนมือถือ/หน้าจอแคบ */
   .shop-modal-body, .shop-detail-body{grid-template-columns:1fr;gap:0} /* บนมือถือ ให้เรียง 1 คอลัมน์ (รูปบน รายละเอียดล่าง) — ตัด gap 32px เดิม (ไว้ใช้ตอนเรียง 2 คอลัมน์) ไม่งั้นเป็นช่องว่างเปล่าคั่นรูปกับข้อมูล */
   .shop-modal-info{padding:24px}
   .shop-modal-name{font-size:1.5rem}
@@ -185,7 +185,7 @@
 
 /* หน้าจอมือถือแคบ — ลดระยะห่างระหว่างบรรทัด/ส่วนต่างๆ ในรายละเอียดสินค้า ให้เห็นข้อมูลหลัก
    (ชื่อ/ราคา/สี/ขนาด/ปุ่มเพิ่มตะกร้า) ได้ในหน้าจอเดียวโดยไม่ต้องเลื่อน */
-@media (max-width: 480px){
+@media (max-width:480px){
   .shop-modal-thumbs{padding:10px;gap:6px}
   .shop-modal-thumb{width:52px;height:52px}
   .shop-modal-info{padding:14px 16px;gap:6px}
@@ -262,3 +262,28 @@
 .shop-grid-4col{grid-template-columns:repeat(4,1fr)}
 @media (max-width:900px){.shop-grid-4col{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:480px){.shop-grid-4col{grid-template-columns:1fr}}
+
+/* Skeleton loading — โครงการ์ด/ข้อความ ระหว่างรอ Firestore โหลด กันจอว่างกระพริบ */
+@keyframes sk-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.sk-block,.sk-line{background:linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%);background-size:200% 100%;animation:sk-shimmer 1.4s ease-in-out infinite;border-radius:8px}
+.shop-card-skeleton{cursor:default;pointer-events:none}
+.shop-card-skeleton .shop-img.sk-block{border-radius:0}
+.sk-line{height:12px;margin:8px 0}
+.sk-line-sm{width:40%}
+.sk-line-md{width:70%}
+.sk-line-lg{width:90%}
+@media (prefers-color-scheme:dark){
+  .sk-block,.sk-line{background:linear-gradient(90deg,#2a2a2a 25%,#333 37%,#2a2a2a 63%);background-size:200% 100%}
+}
+
+/* Empty state ตะกร้า/คำสั่งซื้อว่าง — ไอคอน + ข้อความ + ปุ่มพากลับไปช้อป (ไม่ปล่อยจอโล่ง) */
+.shop-empty{display:flex;flex-direction:column;align-items:center;gap:14px;padding:64px 20px;text-align:center}
+.shop-empty-icon{font-size:3rem;color:#d6ddd6}
+.shop-empty-text{color:var(--ink-soft);font-size:1.05rem;font-weight:600;margin:0}
+.shop-empty-btn{padding:12px 28px;border-radius:999px;border:none;background:var(--green-deep);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.shop-empty-btn:hover{opacity:.9}
+
+/* แถวท้ายการ์ด: คงเหลือ (ซ้าย) + ขายแล้ว (ขวา) — social proof แบบ Shopee */
+.shop-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+.shop-card-foot .shop-stock{margin-top:0}
+.shop-sold{font-size:.78rem;color:var(--ink-soft);white-space:nowrap}

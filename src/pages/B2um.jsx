@@ -8,7 +8,7 @@ import { faCheck, faImage, faSpinner, faXmark } from '@fortawesome/free-solid-sv
 import { formatPhone } from '../utils/formatPhone.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 
-import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT } from '../utils/endpoints.js'
+import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, fetchWithTimeout } from '../utils/endpoints.js'
 
 const EMPTY = { fname: '', lname: '', phone: '', shopName: '' }
 
@@ -58,7 +58,7 @@ export default function B2um() {
       images: images.join(', '),
     }
     try {
-      const res = await fetch(SHEET_ENDPOINT, {
+      const res = await fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(regData),

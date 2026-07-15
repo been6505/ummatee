@@ -13,3 +13,9 @@ export const IFTAR_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzI
 
 // อาสาสมัคร
 export const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
+
+// fetch แบบมี timeout — Google Apps Script บางทีค้าง (ไม่ตอบ ไม่ error) ถ้าไม่มี timeout ปุ่ม "กำลังส่ง..." จะค้างตลอด
+// ค่า default 15 วินาที เผื่อ Apps Script cold start ที่ช้าบ้างในบางครั้ง แต่ไม่ปล่อยให้ค้างไม่มีที่สิ้นสุด
+export function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+  return fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
+}

@@ -21,7 +21,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     searchPh: 'ค้นหาสินค้า...', // placeholder ของช่องค้นหา
     allCat: 'ทุกหมวดหมู่', // ตัวเลือก "ทุกหมวดหมู่" ใน dropdown
     sortNew: 'ใหม่ล่าสุด', sortPriceAsc: 'ราคา: ต่ำ-สูง', sortPriceDesc: 'ราคา: สูง-ต่ำ', sortName: 'ชื่อสินค้า A-Z', // ตัวเลือกการเรียงลำดับ
-    color: 'สี', size: 'ขนาด', stock: 'คงเหลือ', out: 'สินค้าหมด', share: 'แชร์', shared: 'คัดลอกลิงก์แล้ว ✓', // ป้ายข้อความย่อยต่างๆ
+    color: 'สี', size: 'ขนาด', stock: 'คงเหลือ', out: 'สินค้าหมด', share: 'แชร์', shared: 'คัดลอกลิงก์แล้ว ✓', sold: 'ขายแล้ว', soldUnit: 'ชิ้น', // ป้ายข้อความย่อยต่างๆ
     fromPrice: 'จาก', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'ยังไม่มีสินค้าในขณะนี้', // ข้อความตอนไม่มีสินค้า
   },
@@ -32,7 +32,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     searchPh: 'Search products...', // placeholder ของช่องค้นหา
     allCat: 'All categories', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'Newest', sortPriceAsc: 'Price: low to high', sortPriceDesc: 'Price: high to low', sortName: 'Name A-Z', // ตัวเลือกการเรียงลำดับ
-    color: 'Color', size: 'Size', stock: 'In stock', out: 'Out of stock', share: 'Share', shared: 'Link copied ✓', // ป้ายข้อความย่อยต่างๆ
+    color: 'Color', size: 'Size', stock: 'In stock', out: 'Out of stock', share: 'Share', shared: 'Link copied ✓', sold: 'Sold', soldUnit: 'pcs', // ป้ายข้อความย่อยต่างๆ
     fromPrice: 'From', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'No products available yet', // ข้อความตอนไม่มีสินค้า
   },
@@ -43,17 +43,31 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     searchPh: 'البحث عن المنتجات...', // placeholder ของช่องค้นหา
     allCat: 'كل الفئات', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'الأحدث', sortPriceAsc: 'السعر: من الأقل', sortPriceDesc: 'السعر: من الأعلى', sortName: 'الاسم أ-ي', // ตัวเลือกการเรียงลำดับ
-    color: 'اللون', size: 'المقاس', stock: 'المتوفر', out: 'غير متوفر', share: 'مشاركة', shared: 'تم نسخ الرابط ✓', // ป้ายข้อความย่อยต่างๆ
+    color: 'اللون', size: 'المقاس', stock: 'المتوفر', out: 'غير متوفر', share: 'مشاركة', shared: 'تم نسخ الرابط ✓', sold: 'مُباع', soldUnit: 'قطعة', // ป้ายข้อความย่อยต่างๆ
     fromPrice: 'من', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'لا توجد منتجات حالياً', // ข้อความตอนไม่มีสินค้า
   },
 }
 export const SHOP_T = T // ให้หน้าอื่น (ส่วน "สินค้าที่น่าสนใจ" ในหน้ารายละเอียดสินค้า) ใช้ label ชุดเดียวกับ ProductCard ได้
 
+// การ์ดโครง (skeleton) ระหว่างรอ Firestore โหลด — กันจอว่าง/กระพริบ ให้เห็นเค้าโครงล่วงหน้าเหมือน Shopee
+export function SkeletonCard() {
+  return (
+    <div className="shop-card shop-card-skeleton" aria-hidden="true">
+      <div className="shop-img sk-block" />
+      <div className="shop-body">
+        <div className="sk-line sk-line-sm" />
+        <div className="sk-line sk-line-lg" />
+        <div className="sk-line sk-line-md" />
+      </div>
+    </div>
+  )
+}
+
 export function ProductCard({ g, t, onOpen }) { // การ์ดสินค้าหนึ่งใบในตะแกรงสินค้า — g คือกลุ่มสินค้าชื่อเดียวกัน (อาจมีหลายสี/ขนาดคนละ doc), t คือข้อความแปลภาษา, onOpen เรียกเมื่อคลิกเพื่อเปิดรายละเอียด
   // ใช้ร่วมกันทั้งหน้ารายการสินค้า (/um-shop) และส่วน "สินค้าที่น่าสนใจ" ท้ายหน้ารายละเอียดสินค้า
   const [shared, setShared] = useState(false) // state บอกว่าพึ่งคัดลอกลิงก์แชร์ไปหรือยัง (เพื่อแสดงเครื่องหมาย ✓ ชั่วคราว)
-  const { primary, variants, totalStock, minPrice, maxPrice, anyDiscount } = g
+  const { primary, variants, totalStock, totalSold, minPrice, maxPrice, anyDiscount } = g
   const img = variants.find((v) => v.images?.length)?.images?.[0] // ใช้รูปแรกที่เจอในกลุ่ม (เผื่อ variant แรกสุดยังไม่อัพรูป)
   const multiVariant = variants.length > 1
 
@@ -132,7 +146,10 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
         )}
         {primary.description && <p className="shop-desc">{primary.description}</p>} {/* คำอธิบายสินค้า ถ้ามี */}
 
-        <div className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {totalStock}</div> {/* รวมสต็อกทุก variant ในกลุ่ม */}
+        <div className="shop-card-foot">
+          <span className={`shop-stock ${outOfStock ? 'out' : ''}`}>{t.stock}: {totalStock}</span> {/* รวมสต็อกทุก variant ในกลุ่ม */}
+          {totalSold > 0 && <span className="shop-sold">{t.sold} {totalSold} {t.soldUnit}</span>} {/* ยอดขาย — social proof, โชว์เฉพาะเมื่อเคยขายแล้ว */}
+        </div>
       </div>
     </FadeUp>
   )
@@ -216,7 +233,9 @@ export default function Shop() { // คอมโพเนนต์หลัก�
           )}
 
           <div className="shop-grid"> {/* ตะแกรงแสดงการ์ดสินค้าทั้งหมด */}
-            {filtered.map((g) => <ProductCard key={g.key} g={g} t={t} onOpen={openDetail} />)} {/* แสดงการ์ดกลุ่มสินค้าทุกกลุ่มที่ผ่านการกรอง คลิกแล้วไปหน้ารายละเอียด */}
+            {loading
+              ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />) // ระหว่างโหลด โชว์การ์ดโครง 8 ใบกันจอว่าง
+              : filtered.map((g) => <ProductCard key={g.key} g={g} t={t} onOpen={openDetail} />)} {/* แสดงการ์ดกลุ่มสินค้าทุกกลุ่มที่ผ่านการกรอง คลิกแล้วไปหน้ารายละเอียด */}
           </div>
         </div>
       </section>

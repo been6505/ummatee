@@ -56,6 +56,7 @@ export function groupProductsByName(products) {
       primary,
       variants,
       totalStock: variants.reduce((s, v) => s + (Number.isFinite(v.stock) ? v.stock : 0), 0),
+      totalSold: variants.reduce((s, v) => s + (Number(v.sold) || 0), 0), // ยอดขายรวมทุก variant ในกลุ่ม — โชว์ในการ์ด
       minPrice: Math.min(...prices),
       maxPrice: Math.max(...prices),
       anyDiscount: variants.some(hasDiscount),

@@ -31,7 +31,7 @@
 .hm-gaza-desc{font-size:.85rem;color:#555;line-height:1.65;margin:0}
 .hm-gaza-cta{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:#C9302C;color:#fff;border:none;border-radius:99px;font-size:.85rem;font-weight:700;cursor:pointer;transition:opacity .15s;align-self:center;margin-top:4px}
 .hm-gaza-cta:hover{opacity:.88}
-@media(max-width:520px){
+@media (max-width:520px){
   .hm-gaza-wrap{grid-template-columns:1fr}
   .hm-gaza-left{aspect-ratio:1/1}
   .hm-gaza-right{padding:20px 18px}
@@ -81,6 +81,6 @@
 .admin-mission-card .admin-upload-btn,.admin-mission-card .admin-media-preview{margin-left:20px;margin-right:20px}
 .admin-mission-card .admin-media-preview{margin-bottom:0}
 
-@media(max-width:600px){
+@media (max-width:600px){
   .missions-grid{grid-template-columns:1fr;padding:24px 16px 0;gap:20px}
 }

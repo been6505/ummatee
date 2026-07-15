@@ -79,13 +79,14 @@ export async function createOrder({ items, itemsTotal, customer }) {
       const it = items[i]
       const data = snap.data()
       const stock = data.stock
+      const nextSold = (Number(data.sold) || 0) + it.qty // ยอดขายสะสมต่อสินค้า — โชว์ "ขายแล้ว X ชิ้น" ในการ์ด (social proof แบบ Shopee)
       if (data.sizeStock && it.sizes) {
         // ตัดเฉพาะไซซ์ที่เลือก แล้วปรับ stock รวมให้ตรงกับผลรวมใหม่เสมอ (หน้าร้าน/ตารางแอดมินอ่าน stock รวมนี้)
         const nextSizeStock = { ...data.sizeStock, [it.sizes]: (Number(data.sizeStock[it.sizes]) || 0) - it.qty }
         const nextTotal = Object.values(nextSizeStock).reduce((s, v) => s + (Number(v) || 0), 0)
-        tx.update(productRefs[i], { sizeStock: nextSizeStock, stock: nextTotal })
+        tx.update(productRefs[i], { sizeStock: nextSizeStock, stock: nextTotal, sold: nextSold })
       } else if (Number.isFinite(stock)) {
-        tx.update(productRefs[i], { stock: stock - it.qty })
+        tx.update(productRefs[i], { stock: stock - it.qty, sold: nextSold })
       }
       tx.set(doc(collection(db, 'stockMovements')), {
         productId: it.productDocId || it.id,

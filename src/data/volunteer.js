@@ -2,7 +2,7 @@ import { db } from '../firebase.js'
 import {
   collection, doc, setDoc, updateDoc, runTransaction, onSnapshot,
 } from 'firebase/firestore'
-import { VOLUNTEER_ENDPOINT } from '../utils/endpoints.js'
+import { VOLUNTEER_ENDPOINT, fetchWithTimeout } from '../utils/endpoints.js'
 
 // สมัครอาสาสมัคร — Firestore เป็นที่เก็บหลัก (ref มาจาก transaction ที่นี่ ไม่พึ่ง Google Sheet)
 // Google Sheet (ผ่าน Apps Script) เป็นแค่สำรอง + ใช้ส่งอีเมลยืนยัน ถ้าเชื่อมต่อ Sheet ไม่ได้
@@ -22,7 +22,7 @@ async function nextVolunteerRef() {
 // ส่งข้อมูลไป Sheet backup + อีเมลยืนยัน — ไม่บล็อกการสมัคร ถ้าล้มเหลวข้อมูลยังอยู่ใน Firestore ครบ
 async function syncToSheet(docRef, regData) {
   try {
-    const res = await fetch(VOLUNTEER_ENDPOINT, {
+    const res = await fetchWithTimeout(VOLUNTEER_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(regData),

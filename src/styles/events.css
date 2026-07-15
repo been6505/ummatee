@@ -132,7 +132,7 @@
 .volunteer-page .iftar-stage{background:linear-gradient(180deg,#0f2d1e,#091a10)}
 .vol-gallery{display:flex;flex-direction:column;gap:14px;max-width:420px;margin:24px auto 0;align-items:center}
 .vol-gallery img{width:100%;border-radius:18px;display:block;box-shadow:0 8px 24px -8px rgba(0,0,0,.3)}
-@media(min-width:769px){
+@media (min-width:769px){
   .vol-gallery{flex-direction:row;max-width:860px;align-items:flex-start}
   .vol-gallery img{width:50%}
 }
@@ -269,13 +269,13 @@ select.iftar-input option{color:#222;background:#fff}
 /* เมนูหลัก (โลโก้ + 7 ลิงก์ + สลับภาษา + ปุ่มบริจาค) ต้องการพื้นที่มากกว่า 860px ถึงจะพอดีแถวเดียวไม่ตก/บีบข้อความ
    (เช่น "หน้าหลัก" ตัดบรรทัดเป็น "หน้า/หลัก" ทดสอบจริงแล้วที่ 900px ยังบีบอยู่) แยก media query ออกมาต่างหาก
    ไม่รวมกับ breakpoint 860px ด้านล่าง เพราะอันนั้นคุมเลย์เอาต์เนื้อหาอื่น (grid คอลัมน์ต่างๆ) ที่ยังใช้ 860px ได้ปกติ ไม่เกี่ยวกับเมนู */
-@media(max-width:1180px){
+@media (max-width:1180px){
   .nav-links{display:none}
   .nav-cta{display:none}
   .nav-hamburger{display:flex}
 }
 
-@media(max-width:860px){
+@media (max-width:860px){
   .stats-inner{grid-template-columns:1fr 1fr;gap:36px 24px}
   .stat-block:nth-child(2)::after{display:none}
   .focus-grid{grid-template-columns:1fr}
@@ -292,20 +292,20 @@ select.iftar-input option{color:#222;background:#fff}
   .iftar-stage{padding:48px 0 72px}
 }
 /* tablet: ยังใช้ 2-col สำหรับ form row */
-@media(min-width:601px) and (max-width:860px){
+@media (min-width:601px) and (max-width:860px){
   .iftar-row{grid-template-columns:1fr 1fr}
   .iftar-card{max-width:680px}
   .form-shell{padding:36px 30px}
 }
 /* mobile */
-@media(max-width:600px){
+@media (max-width:600px){
   .iftar-row{grid-template-columns:1fr}
   .iftar-hero{padding:90px 0 40px}
   .iftar-stage{padding:36px 0 60px}
   .iftar-card{padding:0 14px}
   .form-shell{padding:28px 18px}
 }
-@media(max-width:480px){
+@media (max-width:480px){
   .help-grid{grid-template-columns:1fr}
   .stats-inner{gap:30px 18px}
   .stat-block::after{display:none}

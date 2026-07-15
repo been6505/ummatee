@@ -5,7 +5,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLaptop, faUtensils, faCircleCheck, faPhone, faCamera, faCheck, faXmark, faArrowLeft, faHandHoldingHeart, faBoxOpen } from '@fortawesome/free-solid-svg-icons'
 
-import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN } from '../utils/endpoints.js'
+import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN, fetchWithTimeout } from '../utils/endpoints.js'
 
 import { formatPhone } from '../utils/formatPhone.js'
 const CLD_CLOUD = 'dei5jktuw'
@@ -217,7 +217,7 @@ export default function Give2() {
 
       await setDoc(doc(collection(db, 'give2Regs'), refCode), payload)
 
-      fetch(SHEET_ENDPOINT, {
+      fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: SHEET_TOKEN, type: 'give2', ...payload }),

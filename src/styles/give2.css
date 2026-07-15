@@ -61,12 +61,12 @@
 .give-campaign-poster{border-radius:16px;overflow:hidden;box-shadow:0 8px 32px -12px rgba(124,58,237,.25);display:flex}
 .give-campaign-poster img{width:100%;display:block;border-radius:16px;object-fit:cover}
 .campaign-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:768px){
+@media (max-width:768px){
   .campaign-layout{grid-template-columns:1fr}
   .give-campaign-poster{max-width:420px;margin:0 auto;position:static}
   .campaign-cards{grid-template-columns:1fr 1fr}
 }
-@media(max-width:480px){.campaign-cards{grid-template-columns:1fr}}
+@media (max-width:480px){.campaign-cards{grid-template-columns:1fr}}
 .receive-section{background:#fef9ee}
 .receive-badge{background:#d97706;color:#fff}
 .receive-card{border-top:3px solid #d97706}
@@ -91,7 +91,7 @@
 .campaign-cta-card .give-card-icon{color:#7c3aed}
 .campaign-cta-card h4{color:#7c3aed}
 .campaign-cta-link{margin-top:10px;font-size:.85rem;font-weight:700;color:#7c3aed}
-@media(max-width:600px){.featured-card{grid-column:span 1}}
+@media (max-width:600px){.featured-card{grid-column:span 1}}
 .exhibition-card{border-top:3px solid #0ea5e9}
 .donation-card{border-top:3px solid #059669}
 .give-cta-btn{display:inline-block;background:#7c3aed;color:#fff;font-weight:700;font-size:1rem;padding:14px 32px;border-radius:99px;text-decoration:none;transition:background .2s,transform .15s}
@@ -123,12 +123,12 @@
 .ship-status-chip{padding:8px 16px;border-radius:99px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:.85rem;font-weight:600;color:#5b6660;transition:all .15s}
 .ship-status-chip:hover{border-color:var(--green-mid);color:var(--green-deep);background:#f5fbf7}
 .ship-status-chip:disabled{opacity:.5;cursor:not-allowed}
-@media(max-width:480px){.ship-status-chip{padding:7px 12px;font-size:.8rem}}
+@media (max-width:480px){.ship-status-chip{padding:7px 12px;font-size:.8rem}}
 
 /* ── แถวฟอร์มแบบ input+ปุ่ม ที่ต้องการวางเรียงเป็นคอลัมน์บนมือถือ (โปรโมชั่น/เลขพัสดุ/อัปเดตสถานะจัดส่ง) ── */
 .admin-inline-row{display:flex;gap:8px}
 .admin-inline-row > input,.admin-inline-row > select{flex:1;min-width:0}
-@media(max-width:480px){
+@media (max-width:480px){
   .admin-inline-row{flex-direction:column}
   .admin-inline-row > input,.admin-inline-row > select,.admin-inline-row > button{width:100%}
 }
@@ -136,7 +136,7 @@
 /* ── การ์ดแก้ไขราคาส่วนลดในตาราง (DiscountCell) — บังคับความกว้างขั้นต่ำแต่ไม่ล้นจอมือถือ ── */
 .discount-edit-box{min-width:220px;max-width:min(320px,80vw)}
 .discount-edit-box .admin-inline-row > input{width:auto}
-@media(max-width:480px){.discount-edit-box{min-width:170px}}
+@media (max-width:480px){.discount-edit-box{min-width:170px}}
 
 /* ── รายการโปรโมชั่นทั้งหมด (หน้าจัดการสินค้า) — list แถวเดียว ไม่ใช่ชิป ดูรายละเอียดส่วนลดได้ครบ ── */
 .promo-list{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px}
@@ -156,7 +156,7 @@
 .give-type-chip{padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700}
 .give-type-chip.computer{background:#ede9fe;color:#6d28d9}
 .give-type-chip.tools{background:#d1fae5;color:#047857}
-@media(prefers-color-scheme:dark){
+@media (prefers-color-scheme:dark){
   .give-type-chip.computer{background:#2d1b4e;color:#c4b5fd}
   .give-type-chip.tools{background:#064e3b;color:#6ee7b7}
 }

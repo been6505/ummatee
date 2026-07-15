@@ -5,7 +5,7 @@ import Footer from '../components/Footer.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLaptop, faCheck, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 
-import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN } from '../utils/endpoints.js'
+import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN, fetchWithTimeout } from '../utils/endpoints.js'
 
 import { formatPhone } from '../utils/formatPhone.js'
 
@@ -56,7 +56,7 @@ export default function Give2ComReceive() {
         teacherName: form.teacherName.trim(), teacherPhone: formatPhone(form.teacherPhone),
         address: form.address.trim(), reason: form.reason.trim(),
       }
-      fetch(SHEET_ENDPOINT, {
+      fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: SHEET_TOKEN, ...payload }),

@@ -57,10 +57,11 @@ export default function ShopMyOrders() {
           {orders === null ? (
             <p style={{ textAlign: 'center', padding: 40, color: 'var(--ink-soft)' }}>กำลังโหลด...</p>
           ) : orders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--ink-soft)' }}>
-              <p style={{ fontSize: '2.4rem', marginBottom: 10 }}><FontAwesomeIcon icon={faBoxOpen} /></p>
-              <p>ยังไม่มีคำสั่งซื้อจากเครื่องนี้</p>
-              <p style={{ fontSize: '.85rem', marginTop: 6 }}>ถ้าเคยสั่งซื้อจากเครื่องอื่น ให้เปิดจากลิงก์/QR ที่ได้รับตอนสั่งซื้อ</p>
+            <div className="shop-empty">
+              <FontAwesomeIcon icon={faBoxOpen} className="shop-empty-icon" />
+              <p className="shop-empty-text">ยังไม่มีคำสั่งซื้อจากเครื่องนี้</p>
+              <p style={{ fontSize: '.85rem', marginTop: -4, marginBottom: 4, color: 'var(--ink-soft)' }}>ถ้าเคยสั่งซื้อจากเครื่องอื่น ให้เปิดจากลิงก์/QR ที่ได้รับตอนสั่งซื้อ</p>
+              <button type="button" className="shop-empty-btn" onClick={() => go('shop')}>เลือกซื้อสินค้า</button>
             </div>
           ) : (
             <div>

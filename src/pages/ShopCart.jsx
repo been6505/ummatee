@@ -31,7 +31,11 @@ export default function ShopCart() {
           </a>
 
           {items.length === 0 ? (
-            <p style={{ textAlign: 'center', color: 'var(--ink-soft)', padding: '60px 0' }}>ยังไม่มีสินค้าในตะกร้า</p>
+            <div className="shop-empty">
+              <FontAwesomeIcon icon={faCartShopping} className="shop-empty-icon" />
+              <p className="shop-empty-text">ยังไม่มีสินค้าในตะกร้า</p>
+              <button type="button" className="shop-empty-btn" onClick={() => go('shop')}>เลือกซื้อสินค้า</button>
+            </div>
           ) : (
             <div className="cart-layout">
               <div className="cart-items">

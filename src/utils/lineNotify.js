@@ -1,4 +1,4 @@
-import { VOLUNTEER_ENDPOINT, GIVE_SHEET_TOKEN } from './endpoints.js'
+import { VOLUNTEER_ENDPOINT, GIVE_SHEET_TOKEN, fetchWithTimeout } from './endpoints.js'
 
 // แจ้งเตือนสถานะคำสั่งซื้อผ่าน LINE — ทำงานเฉพาะออเดอร์ที่ลูกค้าลงทะเบียนด้วย LINE
 // (มี customer.lineUserId) ส่งผ่าน Apps Script (ถือ channel access token ฝั่ง server)
@@ -21,7 +21,7 @@ export function notifyLineOrderStatus(order, event, extra) {
   const lineUserId = order?.customer?.lineUserId
   const build = MESSAGES[event]
   if (!lineUserId || !build) return
-  fetch(VOLUNTEER_ENDPOINT, {
+  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'lineNotify', lineUserId, message: build(order, extra) }),
@@ -30,7 +30,7 @@ export function notifyLineOrderStatus(order, event, extra) {
 
 // แจ้งเตือนแอดมิน (อีเมลเสมอ + LINE ถ้าตั้งค่าแล้ว) — best-effort ไม่กระทบ flow ลูกค้า
 export function notifyAdmin(subject, message) {
-  fetch(VOLUNTEER_ENDPOINT, {
+  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'adminNotify', subject, message }),

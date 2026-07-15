@@ -185,7 +185,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .an-child.active{background:rgba(255,255,255,.18);font-weight:600;opacity:1}
 
 /* Desktop — top bar → left sidenav */
-@media (min-width: 769px) {
+@media (min-width:769px) {
   .admin-nav {
     position: fixed;
     top: 0; left: 0; right: auto;

@@ -49,7 +49,7 @@ const PROVINCES = [
 ]
 
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
-import { IFTAR_SHEET_ENDPOINT as SHEET_ENDPOINT } from '../utils/endpoints.js'
+import { IFTAR_SHEET_ENDPOINT as SHEET_ENDPOINT, fetchWithTimeout } from '../utils/endpoints.js'
 
 // บันทึกลง Firestore แบบ retry (สำรองข้อมูลให้ครบเสมอ เพราะหน้า admin อ่านจาก Firestore)
 // ลองซ้ำสูงสุด 3 ครั้ง หน่วงเพิ่มขึ้นเรื่อย ๆ — คืน true เมื่อสำเร็จ, false เมื่อพลาดทุกครั้ง
@@ -268,7 +268,7 @@ export default function Iftar() {
         if (snap.data().isClosed) setIsFull(true)
         const limit = snap.data().seatLimit || SEAT_LIMIT
         // 2) ปิดอัตโนมัติเมื่อยอดถึงเพดาน (อ่าน count สาธารณะจาก Apps Script)
-        fetch(`${SHEET_ENDPOINT}?count=1`)
+        fetchWithTimeout(`${SHEET_ENDPOINT}?count=1`)
           .then((r) => r.json())
           .then((o) => { if (typeof o.count === 'number' && o.count >= limit) setIsFull(true) })
           .catch(() => {})
@@ -303,7 +303,7 @@ export default function Iftar() {
 
     try {
       // ส่งไป Google Sheet ก่อน — Apps Script เป็นผู้ออกเลข IFG (นับจากแถวจริง ไม่ซ้ำข้ามเครื่อง)
-      const res = await fetch(SHEET_ENDPOINT, {
+      const res = await fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(regData),

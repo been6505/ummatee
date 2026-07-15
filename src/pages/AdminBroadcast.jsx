@@ -6,7 +6,7 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 
-import { IFTAR_SHEET_ENDPOINT as SEND_SCRIPT } from '../utils/endpoints.js'
+import { IFTAR_SHEET_ENDPOINT as SEND_SCRIPT, fetchWithTimeout } from '../utils/endpoints.js'
 
 // ── กลุ่มผู้รับที่รองรับ ────────────────────────────────────────────────────
 const SOURCES = [
@@ -158,7 +158,7 @@ export default function AdminBroadcast() {
   const sendOne = async (reg, subj, msg, poster, header) => {
     const html = buildEmailHtml(header, msg, poster, reg)
     const idToken = await user.getIdToken()
-    const res = await fetch(SEND_SCRIPT, {
+    const res = await fetchWithTimeout(SEND_SCRIPT, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'broadcast', idToken, email: reg.email, subject: subj, htmlBody: html }),

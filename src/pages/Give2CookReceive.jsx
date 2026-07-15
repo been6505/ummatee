@@ -7,7 +7,7 @@ import { faUtensils, faCheck, faArrowLeft } from '@fortawesome/free-solid-svg-ic
 
 import { formatPhone } from '../utils/formatPhone.js'
 
-import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN } from '../utils/endpoints.js'
+import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN, fetchWithTimeout } from '../utils/endpoints.js'
 
 const AGES_ADULT = Array.from({ length: 63 }, (_, i) => i + 18)
 const EMPTY = { fname: '', lname: '', phone: '', email: '', age: '', job: '', detail: '', address: '', wantedItems: '', reason: '' }
@@ -46,7 +46,7 @@ export default function Give2CookReceive() {
         wantedItems: form.wantedItems.trim(),
         reason: form.reason.trim(),
       })
-      fetch(SHEET_ENDPOINT, {
+      fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

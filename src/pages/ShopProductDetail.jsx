@@ -130,7 +130,25 @@ export default function ShopProductDetail({ productId }) {
   const viewCart = () => go('shop-cart')
   const openProduct = (p) => go('shop-detail', p.productId || p.id)
 
-  if (loading) return null
+  // ระหว่างโหลด โชว์โครงหน้า (รูป + แถวข้อความ) แทนจอว่าง — กันหน้าขาวกระพริบตอนเข้าหน้าสินค้าครั้งแรก
+  if (loading) {
+    return (
+      <main className="page shop-detail-page">
+        <section className="section"><div className="wrap">
+          <div className="shop-detail-body">
+            <div className="shop-modal-gallery"><div className="shop-modal-main sk-block" /></div>
+            <div className="shop-modal-info">
+              <div className="sk-line sk-line-sm" />
+              <div className="sk-line sk-line-lg" style={{ height: 28 }} />
+              <div className="sk-line sk-line-md" />
+              <div className="sk-line sk-line-md" />
+              <div className="sk-line sk-line-sm" />
+            </div>
+          </div>
+        </div></section>
+      </main>
+    )
+  }
 
   if (!linkedProduct) {
     return (

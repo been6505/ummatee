@@ -209,7 +209,7 @@ export default function ShopOrderStatus({ orderId }) {
               {order.trackingNumber && (
                 <p style={{ fontSize: '.95rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
                     <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
                   </a>
                 </p>
@@ -244,7 +244,7 @@ export default function ShopOrderStatus({ orderId }) {
               {order.trackingNumber && (
                 <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
                     <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
                   </a>
                 </p>

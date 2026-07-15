@@ -160,16 +160,20 @@ export const adminStatusLabel = (order) => {
 export const confirmPayment = (orderId) =>
   updateDoc(doc(db, 'orders', orderId), { status: 'preparing', paymentConfirmedAt: new Date().toLocaleString('th-TH') })
 
-// ยืนยันแพ็คของ + อัปโหลดรูปสินค้าที่แพ็ค + เลขพัสดุ (ไม่บังคับ) → เปลี่ยนสถานะเป็นกำลังจัดส่ง
-export const confirmPackedAndShip = (orderId, packedImages, trackingNumber) =>
+// ยืนยันแพ็คของ + อัปโหลดรูปสินค้าที่แพ็ค + เลขพัสดุ+ขนส่ง (ไม่บังคับ) → เปลี่ยนสถานะเป็นกำลังจัดส่ง
+export const confirmPackedAndShip = (orderId, packedImages, trackingNumber, courier) =>
   updateDoc(doc(db, 'orders', orderId), {
     packedImages, packedAt: new Date().toLocaleString('th-TH'), status: 'shipping',
     trackingNumber: trackingNumber?.trim() || null,
+    courier: trackingNumber?.trim() ? (courier || null) : null,
   })
 
-// แก้/เพิ่มเลขพัสดุภายหลัง (เช่น ตอนแรกไม่มีเลข พึ่งได้จากขนส่งทีหลัง) — ใช้ได้ทั้งตอน shipping/delivered
-export const setTrackingNumber = (orderId, trackingNumber) =>
-  updateDoc(doc(db, 'orders', orderId), { trackingNumber: trackingNumber?.trim() || null })
+// แก้/เพิ่มเลขพัสดุ+ขนส่งภายหลัง (เช่น ตอนแรกไม่มีเลข พึ่งได้จากขนส่งทีหลัง) — ใช้ได้ทั้งตอน shipping/delivered
+export const setTrackingNumber = (orderId, trackingNumber, courier) =>
+  updateDoc(doc(db, 'orders', orderId), {
+    trackingNumber: trackingNumber?.trim() || null,
+    courier: trackingNumber?.trim() ? (courier || null) : null,
+  })
 
 // อัปเดตความคืบหน้าการจัดส่ง (ข้อความอิสระจากผู้จัดส่ง) — เก็บเป็นประวัติ
 export const addShippingUpdate = (orderId, text) =>

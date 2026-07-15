@@ -8,8 +8,22 @@ import { STATUS_STEPS, STATUS_LABEL, stepIndex } from '../data/orders.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 export const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 
-// ลิงก์ติดตามพัสดุ — ใช้ 17TRACK (ตรวจจับขนส่งอัตโนมัติจากรูปแบบเลขพัสดุ รองรับไปรษณีย์ไทย/Kerry/Flash/J&T ฯลฯ ในลิงก์เดียว)
-export const trackingUrl = (code) => `https://t.17track.net/en#nums=${encodeURIComponent(code.trim())}`
+// รายชื่อขนส่งที่ใช้บ่อยในไทย — ลิงก์ตรงไปหน้าติดตามของแต่ละเจ้า (แม่นยำกว่าเดาจากรูปแบบเลขพัสดุ)
+export const COURIERS = [
+  { key: 'thailandpost', label: 'ไปรษณีย์ไทย (EMS/ลงทะเบียน)', url: (code) => `https://track.thailandpost.co.th/?trackNumber=${encodeURIComponent(code)}` },
+  { key: 'kerry', label: 'Kerry Express', url: (code) => `https://th.kerryexpress.com/th/track/?track=${encodeURIComponent(code)}` },
+  { key: 'flash', label: 'Flash Express', url: (code) => `https://www.flashexpress.com/tracking/?se=${encodeURIComponent(code)}` },
+  { key: 'jt', label: 'J&T Express', url: (code) => `https://www.jtexpress.co.th/index/query/gzquery.html?bills=${encodeURIComponent(code)}` },
+  { key: 'ninjavan', label: 'Ninja Van', url: (code) => `https://www.ninjavan.co/th-th/tracking?id=${encodeURIComponent(code)}` },
+]
+
+// ลิงก์ติดตามพัสดุ — ถ้ารู้ขนส่งให้ไปหน้าติดตามของเจ้านั้นตรงๆ ถ้าไม่รู้ (ออเดอร์เก่าก่อนมีช่องเลือกขนส่ง) fallback ไป 17TRACK ที่เดาขนส่งจากรูปแบบเลขพัสดุ
+export const trackingUrl = (code, courierKey) => {
+  const trimmed = code.trim()
+  const courier = COURIERS.find((c) => c.key === courierKey)
+  if (courier) return courier.url(trimmed)
+  return `https://t.17track.net/en#nums=${encodeURIComponent(trimmed)}`
+}
 
 const STEP_ICONS = ['1', '2', '3', '4']
 

@@ -11,7 +11,7 @@ import {
 import { useProducts, effectivePrice } from '../data/shop.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { notifyLineOrderStatus } from '../utils/lineNotify.js'
-import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
+import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, COURIERS } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 
@@ -48,6 +48,7 @@ export default function AdminShopOrderDetail({ orderId }) {
   const [confirming, setConfirming] = useState(false)
   const [shipText, setShipText] = useState('')
   const [trackingInput, setTrackingInput] = useState('')
+  const [courierInput, setCourierInput] = useState('')
   const [editingTracking, setEditingTracking] = useState(false)
   const [uploadingDelivered, setUploadingDelivered] = useState(false)
   const [actionStatus, setActionStatus] = useState('')
@@ -89,7 +90,7 @@ export default function AdminShopOrderDetail({ orderId }) {
     if (packedPreview.length === 0) { setActionStatus('กรุณาอัพโหลดรูปสินค้าที่แพ็คก่อน'); return }
     setConfirming(true)
     try {
-      await confirmPackedAndShip(order.id, packedPreview, trackingInput)
+      await confirmPackedAndShip(order.id, packedPreview, trackingInput, courierInput)
       notifyLineOrderStatus(order, 'shipping', { trackingNumber: trackingInput })
     }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
@@ -99,7 +100,7 @@ export default function AdminShopOrderDetail({ orderId }) {
   // แก้/เพิ่มเลขพัสดุภายหลัง (ตอน shipping) — เผื่อไม่มีเลขตอนแพ็ค พึ่งได้จากขนส่งทีหลัง
   const handleSaveTracking = async () => {
     setConfirming(true)
-    try { await setTrackingNumber(order.id, trackingInput); setEditingTracking(false) }
+    try { await setTrackingNumber(order.id, trackingInput, courierInput); setEditingTracking(false) }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
     finally { setConfirming(false) }
   }
@@ -237,16 +238,25 @@ export default function AdminShopOrderDetail({ orderId }) {
                   </div>
                 )}
                 <UploadButton label="อัพโหลดรูปสินค้าที่แพ็ค" multiple uploading={uploadingPacked} onFiles={handlePackedUpload} />
-                <label style={{ display: 'block', marginTop: 14, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)' }}>
-                  เลขพัสดุ (ไม่บังคับ — ใส่ทีหลังได้)
-                  <input
-                    type="text"
-                    value={trackingInput}
-                    onChange={(e) => setTrackingInput(e.target.value)}
-                    placeholder="เช่น TH0123456789"
-                    style={{ display: 'block', width: '100%', marginTop: 6, fontWeight: 400, boxSizing: 'border-box' }}
-                  />
-                </label>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+                  <label style={{ display: 'block', flex: '1 1 200px', fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)' }}>
+                    เลขพัสดุ (ไม่บังคับ — ใส่ทีหลังได้)
+                    <input
+                      type="text"
+                      value={trackingInput}
+                      onChange={(e) => setTrackingInput(e.target.value)}
+                      placeholder="เช่น TH0123456789"
+                      style={{ display: 'block', width: '100%', marginTop: 6, fontWeight: 400, boxSizing: 'border-box' }}
+                    />
+                  </label>
+                  <label style={{ display: 'block', flex: '1 1 160px', fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)' }}>
+                    ขนส่ง
+                    <select value={courierInput} onChange={(e) => setCourierInput(e.target.value)} style={{ display: 'block', width: '100%', marginTop: 6, fontWeight: 400 }}>
+                      <option value="">— เลือกขนส่ง —</option>
+                      {COURIERS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                    </select>
+                  </label>
+                </div>
                 <button className="admin-btn-primary" style={{ marginTop: 12, display: 'block' }} onClick={handleConfirmPacked} disabled={confirming}>
                   {confirming ? 'กำลังยืนยัน...' : 'ยืนยันการจัดส่ง'}
                 </button>
@@ -261,16 +271,20 @@ export default function AdminShopOrderDetail({ orderId }) {
                   {editingTracking ? (
                     <div className="admin-inline-row">
                       <input type="text" value={trackingInput} onChange={(e) => setTrackingInput(e.target.value)} placeholder="เช่น TH0123456789" />
+                      <select value={courierInput} onChange={(e) => setCourierInput(e.target.value)}>
+                        <option value="">— เลือกขนส่ง —</option>
+                        {COURIERS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                      </select>
                       <button className="admin-btn-primary" onClick={handleSaveTracking} disabled={confirming}>บันทึก</button>
                     </div>
                   ) : (
                     <p style={{ fontSize: '.9rem', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span><strong>เลขพัสดุ:</strong> {order.trackingNumber || <span style={{ color: 'var(--ink-soft)' }}>ยังไม่มี</span>}</span>
-                      <button className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} onClick={() => { setTrackingInput(order.trackingNumber || ''); setEditingTracking(true) }}>
+                      <button className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} onClick={() => { setTrackingInput(order.trackingNumber || ''); setCourierInput(order.courier || ''); setEditingTracking(true) }}>
                         {order.trackingNumber ? 'แก้ไข' : 'เพิ่มเลขพัสดุ'}
                       </button>
                       {order.trackingNumber && (
-                        <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                        <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
                           <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
                         </a>
                       )}
@@ -325,7 +339,7 @@ export default function AdminShopOrderDetail({ orderId }) {
                 {order.trackingNumber && (
                   <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                    <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                    <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
                       <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
                     </a>
                   </p>

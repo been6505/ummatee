@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail } from '../useAdminRole.js'
+import InstallAdminApp from './InstallAdminApp.jsx'
 
 const NAV_GROUPS = [
   { label: 'หน้าหลัก', icon: faHouse, href: '/admin/dashboard' },
@@ -163,6 +164,7 @@ export default function AdminNav() {
   const navContent = (
     <>
       {groups.map((g, i) => <NavGroup key={i} g={g} path={path} onNavigate={close} />)}
+      <InstallAdminApp />
       {email && (
         <span className="admin-nav-user">{email}</span>
       )}

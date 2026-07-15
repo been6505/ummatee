@@ -266,10 +266,16 @@ select.iftar-input option{color:#222;background:#fff}
 .check-empty{text-align:center;color:rgba(255,255,255,.45);padding:30px;font-weight:450}
 
 /* ============ RESPONSIVE ============ */
-@media(max-width:860px){
+/* เมนูหลัก (โลโก้ + 7 ลิงก์ + สลับภาษา + ปุ่มบริจาค) ต้องการพื้นที่มากกว่า 860px ถึงจะพอดีแถวเดียวไม่ตก/บีบข้อความ
+   (เช่น "หน้าหลัก" ตัดบรรทัดเป็น "หน้า/หลัก" ทดสอบจริงแล้วที่ 900px ยังบีบอยู่) แยก media query ออกมาต่างหาก
+   ไม่รวมกับ breakpoint 860px ด้านล่าง เพราะอันนั้นคุมเลย์เอาต์เนื้อหาอื่น (grid คอลัมน์ต่างๆ) ที่ยังใช้ 860px ได้ปกติ ไม่เกี่ยวกับเมนู */
+@media(max-width:1180px){
   .nav-links{display:none}
   .nav-cta{display:none}
   .nav-hamburger{display:flex}
+}
+
+@media(max-width:860px){
   .stats-inner{grid-template-columns:1fr 1fr;gap:36px 24px}
   .stat-block:nth-child(2)::after{display:none}
   .focus-grid{grid-template-columns:1fr}

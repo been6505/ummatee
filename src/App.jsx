@@ -40,6 +40,7 @@ const ShopCheckout = lazyWithReload(() => import('./pages/ShopCheckout.jsx'))
 const ShopOrderStatus = lazyWithReload(() => import('./pages/ShopOrderStatus.jsx'))
 const ShopMyOrders = lazyWithReload(() => import('./pages/ShopMyOrders.jsx'))
 const AdminShop = lazyWithReload(() => import('./pages/AdminShop.jsx'))
+const AdminShopNew = lazyWithReload(() => import('./pages/AdminShopNew.jsx'))
 const AdminShopOrders = lazyWithReload(() => import('./pages/AdminShopOrders.jsx'))
 const AdminShopOrderDetail = lazyWithReload(() => import('./pages/AdminShopOrderDetail.jsx'))
 const AdminInventory = lazyWithReload(() => import('./pages/AdminInventory.jsx'))
@@ -65,7 +66,7 @@ const QuickDonations = lazyWithReload(() => import('./pages/QuickDonations.jsx')
 import FloatingDonate from './components/FloatingDonate.jsx'
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/quick-donate': 'quick-donate', '/quick-donations': 'quick-donations', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2com': 'give2', '/event/give-for-um/give2cook': 'give2cook', '/event/give-for-um/b2um': 'b2um', '/event/give-for-um/receive': 'give-receive', '/event/give-for-um/receive/computer': 'give2com-receive', '/event/give-for-um/receive/equipment': 'give2cook-receive', '/missions': 'missions', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions': 'admin-missions', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/admin/website': 'admin-website', '/um-shop': 'shop', '/um-shop/cart': 'shop-cart', '/um-shop/checkout': 'shop-checkout', '/um-shop/my-orders': 'shop-my-orders', '/admin/shop': 'admin-shop', '/admin/shop/orders': 'admin-shop-orders', '/admin/shop/inventory': 'admin-shop-inventory', '/admin/shop/sales': 'admin-shop-sales', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/qrcode': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give', '/admin/give/receiver': 'admin-give-receiver', '/admin/dashboard/broadcast': 'admin-broadcast' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/quick-donate': 'quick-donate', '/quick-donations': 'quick-donations', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2com': 'give2', '/event/give-for-um/give2cook': 'give2cook', '/event/give-for-um/b2um': 'b2um', '/event/give-for-um/receive': 'give-receive', '/event/give-for-um/receive/computer': 'give2com-receive', '/event/give-for-um/receive/equipment': 'give2cook-receive', '/missions': 'missions', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions': 'admin-missions', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/admin/website': 'admin-website', '/um-shop': 'shop', '/um-shop/cart': 'shop-cart', '/um-shop/checkout': 'shop-checkout', '/um-shop/my-orders': 'shop-my-orders', '/admin/shop': 'admin-shop', '/admin/shop/new': 'admin-shop-new', '/admin/shop/orders': 'admin-shop-orders', '/admin/shop/inventory': 'admin-shop-inventory', '/admin/shop/sales': 'admin-shop-sales', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/qrcode': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give', '/admin/give/receiver': 'admin-give-receiver', '/admin/dashboard/broadcast': 'admin-broadcast' }
 const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', give2: '/event/give-for-um/give2com', b2um: '/event/give-for-um/b2um', 'give-receive': '/event/give-for-um/receive', 'give2com-receive': '/event/give-for-um/receive/computer', 'give2cook-receive': '/event/give-for-um/receive/equipment', 'give2cook': '/event/give-for-um/give2cook', qurban: '/missions/qurban2026', missions: '/missions', shop: '/um-shop', 'shop-cart': '/um-shop/cart', 'shop-checkout': '/um-shop/checkout', 'shop-my-orders': '/um-shop/my-orders', volunteer: '/volunteer/register' }
 
 // path คำสั่งซื้อแบบไดนามิก /um-shop/order/<orderId> — เช็คก่อน path สินค้าเสมอ (มี 2 ระดับ ไม่ชนกับ /um-shop/:productId)
@@ -80,6 +81,12 @@ const adminShopOrderIdFromPath = () => {
   return m ? decodeURIComponent(m[1]) : null
 }
 
+// path เพิ่ม/แก้ไข/ทำสำเนาสินค้าของแอดมิน /admin/shop/new(/edit|duplicate/<id>) — เช็คก่อน /admin/shop/new (path ตายตัว) เสมอ
+const adminShopNewSeedFromPath = () => {
+  const m = window.location.pathname.match(/^\/admin\/shop\/new\/(edit|duplicate)\/([^/]+)\/?$/)
+  return m ? { mode: m[1], id: decodeURIComponent(m[2]) } : null
+}
+
 // path สินค้าแบบไดนามิก /um-shop/<productId หรือ Firestore doc id> — แยกออกจาก PATH_TO_PAGE แบบตายตัว
 const shopDetailIdFromPath = () => {
   const m = window.location.pathname.match(/^\/um-shop\/([^/]+)\/?$/)
@@ -91,6 +98,7 @@ const shopDetailIdFromPath = () => {
 const pageFromPath = () => {
   if (PATH_TO_PAGE[window.location.pathname]) return PATH_TO_PAGE[window.location.pathname]
   if (adminShopOrderIdFromPath()) return 'admin-shop-order-detail'
+  if (adminShopNewSeedFromPath()) return 'admin-shop-new'
   if (shopOrderIdFromPath()) return 'shop-order'
   if (shopDetailIdFromPath()) return 'shop-detail'
   return 'home'
@@ -101,6 +109,7 @@ export default function App() {
   const [shopDetailId, setShopDetailId] = useState(shopDetailIdFromPath)
   const [shopOrderId, setShopOrderId] = useState(shopOrderIdFromPath)
   const [adminShopOrderId, setAdminShopOrderId] = useState(adminShopOrderIdFromPath)
+  const [adminShopNewSeed, setAdminShopNewSeed] = useState(adminShopNewSeedFromPath)
   const [scrolled, setScrolled] = useState(false)
   const [maintenance, setMaintenance] = useState(false)
 
@@ -142,6 +151,7 @@ export default function App() {
       setShopDetailId(shopDetailIdFromPath())
       setShopOrderId(shopOrderIdFromPath())
       setAdminShopOrderId(adminShopOrderIdFromPath())
+      setAdminShopNewSeed(adminShopNewSeedFromPath())
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', onPop)
@@ -187,6 +197,7 @@ export default function App() {
     'admin-home': AdminHome,
     'admin-website': AdminWebsite,
     'admin-shop': AdminShop,
+    'admin-shop-new': AdminShopNew,
     'admin-shop-orders': AdminShopOrders,
     'admin-shop-inventory': AdminInventory,
     'admin-shop-sales': AdminShopSales,
@@ -217,7 +228,11 @@ export default function App() {
     return (
       <ErrorBoundary>
         <Suspense fallback={null}>
-          <Standalone orderId={page === 'admin-shop-order-detail' ? adminShopOrderId : undefined} />
+          <Standalone
+            orderId={page === 'admin-shop-order-detail' ? adminShopOrderId : undefined}
+            mode={page === 'admin-shop-new' ? adminShopNewSeed?.mode : undefined}
+            seedId={page === 'admin-shop-new' ? adminShopNewSeed?.id : undefined}
+          />
         </Suspense>
       </ErrorBoundary>
     )

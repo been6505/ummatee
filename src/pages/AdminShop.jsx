@@ -663,22 +663,22 @@ export default function AdminShop() {
                           : <span className="asc-price-now">{THB(p.price)}</span>}
                       </div>
                     </div>
-                    <div className="asc-bottom">
-                      <div className="asc-actions">
-                        <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
-                        <button className="admin-btn" onClick={() => duplicateProduct(p)}>ทำสำเนา</button>
-                        <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
-                      </div>
-                      <div className="asc-status-group">
-                        <span className={`asc-stock ${p.stock <= 0 ? 'out' : ''}`}>คงเหลือ {p.stock}</span>
-                        <button
-                          className="admin-btn asc-status-btn"
-                          onClick={() => toggleActive(p)}
-                          style={isActive
-                            ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
-                            : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
-                        >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
-                      </div>
+                    {/* แถว 2: คงเหลือ + ปุ่มแสดง/ซ่อน (ชิดขวา) */}
+                    <div className="asc-row asc-row-status">
+                      <span className={`asc-stock ${p.stock <= 0 ? 'out' : ''}`}>คงเหลือ {p.stock}</span>
+                      <button
+                        className="admin-btn asc-status-btn"
+                        onClick={() => toggleActive(p)}
+                        style={isActive
+                          ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+                          : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
+                      >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
+                    </div>
+                    {/* แถว 3: ปุ่มจัดการ แก้ไข/ทำสำเนา/ลบ (ชิดขวา) */}
+                    <div className="asc-row asc-row-actions">
+                      <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
+                      <button className="admin-btn" onClick={() => duplicateProduct(p)}>ทำสำเนา</button>
+                      <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
                     </div>
                   </div>
                 )

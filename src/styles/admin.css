@@ -267,14 +267,16 @@
 .asc-info{flex:1;min-width:0}
 .asc-name{font-weight:700;color:var(--green-deep);font-size:.98rem;line-height:1.3;word-break:break-word}
 .asc-code{font-size:.76rem;color:var(--ink-soft);margin-top:2px;font-family:monospace}
+.asc-variant{font-size:.78rem;color:var(--ink-soft);margin-top:3px;word-break:break-word} /* สี/ขนาด ในแถวบน */
 .asc-price{text-align:right;flex-shrink:0}
 .asc-price-old{display:block;font-size:.72rem;color:var(--ink-soft);text-decoration:line-through}
 .asc-price-now{font-weight:800;color:var(--gold);font-size:1.02rem}
-/* แถวล่าง: คงเหลือ + สถานะ + ปุ่ม */
+/* แถวล่าง: ปุ่มจัดการ (ซ้าย) — คงเหลือ + สถานะ ดันไปขวา */
 .admin-shop-card .asc-bottom{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f0}
+.asc-status-group{display:flex;align-items:center;gap:8px;margin-left:auto} /* คงเหลือ + ปุ่มสถานะ ชิดขวา */
 .asc-stock{font-size:.82rem;font-weight:700;color:var(--green-mid)}
 .asc-stock.out{color:#d84315}
 .asc-status-btn{font-size:.8rem;padding:6px 12px}
-.asc-actions{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.asc-actions{display:flex;gap:6px;flex-wrap:wrap}
 /* ปุ่มในการ์ดมือถือแตะง่ายขึ้น (สูง ~38px) */
 .admin-shop-card .admin-btn,.admin-shop-card .admin-btn-danger{padding:8px 14px;font-size:.82rem}

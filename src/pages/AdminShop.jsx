@@ -653,6 +653,9 @@ export default function AdminShop() {
                       <div className="asc-info">
                         <div className="asc-name">{p.name}</div>
                         <div className="asc-code">{p.productId || '—'}{p.category ? ` · ${p.category}` : ''}{p.type ? ` · ${p.type}` : ''}</div>
+                        {[...(p.colors || []), ...(p.sizes || [])].length > 0 && (
+                          <div className="asc-variant">{[...(p.colors || []), ...(p.sizes || [])].join(', ')}</div>
+                        )}
                       </div>
                       <div className="asc-price">
                         {p.discountPrice != null
@@ -661,18 +664,20 @@ export default function AdminShop() {
                       </div>
                     </div>
                     <div className="asc-bottom">
-                      <span className={`asc-stock ${p.stock <= 0 ? 'out' : ''}`}>คงเหลือ {p.stock}</span>
-                      <button
-                        className="admin-btn asc-status-btn"
-                        onClick={() => toggleActive(p)}
-                        style={isActive
-                          ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
-                          : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
-                      >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
                       <div className="asc-actions">
                         <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
                         <button className="admin-btn" onClick={() => duplicateProduct(p)}>ทำสำเนา</button>
                         <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
+                      </div>
+                      <div className="asc-status-group">
+                        <span className={`asc-stock ${p.stock <= 0 ? 'out' : ''}`}>คงเหลือ {p.stock}</span>
+                        <button
+                          className="admin-btn asc-status-btn"
+                          onClick={() => toggleActive(p)}
+                          style={isActive
+                            ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+                            : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
+                        >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
                       </div>
                     </div>
                   </div>

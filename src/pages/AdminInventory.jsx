@@ -23,23 +23,26 @@ function fmtDate(ms) {
 
 function StockInForm({ products }) {
   const [productId, setProductId] = useState('')
+  const [size, setSize] = useState('')
   const [qty, setQty] = useState('')
   const [reason, setReason] = useState('')
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
 
   const product = products.find((p) => p.id === productId)
+  const sizeOptions = product?.sizeStock ? Object.keys(product.sizeStock) : []
 
   const submit = async () => {
     setStatus('')
     if (!product) { setStatus('กรุณาเลือกสินค้า'); return }
+    if (sizeOptions.length > 0 && !size) { setStatus('กรุณาเลือกไซซ์ที่รับเข้า'); return }
     const n = Number(qty)
     if (!qty || isNaN(n) || n <= 0) { setStatus('กรุณาใส่จำนวนที่มากกว่า 0'); return }
     setSaving(true)
     try {
-      await stockIn(product, n, reason)
-      setStatus(`รับเข้าคลังสำเร็จ — ${product.name} +${n}`)
-      setQty(''); setReason('')
+      await stockIn(product, n, reason, size)
+      setStatus(`รับเข้าคลังสำเร็จ — ${product.name}${size ? ` ไซซ์ ${size}` : ''} +${n}`)
+      setQty(''); setReason(''); setSize('')
     } catch (e) {
       setStatus('เกิดข้อผิดพลาด: ' + e.message)
     } finally {
@@ -52,13 +55,23 @@ function StockInForm({ products }) {
       <h4><FontAwesomeIcon icon={faPlus} /> รับสินค้าเข้าคลัง</h4>
       <div className="admin-form-grid">
         <label>สินค้า
-          <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+          <select value={productId} onChange={(e) => { setProductId(e.target.value); setSize('') }}>
             <option value="">— เลือกสินค้า —</option>
             {products.map((p) => (
-              <option key={p.id} value={p.id}>{p.productId ? `[${p.productId}] ` : ''}{p.name} (คงเหลือ {Number.isFinite(p.stock) ? p.stock : '—'})</option>
+              <option key={p.id} value={p.id}>{p.productId ? `[${p.productId}] ` : ''}{p.name}{p.type ? ` (${p.type})` : ''} (คงเหลือ {Number.isFinite(p.stock) ? p.stock : '—'})</option>
             ))}
           </select>
         </label>
+        {sizeOptions.length > 0 && (
+          <label>ไซซ์ที่รับเข้า
+            <select value={size} onChange={(e) => setSize(e.target.value)}>
+              <option value="">— เลือกไซซ์ —</option>
+              {sizeOptions.map((sz) => (
+                <option key={sz} value={sz}>{sz} (คงเหลือ {Number(product.sizeStock[sz]) || 0})</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>จำนวนที่รับเข้า
           <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="เช่น 20" />
         </label>

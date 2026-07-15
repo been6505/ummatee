@@ -14,15 +14,26 @@ export const stockLevel = (stock) => {
 }
 
 // รับสินค้าเข้าคลัง — เพิ่ม stock ของสินค้า + บันทึก log (เฉพาะแอดมิน — คุมสิทธิ์ใน firestore.rules)
-export async function stockIn(product, qty, reason) {
+// สินค้าที่มี sizeStock (เช่น เสื้อ) ต้องระบุ size ด้วย — บวกเข้าไซซ์นั้นโดยตรง แล้วคำนวณ stock รวมใหม่จากผลรวม sizeStock เสมอ
+// กันไม่ให้ stock (ยอดรวม) เพี้ยนไปจาก sizeStock จริง (ไม่งั้นของที่ "รับเข้า" จะไม่มีไซซ์ไหนขายได้จริง)
+export async function stockIn(product, qty, reason, size) {
   const n = Math.trunc(Number(qty))
   if (!Number.isFinite(n) || n <= 0) throw new Error('กรุณาใส่จำนวนที่มากกว่า 0')
+  const hasSizeStock = product.sizeStock && Object.keys(product.sizeStock).length > 0
+  if (hasSizeStock && !size) throw new Error('สินค้านี้แยกสต็อกตามไซซ์ กรุณาเลือกไซซ์ที่รับเข้า')
   const productRef = doc(db, 'products', product.id)
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(productRef)
     if (!snap.exists()) throw new Error('ไม่พบสินค้านี้ในระบบแล้ว')
-    const next = (Number.isFinite(snap.data().stock) ? snap.data().stock : 0) + n
-    tx.update(productRef, { stock: next })
+    const data = snap.data()
+    if (hasSizeStock) {
+      const nextSizeStock = { ...data.sizeStock, [size]: (Number(data.sizeStock?.[size]) || 0) + n }
+      const nextTotal = Object.values(nextSizeStock).reduce((s, v) => s + (Number(v) || 0), 0)
+      tx.update(productRef, { sizeStock: nextSizeStock, stock: nextTotal })
+    } else {
+      const next = (Number.isFinite(data.stock) ? data.stock : 0) + n
+      tx.update(productRef, { stock: next })
+    }
   })
   await addDoc(collection(db, 'stockMovements'), {
     productId: product.id,
@@ -30,7 +41,7 @@ export async function stockIn(product, qty, reason) {
     productName: product.name || '',
     qty: n,
     type: 'stock-in',
-    reason: (reason || '').trim().slice(0, 300),
+    reason: (hasSizeStock ? `ไซซ์ ${size}${reason ? ' — ' + reason : ''}` : (reason || '')).trim().slice(0, 300),
     at: Date.now(),
   })
 }

@@ -50,11 +50,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // แยก vendor chunk ที่นานๆ เปลี่ยนที (react/fontawesome/firebase) ออกจากโค้ดของเรา —
-        // เวลา deploy โค้ดใหม่ ผู้ใช้โหลดเฉพาะ chunk ที่เปลี่ยน ไม่ต้องโหลด vendor ซ้ำ
+        // แยก react + "engine" ของ fontawesome (ตัว render SVG/จัดการ prop — ไม่ใช่ตัวไอคอน) เป็น vendor chunk ถาวร
+        // ทุกหน้าใช้ engine นี้เหมือนกันอยู่แล้ว แคชยาวได้ ไม่ต้องโหลดซ้ำทุกหน้า
+        // ตั้งใจไม่รวมแพ็กเกจไอคอน (free-solid/free-brands) เข้ามาด้วย — ปล่อยให้แต่ละหน้า (lazy chunk) tree-shake
+        // เอาเฉพาะไอคอนที่หน้านั้นใช้จริงเข้าไปในชิ้นของตัวเอง แทนที่จะรวมไอคอนทั้งแอปไว้ก้อนเดียวที่โหลดตั้งแต่หน้าแรก
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-icons': ['@fortawesome/react-fontawesome', '@fortawesome/free-solid-svg-icons', '@fortawesome/free-brands-svg-icons'],
+          'vendor-fa-core': ['@fortawesome/react-fontawesome', '@fortawesome/fontawesome-svg-core'],
         },
       },
     },

@@ -123,7 +123,7 @@ export default function ShopProductDetail({ productId }) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    return shuffled.slice(0, 3)
+    return shuffled.slice(0, 4)
   }, [products, linkedProduct])
 
   const backToShop = (e) => { e.preventDefault(); go('shop') }
@@ -342,7 +342,7 @@ export default function ShopProductDetail({ productId }) {
         {relatedGroups.length > 0 && (
           <div className="wrap shop-related">
             <h3 className="shop-related-title">{t.related}</h3>
-            <div className="shop-grid shop-grid-3col">
+            <div className="shop-grid shop-grid-4col">
               {relatedGroups.map((g) => (
                 <ProductCard key={g.key} g={g} t={SHOP_T[lang] || SHOP_T.th} onOpen={openProduct} />
               ))}

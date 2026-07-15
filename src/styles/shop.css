@@ -256,9 +256,9 @@
   .shop-detail-inline-viewcart:hover{border-color:var(--green-mid)}
 }
 
-/* ส่วน "สินค้าที่น่าสนใจ" ท้ายหน้ารายละเอียดสินค้า — บังคับ 1 แถว 3 คอลัมน์บนจอกว้าง */
+/* ส่วน "สินค้าที่น่าสนใจ" ท้ายหน้ารายละเอียดสินค้า — บังคับ 1 แถว 4 คอลัมน์บนจอกว้าง (ครบ 4 ชิ้นพอดี ไม่เหลือช่องว่าง) */
 .shop-related{margin-top:48px}
 .shop-related-title{font-size:1.25rem;font-weight:800;color:var(--green-deep);margin-bottom:18px}
-.shop-grid-3col{grid-template-columns:repeat(3,1fr)}
-@media (max-width:900px){.shop-grid-3col{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:480px){.shop-grid-3col{grid-template-columns:1fr}}
+.shop-grid-4col{grid-template-columns:repeat(4,1fr)}
+@media (max-width:900px){.shop-grid-4col{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.shop-grid-4col{grid-template-columns:1fr}}

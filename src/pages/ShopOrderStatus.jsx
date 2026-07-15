@@ -6,9 +6,9 @@ import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
-import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard } from '../components/OrderShared.jsx'
+import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 import { optImg } from '../utils/cloudinaryUrl.js'
 
 // หน้าติดตามคำสั่งซื้อสำหรับลูกค้า (/um-shop/order/:orderId) — ดูสถานะ + อัพหลักฐานการโอนเท่านั้น
@@ -207,7 +207,12 @@ export default function ShopOrderStatus({ orderId }) {
             <div className="admin-card" style={{ marginBottom: 20 }}>
               <h4>กำลังจัดส่ง</h4>
               {order.trackingNumber && (
-                <p style={{ fontSize: '.95rem', marginBottom: 12 }}><strong>เลขพัสดุ:</strong> {order.trackingNumber}</p>
+                <p style={{ fontSize: '.95rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
+                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                    <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
+                  </a>
+                </p>
               )}
               {order.packedImages?.length > 0 && (
                 <div className="admin-media-preview" style={{ marginBottom: 14 }}>
@@ -236,7 +241,14 @@ export default function ShopOrderStatus({ orderId }) {
             <div className="admin-card" style={{ marginBottom: 20 }}>
               <h4>จัดส่งเรียบร้อยแล้ว</h4>
               <p style={{ color: '#15803d' }}><FontAwesomeIcon icon={faCheck} /> ได้รับสินค้าเมื่อ {order.deliveredAt}</p>
-              {order.trackingNumber && <p style={{ fontSize: '.9rem', marginTop: 6 }}><strong>เลขพัสดุ:</strong> {order.trackingNumber}</p>}
+              {order.trackingNumber && (
+                <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
+                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                    <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
+                  </a>
+                </p>
+              )}
               {order.deliveredImages?.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุแล้ว</p>

@@ -8,6 +8,9 @@ import { STATUS_STEPS, STATUS_LABEL, stepIndex } from '../data/orders.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 export const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 
+// ลิงก์ติดตามพัสดุ — ใช้ 17TRACK (ตรวจจับขนส่งอัตโนมัติจากรูปแบบเลขพัสดุ รองรับไปรษณีย์ไทย/Kerry/Flash/J&T ฯลฯ ในลิงก์เดียว)
+export const trackingUrl = (code) => `https://t.17track.net/en#nums=${encodeURIComponent(code.trim())}`
+
 const STEP_ICONS = ['1', '2', '3', '4']
 
 export function Stepper({ status }) {

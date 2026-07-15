@@ -11,9 +11,9 @@ import {
 import { useProducts, effectivePrice } from '../data/shop.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { notifyLineOrderStatus } from '../utils/lineNotify.js'
-import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard } from '../components/OrderShared.jsx'
+import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าจัดการคำสั่งซื้อของแอดมิน (/admin/shop/orders/:id) — ทำทุกขั้นตอน:
 // ยืนยันการชำระเงิน, แนบรูปสินค้าที่แพ็ค + ยืนยันจัดส่ง, อัปเดตสถานะการจัดส่ง, ยืนยันจัดส่งเรียบร้อย
@@ -269,6 +269,11 @@ export default function AdminShopOrderDetail({ orderId }) {
                       <button className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} onClick={() => { setTrackingInput(order.trackingNumber || ''); setEditingTracking(true) }}>
                         {order.trackingNumber ? 'แก้ไข' : 'เพิ่มเลขพัสดุ'}
                       </button>
+                      {order.trackingNumber && (
+                        <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                          <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
+                        </a>
+                      )}
                     </p>
                   )}
                 </div>
@@ -317,7 +322,14 @@ export default function AdminShopOrderDetail({ orderId }) {
               <div className="admin-card" style={{ marginBottom: 20 }}>
                 <h4>{STATUS_LABEL.delivered}</h4>
                 <p style={{ color: '#15803d' }}><FontAwesomeIcon icon={faCheck} /> ได้รับสินค้าเมื่อ {order.deliveredAt}</p>
-                {order.trackingNumber && <p style={{ fontSize: '.9rem', marginTop: 6 }}><strong>เลขพัสดุ:</strong> {order.trackingNumber}</p>}
+                {order.trackingNumber && (
+                  <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
+                    <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber)} target="_blank" rel="noopener noreferrer">
+                      <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
+                    </a>
+                  </p>
+                )}
 
                 <div style={{ marginTop: 16 }}>
                   <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุแล้ว (เช่น รูปหน้าบ้านลูกค้า/ใบเซ็นรับ)</p>

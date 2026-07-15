@@ -35,13 +35,26 @@ export default function AdminShopOrders() {
           </div>
         </div>
 
-        <div className="give-admin-tabs" style={{ marginBottom: 20 }}>
-          <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>ทั้งหมด ({orders.length})</button>
-          {Object.entries(STATUS_LABEL).map(([key, label]) => (
-            <button key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>
-              {label} ({orders.filter((o) => o.status === key).length})
-            </button>
-          ))}
+        <div className="admin-card" style={{ marginBottom: 20, padding: 0, overflow: 'hidden' }}>
+          <div className="admin-table-wrap">
+            <table className="admin-table admin-status-filter-table">
+              <thead>
+                <tr><th>สถานะ</th><th style={{ textAlign: 'right' }}>จำนวน</th></tr>
+              </thead>
+              <tbody>
+                <tr className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>
+                  <td>ทั้งหมด</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{orders.length}</td>
+                </tr>
+                {Object.entries(STATUS_LABEL).map(([key, label]) => (
+                  <tr key={key} className={filter === key ? 'active' : ''} onClick={() => setFilter(key)}>
+                    <td style={{ color: STATUS_COLOR[key], fontWeight: 700 }}>{label}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{orders.filter((o) => o.status === key).length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {ordersLoading ? <p>กำลังโหลดข้อมูล...</p> : (

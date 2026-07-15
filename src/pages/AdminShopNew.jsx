@@ -8,7 +8,7 @@ import {
   usePromotions, addPromotion, deletePromotion, applyPromotion, SHOP_SIZES_BY_CATEGORY,
 } from '../data/shop.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faImage, faXmark, faSpinner, faTag } from '@fortawesome/free-solid-svg-icons'
+import { faImage, faXmark, faSpinner, faTag, faCamera } from '@fortawesome/free-solid-svg-icons'
 
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 
@@ -325,11 +325,18 @@ export default function AdminShopNew({ mode, seedId }) {
             </label>
             <div>
               <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปภาพสินค้า (รูปแรกเป็นรูปหลัก)</div>
-              <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
-                <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
-                {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูปภาพสินค้า'}
-                <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
-              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
+                  <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
+                  {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูปภาพสินค้า'}
+                  <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
+                </label>
+                <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }} title="ถ่ายภาพด้วยกล้อง">
+                  <FontAwesomeIcon icon={faCamera} />
+                  {' ถ่ายภาพ'}
+                  <input type="file" accept="image/*" capture="environment" hidden onChange={uploadImages} />
+                </label>
+              </div>
               {form.images.length > 0 && (
                 <div className="admin-media-preview" style={{ marginTop: 10 }}>
                   {form.images.map((url, i) => (

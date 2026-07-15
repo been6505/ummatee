@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faSpinner, faImage, faCartShopping } from '@fortawesome/free-solid-svg-icons'
+import { faCheck, faSpinner, faImage, faCartShopping, faCamera } from '@fortawesome/free-solid-svg-icons'
 import { STATUS_STEPS, STATUS_LABEL, stepIndex } from '../data/orders.js'
 
 // ชิ้นส่วน UI ที่ใช้ร่วมกันระหว่างหน้าติดตามคำสั่งซื้อของลูกค้า (ShopOrderStatus)
@@ -24,13 +24,21 @@ export function Stepper({ status }) {
   )
 }
 
+// ปุ่มอัพโหลดรูป — มี 2 ตัวเลือก: เลือกจากคลังรูปภาพ / ถ่ายภาพด้วยกล้องโดยตรง (capture="environment" เปิดกล้องหลังทันทีบนมือถือ)
 export function UploadButton({ label, multiple, uploading, onFiles }) {
   return (
-    <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
-      <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
-      {uploading ? ' กำลังอัพโหลด...' : ` ${label}`}
-      <input type="file" accept="image/*" multiple={multiple} hidden onChange={onFiles} />
-    </label>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
+        <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
+        {uploading ? ' กำลังอัพโหลด...' : ` ${label}`}
+        <input type="file" accept="image/*" multiple={multiple} hidden onChange={onFiles} />
+      </label>
+      <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }} title="ถ่ายภาพด้วยกล้อง">
+        <FontAwesomeIcon icon={faCamera} />
+        {' ถ่ายภาพ'}
+        <input type="file" accept="image/*" capture="environment" hidden onChange={onFiles} />
+      </label>
+    </div>
   )
 }
 

@@ -128,6 +128,7 @@ export default function AdminShop() {
   const [origStock, setOrigStock] = useState(null) // snapshot สต็อกตอนเปิดฟอร์มแก้ไข — ใช้เช็คว่าแอดมินแตะสต็อกไหม
   const [status, setStatus] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [showGuide, setShowGuide] = useState(false) // คู่มือย่อ "วิธีจัดการสินค้าเสื้อ" — เปิด/ปิดได้
 
   const [promoForm, setPromoForm] = useState(EMPTY_PROMO)
   const [promoStatus, setPromoStatus] = useState('')
@@ -250,6 +251,25 @@ export default function AdminShop() {
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM); setOrigStock(null) }
 
+  // ทำสำเนาสินค้า — คัดลอกชื่อ/หมวด/ประเภท/คำอธิบายจาก doc เดิม แต่เป็นการ "เพิ่มใหม่" (ไม่ใช่แก้ไข)
+  // เว้นสี/จำนวนให้กรอกใหม่ ให้รหัสสินค้าอันถัดไปอัตโนมัติ — กันพิมพ์ชื่อไม่ตรง (สินค้าจะได้จับกลุ่มการ์ดเดียวกัน)
+  const duplicateProduct = (p) => {
+    setEditId(null) // โหมดเพิ่มใหม่ ไม่ใช่แก้ไข
+    setForm({
+      ...EMPTY_FORM,
+      productId: '', // ปล่อยว่างให้ระบบเสนอรหัสถัดไป (um0xx)
+      name: p.name || '', // ชื่อเดิมเป๊ะ = จับกลุ่มการ์ดเดียวกันแน่นอน
+      category: p.category || '',
+      type: p.type || '',
+      description: p.description || '',
+      price: p.price ?? '',
+      // เว้น colors / sizes / sizeStock / images ให้กรอกใหม่สำหรับสีถัดไป
+    })
+    setOrigStock(null)
+    setStatus('ทำสำเนาแล้ว — กรอกสี/จำนวน/รูป ของตัวเลือกใหม่ แล้วกด "เพิ่มสินค้า"')
+    document.querySelector('.admin-shop-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const save = async () => {
     if (!form.name.trim()) { setStatus('กรุณากรอกชื่อสินค้า'); return }
     setStatus('กำลังบันทึก...')
@@ -332,10 +352,34 @@ export default function AdminShop() {
             <h1>จัดการสินค้า Um Shop</h1>
             <p>เพิ่ม/แก้ไขสินค้า — แสดงผลที่หน้า <a href="/um-shop">/um-shop</a> ทันที</p>
           </div>
+          <button type="button" className="admin-btn" onClick={() => setShowGuide((v) => !v)}>
+            {showGuide ? 'ปิดคู่มือ' : '📖 วิธีจัดการสินค้าเสื้อ'}
+          </button>
         </div>
 
+        {showGuide && (
+          <div className="admin-card shop-guide">
+            <h4>📖 วิธีจัดการสินค้าเสื้อ (หลายสี/ประเภท/ไซซ์)</h4>
+            <p className="shop-guide-key">
+              หัวใจสำคัญ: <b>เสื้อ 1 แบบ = หลายรายการ (doc) ที่ใช้ "ชื่อสินค้า" เหมือนกันเป๊ะ</b> ระบบจะรวมเป็นการ์ดเดียวบนหน้าร้านให้เอง
+              — พิมพ์ชื่อไม่ตรงกันแม้แต่เว้นวรรคเดียว จะกลายเป็นคนละการ์ด
+            </p>
+            <ol className="shop-guide-steps">
+              <li>เลือก <b>หมวดหมู่ "เสื้อ"</b> ก่อนเสมอ — ช่อง "ประเภท" และ "ขนาด" จะเปลี่ยนเป็นตัวเลือกสำเร็จรูป (แขนสั้น/แขนยาว/เด็กเล็ก + S–3XL)</li>
+              <li><b>ชื่อสินค้า</b> เลือกจาก dropdown ที่จำชื่อเดิม (กันพิมพ์ผิด/ไม่ตรง)</li>
+              <li><b>1 doc = 1 สี</b> (และ 1 ประเภท) — ใส่สีเดียวต่อรายการ ไม่ต้องใส่หลายสีคั่นจุลภาค</li>
+              <li><b>ไซซ์</b> เลือกไซซ์ที่มี แล้ว<b>กรอกจำนวนแต่ละไซซ์</b> — ยอดรวมคงเหลือคำนวณให้อัตโนมัติ</li>
+              <li>สี/ประเภทถัดไป: กด <b>"ทำสำเนา"</b> ในตารางด้านล่าง → ชื่อ/หมวด/ประเภทถูกคัดลอกมาให้ เหลือแค่เปลี่ยนสี+จำนวน แล้วกด "เพิ่มสินค้า"</li>
+            </ol>
+            <p className="shop-guide-tip">
+              💡 <b>ของหมดเฉพาะไซซ์</b> → แก้จำนวนไซซ์นั้นเป็น 0 (ปุ่มบนหน้าร้านจะปิดเอง ไม่ต้องลบทั้งรายการ) ·
+              <b> ปิดขายทั้งแบบชั่วคราว</b> → กดปุ่ม "แสดงอยู่/ซ่อน" ทุก doc ที่ชื่อเดียวกัน
+            </p>
+          </div>
+        )}
+
         <div className="admin-shop-top-grid">
-        <div className="admin-card">
+        <div className="admin-card admin-shop-form-card">
           <h4>{editId ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h4>
           <div className="admin-form-grid admin-form-grid-3col">
             {/* แถว 1: รหัสสินค้า / ชื่อสินค้า / หมวดหมู่ */}
@@ -580,8 +624,9 @@ export default function AdminShop() {
                           {isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}
                         </button>
                       </td>
-                      <td style={{ display: 'flex', gap: 6 }}>
+                      <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
+                        <button className="admin-btn" onClick={() => duplicateProduct(p)} title="คัดลอกชื่อ/หมวด/ประเภท ไปสร้างสี/ตัวเลือกใหม่ (จับกลุ่มการ์ดเดียวกัน)">ทำสำเนา</button>
                         <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
                       </td>
                     </tr>

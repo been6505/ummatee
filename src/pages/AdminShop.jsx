@@ -581,7 +581,8 @@ export default function AdminShop() {
                 )}
               </div>
             </div>
-            <div className="admin-table-wrap">
+            {/* เดสก์ท็อป: ตารางเต็ม (เรียงคอลัมน์ได้) — ซ่อนบนมือถือ ดู .admin-shop-cards แทน */}
+            <div className="admin-table-wrap admin-shop-table-desktop">
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -637,6 +638,49 @@ export default function AdminShop() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* มือถือ: การ์ด 2 แถว — แถวบน รูป+ชื่อ+ราคา / แถวล่าง คงเหลือ+สถานะ+ปุ่ม (ซ่อนบนเดสก์ท็อป) */}
+            <div className="admin-shop-cards">
+              {filtered.map((p) => {
+                const isActive = p.active !== false
+                return (
+                  <div key={p.id} className={`admin-shop-card ${isActive ? '' : 'is-hidden'}`}>
+                    <div className="asc-top">
+                      <div className="asc-thumb">
+                        {p.images?.[0] ? <img src={p.images[0]} alt={p.name} /> : <span className="asc-thumb-ph">—</span>}
+                      </div>
+                      <div className="asc-info">
+                        <div className="asc-name">{p.name}</div>
+                        <div className="asc-code">{p.productId || '—'}{p.category ? ` · ${p.category}` : ''}{p.type ? ` · ${p.type}` : ''}</div>
+                      </div>
+                      <div className="asc-price">
+                        {p.discountPrice != null
+                          ? <><span className="asc-price-old">{THB(p.price)}</span><span className="asc-price-now">{THB(p.discountPrice)}</span></>
+                          : <span className="asc-price-now">{THB(p.price)}</span>}
+                      </div>
+                    </div>
+                    <div className="asc-bottom">
+                      <span className={`asc-stock ${p.stock <= 0 ? 'out' : ''}`}>คงเหลือ {p.stock}</span>
+                      <button
+                        className="admin-btn asc-status-btn"
+                        onClick={() => toggleActive(p)}
+                        style={isActive
+                          ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+                          : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
+                      >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
+                      <div className="asc-actions">
+                        <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
+                        <button className="admin-btn" onClick={() => duplicateProduct(p)}>ทำสำเนา</button>
+                        <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+              {filtered.length === 0 && (
+                <p style={{ textAlign: 'center', color: '#999', padding: '30px 0' }}>ยังไม่มีสินค้า — เพิ่มจากฟอร์มด้านบน</p>
+              )}
             </div>
           </div>
         )}

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useProducts, hasDiscount, discountPercent, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY } from '../data/shop.js'
+import { useProducts, hasDiscount, discountPercent, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY, groupProductsByName } from '../data/shop.js'
 import { addToCart, useCartCount } from '../data/cart.js'
 import Footer from '../components/Footer.jsx'
+import { ProductCard, SHOP_T } from './Shop.jsx'
 import { useLang } from '../i18n.jsx'
 import { useNavigate } from '../navContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -20,19 +21,19 @@ const T = {
     back: 'กลับไปหน้าร้านค้า', color: 'สี', size: 'ขนาด', type: 'ประเภท', stock: 'คงเหลือ', out: 'สินค้าหมด',
     pickColor: 'กรุณาเลือกสี', pickSize: 'กรุณาเลือกขนาด', pickType: 'กรุณาเลือกประเภท',
     qty: 'จำนวน', addToCart: 'เพิ่มลงตะกร้า', added: 'เพิ่มลงตะกร้าแล้ว ✓', chat: 'ทักไลน์', viewCart: 'ดูตะกร้าสินค้า',
-    notFound: 'ไม่พบสินค้านี้', notFoundDesc: 'สินค้าอาจถูกลบหรือย้ายไปแล้ว',
+    notFound: 'ไม่พบสินค้านี้', notFoundDesc: 'สินค้าอาจถูกลบหรือย้ายไปแล้ว', related: 'สินค้าที่น่าสนใจ',
   },
   en: {
     back: 'Back to shop', color: 'Color', size: 'Size', type: 'Type', stock: 'In stock', out: 'Out of stock',
     pickColor: 'Please select a color', pickSize: 'Please select a size', pickType: 'Please select a type',
     qty: 'Quantity', addToCart: 'Add to cart', added: 'Added to cart ✓', chat: 'Chat on LINE', viewCart: 'View cart',
-    notFound: 'Product not found', notFoundDesc: 'This product may have been removed or moved.',
+    notFound: 'Product not found', notFoundDesc: 'This product may have been removed or moved.', related: 'You may also like',
   },
   ar: {
     back: 'العودة للمتجر', color: 'اللون', size: 'المقاس', type: 'النوع', stock: 'المتوفر', out: 'غير متوفر',
     pickColor: 'يرجى اختيار اللون', pickSize: 'يرجى اختيار المقاس', pickType: 'يرجى اختيار النوع',
     qty: 'الكمية', addToCart: 'أضف إلى السلة', added: 'أُضيف إلى السلة ✓', chat: 'تواصل عبر LINE', viewCart: 'عرض السلة',
-    notFound: 'المنتج غير موجود', notFoundDesc: 'ربما تمت إزالة هذا المنتج أو نقله.',
+    notFound: 'المنتج غير موجود', notFoundDesc: 'ربما تمت إزالة هذا المنتج أو نقله.', related: 'منتجات قد تعجبك',
   },
 }
 
@@ -110,8 +111,24 @@ export default function ShopProductDetail({ productId }) {
     return SHOP_SIZES_BY_CATEGORY[product?.category] || dedupeSortSizes(product?.sizes, product?.category)
   }, [product])
 
+  // สินค้าที่น่าสนใจ — สุ่ม 3 ชิ้นจากสินค้าที่แสดงผลอยู่ (active) ไม่รวมสินค้ากลุ่มปัจจุบัน เลือกหมวดหมู่เดียวกันก่อนถ้ามีพอ ไม่งั้นใช้ทั้งร้าน
+  const relatedGroups = useMemo(() => {
+    const others = products.filter((p) => p.active !== false && (p.name || '').trim() !== (linkedProduct?.name || '').trim())
+    const groups = groupProductsByName(others)
+    const sameCategory = groups.filter((g) => g.primary.category === linkedProduct?.category)
+    const pool = sameCategory.length >= 3 ? sameCategory : groups
+    // สุ่มลำดับแบบ Fisher–Yates เบาๆ ให้เปลี่ยนหน้าตาทุกครั้งที่เข้า ไม่ใช่โชว์ 3 ชิ้นเดิมซ้ำๆ
+    const shuffled = [...pool]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled.slice(0, 3)
+  }, [products, linkedProduct])
+
   const backToShop = (e) => { e.preventDefault(); go('shop') }
   const viewCart = () => go('shop-cart')
+  const openProduct = (p) => go('shop-detail', p.productId || p.id)
 
   if (loading) return null
 
@@ -321,6 +338,17 @@ export default function ShopProductDetail({ productId }) {
             </div>
           </div>
         </div>
+
+        {relatedGroups.length > 0 && (
+          <div className="wrap shop-related">
+            <h3 className="shop-related-title">{t.related}</h3>
+            <div className="shop-grid shop-grid-3col">
+              {relatedGroups.map((g) => (
+                <ProductCard key={g.key} g={g} t={SHOP_T[lang] || SHOP_T.th} onOpen={openProduct} />
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </main>
 

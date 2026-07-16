@@ -203,6 +203,8 @@
 .hf-btn-volunteer{background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff}
 .hf-card-gradient-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 20px 32px;min-height:160px}
 .hf-gradient-volunteer{background:linear-gradient(135deg,#0891b2 0%,#0e7490 50%,#164e63 100%)}
+.hf-gradient-iftar{background:linear-gradient(135deg,#2E7D52 0%,#1B5E36 60%,#0f3d23 100%)}
+.hf-gradient-give{background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 55%,#5b21b6 100%)}
 .hf-gradient-icon{font-size:3rem;line-height:1}
 .hf-gradient-label{font-size:.85rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85)}
 .hf-tag-teal{background:rgba(8,145,178,.12);color:#0e7490;border:1px solid rgba(8,145,178,.25)}

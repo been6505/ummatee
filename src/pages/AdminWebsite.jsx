@@ -4,7 +4,7 @@ import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
-import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS } from '../data/homeCards.js'
+import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS } from '../data/homeCards.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
@@ -115,9 +115,11 @@ export default function AdminWebsite() {
   const [cardsSaving, setCardsSaving] = useState(false)
   const [cardsSaved, setCardsSaved] = useState(false)
   useEffect(() => {
-    // sync จาก Firestore เฉพาะตอนยังไม่ได้แก้อะไรในเครื่อง — กันทับงานที่กำลังพิมพ์อยู่
-    if (!cardsDirty && savedCards !== null) setCards(savedCards)
-  }, [savedCards, cardsDirty])
+    // sync จาก Firestore เฉพาะตอนโหลดเสร็จและยังไม่ได้แก้อะไรในเครื่อง — กันทับงานที่กำลังพิมพ์อยู่
+    // ถ้าแอดมินยังไม่เคยบันทึก (savedCards === null) ให้เริ่มจากการ์ดมาตรฐาน 3 ใบ เพื่อให้แก้/บันทึกต่อได้เลย
+    if (cardsLoading || cardsDirty) return
+    setCards(savedCards !== null ? savedCards : DEFAULT_HOME_CARDS)
+  }, [savedCards, cardsLoading, cardsDirty])
 
   const [enabled, setEnabled] = useState(false)
   const [text, setText] = useState('')
@@ -182,6 +184,8 @@ export default function AdminWebsite() {
     setCardsDirty(true)
   }
   const addCard = () => { setCards((cs) => [...(cs || []), { ...EMPTY_CARD }]); setCardsDirty(true) }
+  // เพิ่มการ์ดมาตรฐาน 3 ใบ (Iftar/งานให้/อาสาสมัคร) ต่อท้ายชุดปัจจุบัน — เผื่อเคยบันทึกการ์ดของตัวเองไปแล้วอยากดึงการ์ดเดิมกลับมาจัดการ
+  const addDefaults = () => { setCards((cs) => [...(cs || []), ...DEFAULT_HOME_CARDS.map((c) => ({ ...c }))]); setCardsDirty(true) }
   const saveCards = async () => {
     setCardsSaving(true)
     try {
@@ -308,12 +312,12 @@ export default function AdminWebsite() {
           </div>
           <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
             จัดการการ์ดกิจกรรม/ประชาสัมพันธ์บนหน้าแรกได้เอง — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดหน้าแรก"
-            {cards === null && !cardsLoading && ' (ยังไม่เคยตั้งค่า — หน้าแรกใช้การ์ดมาตรฐาน 3 ใบเดิม กด "เพิ่มการ์ด" เพื่อเริ่มจัดการเอง)'}
+            {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
           </p>
 
-          {cardsLoading ? <p>กำลังโหลด…</p> : (
+          {cardsLoading || cards === null ? <p>กำลังโหลด…</p> : (
             <>
-              {(cards || []).map((card, i) => (
+              {cards.map((card, i) => (
                 <CardEditor
                   key={i} card={card} index={i} total={cards.length}
                   onChange={(next) => updateCard(i, next)}
@@ -321,20 +325,21 @@ export default function AdminWebsite() {
                   onRemove={removeCard}
                 />
               ))}
-              {cards !== null && cards.length === 0 && (
+              {cards.length === 0 && (
                 <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
-                  ⚠️ ไม่มีการ์ดเลย — หน้าแรกจะไม่แสดงส่วนการ์ดกิจกรรม (ถ้าต้องการกลับไปใช้การ์ดมาตรฐานเดิม ให้ลบ doc config/homeCards ใน Firestore)
+                  ⚠️ ไม่มีการ์ดเลย — หน้าแรกจะไม่แสดงส่วนการ์ดกิจกรรม
                 </p>
               )}
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
                 <button type="button" className="admin-btn" onClick={addCard}>
                   <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ด
                 </button>
-                {cards !== null && (
-                  <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || !cardsDirty}>
-                    <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
-                  </button>
-                )}
+                <button type="button" className="admin-btn" onClick={addDefaults}>
+                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดมาตรฐาน (3 ใบ)
+                </button>
+                <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || (!cardsDirty && savedCards !== null)}>
+                  <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
+                </button>
               </div>
             </>
           )}

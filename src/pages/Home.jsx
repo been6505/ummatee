@@ -7,7 +7,7 @@ import SocialLinks from '../components/SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
-import { useHomeCards } from '../data/homeCards.js'
+import { useHomeCards, DEFAULT_HOME_CARDS } from '../data/homeCards.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
@@ -304,102 +304,48 @@ export default function Home() {
         </div>
 
         <div className="hf-feed">
-          {/* การ์ดจากแอดมิน (/admin/website) — ถ้าตั้งค่าไว้ใช้ชุดนี้แทนการ์ดมาตรฐานด้านล่างทั้งหมด */}
-          {customCards !== null && customCards.map((c, i) => (
-            <FadeUp className="hf-card" key={i} delay={i * 80}>
-              <ShareCardBtn
-                className="hf-card-share hf-card-share-float"
-                iconOnly
-                title={c.title} desc={c.desc} link={c.link}
-                image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
-              />
-              {c.images?.length > 0 && (
-                <PosterCarousel
-                  images={c.images.map((u) => optImg(u, 900))}
-                  alt={c.title}
-                  onClick={() => goPath(c.link || '/')}
+          {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website */}
+          {(customCards !== null ? customCards : DEFAULT_HOME_CARDS).map((c, i) => {
+            const gradIcon = c.color === 'give' ? faHandHoldingHeart : c.color === 'volunteer' ? faHandSparkles : faMoon
+            return (
+              <FadeUp className="hf-card" key={i} delay={i * 80}>
+                <ShareCardBtn
+                  className="hf-card-share hf-card-share-float"
+                  iconOnly
+                  title={c.title} desc={c.desc} link={c.link}
+                  image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
                 />
-              )}
-              <div className="hf-card-body">
-                {(c.tag || c.tag2) && (
-                  <div className="hf-card-tags">
-                    {c.tag && <span className={`hf-tag ${c.color === 'give' ? 'hf-tag-purple' : c.color === 'volunteer' ? 'hf-tag-teal' : 'hf-tag-green'}`}>{c.tag}</span>}
-                    {c.tag2 && <span className="hf-tag hf-tag-muted">{c.tag2}</span>}
-                  </div>
+                {c.images?.length > 0 ? (
+                  <PosterCarousel
+                    images={c.images.map((u) => optImg(u, 900))}
+                    alt={c.title}
+                    onClick={() => goPath(c.link || '/')}
+                  />
+                ) : (
+                  // การ์ดไม่มีรูป → พื้นไล่สีตามสีของการ์ด (เช่น การ์ดอาสาสมัคร)
+                  <button type="button" className={`hf-card-gradient-hero hf-gradient-${c.color || 'iftar'}`} onClick={() => goPath(c.link || '/')} style={{ border: 'none', width: '100%', cursor: 'pointer' }}>
+                    <span className="hf-gradient-icon"><FontAwesomeIcon icon={gradIcon} /></span>
+                    {c.tag && <div className="hf-gradient-label">{c.tag}</div>}
+                  </button>
                 )}
-                {c.title && <h2 className="hf-card-title">{c.title}</h2>}
-                {c.desc && <p className="hf-card-desc">{c.desc}</p>}
-                {c.btnText && (
-                  <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
-                    {c.btnText} →
-                  </a>
-                )}
-              </div>
-            </FadeUp>
-          ))}
-
-          {customCards === null && <>
-          {/* Card 1 — Iftar For Gaza */}
-          <FadeUp className="hf-card">
-            <PosterCarousel
-              images={['/poster-iftar-gaza.webp', '/poster-line1.webp', '/poster-line2.webp']}
-              alt="Iftar For Gaza"
-              onClick={() => go('iftar')}
-            />
-            <div className="hf-card-body">
-              <div className="hf-card-tags">
-                <span className="hf-tag hf-tag-green"><FontAwesomeIcon icon={faMoon} /> EVENT</span>
-                <span className="hf-tag hf-tag-muted"><FontAwesomeIcon icon={faFlag} /> Gaza</span>
-              </div>
-              <h2 className="hf-card-title">{t.fcEventTitle}</h2>
-              <p className="hf-card-desc">{t.fcEventP}</p>
-              <a href="#" className="hf-card-btn hf-btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}>
-                {t.fcEventLink} →
-              </a>
-            </div>
-          </FadeUp>
-
-          {/* Card 2 — งาน ให้ */}
-          <FadeUp className="hf-card" delay={80}>
-            <a href="#" onClick={(e) => { e.preventDefault(); go('give') }} className="hf-card-poster-link">
-              <img
-                src="/721119853_1607959538003595_185415737813897318_n.jpg"
-                alt="งาน ให้ ครั้งที่ 6"
-                className="hf-poster"
-              />
-            </a>
-            <div className="hf-card-body">
-              <div className="hf-card-tags">
-                <span className="hf-tag hf-tag-purple"><FontAwesomeIcon icon={faHandHoldingHeart} /> EVENT</span>
-                <span className="hf-tag hf-tag-muted">3–5 ก.ค. 2569</span>
-              </div>
-              <h2 className="hf-card-title">{lang === 'ar' ? 'العطاء — الدورة السادسة' : lang === 'en' ? 'GIVE — 6th Edition' : 'งาน "ให้" ครั้งที่ 6'}</h2>
-              <p className="hf-card-desc">{lang === 'ar' ? 'مهرجان العطاء — أكشاك طعام، محاضرات، وأنشطة عائلية. ثلاثة أيام كاملة.' : lang === 'en' ? 'A festival of giving — food stalls, talks, influencer meet-ups, and a fun kids zone. Three full days.' : 'เทศกาลแห่งการแบ่งปัน ออกร้านอาหาร ฟังบรรยาย และส่งต่อสิ่งของ ลานพลาซ่า อินดอร์สเตเดียมหัวหมาก'}</p>
-              <a href="#" className="hf-card-btn hf-btn-give" onClick={(e) => { e.preventDefault(); go('give') }}>
-                {lang === 'ar' ? 'اعرف أكثر ←' : lang === 'en' ? 'Learn More →' : 'ดูรายละเอียด →'}
-              </a>
-            </div>
-          </FadeUp>
-
-          {/* Card 3 — อาสาสมัคร */}
-          <FadeUp className="hf-card" delay={160}>
-            <div className="hf-card-gradient-hero hf-gradient-volunteer">
-              <span className="hf-gradient-icon"><FontAwesomeIcon icon={faHandSparkles} /></span>
-              <div className="hf-gradient-label">Volunteer</div>
-            </div>
-            <div className="hf-card-body">
-              <div className="hf-card-tags">
-                <span className="hf-tag hf-tag-teal"><FontAwesomeIcon icon={faHands} /> JOIN US</span>
-                <span className="hf-tag hf-tag-muted">งาน ให้ ครั้งที่ 6</span>
-              </div>
-              <h2 className="hf-card-title">{lang === 'en' ? 'Volunteer with Us' : lang === 'ar' ? 'تطوع معنا' : 'สมัครอาสาสมัคร'}</h2>
-              <p className="hf-card-desc">{lang === 'en' ? 'Join our volunteer team for GIVE 6th edition — help set up, guide guests, and make the event a success.' : lang === 'ar' ? 'انضم إلى فريق التطوع لنسخة العطاء السادسة وساعد في جعل الحدث ناجحاً.' : 'ร่วมเป็นทีมอาสาในงาน "ให้" ครั้งที่ 6 ช่วยเตรียมงาน ต้อนรับแขก และสร้างบรรยากาศที่อบอุ่น'}</p>
-              <a href="#" className="hf-card-btn hf-btn-volunteer" onClick={(e) => { e.preventDefault(); go('volunteer') }}>
-                {lang === 'en' ? 'Sign Up →' : lang === 'ar' ? 'سجّل الآن ←' : 'สมัครเลย →'}
-              </a>
-            </div>
-          </FadeUp>
-          </>}
+                <div className="hf-card-body">
+                  {(c.tag || c.tag2) && (
+                    <div className="hf-card-tags">
+                      {c.tag && <span className={`hf-tag ${c.color === 'give' ? 'hf-tag-purple' : c.color === 'volunteer' ? 'hf-tag-teal' : 'hf-tag-green'}`}>{c.tag}</span>}
+                      {c.tag2 && <span className="hf-tag hf-tag-muted">{c.tag2}</span>}
+                    </div>
+                  )}
+                  {c.title && <h2 className="hf-card-title">{c.title}</h2>}
+                  {c.desc && <p className="hf-card-desc">{c.desc}</p>}
+                  {c.btnText && (
+                    <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
+                      {c.btnText} →
+                    </a>
+                  )}
+                </div>
+              </FadeUp>
+            )
+          })}
         </div>
       </section>
 

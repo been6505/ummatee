@@ -193,12 +193,9 @@ export default function Shop() { // คอมโพเนนต์หลัก�
 
   return ( // ส่วนแสดงผลของหน้า Shop ทั้งหมด
     <main className="page"> {/* คอนเทนเนอร์หลักของหน้า */}
-      <section className="page-band shop-page-band"> {/* แถบหัวหน้า — พื้นหลังโปสเตอร์ MEGA SALE เต็มภาพ ไม่มีลายเส้น/สีเขียวทับ */}
-        <div className="inner"> {/* กล่องเนื้อหากลางของแถบหัว */}
-          <span className="badge">{t.badge}</span> {/* ป้าย badge "Um Shop" */}
-          <h1>{t.h1}</h1> {/* หัวข้อใหญ่ของหน้า */}
-          <p>{t.p}</p> {/* คำบรรยายใต้หัวข้อ */}
-        </div>
+      <section className="page-band shop-page-band"> {/* แถบหัวหน้า — พื้นหลังโปสเตอร์ MEGA SALE เต็มภาพ ไม่มีข้อความทับ (โปสเตอร์มีข้อความอยู่แล้ว) */}
+        {/* h1 ซ่อนไว้เพื่อ SEO/accessibility (โครงสร้างหน้าควรมี h1 เดียว) แต่ไม่แสดงผลทับโปสเตอร์ */}
+        <h1 style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>{t.h1}</h1>
       </section>
 
       <section className="section"> {/* ส่วนเนื้อหาหลัก: แถบควบคุมและตะแกรงสินค้า */}

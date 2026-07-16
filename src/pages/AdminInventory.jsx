@@ -103,6 +103,25 @@ export default function AdminInventory() {
   const lowStock = useMemo(() => products.filter((p) => stockLevel(p.stock) === 'low'), [products])
   const outOfStock = useMemo(() => products.filter((p) => stockLevel(p.stock) === 'out'), [products])
 
+  // รายการที่ต้องเติมสต็อก แยกเป็นราย "ไซซ์" สำหรับสินค้าที่มี sizeStock (เสื้อ) — ไซซ์ไหนเหลือน้อย/หมดก็ขึ้นแถวของมันเอง
+  // สินค้าที่ไม่มีไซซ์ (หมวก/กระเป๋า ฯลฯ) ใช้สต็อกรวมทั้งชิ้น ขนาดแสดงเป็น "—"
+  const restockRows = useMemo(() => {
+    const rows = []
+    products.forEach((p) => {
+      const label = p.name + (p.type ? ` (${p.type})` : '')
+      const sizes = p.sizeStock && Object.keys(p.sizeStock).length > 0 ? p.sizeStock : null
+      if (sizes) {
+        Object.entries(sizes).forEach(([sz, qty]) => {
+          const n = Number(qty) || 0
+          if (n <= LOW_STOCK_THRESHOLD) rows.push({ id: p.id + '|' + sz, name: label, size: sz, remaining: n })
+        })
+      } else if (stockLevel(p.stock) !== 'ok') {
+        rows.push({ id: p.id, name: label, size: '—', remaining: Number.isFinite(p.stock) ? p.stock : 0 })
+      }
+    })
+    return rows.sort((a, b) => a.remaining - b.remaining) // เหลือน้อยสุด (หมด) ขึ้นก่อน
+  }, [products])
+
   const filteredMovements = useMemo(
     () => (productFilter ? movements.filter((m) => m.productId === productFilter) : movements),
     [movements, productFilter]
@@ -128,20 +147,33 @@ export default function AdminInventory() {
           <div className="admin-stat"><div className="v" style={{ color: '#b45309' }}>{lowStock.length}</div><div className="l">ใกล้หมด (≤{LOW_STOCK_THRESHOLD})</div></div>
         </div>
 
-        {!prodLoading && (outOfStock.length > 0 || lowStock.length > 0) && (
+        {!prodLoading && restockRows.length > 0 && (
           <div className="admin-card" style={{ marginTop: 20, borderColor: '#fca5a5' }}>
-            <h4><FontAwesomeIcon icon={faTriangleExclamation} style={{ color: '#dc2626' }} /> สินค้าต้องเติมสต็อก</h4>
-            <div className="ship-chip-wrap">
-              {outOfStock.map((p) => (
-                <span key={p.id} className="ship-status-chip" style={{ cursor: 'default', borderColor: '#dc2626', color: '#dc2626', background: '#fef2f2' }}>
-                  {p.name} — หมด
-                </span>
-              ))}
-              {lowStock.map((p) => (
-                <span key={p.id} className="ship-status-chip" style={{ cursor: 'default', borderColor: '#f59e0b', color: '#b45309', background: '#fffbeb' }}>
-                  {p.name} — เหลือ {p.stock}
-                </span>
-              ))}
+            <h4><FontAwesomeIcon icon={faTriangleExclamation} style={{ color: '#dc2626' }} /> สินค้าต้องเติมสต็อก ({restockRows.length})</h4>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>สินค้า</th>
+                    <th style={{ textAlign: 'center' }}>ขนาด</th>
+                    <th style={{ textAlign: 'right' }}>เหลือ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {restockRows.map((r) => {
+                    const out = r.remaining <= 0
+                    return (
+                      <tr key={r.id}>
+                        <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{r.name}</td>
+                        <td style={{ textAlign: 'center' }}>{r.size}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: out ? '#d84315' : '#b45309' }}>
+                          {out ? 'หมด' : r.remaining}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

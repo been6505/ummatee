@@ -7,6 +7,12 @@
   background:url('/shop-sale-banner.webp') center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
 }
+/* fade เข้มบางๆ เฉพาะหลังกล่องข้อความ (ไม่ทับทั้งภาพ) กันข้อความจมไปกับลายโปสเตอร์ */
+.shop-page-band .inner{
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.5) 0%,rgba(0,0,0,.28) 55%,transparent 80%);
+  border-radius:24px;
+  padding:28px 24px;
+}
 
 /* ===== Social media follow ===== */
 .social-section{padding:0 0 96px}

@@ -18,7 +18,7 @@ const goPath = (path) => {
 }
 
 // ปุ่มแชร์การ์ดหน้าแรก — แนบรูปโปสเตอร์ + ลิงก์ไปด้วยกัน (Web Share API) ถ้าไม่รองรับก็คัดลอกลิงก์แทน
-function ShareCardBtn({ title, desc, link, image, className }) {
+function ShareCardBtn({ title, desc, link, image, className, iconOnly }) {
   const [done, setDone] = useState(false)
   const onShare = async (e) => {
     e.preventDefault(); e.stopPropagation()
@@ -37,7 +37,7 @@ function ShareCardBtn({ title, desc, link, image, className }) {
   }
   return (
     <button type="button" className={className} onClick={onShare} aria-label="แชร์" title="แชร์">
-      <FontAwesomeIcon icon={done ? faCheck : faShareNodes} /> {done ? 'คัดลอกแล้ว' : 'แชร์'}
+      <FontAwesomeIcon icon={done ? faCheck : faShareNodes} />{iconOnly ? '' : ` ${done ? 'คัดลอกแล้ว' : 'แชร์'}`}
     </button>
   )
 }
@@ -295,6 +295,12 @@ export default function Home() {
           {/* การ์ดจากแอดมิน (/admin/website) — ถ้าตั้งค่าไว้ใช้ชุดนี้แทนการ์ดมาตรฐานด้านล่างทั้งหมด */}
           {customCards !== null && customCards.map((c, i) => (
             <FadeUp className="hf-card" key={i} delay={i * 80}>
+              <ShareCardBtn
+                className="hf-card-share hf-card-share-float"
+                iconOnly
+                title={c.title} desc={c.desc} link={c.link}
+                image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
+              />
               {c.images?.length > 0 && (
                 <PosterCarousel
                   images={c.images.map((u) => optImg(u, 900))}
@@ -311,18 +317,11 @@ export default function Home() {
                 )}
                 {c.title && <h2 className="hf-card-title">{c.title}</h2>}
                 {c.desc && <p className="hf-card-desc">{c.desc}</p>}
-                <div className="hf-card-actions">
-                  {c.btnText && (
-                    <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
-                      {c.btnText} →
-                    </a>
-                  )}
-                  <ShareCardBtn
-                    className="hf-card-share"
-                    title={c.title} desc={c.desc} link={c.link}
-                    image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
-                  />
-                </div>
+                {c.btnText && (
+                  <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
+                    {c.btnText} →
+                  </a>
+                )}
               </div>
             </FadeUp>
           ))}

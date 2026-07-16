@@ -23,24 +23,29 @@ export const EMPTY_CARD = {
   color: 'iftar',
 }
 
-export function useHomeCards() {
-  const [cards, setCards] = useState(null) // null = ยังโหลดไม่เสร็จ, [] = ตั้งค่าแล้วแต่ว่าง
+// live=false → อ่านครั้งเดียว (getDoc) เหมาะกับหน้าแรก public ที่ไม่ต้องอัปเดตกลางทาง — เลี่ยง onSnapshot listener ค้างต่อผู้เข้าชมทุกคน
+// live=true → onSnapshot เรียลไทม์ ใช้ในหน้าแอดมิน (AdminWebsite) ให้เห็นค่าล่าสุดหลังบันทึก/แก้จากที่อื่น
+export function useHomeCards(live = false) {
+  const [cards, setCards] = useState(null) // null = ยังไม่ตั้งค่า (ใช้การ์ดมาตรฐาน), [] = ตั้งค่าแล้วแต่ว่าง
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let unsub = () => {}
     let cancelled = false
     Promise.all([import('../firebase.js'), import('firebase/firestore')])
-      .then(([{ db }, { doc, onSnapshot }]) => {
+      .then(([{ db }, fs]) => {
         if (cancelled) return
-        unsub = onSnapshot(doc(db, 'config', 'homeCards'), (snap) => {
-          setCards(snap.exists() ? (snap.data().cards || []) : null)
-          setLoading(false)
-        }, () => setLoading(false))
+        const ref = fs.doc(db, 'config', 'homeCards')
+        const apply = (snap) => { setCards(snap.exists() ? (snap.data().cards || []) : null); setLoading(false) }
+        if (live) {
+          unsub = fs.onSnapshot(ref, apply, () => setLoading(false))
+        } else {
+          fs.getDoc(ref).then((snap) => { if (!cancelled) apply(snap) }).catch(() => setLoading(false))
+        }
       })
       .catch(() => setLoading(false))
     return () => { cancelled = true; unsub() }
-  }, [])
+  }, [live])
 
   return { cards, loading }
 }

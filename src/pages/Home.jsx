@@ -13,7 +13,19 @@ import { optImg } from '../utils/cloudinaryUrl.js'
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
 // pushState แล้วยิง popstate ให้ App.jsx จับและเรนเดอร์หน้าใหม่ — ไม่ต้อง reload ทั้งเว็บ
 const goPath = (path) => {
-  window.history.pushState({}, '', path)
+  const p = path || '/'
+  // ลิงก์ภายนอก (http/https ต่างโดเมน หรือ mailto/tel) — เปิดแท็บใหม่ ไม่ใช้ pushState (จะ throw SecurityError ถ้าข้ามโดเมน)
+  if (/^(https?:)?\/\//i.test(p) || /^(mailto:|tel:)/i.test(p)) {
+    try {
+      const dest = new URL(p, window.location.origin)
+      if (dest.origin !== window.location.origin) { window.open(dest.href, '_blank', 'noopener'); return }
+      // ลิงก์เต็มแต่เป็นโดเมนเดียวกัน → นำทางภายในด้วย path ของมัน
+      window.history.pushState({}, '', dest.pathname + dest.search + dest.hash)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    } catch { window.open(p, '_blank', 'noopener') }
+    return
+  }
+  window.history.pushState({}, '', p)
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 

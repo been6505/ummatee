@@ -104,7 +104,7 @@ export default function AdminWebsite() {
   const { user, loading } = useAdminAuth()
   const { announcement, loading: annLoading } = useAnnouncement()
   const { visibility, loading: navLoading } = useNavVisibility()
-  const { cards: savedCards, loading: cardsLoading } = useHomeCards()
+  const { cards: savedCards, loading: cardsLoading } = useHomeCards(true)
 
   const [navSaving, setNavSaving] = useState(false)
   const [navSaved, setNavSaved] = useState(false)

@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 import { useHomeCards, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
+import { useNavVisibility, navKeyForPath } from '../data/navVisibility.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
@@ -250,7 +251,10 @@ export default function Home() {
   const [announcement, setAnnouncement] = useState(null)
   // การ์ด Hero Feed จากแอดมิน (config/homeCards) — null = ยังไม่ตั้งค่า ให้ใช้การ์ดมาตรฐาน 3 ใบเดิม
   const { cards: adminCards } = useHomeCards()
-  const customCards = adminCards ? adminCards.filter((c) => c.enabled !== false) : null
+  // ผูกกับการเปิด/ปิดเมนู — ปิดเมนูไหน การ์ดที่ลิงก์ไปหน้านั้นถูกซ่อนตามด้วย
+  const { visibility: navVis } = useNavVisibility()
+  const navHidden = (link) => { const k = navKeyForPath(link); return !!k && !!navVis && navVis[k] === false }
+  const customCards = adminCards ? adminCards.filter((c) => c.enabled !== false && !navHidden(c.link)) : null
   const [dismissedAt, setDismissedAt] = useState(() => localStorage.getItem('umAnnouncementDismissed') || '')
   // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก
   // (Home โหลดทันทีไม่ lazy จึงต้องเลี่ยง static import เหมือนตัวนับผู้เข้าชมใน App.jsx)
@@ -305,7 +309,7 @@ export default function Home() {
 
         <div className="hf-feed">
           {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website */}
-          {(customCards !== null ? customCards : DEFAULT_HOME_CARDS).map((c, i) => {
+          {(customCards !== null ? customCards : DEFAULT_HOME_CARDS.filter((c) => !navHidden(c.link))).map((c, i) => {
             const gradIcon = c.color === 'give' ? faHandHoldingHeart : c.color === 'volunteer' ? faHandSparkles : faMoon
             const cTitle = L(c.title, lang), cDesc = L(c.desc, lang), cBtn = L(c.btnText, lang)
             return (

@@ -7,7 +7,7 @@ import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/nav
 import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS } from '../data/homeCards.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper } from '@fortawesome/free-solid-svg-icons'
+import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 
 // จัดการเว็บฝั่ง public (/admin/website) — เมนู nav, แบนเนอร์ประกาศ และการ์ด Hero Feed หน้าแรก (แบบ CMS)
 // เขียนที่ config/announcement + config/homeCards (public อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน — ดู firestore.rules)
@@ -227,21 +227,23 @@ export default function AdminWebsite() {
                           <button
                             type="button" disabled={navSaving}
                             onClick={() => setNavItem(item.key, false)}
-                            className="admin-btn"
+                            className="admin-btn admin-nav-vis-btn"
+                            aria-label="ซ่อน" title="ซ่อนจากเมนู"
                             style={!shown
-                              ? { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91', fontWeight: 700 }
-                              : { opacity: .5 }}
-                          >{!shown ? '✓ ซ่อน' : 'ซ่อน'}</button>
+                              ? { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }
+                              : { opacity: .4 }}
+                          ><FontAwesomeIcon icon={faEyeSlash} /></button>
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <button
                             type="button" disabled={navSaving}
                             onClick={() => setNavItem(item.key, true)}
-                            className="admin-btn"
+                            className="admin-btn admin-nav-vis-btn"
+                            aria-label="แสดง" title="แสดงในเมนู"
                             style={shown
-                              ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7', fontWeight: 700 }
-                              : { opacity: .5 }}
-                          >{shown ? '✓ แสดง' : 'แสดง'}</button>
+                              ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+                              : { opacity: .4 }}
+                          ><FontAwesomeIcon icon={faEye} /></button>
                         </td>
                       </tr>
                     )

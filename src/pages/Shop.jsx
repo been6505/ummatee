@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react' // ใช้ useMemo สำหรับคำนวณค่าที่แคชไว้ และ useState สำหรับ state
+import { useEffect, useMemo, useState } from 'react' // useMemo/useState สำหรับ state, useEffect สำหรับ placeholder ค้นหาที่วนสินค้าอัตโนมัติ
 import { useProducts, hasDiscount, discountPercent, groupProductsByName, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY, effectivePrice } from '../data/shop.js' // hook ดึงรายการสินค้าจาก Firestore + ตัวช่วยคำนวณราคาส่วนลด/รวมกลุ่มสินค้าชื่อเดียวกัน
 import FadeUp from '../components/FadeUp.jsx' // คอมโพเนนต์ wrapper ทำ animation เลื่อนขึ้นตอนแสดงผล
 import Footer from '../components/Footer.jsx' // ส่วน Footer ท้ายหน้า
@@ -6,7 +6,7 @@ import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { useLang } from '../i18n.jsx' // hook อ่านภาษาปัจจุบันของผู้ใช้ (th/en/ar)
 import { useNavigate } from '../navContext' // ฟังก์ชันเปลี่ยนหน้าแบบ SPA (ไป /um-shop/:productId)
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBagShopping, faLink, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faBagShopping, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าร้านค้า Um Shop (/um-shop) — แสดงสินค้าทั้งหมด ค้นหา/กรองหมวดหมู่/เรียงราคา และแชร์รูปสินค้าลงโซเชียลได้
 // คลิกที่สินค้าเพื่อไปหน้ารายละเอียดสินค้า (/um-shop/:productId) พร้อมแกลเลอรีรูป เลือกจำนวน และเพิ่มลงตะกร้า
@@ -19,7 +19,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     badge: 'Um Shop', // ป้าย badge บนหัวหน้า
     h1: 'สินค้าจากมูลนิธิอุมมะตี', // หัวข้อใหญ่
     p: 'เลือกซื้อสินค้าเพื่อสนับสนุนภารกิจของมูลนิธิ — รายได้นำไปช่วยเหลือผู้ยากไร้', // คำบรรยายใต้หัวข้อ
-    searchPh: 'ค้นหาสินค้า...', // placeholder ของช่องค้นหา
+    searchPh: 'ค้นหา', // placeholder ของช่องค้นหา
     allCat: 'ทุกหมวดหมู่', // ตัวเลือก "ทุกหมวดหมู่" ใน dropdown
     sortNew: 'ใหม่ล่าสุด', sortPriceAsc: 'ราคา: ต่ำ-สูง', sortPriceDesc: 'ราคา: สูง-ต่ำ', sortName: 'ชื่อสินค้า A-Z', // ตัวเลือกการเรียงลำดับ
     color: 'สี', size: 'ขนาด', stock: 'คงเหลือ', out: 'สินค้าหมด', share: 'แชร์', shared: 'คัดลอกลิงก์แล้ว ✓', sold: 'ขายแล้ว', soldUnit: 'ชิ้น', // ป้ายข้อความย่อยต่างๆ
@@ -72,10 +72,23 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
   const img = variants.find((v) => v.images?.length)?.images?.[0] // ใช้รูปแรกที่เจอในกลุ่ม (เผื่อ variant แรกสุดยังไม่อัพรูป)
   const multiVariant = variants.length > 1
 
-  const share = async (e) => { // ฟังก์ชันแชร์สินค้า เมื่อกดปุ่มแชร์บนการ์ด
+  const share = async (e) => { // ฟังก์ชันแชร์สินค้า เมื่อกดปุ่มแชร์บนการ์ด — แนบทั้งรูปสินค้าและลิงก์ไปด้วยกัน
     e.stopPropagation() // กันไม่ให้ event ลอยไปกระตุ้น onClick ของการ์ด (ซึ่งจะเปิดหน้ารายละเอียด)
     const url = `${window.location.origin}/um-shop/${primary.productId || primary.id}` // สร้างลิงก์ตรงไปยังหน้ารายละเอียดสินค้านี้
     const shareData = { title: primary.name, text: `${primary.name} ${minPrice ? THB(minPrice) : ''}`, url } // ข้อมูลที่จะส่งให้ Web Share API
+
+    // ลองแนบรูปสินค้าไปด้วย (โหลดรูปมาแปลงเป็นไฟล์) — เบราว์เซอร์ที่รองรับแชร์ไฟล์ (มือถือส่วนใหญ่) จะแชร์ภาพ+ลิงก์พร้อมกัน
+    if (img && navigator.share && navigator.canShare) {
+      try {
+        const res = await fetch(optImg(img, 800))
+        const blob = await res.blob()
+        const file = new File([blob], 'product.jpg', { type: blob.type || 'image/jpeg' })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ ...shareData, files: [file] })
+          return
+        }
+      } catch { /* โหลด/แชร์รูปไม่สำเร็จ — ไปแชร์แบบไม่มีรูปต่อด้านล่างแทน */ }
+    }
     if (navigator.share) { // ถ้าเบราว์เซอร์รองรับ Web Share API (มักเป็นมือถือ)
       try { await navigator.share(shareData); return } catch { /* cancelled */ } // เปิดหน้าต่างแชร์ของระบบ ถ้าผู้ใช้กดยกเลิกก็ไม่ทำอะไรต่อ
     }
@@ -116,7 +129,7 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
         {!outOfStock && anyDiscount && <span className="shop-badge-discount">-{maxDiscountPercent}%</span>} {/* ป้ายเปอร์เซ็นต์ส่วนลดสูงสุดในกลุ่ม */}
         {multiVariant && <span className="shop-badge-variants">{variants.length} ตัวเลือก</span>} {/* บอกว่ามีให้เลือกหลายสี/ขนาด */}
         <button className="shop-share" onClick={share} title={t.share} aria-label={t.share}> {/* ปุ่มแชร์ลิงก์สินค้า */}
-          {shared ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faLink} />}
+          {shared ? <FontAwesomeIcon icon={faCheck} /> : <FontAwesomeIcon icon={faShareNodes} />}
         </button>
       </div>
       <div className="shop-body"> {/* ส่วนข้อมูลข้อความของการ์ด */}
@@ -178,6 +191,16 @@ export default function Shop() { // คอมโพเนนต์หลัก�
   // รวมสินค้าชื่อเดียวกัน (คนละสี/ขนาด คนละ doc) ให้เป็นการ์ดเดียวก่อนกรอง/เรียง
   const groups = useMemo(() => groupProductsByName(visibleProducts), [visibleProducts])
 
+  // placeholder ช่องค้นหาที่วนแสดงชื่อสินค้าจริงไปเรื่อยๆ (เช่น 'ค้นหาสินค้า... เช่น "เสื้อลายมะกอก"') ให้ผู้ใช้เห็นตัวอย่างว่าพิมพ์อะไรได้บ้าง
+  const sampleNames = useMemo(() => [...new Set(groups.map((g) => g.name).filter(Boolean))].slice(0, 12), [groups])
+  const [phIndex, setPhIndex] = useState(0)
+  useEffect(() => {
+    if (sampleNames.length === 0) return
+    const id = setInterval(() => setPhIndex((i) => (i + 1) % sampleNames.length), 2200)
+    return () => clearInterval(id)
+  }, [sampleNames])
+  const searchPlaceholder = sampleNames.length > 0 ? `${t.searchPh} "${sampleNames[phIndex]}"` : t.searchPh
+
   const filtered = useMemo(() => { // คำนวณกลุ่มสินค้าที่ผ่านการค้นหา/กรอง/เรียงลำดับ (คำนวณใหม่เมื่อ dependency เปลี่ยน)
     const s = search.trim().toLowerCase() // ข้อความค้นหา ตัดช่องว่างและแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์
     return groups
@@ -205,7 +228,7 @@ export default function Shop() { // คอมโพเนนต์หลัก�
             <input
               type="search" // กล่องค้นหาแบบ search input (มีปุ่ม X ล้างค่าในบางเบราว์เซอร์)
               className="shop-search"
-              placeholder={t.searchPh} // ข้อความตัวอย่างในช่องค้นหา
+              placeholder={searchPlaceholder} // ข้อความตัวอย่างในช่องค้นหา — วนโชว์ชื่อสินค้าจริงไปเรื่อยๆ
               value={search} // ค่าปัจจุบันผูกกับ state search
               onChange={(e) => setSearch(e.target.value)} // อัปเดต state เมื่อผู้ใช้พิมพ์
             />

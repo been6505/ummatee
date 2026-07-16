@@ -7,7 +7,7 @@ import SocialLinks from '../components/SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
-import { useHomeCards, DEFAULT_HOME_CARDS } from '../data/homeCards.js'
+import { useHomeCards, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
@@ -307,18 +307,19 @@ export default function Home() {
           {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website */}
           {(customCards !== null ? customCards : DEFAULT_HOME_CARDS).map((c, i) => {
             const gradIcon = c.color === 'give' ? faHandHoldingHeart : c.color === 'volunteer' ? faHandSparkles : faMoon
+            const cTitle = L(c.title, lang), cDesc = L(c.desc, lang), cBtn = L(c.btnText, lang)
             return (
               <FadeUp className="hf-card" key={i} delay={i * 80}>
                 <ShareCardBtn
                   className="hf-card-share hf-card-share-float"
                   iconOnly
-                  title={c.title} desc={c.desc} link={c.link}
+                  title={cTitle} desc={cDesc} link={c.link}
                   image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
                 />
                 {c.images?.length > 0 ? (
                   <PosterCarousel
                     images={c.images.map((u) => optImg(u, 900))}
-                    alt={c.title}
+                    alt={cTitle}
                     onClick={() => goPath(c.link || '/')}
                   />
                 ) : (
@@ -335,11 +336,11 @@ export default function Home() {
                       {c.tag2 && <span className="hf-tag hf-tag-muted">{c.tag2}</span>}
                     </div>
                   )}
-                  {c.title && <h2 className="hf-card-title">{c.title}</h2>}
-                  {c.desc && <p className="hf-card-desc">{c.desc}</p>}
-                  {c.btnText && (
+                  {cTitle && <h2 className="hf-card-title">{cTitle}</h2>}
+                  {cDesc && <p className="hf-card-desc">{cDesc}</p>}
+                  {cBtn && (
                     <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
-                      {c.btnText} →
+                      {cBtn} →
                     </a>
                   )}
                 </div>

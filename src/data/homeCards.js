@@ -11,14 +11,22 @@ export const CARD_COLORS = [
   { key: 'volunteer', label: 'ฟ้าเขียว' },
 ]
 
+// ฟิลด์ข้อความที่แปลได้ (title/desc/btnText) เก็บเป็น { th, en, ar } — ดึงค่าตามภาษา ถ้าภาษานั้นว่างให้ fallback มาไทย
+// รองรับค่าเดิมที่เป็น string เดี่ยว (การ์ดที่บันทึกก่อนรองรับหลายภาษา) ด้วย
+export const L = (field, lang) => {
+  if (field == null) return ''
+  if (typeof field === 'string') return field
+  return field[lang] || field.th || field.en || field.ar || ''
+}
+
 export const EMPTY_CARD = {
   enabled: true,
   images: [],       // รูปโปสเตอร์ (หลายรูป = สไลด์วนอัตโนมัติ)
-  tag: '',          // ป้ายแรก เช่น "🌙 EVENT"
-  tag2: '',         // ป้ายรอง เช่น "Gaza" / วันที่จัดงาน
-  title: '',
-  desc: '',
-  btnText: 'ดูรายละเอียด',
+  tag: '',          // ป้ายแรก เช่น "🌙 EVENT" (ไม่แปลภาษา — ใช้ร่วมทุกภาษา)
+  tag2: '',         // ป้ายรอง เช่น "Gaza" / วันที่จัดงาน (ไม่แปลภาษา)
+  title: { th: '', en: '', ar: '' },
+  desc: { th: '', en: '', ar: '' },
+  btnText: { th: 'ดูรายละเอียด', en: 'Learn More', ar: 'اعرف أكثر' },
   link: '/',        // path ภายในเว็บ เช่น /event/iftar-for-gaza
   color: 'iftar',
 }
@@ -30,27 +38,39 @@ export const DEFAULT_HOME_CARDS = [
     enabled: true,
     images: ['/poster-iftar-gaza.webp', '/poster-line1.webp', '/poster-line2.webp'],
     tag: '🌙 EVENT', tag2: 'Gaza',
-    title: 'Iftar For Gaza',
-    desc: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารและดุอาอ์ให้พี่น้องผู้ถูกกดขี่ ลงทะเบียนเข้าร่วมงานฟรี',
-    btnText: 'ชมภาพและวิดีโอจากงาน',
+    title: { th: 'Iftar For Gaza', en: 'Iftar For Gaza', ar: 'إفطار من أجل غزة' },
+    desc: {
+      th: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารและดุอาอ์ให้พี่น้องผู้ถูกกดขี่ ลงทะเบียนเข้าร่วมงานฟรี',
+      en: 'Break fast together for Gaza, share meals and dua for our oppressed brothers and sisters. Free registration.',
+      ar: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك الطعام والدعاء لإخواننا المستضعفين. التسجيل مجاني.',
+    },
+    btnText: { th: 'ชมภาพและวิดีโอจากงาน', en: 'Register Now', ar: 'سجّل الآن' },
     link: '/event/iftar-for-gaza', color: 'iftar',
   },
   {
     enabled: true,
     images: ['/721119853_1607959538003595_185415737813897318_n.jpg'],
     tag: '💜 EVENT', tag2: '3–5 ก.ค. 2569',
-    title: 'งาน "ให้" ครั้งที่ 6',
-    desc: 'เทศกาลแห่งการแบ่งปัน ออกร้านอาหาร ฟังบรรยาย และส่งต่อสิ่งของ ลานพลาซ่า อินดอร์สเตเดียมหัวหมาก',
-    btnText: 'ดูรายละเอียด',
+    title: { th: 'งาน "ให้" ครั้งที่ 6', en: 'GIVE — 6th Edition', ar: 'العطاء — الدورة السادسة' },
+    desc: {
+      th: 'เทศกาลแห่งการแบ่งปัน ออกร้านอาหาร ฟังบรรยาย และส่งต่อสิ่งของ ลานพลาซ่า อินดอร์สเตเดียมหัวหมาก',
+      en: 'A festival of giving — food stalls, talks, influencer meet-ups, and a fun kids zone. Three full days.',
+      ar: 'مهرجان العطاء — أكشاك طعام، محاضرات، وأنشطة عائلية. ثلاثة أيام كاملة.',
+    },
+    btnText: { th: 'ดูรายละเอียด', en: 'Learn More', ar: 'اعرف أكثر' },
     link: '/event/give-for-um', color: 'give',
   },
   {
     enabled: true,
     images: [],
     tag: '🤝 JOIN US', tag2: 'งาน ให้ ครั้งที่ 6',
-    title: 'สมัครอาสาสมัคร',
-    desc: 'ร่วมเป็นทีมอาสาในงาน "ให้" ครั้งที่ 6 ช่วยเตรียมงาน ต้อนรับแขก และสร้างบรรยากาศที่อบอุ่น',
-    btnText: 'สมัครเลย',
+    title: { th: 'สมัครอาสาสมัคร', en: 'Volunteer with Us', ar: 'تطوع معنا' },
+    desc: {
+      th: 'ร่วมเป็นทีมอาสาในงาน "ให้" ครั้งที่ 6 ช่วยเตรียมงาน ต้อนรับแขก และสร้างบรรยากาศที่อบอุ่น',
+      en: 'Join our volunteer team for GIVE 6th edition — help set up, guide guests, and make the event a success.',
+      ar: 'انضم إلى فريق التطوع لنسخة العطاء السادسة وساعد في جعل الحدث ناجحاً.',
+    },
+    btnText: { th: 'สมัครเลย', en: 'Sign Up', ar: 'سجّل الآن' },
     link: '/volunteer/register', color: 'volunteer',
   },
 ]

@@ -4,7 +4,7 @@ import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
-import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS } from '../data/homeCards.js'
+import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
@@ -12,11 +12,17 @@ import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faAr
 // จัดการเว็บฝั่ง public (/admin/website) — เมนู nav, แบนเนอร์ประกาศ และการ์ด Hero Feed หน้าแรก (แบบ CMS)
 // เขียนที่ config/announcement + config/homeCards (public อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน — ดู firestore.rules)
 
+const CARD_LANGS = [['th', 'ไทย'], ['en', 'EN'], ['ar', 'AR']]
+
 // ── ตัวแก้ไขการ์ดหน้าแรก 1 ใบ ──
 function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
   const [uploading, setUploading] = useState(false)
 
   const set = (k) => (e) => onChange({ ...card, [k]: e.target.value })
+  // ฟิลด์ที่แปลได้ (title/desc/btnText) — เก็บเป็น object {th,en,ar} รองรับค่าเดิมที่เป็น string
+  const asObj = (v) => (v && typeof v === 'object') ? v : { th: v || '', en: '', ar: '' }
+  const setL = (k, lang) => (e) => onChange({ ...card, [k]: { ...asObj(card[k]), [lang]: e.target.value } })
+  const valL = (k, lang) => asObj(card[k])[lang] || ''
 
   const uploadImages = async (e) => {
     const files = [...e.target.files]
@@ -37,7 +43,7 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
   return (
     <div className="admin-card" style={{ marginBottom: 14, borderLeft: card.enabled ? '4px solid var(--green-mid)' : '4px solid #ffab91' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        <strong style={{ marginRight: 'auto' }}>การ์ดที่ {index + 1}{card.title ? ` — ${card.title}` : ''}</strong>
+        <strong style={{ marginRight: 'auto' }}>การ์ดที่ {index + 1}{L(card.title, 'th') ? ` — ${L(card.title, 'th')}` : ''}</strong>
         <button type="button" className="admin-btn" disabled={index === 0} onClick={() => onMove(index, -1)} title="เลื่อนขึ้น"><FontAwesomeIcon icon={faArrowUp} /></button>
         <button type="button" className="admin-btn" disabled={index === total - 1} onClick={() => onMove(index, 1)} title="เลื่อนลง"><FontAwesomeIcon icon={faArrowDown} /></button>
         <button
@@ -51,10 +57,10 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
       </div>
 
       <div className="admin-form-grid admin-form-grid-3col">
-        <label>ป้ายหลัก (tag)
+        <label>ป้ายหลัก (tag) — ใช้ร่วมทุกภาษา
           <input type="text" value={card.tag} onChange={set('tag')} placeholder="เช่น 🌙 EVENT" />
         </label>
-        <label>ป้ายรอง
+        <label>ป้ายรอง — ใช้ร่วมทุกภาษา
           <input type="text" value={card.tag2} onChange={set('tag2')} placeholder="เช่น Gaza / 3–5 ก.ค. 2569" />
         </label>
         <label>สีปุ่ม
@@ -62,20 +68,40 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
             {CARD_COLORS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
         </label>
-        <label>หัวข้อการ์ด
-          <input type="text" value={card.title} onChange={set('title')} placeholder="เช่น Iftar For Gaza" />
-        </label>
-        <label>ข้อความปุ่ม
-          <input type="text" value={card.btnText} onChange={set('btnText')} placeholder="เช่น ดูรายละเอียด" />
-        </label>
-        <label>ลิงก์ (path ภายในเว็บ)
-          <input type="text" value={card.link} onChange={set('link')} placeholder="เช่น /event/iftar-for-gaza" />
-        </label>
       </div>
+
+      {/* หัวข้อ — 3 ภาษา (EN/AR เว้นว่างได้ จะใช้ไทยแทน) */}
+      <div style={{ marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>หัวข้อการ์ด (3 ภาษา)</div>
+      <div className="admin-form-grid admin-form-grid-3col">
+        {CARD_LANGS.map(([lg, lb]) => (
+          <label key={lg}>{lb}
+            <input type="text" value={valL('title', lg)} onChange={setL('title', lg)} placeholder={lg === 'th' ? 'เช่น Iftar For Gaza' : `(${lb}) เว้นว่าง = ใช้ไทย`} />
+          </label>
+        ))}
+      </div>
+
+      {/* ข้อความปุ่ม — 3 ภาษา */}
+      <div style={{ marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>ข้อความปุ่ม (3 ภาษา)</div>
+      <div className="admin-form-grid admin-form-grid-3col">
+        {CARD_LANGS.map(([lg, lb]) => (
+          <label key={lg}>{lb}
+            <input type="text" value={valL('btnText', lg)} onChange={setL('btnText', lg)} placeholder={lg === 'th' ? 'เช่น ดูรายละเอียด' : `(${lb})`} />
+          </label>
+        ))}
+      </div>
+
       <label style={{ display: 'block', marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)' }}>
-        คำอธิบาย
-        <textarea rows="2" value={card.desc} onChange={set('desc')} style={{ display: 'block', width: '100%', marginTop: 6, fontWeight: 400, boxSizing: 'border-box', fontFamily: 'inherit', padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
+        ลิงก์ (path ภายในเว็บ)
+        <input type="text" value={card.link} onChange={set('link')} placeholder="เช่น /event/iftar-for-gaza" style={{ display: 'block', width: '100%', marginTop: 6, fontWeight: 400, boxSizing: 'border-box' }} />
       </label>
+
+      {/* คำอธิบาย — 3 ภาษา */}
+      <div style={{ marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>คำอธิบาย (3 ภาษา)</div>
+      {CARD_LANGS.map(([lg, lb]) => (
+        <label key={lg} style={{ display: 'block', marginBottom: 8, fontSize: '.82rem', fontWeight: 600, color: 'var(--ink-soft)' }}>{lb}
+          <textarea rows="2" value={valL('desc', lg)} onChange={setL('desc', lg)} placeholder={lg === 'th' ? 'คำอธิบายภาษาไทย' : `(${lb}) เว้นว่าง = ใช้ไทย`} style={{ display: 'block', width: '100%', marginTop: 4, fontWeight: 400, boxSizing: 'border-box', fontFamily: 'inherit', padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
+        </label>
+      ))}
 
       <div style={{ marginTop: 12 }}>
         <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปโปสเตอร์ (หลายรูป = สไลด์วนอัตโนมัติ)</div>

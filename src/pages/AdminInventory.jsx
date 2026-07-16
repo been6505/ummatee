@@ -6,7 +6,7 @@ import useAdminAuth from '../useAdminAuth.js'
 import { useProducts, SHOP_SIZES_BY_CATEGORY } from '../data/shop.js'
 import { stockIn, useStockMovements, stockLevel, LOW_STOCK_THRESHOLD } from '../data/inventory.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBoxesStacked, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faBoxesStacked, faTriangleExclamation, faPlus, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 // ระบบคลัง Um Shop (/admin/shop/inventory) — แจ้งเตือนสินค้าใกล้หมด/หมด + รับสินค้าเข้าคลัง + ประวัติการเคลื่อนไหวสต็อก
 // การตัดสต็อกตอนสั่งซื้อเป็นแบบอัตโนมัติอยู่แล้ว (ดู createOrder ใน src/data/orders.js) หน้านี้ไม่ต้องทำอะไรเพิ่ม
@@ -96,6 +96,8 @@ export default function AdminInventory() {
   const { products, loading: prodLoading } = useProducts()
   const { rows: movements, loading: movLoading } = useStockMovements()
   const [productFilter, setProductFilter] = useState('')
+  // การเรียงตารางแจ้งเติมสต็อก — เริ่มที่ "เหลือ" น้อยไปมาก, กดหัวคอลัมน์ "รหัส"/"เหลือ" เพื่อสลับ
+  const [restockSort, setRestockSort] = useState({ key: 'total', dir: 'asc' })
 
   // เรียงตามรหัสสินค้า (um001, um002, ...) — numeric:true กันเคสเลขไม่เท่ากันหลัก เช่น um2 < um10
   const sortedProducts = useMemo(
@@ -123,8 +125,20 @@ export default function AdminInventory() {
         rows.push({ id: p.id, code, name: label, sizes: null, total: Number.isFinite(p.stock) ? p.stock : 0, sized: false })
       }
     })
-    return rows.sort((a, b) => a.total - b.total) // เหลือน้อยสุด (หมด) ขึ้นก่อน
-  }, [products])
+    const { key, dir } = restockSort
+    const sign = dir === 'asc' ? 1 : -1
+    return rows.sort((a, b) => {
+      const cmp = key === 'code'
+        ? (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }) // um2 < um10
+        : a.total - b.total
+      return cmp * sign
+    })
+  }, [products, restockSort])
+
+  const restockSortBy = (key) => setRestockSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+  const restockArrow = (key) => restockSort.key === key
+    ? <FontAwesomeIcon icon={restockSort.dir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} />
+    : null
 
   const filteredMovements = useMemo(
     () => (productFilter ? movements.filter((m) => m.productId === productFilter) : movements),
@@ -158,10 +172,10 @@ export default function AdminInventory() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>รหัส</th>
+                    <th className="admin-th-sort" onClick={() => restockSortBy('code')}>รหัส{restockArrow('code')}</th>
                     <th>สินค้า</th>
                     {SIZE_COLS.map((sz) => <th key={sz} style={{ textAlign: 'center' }}>{sz}</th>)}
-                    <th style={{ textAlign: 'right' }}>เหลือ</th>
+                    <th className="admin-th-sort" style={{ textAlign: 'right' }} onClick={() => restockSortBy('total')}>เหลือ{restockArrow('total')}</th>
                   </tr>
                 </thead>
                 <tbody>

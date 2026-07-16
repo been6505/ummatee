@@ -39,6 +39,18 @@
         ]
       },
       {
+        "source": "/index.html",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
+        "source": "/registerSW.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
+      {
         "source": "**",
         "headers": [
           { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },

@@ -5,7 +5,7 @@ import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import SocialLinks from '../components/SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay } from '@fortawesome/free-solid-svg-icons'
+import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 import { useHomeCards } from '../data/homeCards.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
@@ -15,6 +15,31 @@ import { optImg } from '../utils/cloudinaryUrl.js'
 const goPath = (path) => {
   window.history.pushState({}, '', path)
   window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+// ปุ่มแชร์การ์ดหน้าแรก — แนบรูปโปสเตอร์ + ลิงก์ไปด้วยกัน (Web Share API) ถ้าไม่รองรับก็คัดลอกลิงก์แทน
+function ShareCardBtn({ title, desc, link, image, className }) {
+  const [done, setDone] = useState(false)
+  const onShare = async (e) => {
+    e.preventDefault(); e.stopPropagation()
+    const url = `${window.location.origin}${link || '/'}`
+    const shareData = { title: title || 'Ummatee', text: desc || title || '', url }
+    if (image && navigator.share && navigator.canShare) {
+      try {
+        const res = await fetch(image)
+        const blob = await res.blob()
+        const file = new File([blob], 'ummatee.jpg', { type: blob.type || 'image/jpeg' })
+        if (navigator.canShare({ files: [file] })) { await navigator.share({ ...shareData, files: [file] }); return }
+      } catch { /* ไปแชร์แบบไม่มีรูปต่อ */ }
+    }
+    if (navigator.share) { try { await navigator.share(shareData); return } catch { /* cancelled */ } }
+    try { await navigator.clipboard.writeText(url); setDone(true); setTimeout(() => setDone(false), 1800) } catch { /* noop */ }
+  }
+  return (
+    <button type="button" className={className} onClick={onShare} aria-label="แชร์" title="แชร์">
+      <FontAwesomeIcon icon={done ? faCheck : faShareNodes} /> {done ? 'คัดลอกแล้ว' : 'แชร์'}
+    </button>
+  )
 }
 
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
@@ -286,11 +311,18 @@ export default function Home() {
                 )}
                 {c.title && <h2 className="hf-card-title">{c.title}</h2>}
                 {c.desc && <p className="hf-card-desc">{c.desc}</p>}
-                {c.btnText && (
-                  <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
-                    {c.btnText} →
-                  </a>
-                )}
+                <div className="hf-card-actions">
+                  {c.btnText && (
+                    <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
+                      {c.btnText} →
+                    </a>
+                  )}
+                  <ShareCardBtn
+                    className="hf-card-share"
+                    title={c.title} desc={c.desc} link={c.link}
+                    image={c.images?.[0] ? optImg(c.images[0], 800) : ''}
+                  />
+                </div>
               </div>
             </FadeUp>
           ))}

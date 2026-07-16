@@ -90,11 +90,14 @@ export default function AdminShopNew({ mode, seedId }) {
     setSeeded(true)
   }, [seeded, prodLoading, seedId, mode, products])
 
+  // เติมรหัสสินค้าอัตโนมัติเฉพาะโหมด "เพิ่มใหม่/ทำสำเนา" เท่านั้น — โหมดแก้ไขห้ามเติม
+  // (กันเคส race: seed effect เพิ่งตั้ง productId=รหัสจริง แต่ editId ยังไม่อัปเดตในเฟรมเดียวกัน แล้วโดนเขียนทับด้วยรหัสถัดไป)
   useEffect(() => {
+    if (mode === 'edit') return
     if (!editId && !form.productId && !prodLoading) {
       setForm((f) => ({ ...f, productId: suggestedId }))
     }
-  }, [editId, form.productId, prodLoading, suggestedId])
+  }, [mode, editId, form.productId, prodLoading, suggestedId])
 
   const knownColors = useMemo(() => {
     const set = new Set()

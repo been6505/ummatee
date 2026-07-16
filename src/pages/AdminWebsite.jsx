@@ -154,10 +154,10 @@ export default function AdminWebsite() {
     }
   }
 
-  const toggleNavItem = async (key, currentlyShown) => {
+  const setNavItem = async (key, show) => {
     setNavSaving(true)
     try {
-      await saveNavVisibility({ [key]: !currentlyShown })
+      await saveNavVisibility({ [key]: show })
       setNavSaved(true)
       setTimeout(() => setNavSaved(false), 1200)
     } finally {
@@ -207,25 +207,49 @@ export default function AdminWebsite() {
           <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
             ปิดรายการที่ไม่ต้องการให้แสดงในเมนูหลักของเว็บ (ไม่กระทบ URL เดิม เข้าตรงได้เหมือนเดิม แค่ซ่อนจากเมนู) — มีผลทันทีเมื่อกดปิด/เปิด
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {navLoading ? 'กำลังโหลด…' : NAV_MENU_ITEMS.map((item) => {
-              const shown = visibility?.[item.key] !== false
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  disabled={navSaving}
-                  onClick={() => toggleNavItem(item.key, shown)}
-                  className="admin-btn"
-                  style={shown
-                    ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
-                    : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
-                >
-                  {item.label} — {shown ? 'แสดงอยู่' : 'ซ่อนอยู่'}
-                </button>
-              )
-            })}
-          </div>
+          {navLoading ? 'กำลังโหลด…' : (
+            <div className="admin-table-wrap">
+              <table className="admin-table admin-nav-vis-table">
+                <thead>
+                  <tr>
+                    <th>รายการ</th>
+                    <th style={{ textAlign: 'center' }}>ไม่แสดง</th>
+                    <th style={{ textAlign: 'center' }}>แสดง</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {NAV_MENU_ITEMS.map((item) => {
+                    const shown = visibility?.[item.key] !== false
+                    return (
+                      <tr key={item.key}>
+                        <td>{item.label}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button" disabled={navSaving}
+                            onClick={() => setNavItem(item.key, false)}
+                            className="admin-btn"
+                            style={!shown
+                              ? { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91', fontWeight: 700 }
+                              : { opacity: .5 }}
+                          >{!shown ? '✓ ซ่อน' : 'ซ่อน'}</button>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button" disabled={navSaving}
+                            onClick={() => setNavItem(item.key, true)}
+                            className="admin-btn"
+                            style={shown
+                              ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7', fontWeight: 700 }
+                              : { opacity: .5 }}
+                          >{shown ? '✓ แสดง' : 'แสดง'}</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
           {navSaved && <p style={{ color: '#2e7d32', fontSize: '.85rem', marginTop: 12 }}>บันทึกแล้ว ✓</p>}
         </div>
 

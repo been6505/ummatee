@@ -3,7 +3,7 @@ import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
-import { useProducts } from '../data/shop.js'
+import { useProducts, SHOP_SIZES_BY_CATEGORY } from '../data/shop.js'
 import { stockIn, useStockMovements, stockLevel, LOW_STOCK_THRESHOLD } from '../data/inventory.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBoxesStacked, faTriangleExclamation, faPlus } from '@fortawesome/free-solid-svg-icons'
@@ -15,6 +15,9 @@ const MOVEMENT_LABEL = {
   order: 'ตัดสต็อก (คำสั่งซื้อ)',
   'stock-in': 'รับเข้าคลัง',
 }
+
+// คอลัมน์ไซซ์ในตารางแจ้งเติมสต็อก — ใช้ลำดับไซซ์มาตรฐานของเสื้อ (S,M,L,XL,2XL,3XL)
+const SIZE_COLS = SHOP_SIZES_BY_CATEGORY['เสื้อ'] || ['S', 'M', 'L', 'XL', '2XL', '3XL']
 
 function fmtDate(ms) {
   if (!ms) return '—'
@@ -103,8 +106,8 @@ export default function AdminInventory() {
   const lowStock = useMemo(() => products.filter((p) => stockLevel(p.stock) === 'low'), [products])
   const outOfStock = useMemo(() => products.filter((p) => stockLevel(p.stock) === 'out'), [products])
 
-  // รายการที่ต้องเติมสต็อก แยกเป็นราย "ไซซ์" สำหรับสินค้าที่มี sizeStock (เสื้อ) — ไซซ์ไหนเหลือน้อย/หมดก็ขึ้นแถวของมันเอง
-  // สินค้าที่ไม่มีไซซ์ (หมวก/กระเป๋า ฯลฯ) ใช้สต็อกรวมทั้งชิ้น ขนาดแสดงเป็น "—"
+  // รายการที่ต้องเติมสต็อก — 1 แถวต่อ 1 สินค้า (doc) แสดงจำนวนแยกทุกไซซ์เป็นคอลัมน์ + รวมเหลือ
+  // สินค้าที่มี sizeStock (เสื้อ) เข้าเงื่อนไขเมื่อไซซ์ใดไซซ์หนึ่งเหลือน้อย/หมด · สินค้าไม่มีไซซ์ใช้สต็อกรวม (คอลัมน์ไซซ์เป็น —)
   const restockRows = useMemo(() => {
     const rows = []
     products.forEach((p) => {
@@ -112,15 +115,15 @@ export default function AdminInventory() {
       const code = p.productId || '—'
       const sizes = p.sizeStock && Object.keys(p.sizeStock).length > 0 ? p.sizeStock : null
       if (sizes) {
-        Object.entries(sizes).forEach(([sz, qty]) => {
-          const n = Number(qty) || 0
-          if (n <= LOW_STOCK_THRESHOLD) rows.push({ id: p.id + '|' + sz, code, name: label, size: sz, remaining: n })
-        })
+        const anyLow = Object.values(sizes).some((q) => (Number(q) || 0) <= LOW_STOCK_THRESHOLD)
+        if (!anyLow) return
+        const total = Object.values(sizes).reduce((s, q) => s + (Number(q) || 0), 0)
+        rows.push({ id: p.id, code, name: label, sizes, total, sized: true })
       } else if (stockLevel(p.stock) !== 'ok') {
-        rows.push({ id: p.id, code, name: label, size: '—', remaining: Number.isFinite(p.stock) ? p.stock : 0 })
+        rows.push({ id: p.id, code, name: label, sizes: null, total: Number.isFinite(p.stock) ? p.stock : 0, sized: false })
       }
     })
-    return rows.sort((a, b) => a.remaining - b.remaining) // เหลือน้อยสุด (หมด) ขึ้นก่อน
+    return rows.sort((a, b) => a.total - b.total) // เหลือน้อยสุด (หมด) ขึ้นก่อน
   }, [products])
 
   const filteredMovements = useMemo(
@@ -157,24 +160,28 @@ export default function AdminInventory() {
                   <tr>
                     <th>รหัส</th>
                     <th>สินค้า</th>
-                    <th style={{ textAlign: 'center' }}>ขนาด</th>
+                    {SIZE_COLS.map((sz) => <th key={sz} style={{ textAlign: 'center' }}>{sz}</th>)}
                     <th style={{ textAlign: 'right' }}>เหลือ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {restockRows.map((r) => {
-                    const out = r.remaining <= 0
-                    return (
-                      <tr key={r.id}>
-                        <td style={{ fontFamily: 'monospace' }}>{r.code}</td>
-                        <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{r.name}</td>
-                        <td style={{ textAlign: 'center' }}>{r.size}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: out ? '#d84315' : '#b45309' }}>
-                          {out ? 'หมด' : r.remaining}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {restockRows.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ fontFamily: 'monospace' }}>{r.code}</td>
+                      <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{r.name}</td>
+                      {SIZE_COLS.map((sz) => {
+                        if (!r.sized) return <td key={sz} style={{ textAlign: 'center', color: '#ccc' }}>—</td>
+                        const has = r.sizes[sz] !== undefined
+                        if (!has) return <td key={sz} style={{ textAlign: 'center', color: '#ddd' }}>·</td>
+                        const q = Number(r.sizes[sz]) || 0
+                        const color = q <= 0 ? '#d84315' : q <= LOW_STOCK_THRESHOLD ? '#b45309' : 'inherit'
+                        return <td key={sz} style={{ textAlign: 'center', color, fontWeight: q <= LOW_STOCK_THRESHOLD ? 700 : 400 }}>{q}</td>
+                      })}
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: r.total <= 0 ? '#d84315' : '#b45309' }}>
+                        {r.total <= 0 ? 'หมด' : r.total}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

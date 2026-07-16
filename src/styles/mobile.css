@@ -32,8 +32,9 @@
 .fd-more{display:block;text-align:center;margin-top:16px;color:var(--green-mid);font-weight:600;font-size:.9rem;text-decoration:none}
 .fd-more:hover{text-decoration:underline}
 @media (max-width:400px){.fd-popup{right:8px;left:8px;width:auto;bottom:8px}}
-.fd-fab-cart{background:linear-gradient(135deg,var(--green-mid),var(--green-deep));animation:none} /* ปุ่มลอยตะกร้า — แทนที่ปุ่มบริจาคตอนมีสินค้าในตะกร้า ไม่ต้องกระพริบเหมือนปุ่มบริจาค */
+.fd-fab-cart{background:linear-gradient(135deg,var(--green-mid),var(--green-deep));animation:fd-cart-bounce 1.8s ease-in-out infinite} /* ปุ่มลอยตะกร้า — แทนที่ปุ่มบริจาคตอนมีสินค้าในตะกร้า เด้งเบาๆ ชวนให้สังเกต */
 .fd-fab-cart:hover{transform:scale(1.08)}
+@keyframes fd-cart-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
 
 /* หน้าตะกร้าสินค้า (/um-shop/cart) */
 .cart-layout{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}

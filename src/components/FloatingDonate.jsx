@@ -50,7 +50,7 @@ export default function FloatingDonate({ hidden }) {
   if (cartCount > 0) {
     return (
       <button className="fd-fab fd-fab-cart" onClick={() => go('shop-cart')} aria-label="ตะกร้าสินค้า">
-        <FontAwesomeIcon icon={faCartShopping} /> ตะกร้า ({cartCount})
+        <FontAwesomeIcon icon={faCartShopping} />  {cartCount}
       </button>
     )
   }

@@ -21,7 +21,7 @@ function PosterCarousel({ images, alt, onClick }) {
   const safeIdx = idx < total ? idx : 0
   return (
     <a href="#" onClick={(e) => { e.preventDefault(); onClick() }} className="hf-card-poster-link hf-poster-carousel">
-      <img src={images[safeIdx]} alt={alt} className="hf-poster" />
+      <img src={images[safeIdx]} alt={alt} className="hf-poster" fetchPriority={safeIdx === 0 ? 'high' : 'auto'} />
       {total > 1 && (
         <div className="hf-poster-dots">
           {images.map((_, i) => <span key={i} className={`hf-poster-dot${i === safeIdx ? ' active' : ''}`} />)}

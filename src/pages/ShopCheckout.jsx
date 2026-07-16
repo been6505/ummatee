@@ -5,6 +5,7 @@ import { notifyAdminNewOrder } from '../utils/lineNotify.js'
 import { formatPhone } from '../utils/formatPhone.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
+import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCartShopping, faCheck, faUserPen } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faLine } from '@fortawesome/free-brands-svg-icons'
@@ -157,6 +158,8 @@ export default function ShopCheckout() {
           <a href="/um-shop/cart" onClick={(e) => { e.preventDefault(); go('shop-cart') }} className="shop-detail-back">
             <FontAwesomeIcon icon={faArrowLeft} /> กลับไปตะกร้า
           </a>
+
+          <InAppBrowserWarning />
 
           <div className="admin-card" style={{ marginBottom: 20 }}>
             <h4>รายการสินค้า</h4>

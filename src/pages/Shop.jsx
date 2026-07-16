@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react' // ใช้ useMemo สำหรั�
 import { useProducts, hasDiscount, discountPercent, groupProductsByName, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY, effectivePrice } from '../data/shop.js' // hook ดึงรายการสินค้าจาก Firestore + ตัวช่วยคำนวณราคาส่วนลด/รวมกลุ่มสินค้าชื่อเดียวกัน
 import FadeUp from '../components/FadeUp.jsx' // คอมโพเนนต์ wrapper ทำ animation เลื่อนขึ้นตอนแสดงผล
 import Footer from '../components/Footer.jsx' // ส่วน Footer ท้ายหน้า
+import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { useLang } from '../i18n.jsx' // hook อ่านภาษาปัจจุบันของผู้ใช้ (th/en/ar)
 import { useNavigate } from '../navContext' // ฟังก์ชันเปลี่ยนหน้าแบบ SPA (ไป /um-shop/:productId)
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -203,6 +204,7 @@ export default function Shop() { // คอมโพเนนต์หลัก�
 
       <section className="section"> {/* ส่วนเนื้อหาหลัก: แถบควบคุมและตะแกรงสินค้า */}
         <div className="wrap"> {/* กรอบจำกัดความกว้างเนื้อหา */}
+          <InAppBrowserWarning />
           <div className="shop-toolbar"> {/* แถบเครื่องมือ: ค้นหา/กรองหมวดหมู่/เรียงลำดับ */}
             <input
               type="search" // กล่องค้นหาแบบ search input (มีปุ่ม X ล้างค่าในบางเบราว์เซอร์)

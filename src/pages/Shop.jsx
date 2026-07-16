@@ -193,8 +193,7 @@ export default function Shop() { // คอมโพเนนต์หลัก�
 
   return ( // ส่วนแสดงผลของหน้า Shop ทั้งหมด
     <main className="page"> {/* คอนเทนเนอร์หลักของหน้า */}
-      <section className="page-band shop-page-band"> {/* แถบหัวหน้าสีพื้นหลังเข้ม (ลดความสูงกว่าหน้าอื่นเล็กน้อย) */}
-        <div className="fc-pattern hero-pattern"></div> {/* ลายพื้นหลังตกแต่ง */}
+      <section className="page-band shop-page-band"> {/* แถบหัวหน้า — พื้นหลังโปสเตอร์ MEGA SALE เต็มภาพ ไม่มีลายเส้น/สีเขียวทับ */}
         <div className="inner"> {/* กล่องเนื้อหากลางของแถบหัว */}
           <span className="badge">{t.badge}</span> {/* ป้าย badge "Um Shop" */}
           <h1>{t.h1}</h1> {/* หัวข้อใหญ่ของหน้า */}

@@ -1,9 +1,11 @@
-/* ===== หน้า Shop — ลดความสูงแถบหัว (page-band) ลงจากค่ามาตรฐาน (140px/70px) ให้กระชับกว่าหน้า event/donation ===== */
+/* ===== หน้า Shop — แถบหัวใช้โปสเตอร์ MEGA SALE เต็มภาพ (ไม่มีลายเส้น/สีเขียวทับ) ===== */
+/* ปรับสัดส่วนกล่องให้ตรงกับสัดส่วนภาพจริง (4675x5842) กัน background-size:cover ครอปภาพ */
 .shop-page-band{
-  padding:64px 0 28px;
-  background:
-    linear-gradient(150deg,rgba(15,61,35,.82),rgba(27,94,54,.88)),
-    url('/shop-sale-banner.webp') center 30%/cover no-repeat;
+  padding:0;
+  aspect-ratio:4675/5842;
+  max-height:none;
+  background:url('/shop-sale-banner.webp') center/contain no-repeat;
+  display:flex;align-items:center;justify-content:center;
 }
 
 /* ===== Social media follow ===== */

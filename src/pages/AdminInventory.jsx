@@ -109,14 +109,15 @@ export default function AdminInventory() {
     const rows = []
     products.forEach((p) => {
       const label = p.name + (p.type ? ` (${p.type})` : '')
+      const code = p.productId || '—'
       const sizes = p.sizeStock && Object.keys(p.sizeStock).length > 0 ? p.sizeStock : null
       if (sizes) {
         Object.entries(sizes).forEach(([sz, qty]) => {
           const n = Number(qty) || 0
-          if (n <= LOW_STOCK_THRESHOLD) rows.push({ id: p.id + '|' + sz, name: label, size: sz, remaining: n })
+          if (n <= LOW_STOCK_THRESHOLD) rows.push({ id: p.id + '|' + sz, code, name: label, size: sz, remaining: n })
         })
       } else if (stockLevel(p.stock) !== 'ok') {
-        rows.push({ id: p.id, name: label, size: '—', remaining: Number.isFinite(p.stock) ? p.stock : 0 })
+        rows.push({ id: p.id, code, name: label, size: '—', remaining: Number.isFinite(p.stock) ? p.stock : 0 })
       }
     })
     return rows.sort((a, b) => a.remaining - b.remaining) // เหลือน้อยสุด (หมด) ขึ้นก่อน
@@ -154,6 +155,7 @@ export default function AdminInventory() {
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th>รหัส</th>
                     <th>สินค้า</th>
                     <th style={{ textAlign: 'center' }}>ขนาด</th>
                     <th style={{ textAlign: 'right' }}>เหลือ</th>
@@ -164,6 +166,7 @@ export default function AdminInventory() {
                     const out = r.remaining <= 0
                     return (
                       <tr key={r.id}>
+                        <td style={{ fontFamily: 'monospace' }}>{r.code}</td>
                         <td style={{ whiteSpace: 'normal', minWidth: 140 }}>{r.name}</td>
                         <td style={{ textAlign: 'center' }}>{r.size}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: out ? '#d84315' : '#b45309' }}>

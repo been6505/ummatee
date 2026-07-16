@@ -8,7 +8,7 @@ import {
   usePromotions, applyPromotion,
 } from '../data/shop.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCaretUp, faCaretDown, faPencil, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faCaretUp, faCaretDown, faPencil, faCheck, faCopy, faTrash, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 
 // จัดการสินค้า Um Shop (/admin/shop) — รายการสินค้า ค้นหา/กรอง/เรียง/ลบ/แสดง-ซ่อน
 // เพิ่มสินค้าใหม่/แก้ไข/โปรโมชั่น อยู่ที่หน้าแยก /admin/shop/new (AdminShopNew.jsx)
@@ -212,20 +212,21 @@ export default function AdminShop() {
                       <td>{[...(p.colors || []), ...(p.sizes || [])].join(', ') || '—'}</td>
                       <td>
                         <button
-                          className="admin-btn"
+                          className="admin-btn admin-icon-btn"
                           onClick={() => toggleActive(p)}
-                          title={isActive ? 'คลิกเพื่อซ่อนจากหน้าร้าน' : 'คลิกเพื่อแสดงในหน้าร้าน'}
+                          title={isActive ? 'แสดงอยู่ — คลิกเพื่อซ่อนจากหน้าร้าน' : 'ซ่อนอยู่ — คลิกเพื่อแสดงในหน้าร้าน'}
+                          aria-label={isActive ? 'ซ่อนจากหน้าร้าน' : 'แสดงในหน้าร้าน'}
                           style={isActive
                             ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
                             : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
                         >
-                          {isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}
+                          <FontAwesomeIcon icon={isActive ? faEye : faEyeSlash} />
                         </button>
                       </td>
                       <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <a className="admin-btn" href={`/admin/shop/new/edit/${p.id}`}>แก้ไข</a>
-                        <a className="admin-btn" href={`/admin/shop/new/duplicate/${p.id}`} title="คัดลอกชื่อ/หมวด/ประเภท ไปสร้างสี/ตัวเลือกใหม่ (จับกลุ่มการ์ดเดียวกัน)">ทำสำเนา</a>
-                        <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
+                        <a className="admin-btn admin-icon-btn" href={`/admin/shop/new/edit/${p.id}`} title="แก้ไข" aria-label="แก้ไข"><FontAwesomeIcon icon={faPencil} /></a>
+                        <a className="admin-btn admin-icon-btn" href={`/admin/shop/new/duplicate/${p.id}`} title="ทำสำเนา (คัดลอกชื่อ/หมวด/ประเภท ไปสร้างสี/ตัวเลือกใหม่)" aria-label="ทำสำเนา"><FontAwesomeIcon icon={faCopy} /></a>
+                        <button className="admin-btn-danger admin-icon-btn" onClick={() => remove(p.id)} title="ลบ" aria-label="ลบ"><FontAwesomeIcon icon={faTrash} /></button>
                       </td>
                     </tr>
                     )
@@ -266,16 +267,17 @@ export default function AdminShop() {
                       <button
                         className="admin-btn asc-status-btn"
                         onClick={() => toggleActive(p)}
+                        aria-label={isActive ? 'ซ่อนจากหน้าร้าน' : 'แสดงในหน้าร้าน'}
                         style={isActive
                           ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
                           : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
-                      >{isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
+                      ><FontAwesomeIcon icon={isActive ? faEye : faEyeSlash} /> {isActive ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
                     </div>
                     {/* แถว 3: ปุ่มจัดการ แก้ไข/ทำสำเนา/ลบ (ชิดขวา) */}
                     <div className="asc-row asc-row-actions">
-                      <a className="admin-btn" href={`/admin/shop/new/edit/${p.id}`}>แก้ไข</a>
-                      <a className="admin-btn" href={`/admin/shop/new/duplicate/${p.id}`}>ทำสำเนา</a>
-                      <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
+                      <a className="admin-btn admin-icon-btn" href={`/admin/shop/new/edit/${p.id}`} title="แก้ไข" aria-label="แก้ไข"><FontAwesomeIcon icon={faPencil} /></a>
+                      <a className="admin-btn admin-icon-btn" href={`/admin/shop/new/duplicate/${p.id}`} title="ทำสำเนา" aria-label="ทำสำเนา"><FontAwesomeIcon icon={faCopy} /></a>
+                      <button className="admin-btn-danger admin-icon-btn" onClick={() => remove(p.id)} title="ลบ" aria-label="ลบ"><FontAwesomeIcon icon={faTrash} /></button>
                     </div>
                   </div>
                 )

@@ -7,6 +7,15 @@ import SocialLinks from '../components/SocialLinks.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
+import { useHomeCards } from '../data/homeCards.js'
+import { optImg } from '../utils/cloudinaryUrl.js'
+
+// นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
+// pushState แล้วยิง popstate ให้ App.jsx จับและเรนเดอร์หน้าใหม่ — ไม่ต้อง reload ทั้งเว็บ
+const goPath = (path) => {
+  window.history.pushState({}, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
 
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
@@ -202,6 +211,9 @@ export default function Home() {
   const t = T[lang]
   const [gazaMedia, setGazaMedia] = useState([])
   const [announcement, setAnnouncement] = useState(null)
+  // การ์ด Hero Feed จากแอดมิน (config/homeCards) — null = ยังไม่ตั้งค่า ให้ใช้การ์ดมาตรฐาน 3 ใบเดิม
+  const { cards: adminCards } = useHomeCards()
+  const customCards = adminCards ? adminCards.filter((c) => c.enabled !== false) : null
   const [dismissedAt, setDismissedAt] = useState(() => localStorage.getItem('umAnnouncementDismissed') || '')
   // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก
   // (Home โหลดทันทีไม่ lazy จึงต้องเลี่ยง static import เหมือนตัวนับผู้เข้าชมใน App.jsx)
@@ -255,6 +267,35 @@ export default function Home() {
         </div>
 
         <div className="hf-feed">
+          {/* การ์ดจากแอดมิน (/admin/website) — ถ้าตั้งค่าไว้ใช้ชุดนี้แทนการ์ดมาตรฐานด้านล่างทั้งหมด */}
+          {customCards !== null && customCards.map((c, i) => (
+            <FadeUp className="hf-card" key={i} delay={i * 80}>
+              {c.images?.length > 0 && (
+                <PosterCarousel
+                  images={c.images.map((u) => optImg(u, 900))}
+                  alt={c.title}
+                  onClick={() => goPath(c.link || '/')}
+                />
+              )}
+              <div className="hf-card-body">
+                {(c.tag || c.tag2) && (
+                  <div className="hf-card-tags">
+                    {c.tag && <span className={`hf-tag ${c.color === 'give' ? 'hf-tag-purple' : c.color === 'volunteer' ? 'hf-tag-teal' : 'hf-tag-green'}`}>{c.tag}</span>}
+                    {c.tag2 && <span className="hf-tag hf-tag-muted">{c.tag2}</span>}
+                  </div>
+                )}
+                {c.title && <h2 className="hf-card-title">{c.title}</h2>}
+                {c.desc && <p className="hf-card-desc">{c.desc}</p>}
+                {c.btnText && (
+                  <a href={c.link || '/'} className={`hf-card-btn hf-btn-${c.color || 'iftar'}`} onClick={(e) => { e.preventDefault(); goPath(c.link || '/') }}>
+                    {c.btnText} →
+                  </a>
+                )}
+              </div>
+            </FadeUp>
+          ))}
+
+          {customCards === null && <>
           {/* Card 1 — Iftar For Gaza */}
           <FadeUp className="hf-card">
             <PosterCarousel
@@ -315,6 +356,7 @@ export default function Home() {
               </a>
             </div>
           </FadeUp>
+          </>}
         </div>
       </section>
 

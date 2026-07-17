@@ -23,7 +23,6 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     allCat: 'ทุกหมวดหมู่', // ตัวเลือก "ทุกหมวดหมู่" ใน dropdown
     sortNew: 'ใหม่ล่าสุด', sortPriceAsc: 'ราคา: ต่ำ-สูง', sortPriceDesc: 'ราคา: สูง-ต่ำ', sortName: 'ชื่อสินค้า A-Z', // ตัวเลือกการเรียงลำดับ
     color: 'สี', size: 'ขนาด', stock: 'คงเหลือ', out: 'สินค้าหมด', share: 'แชร์', shared: 'คัดลอกลิงก์แล้ว ✓', sold: 'ขายแล้ว', soldUnit: 'ชิ้น', // ป้ายข้อความย่อยต่างๆ
-    fromPrice: 'จาก', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'ยังไม่มีสินค้าในขณะนี้', // ข้อความตอนไม่มีสินค้า
   },
   en: { // ข้อความภาษาอังกฤษ
@@ -34,7 +33,6 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     allCat: 'All categories', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'Newest', sortPriceAsc: 'Price: low to high', sortPriceDesc: 'Price: high to low', sortName: 'Name A-Z', // ตัวเลือกการเรียงลำดับ
     color: 'Color', size: 'Size', stock: 'In stock', out: 'Out of stock', share: 'Share', shared: 'Link copied ✓', sold: 'Sold', soldUnit: 'pcs', // ป้ายข้อความย่อยต่างๆ
-    fromPrice: 'From', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'No products available yet', // ข้อความตอนไม่มีสินค้า
   },
   ar: { // ข้อความภาษาอาหรับ
@@ -45,7 +43,6 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     allCat: 'كل الفئات', // ตัวเลือก "ทุกหมวดหมู่"
     sortNew: 'الأحدث', sortPriceAsc: 'السعر: من الأقل', sortPriceDesc: 'السعر: من الأعلى', sortName: 'الاسم أ-ي', // ตัวเลือกการเรียงลำดับ
     color: 'اللون', size: 'المقاس', stock: 'المتوفر', out: 'غير متوفر', share: 'مشاركة', shared: 'تم نسخ الرابط ✓', sold: 'مُباع', soldUnit: 'قطعة', // ป้ายข้อความย่อยต่างๆ
-    fromPrice: 'من', // นำหน้าราคาต่ำสุด เมื่อสินค้ากลุ่มเดียวกันราคาไม่เท่ากัน
     empty: 'لا توجد منتجات حالياً', // ข้อความตอนไม่มีสินค้า
   },
 }
@@ -135,10 +132,10 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
       <div className="shop-body"> {/* ส่วนข้อมูลข้อความของการ์ด */}
         {primary.category && <span className="shop-cat">{primary.category}</span>} {/* แท็กหมวดหมู่สินค้า ถ้ามี */}
         <h4 className="shop-name">{primary.name}</h4> {/* ชื่อสินค้า */}
-        {minPrice != null && ( // ราคาสินค้า — มีส่วนลดจริงโชว์ราคาเต็มขีดฆ่าคู่กับราคาลด (anchoring effect) ราคาต่างกันในกลุ่มให้โชว์ "จาก" ราคาต่ำสุด
+        {minPrice != null && ( // ราคาสินค้า — มีส่วนลดจริงโชว์ราคาเต็มขีดฆ่าคู่กับราคาลด (anchoring effect) ราคาต่างกันในกลุ่มโชว์แค่ราคาต่ำสุด ไม่มีคำนำหน้า
           <div className="shop-price">
             {hasDiscount(cheapestVariant) && <span className="shop-price-old">{THB(cheapestVariant.price)}</span>}
-            {minPrice !== maxPrice && t.fromPrice + ' '}{THB(minPrice)}
+            {THB(minPrice)}
           </div>
         )}
 

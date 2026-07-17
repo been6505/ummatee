@@ -6,9 +6,20 @@ import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner, faLink, faArrowUpRightFromSquare, faPlug } from '@fortawesome/free-solid-svg-icons'
 
 import { uploadToCloudinary } from '../utils/cloudinary.js'
+
+// Content Hub — แอปแยกต่างหาก (Next.js + Firebase Admin) ที่เก็บ OAuth secret ของแต่ละแพลตฟอร์มไว้ฝั่งเซิร์ฟเวอร์
+// ummatee เป็น static site (Vite SPA) เชื่อม OAuth ตรงๆ ไม่ได้ (ไม่มีที่เก็บ client secret อย่างปลอดภัย)
+// เลยฝัง Content Hub เป็น iframe แทน — ล็อกอิน/เชื่อมบัญชี/โพสต์จริง ทำผ่านเซสชันของ Content Hub เอง ไม่มีการส่ง credential ข้าม origin
+const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
+const CONTENT_HUB_TABS = [
+  { path: '/accounts', label: 'เชื่อมต่อแพลตฟอร์ม' },
+  { path: '/compose', label: 'สร้างโพสต์' },
+  { path: '/calendar', label: 'ปฏิทินโพสต์จริง' },
+  { path: '/posts', label: 'ประวัติโพสต์' },
+]
 
 const PLATFORM_OPEN = {
   facebook: 'https://www.facebook.com/',
@@ -75,6 +86,8 @@ export default function AdminCalendar() {
   const [status, setStatus] = useState('')
   const [uploading, setUploading] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
+  const [hubTab, setHubTab] = useState(CONTENT_HUB_TABS[0].path)
+  const [showHub, setShowHub] = useState(false)
 
   useEffect(() => {
     if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
@@ -191,7 +204,44 @@ export default function AdminCalendar() {
             <h1>ปฏิทินคอนเทนต์</h1>
             <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา เลือกแพลตฟอร์ม</p>
           </div>
+          <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
+            <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิด Content Hub' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
+          </button>
         </div>
+
+        {showHub && (
+          <div className="admin-card" style={{ marginBottom: 20 }}>
+            <div className="admin-card-head" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <h4><FontAwesomeIcon icon={faLink} /> Content Hub — เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
+              <a href={`${CONTENT_HUB_URL}${hubTab}`} target="_blank" rel="noopener noreferrer" className="admin-btn">
+                <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เปิดเต็มหน้าจอ
+              </a>
+            </div>
+            <p style={{ color: 'var(--ink-soft)', fontSize: '.85rem', marginBottom: 14 }}>
+              ระบบเชื่อมต่อ OAuth และโพสต์จริงแยกรันอยู่ที่ Content Hub (เก็บกุญแจเชื่อมต่อของแต่ละแพลตฟอร์มไว้ฝั่งเซิร์ฟเวอร์อย่างปลอดภัย) —
+              ล็อกอินครั้งแรกด้วยรหัสผ่านของ Content Hub เอง จากนั้นเชื่อมบัญชี Facebook/Instagram/Threads/YouTube ฯลฯ ได้จากแท็บด้านล่าง
+            </p>
+            <div className="admin-cal-platforms" style={{ marginBottom: 12 }}>
+              {CONTENT_HUB_TABS.map((t) => (
+                <button
+                  key={t.path}
+                  type="button"
+                  className={hubTab === t.path ? 'on' : ''}
+                  style={hubTab === t.path ? { background: 'var(--green-mid)', borderColor: 'var(--green-mid)', color: '#fff' } : {}}
+                  onClick={() => setHubTab(t.path)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <iframe
+              key={hubTab}
+              src={`${CONTENT_HUB_URL}${hubTab}`}
+              title="Content Hub"
+              style={{ width: '100%', height: 640, border: '1px solid #e5e7eb', borderRadius: 12, background: '#fff' }}
+            />
+          </div>
+        )}
 
         <div className="admin-cal-layout">
           {/* ปฏิทินรายเดือน */}

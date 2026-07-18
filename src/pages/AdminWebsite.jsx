@@ -5,7 +5,7 @@ import useAdminAuth from '../useAdminAuth.js'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
 import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
-import { useSiteContent, saveSiteContent } from '../data/siteContent.js'
+import { useSiteContent, saveSiteContent, isSiteImageValue } from '../data/siteContent.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash, faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
@@ -137,6 +137,45 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
   )
 }
 
+// ── แถวฟิลด์รูปภาพอิสระ 1 รายการ (key + อัพโหลดรูปผ่าน Cloudinary) ──
+function ImageFieldRow({ row, onKeyChange, onUrlChange, onRemove }) {
+  const [uploading, setUploading] = useState(false)
+
+  const uploadImage = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const result = await uploadToCloudinary(file, 'image')
+      onUrlChange(result.url)
+    } catch (err) {
+      window.alert('อัพโหลดไม่สำเร็จ: ' + err.message)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <input
+        type="text" placeholder="key เช่น heroBannerImage" value={row.key}
+        onChange={(e) => onKeyChange(e.target.value)}
+        style={{ flex: '0 0 220px' }}
+      />
+      {row.url && <img src={row.url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: '1px solid #ddd' }} />}
+      <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
+        <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
+        {uploading ? ' กำลังอัพโหลด...' : row.url ? ' เปลี่ยนรูป' : ' เลือกรูป'}
+        <input type="file" accept="image/*" hidden onChange={uploadImage} />
+      </label>
+      <button type="button" className="admin-btn-danger" onClick={onRemove} aria-label="ลบฟิลด์นี้" title="ลบ">
+        <FontAwesomeIcon icon={faTrash} />
+      </button>
+    </div>
+  )
+}
+
 export default function AdminWebsite() {
   const { user, loading } = useAdminAuth()
   const { announcement, loading: annLoading } = useAnnouncement()
@@ -149,13 +188,16 @@ export default function AdminWebsite() {
   const [contentDirty, setContentDirty] = useState(false)
   const [contentSaving, setContentSaving] = useState(false)
   const [contentSaved, setContentSaved] = useState(false)
-  const [customRows, setCustomRows] = useState([]) // [{key, value}] — ฟิลด์อิสระที่แอดมินเพิ่มเอง นอกเหนือจาก key มาตรฐานด้านบน
+  const [customRows, setCustomRows] = useState([]) // [{key, value}] — ฟิลด์ข้อความอิสระที่แอดมินเพิ่มเอง นอกเหนือจาก key มาตรฐานด้านบน
+  const [customImageRows, setCustomImageRows] = useState([]) // [{key, url}] — ฟิลด์รูปภาพอิสระ (value เก็บเป็น {type:'image', url})
   useEffect(() => {
     if (siteContentLoading || contentDirty) return
     const data = siteContentSaved || {}
     setSiteContent(data)
     const knownKeys = FOOTER_CONTENT_KEYS.map((f) => f.key)
-    setCustomRows(Object.entries(data).filter(([k]) => !knownKeys.includes(k)).map(([key, value]) => ({ key, value })))
+    const entries = Object.entries(data).filter(([k]) => !knownKeys.includes(k))
+    setCustomRows(entries.filter(([, v]) => !isSiteImageValue(v)).map(([key, value]) => ({ key, value })))
+    setCustomImageRows(entries.filter(([, v]) => isSiteImageValue(v)).map(([key, v]) => ({ key, url: v.url })))
   }, [siteContentSaved, siteContentLoading, contentDirty])
 
   const [navSaving, setNavSaving] = useState(false)
@@ -260,11 +302,22 @@ export default function AdminWebsite() {
     setContentDirty(true)
   }
   const removeCustomRow = (i) => { setCustomRows((rs) => rs.filter((_, j) => j !== i)); setContentDirty(true) }
+  const addCustomImageRow = () => { setCustomImageRows((rs) => [...rs, { key: '', url: '' }]); setContentDirty(true) }
+  const updateCustomImageKey = (i, key) => {
+    setCustomImageRows((rs) => rs.map((r, j) => (j === i ? { ...r, key } : r)))
+    setContentDirty(true)
+  }
+  const setCustomImageUrl = (i, url) => {
+    setCustomImageRows((rs) => rs.map((r, j) => (j === i ? { ...r, url } : r)))
+    setContentDirty(true)
+  }
+  const removeCustomImageRow = (i) => { setCustomImageRows((rs) => rs.filter((_, j) => j !== i)); setContentDirty(true) }
   const saveSiteContentAll = async () => {
     setContentSaving(true)
     try {
       const merged = { ...(siteContent || {}) }
       customRows.forEach(({ key, value }) => { if (key.trim()) merged[key.trim()] = value })
+      customImageRows.forEach(({ key, url }) => { if (key.trim() && url) merged[key.trim()] = { type: 'image', url } })
       await saveSiteContent(merged)
       setContentDirty(false)
       setContentSaved(true)
@@ -465,9 +518,25 @@ export default function AdminWebsite() {
                   </button>
                 </div>
               ))}
+
+              <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
+                ฟิลด์รูปภาพ (key ที่ตั้งเอง)
+              </div>
+              {customImageRows.map((row, i) => (
+                <ImageFieldRow
+                  key={i} row={row}
+                  onKeyChange={(k) => updateCustomImageKey(i, k)}
+                  onUrlChange={(url) => setCustomImageUrl(i, url)}
+                  onRemove={() => removeCustomImageRow(i)}
+                />
+              ))}
+
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
                 <button type="button" className="admin-btn" onClick={addCustomRow}>
                   <FontAwesomeIcon icon={faPlus} /> เพิ่มฟิลด์เนื้อหา
+                </button>
+                <button type="button" className="admin-btn" onClick={addCustomImageRow}>
+                  <FontAwesomeIcon icon={faImage} /> เพิ่มฟิลด์รูปภาพ
                 </button>
                 <button className="admin-btn-primary" onClick={saveSiteContentAll} disabled={contentSaving || !contentDirty}>
                   <FontAwesomeIcon icon={contentSaved ? faCheck : faPenToSquare} /> {contentSaved ? 'บันทึกแล้ว ✓' : contentSaving ? 'กำลังบันทึก…' : 'บันทึกเนื้อหาเว็บ'}

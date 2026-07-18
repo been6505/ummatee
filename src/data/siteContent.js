@@ -29,3 +29,10 @@ export const siteText = (content, key, fallback = '') => {
   const v = content?.[key]
   return (typeof v === 'string' && v.trim()) ? v : fallback
 }
+
+// ค่ารูปภาพเก็บเป็น { type: 'image', url } แยกจากข้อความธรรมดา (string) เพื่อให้หน้าแอดมินรู้ว่า key ไหนควรโชว์เป็นตัวอัพโหลดรูป
+export const siteImageUrl = (content, key, fallback = '') => {
+  const v = content?.[key]
+  return (v && typeof v === 'object' && v.type === 'image' && v.url) ? v.url : fallback
+}
+export const isSiteImageValue = (v) => !!(v && typeof v === 'object' && v.type === 'image')

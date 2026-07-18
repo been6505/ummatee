@@ -51,3 +51,14 @@ export function notifyAdminPaymentDeclared(order) {
     `💰 ลูกค้าแจ้งชำระเงินแล้ว: ${order.orderCode}\nยอด: ฿${Number(order.total).toLocaleString('th-TH')}\nกรุณาตรวจสลิปและกดยืนยันในหน้าแอดมิน`
   )
 }
+
+// แจ้งเตือนสต็อกใกล้หมด/หมด — ยิงตอนตัดสต็อกแล้ว "ข้าม" เกณฑ์ครั้งแรก (ดู createOrder ใน orders.js)
+// กันสแปม: แจ้งเฉพาะตอนที่ stock เพิ่งลดลงมาต่ำกว่าเกณฑ์ ไม่ใช่ทุกครั้งที่ยังต่ำอยู่
+export function notifyAdminLowStock(alerts) {
+  if (!alerts || alerts.length === 0) return
+  const lines = alerts.map((a) => `- ${a.name}${a.detail ? ` (${a.detail})` : ''}: เหลือ ${a.remaining} ชิ้น`).join('\n')
+  notifyAdmin(
+    `⚠️ สต็อกใกล้หมด (${alerts.length} รายการ)`,
+    `⚠️ สินค้าต่อไปนี้สต็อกใกล้หมด/หมดแล้ว กรุณารับเข้าคลังเพิ่ม:\n${lines}`
+  )
+}

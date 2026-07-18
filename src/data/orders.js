@@ -3,6 +3,8 @@ import { db } from '../firebase.js'
 import {
   collection, doc, updateDoc, onSnapshot, runTransaction, query, orderBy, arrayUnion,
 } from 'firebase/firestore'
+import { LOW_STOCK_THRESHOLD } from './inventory.js'
+import { notifyAdminLowStock } from '../utils/lineNotify.js'
 
 // คำสั่งซื้อ Um Shop — เก็บใน Firestore collection "orders"
 // ลำดับสถานะ: pending_payment → preparing → shipping → delivered
@@ -36,8 +38,10 @@ export async function createOrder({ items, itemsTotal, customer }) {
   // it.productDocId = doc id จริงของสินค้า (it.id เป็น line id รวมสี/ขนาด) — fallback it.id เผื่อตะกร้าเก่า
   const productRefs = items.map((it) => doc(db, 'products', it.productDocId || it.id))
   let orderCode = ''
+  let lowStockAlerts = [] // สินค้าที่เพิ่งตัดสต็อกแล้ว "ข้าม" เกณฑ์ต่ำครั้งนี้ — แจ้งแอดมินหลัง tx สำเร็จ
 
   await runTransaction(db, async (tx) => {
+    lowStockAlerts = [] // reset ทุกครั้งที่ tx ลอง retry กันแจ้งซ้ำจากรอบที่ชนกัน
     const counterSnap = await tx.get(counterRef)
     const num = counterSnap.exists() ? (counterSnap.data().count ?? 0) + 1 : 1
     orderCode = `ORD-${String(num).padStart(4, '0')}`
@@ -85,8 +89,16 @@ export async function createOrder({ items, itemsTotal, customer }) {
         const nextSizeStock = { ...data.sizeStock, [it.sizes]: (Number(data.sizeStock[it.sizes]) || 0) - it.qty }
         const nextTotal = Object.values(nextSizeStock).reduce((s, v) => s + (Number(v) || 0), 0)
         tx.update(productRefs[i], { sizeStock: nextSizeStock, stock: nextTotal, sold: nextSold })
+        const prevTotal = Object.values(data.sizeStock).reduce((s, v) => s + (Number(v) || 0), 0)
+        if (prevTotal > LOW_STOCK_THRESHOLD && nextTotal <= LOW_STOCK_THRESHOLD) {
+          lowStockAlerts.push({ name: it.name || data.name, detail: `ไซซ์ ${it.sizes}`, remaining: nextTotal })
+        }
       } else if (Number.isFinite(stock)) {
-        tx.update(productRefs[i], { stock: stock - it.qty, sold: nextSold })
+        const nextStock = stock - it.qty
+        tx.update(productRefs[i], { stock: nextStock, sold: nextSold })
+        if (stock > LOW_STOCK_THRESHOLD && nextStock <= LOW_STOCK_THRESHOLD) {
+          lowStockAlerts.push({ name: it.name || data.name, detail: '', remaining: nextStock })
+        }
       }
       tx.set(doc(collection(db, 'stockMovements')), {
         productId: it.productDocId || it.id,
@@ -99,6 +111,8 @@ export async function createOrder({ items, itemsTotal, customer }) {
       })
     })
   })
+
+  notifyAdminLowStock(lowStockAlerts)
 
   return { id: orderRef.id, orderCode }
 }

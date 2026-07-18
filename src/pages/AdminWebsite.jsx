@@ -5,9 +5,20 @@ import useAdminAuth from '../useAdminAuth.js'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
 import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
+import { useSiteContent, saveSiteContent } from '../data/siteContent.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash, faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
+
+// รายการ key เนื้อหาท้ายเว็บ (footer) ที่มีอยู่แล้วในโค้ด — โชว์เป็นแถวสำเร็จรูปให้แก้ง่าย
+const FOOTER_CONTENT_KEYS = [
+  { key: 'footerTagline_th', label: 'คำโปรยท้ายเว็บ (ไทย)', placeholder: 'มูลนิธิอุมมะตี — ให้ 100 ถึง 100' },
+  { key: 'footerTagline_en', label: 'คำโปรยท้ายเว็บ (EN)', placeholder: 'Ummatee Foundation — Give 100, Reach 100' },
+  { key: 'footerTagline_ar', label: 'คำโปรยท้ายเว็บ (AR)', placeholder: 'مؤسسة أمّتي — أعطِ ١٠٠ تصل ١٠٠' },
+  { key: 'footerEmail', label: 'อีเมลติดต่อ', placeholder: 'ummatee.thailand@gmail.com' },
+  { key: 'footerMapUrl', label: 'ลิงก์แผนที่ (Google Maps)', placeholder: 'https://maps.app.goo.gl/...' },
+  { key: 'footerMapLabel', label: 'ข้อความลิงก์แผนที่', placeholder: 'Office Ummatee Thailand' },
+]
 
 // จัดการเว็บฝั่ง public (/admin/website) — เมนู nav, แบนเนอร์ประกาศ และการ์ด Hero Feed หน้าแรก (แบบ CMS)
 // เขียนที่ config/announcement + config/homeCards (public อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน — ดู firestore.rules)
@@ -131,6 +142,21 @@ export default function AdminWebsite() {
   const { announcement, loading: annLoading } = useAnnouncement()
   const { visibility, loading: navLoading } = useNavVisibility()
   const { cards: savedCards, loading: cardsLoading } = useHomeCards(true)
+  const { content: siteContentSaved, loading: siteContentLoading } = useSiteContent()
+
+  // เนื้อหาเว็บทั่วไป (key-value) — แก้ในเครื่องก่อน กด "บันทึกเนื้อหาเว็บ" ค่อยเขียนขึ้น Firestore ทีเดียว เหมือนการ์ดหน้าแรก
+  const [siteContent, setSiteContent] = useState(null)
+  const [contentDirty, setContentDirty] = useState(false)
+  const [contentSaving, setContentSaving] = useState(false)
+  const [contentSaved, setContentSaved] = useState(false)
+  const [customRows, setCustomRows] = useState([]) // [{key, value}] — ฟิลด์อิสระที่แอดมินเพิ่มเอง นอกเหนือจาก key มาตรฐานด้านบน
+  useEffect(() => {
+    if (siteContentLoading || contentDirty) return
+    const data = siteContentSaved || {}
+    setSiteContent(data)
+    const knownKeys = FOOTER_CONTENT_KEYS.map((f) => f.key)
+    setCustomRows(Object.entries(data).filter(([k]) => !knownKeys.includes(k)).map(([key, value]) => ({ key, value })))
+  }, [siteContentSaved, siteContentLoading, contentDirty])
 
   const [navSaving, setNavSaving] = useState(false)
   const [navSaved, setNavSaved] = useState(false)
@@ -223,6 +249,30 @@ export default function AdminWebsite() {
       window.alert('บันทึกไม่สำเร็จ: ' + e.message)
     } finally {
       setCardsSaving(false)
+    }
+  }
+
+  // ── จัดการเนื้อหาเว็บทั่วไป (key-value) ──
+  const setKnownField = (key, value) => { setSiteContent((c) => ({ ...(c || {}), [key]: value })); setContentDirty(true) }
+  const addCustomRow = () => { setCustomRows((rs) => [...rs, { key: '', value: '' }]); setContentDirty(true) }
+  const updateCustomRow = (i, field, val) => {
+    setCustomRows((rs) => rs.map((r, j) => (j === i ? { ...r, [field]: val } : r)))
+    setContentDirty(true)
+  }
+  const removeCustomRow = (i) => { setCustomRows((rs) => rs.filter((_, j) => j !== i)); setContentDirty(true) }
+  const saveSiteContentAll = async () => {
+    setContentSaving(true)
+    try {
+      const merged = { ...(siteContent || {}) }
+      customRows.forEach(({ key, value }) => { if (key.trim()) merged[key.trim()] = value })
+      await saveSiteContent(merged)
+      setContentDirty(false)
+      setContentSaved(true)
+      setTimeout(() => setContentSaved(false), 1800)
+    } catch (e) {
+      window.alert('บันทึกไม่สำเร็จ: ' + e.message)
+    } finally {
+      setContentSaving(false)
     }
   }
 
@@ -365,6 +415,62 @@ export default function AdminWebsite() {
                 </button>
                 <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || (!cardsDirty && savedCards !== null)}>
                   <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── เนื้อหาเว็บทั่วไป (CMS แบบ key-value) ── */}
+        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 760 }}>
+          <div className="admin-card-head" style={{ marginBottom: 12 }}>
+            <h4><FontAwesomeIcon icon={faPenToSquare} /> เนื้อหาเว็บ (ท้ายเว็บ + ข้อความอื่นๆ)</h4>
+          </div>
+          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+            แก้ข้อความติดต่อ/คำโปรยท้ายเว็บได้เอง โดยไม่ต้องให้ dev แก้โค้ด — ช่องไหนเว้นว่างจะใช้ข้อความเดิมของเว็บแทน
+            ด้านล่างสุดยังเพิ่มฟิลด์เนื้อหาอิสระของตัวเองได้ (key ใหม่) เผื่อใช้ในหน้าอื่นภายหลัง
+          </p>
+          {siteContentLoading || siteContent === null ? <p>กำลังโหลด…</p> : (
+            <>
+              <div className="admin-form-grid admin-form-grid-2col">
+                {FOOTER_CONTENT_KEYS.map((f) => (
+                  <label key={f.key}>{f.label}
+                    <input
+                      type="text"
+                      value={siteContent[f.key] || ''}
+                      placeholder={f.placeholder}
+                      onChange={(e) => setKnownField(f.key, e.target.value)}
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
+                ฟิลด์เนื้อหาอิสระ (key ที่ตั้งเอง)
+              </div>
+              {customRows.map((row, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <input
+                    type="text" placeholder="key เช่น aboutPageTitle" value={row.key}
+                    onChange={(e) => updateCustomRow(i, 'key', e.target.value)}
+                    style={{ flex: '0 0 220px' }}
+                  />
+                  <input
+                    type="text" placeholder="ข้อความ" value={row.value}
+                    onChange={(e) => updateCustomRow(i, 'value', e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button type="button" className="admin-btn-danger" onClick={() => removeCustomRow(i)} aria-label="ลบฟิลด์นี้" title="ลบ">
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                <button type="button" className="admin-btn" onClick={addCustomRow}>
+                  <FontAwesomeIcon icon={faPlus} /> เพิ่มฟิลด์เนื้อหา
+                </button>
+                <button className="admin-btn-primary" onClick={saveSiteContentAll} disabled={contentSaving || !contentDirty}>
+                  <FontAwesomeIcon icon={contentSaved ? faCheck : faPenToSquare} /> {contentSaved ? 'บันทึกแล้ว ✓' : contentSaving ? 'กำลังบันทึก…' : 'บันทึกเนื้อหาเว็บ'}
                 </button>
               </div>
             </>

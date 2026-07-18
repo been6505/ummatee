@@ -1,6 +1,7 @@
 import { useNavigate } from '../navContext'
 import { useLang } from '../i18n.jsx'
 import SocialLinks from './SocialLinks.jsx'
+import { useSiteContent, siteText } from '../data/siteContent.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCow, faHandHoldingHeart, faHandSparkles, faEnvelope, faLocationDot } from '@fortawesome/free-solid-svg-icons'
 
@@ -33,9 +34,15 @@ const T = {
 export default function Footer() {
   const go = useNavigate()
   const { lang } = useLang()
+  const { content } = useSiteContent()
   const t = T[lang]
   const year = new Date().getFullYear()
   const link = (e, p) => { e.preventDefault(); go(p) }
+  // ข้อความติดต่อ/คำโปรย — แก้ได้จากหน้าแอดมิน (จัดการเว็บ) ไม่มีค่าที่ตั้งไว้ใน Firestore ก็ใช้ค่าเดิมแทน
+  const tagline = siteText(content, `footerTagline_${lang}`, t.tagline)
+  const email = siteText(content, 'footerEmail', 'ummatee.thailand@gmail.com')
+  const mapUrl = siteText(content, 'footerMapUrl', 'https://maps.app.goo.gl/VhoiyQSM5brDhSD17')
+  const mapLabel = siteText(content, 'footerMapLabel', 'Office Ummatee Thailand')
 
   return (
     <footer>
@@ -48,7 +55,7 @@ export default function Footer() {
               </span>
             </div>
             <p style={{ fontWeight: 300, maxWidth: '34ch' }}>
-              {t.tagline}
+              {tagline}
             </p>
           </div>
           <div className="foot-col">
@@ -63,8 +70,8 @@ export default function Footer() {
           </div>
           <div className="foot-col">
             <h5>{t.contact}</h5>
-            <a href='mailto:ummatee.thailand@gmail.com'><FontAwesomeIcon icon={faEnvelope} /> ummatee.thailand@gmail.com</a>
-            <a href='https://maps.app.goo.gl/VhoiyQSM5brDhSD17' target='_blank' rel='noopener noreferrer'><FontAwesomeIcon icon={faLocationDot} /> Office Ummatee Thailand</a>
+            <a href={`mailto:${email}`}><FontAwesomeIcon icon={faEnvelope} /> {email}</a>
+            <a href={mapUrl} target='_blank' rel='noopener noreferrer'><FontAwesomeIcon icon={faLocationDot} /> {mapLabel}</a>
             <SocialLinks variant="footer" />
           </div>
         </div>

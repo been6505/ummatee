@@ -119,7 +119,9 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
   })
 
   return ( // ส่วนแสดงผลของการ์ดสินค้า
-    <FadeUp className="shop-card" id={primary.id} onClick={() => onOpen(primary)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
+    // เปิดด้วย cheapestVariant (ไม่ใช่ primary) — การ์ดโชว์ราคาต่ำสุดของกลุ่ม (minPrice) กดเข้าไปต้องเจอตัวเลือกที่ตรงกับราคานั้นเป๊ะ
+    // ไม่งั้นลูกค้าจะเจอราคาอื่น (เช่น การ์ดโชว์ ฿225 ของแขนสั้น แต่กดเข้าไปดันเปิดแขนยาว ฿270 แทน)
+    <FadeUp className="shop-card" id={primary.id} onClick={() => onOpen(cheapestVariant)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
       <div className="shop-img"> {/* ส่วนแสดงรูปภาพของการ์ด */}
         {img ? <img src={optImg(img, 500)} alt={primary.name} loading="lazy" /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
         {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" แสดงเมื่อทุก variant หมด */}

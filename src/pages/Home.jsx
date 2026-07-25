@@ -251,7 +251,8 @@ export default function Home() {
   const [gazaMedia, setGazaMedia] = useState([])
   const [announcement, setAnnouncement] = useState(null)
   // การ์ด Hero Feed จากแอดมิน (config/homeCards) — null = ยังไม่ตั้งค่า ให้ใช้การ์ดมาตรฐาน 3 ใบเดิม
-  const { cards: adminCards } = useHomeCards()
+  // ต้องใช้ loading แยกจาก cards ด้วย เพราะ cards เป็น null ทั้งตอน "ยังโหลดไม่เสร็จ" และ "แอดมินไม่เคยตั้งค่า"
+  const { cards: adminCards, loading: cardsLoading } = useHomeCards()
   // ผูกกับการเปิด/ปิดเมนู — ปิดเมนูไหน การ์ดที่ลิงก์ไปหน้านั้นถูกซ่อนตามด้วย
   const { visibility: navVis } = useNavVisibility()
   const ctaParallaxRef = useParallax(0.15) // ลาย fc-pattern ของแถบ CTA ท้ายหน้าแรก เลื่อนช้ากว่าเนื้อหาตอน scroll
@@ -310,8 +311,20 @@ export default function Home() {
         </div>
 
         <div className="hf-feed">
-          {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website */}
-          {(customCards !== null ? customCards : DEFAULT_HOME_CARDS.filter((c) => !navHidden(c.link))).map((c, i) => {
+          {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website
+              ระหว่างโหลดต้องโชว์ skeleton ห้าม fallback ไป DEFAULT_HOME_CARDS เพราะจะกลายเป็นการ์ดเก่าที่แอดมิน
+              ลบไปแล้วแวบขึ้นมาทุกครั้งที่รีเฟรช (cards=null ยังแยกไม่ได้ว่า "ยังไม่รู้" หรือ "ไม่เคยตั้งค่า") */}
+          {cardsLoading ? (
+            <div className="hf-card hf-card-skeleton">
+              <div className="hf-poster sk-block" />
+              <div className="hf-card-body">
+                <div className="sk-line" style={{ width: '38%', height: 20 }} />
+                <div className="sk-line" style={{ width: '72%', height: 28 }} />
+                <div className="sk-line" style={{ width: '100%', height: 14 }} />
+                <div className="sk-line" style={{ width: '48%', height: 44, borderRadius: 99 }} />
+              </div>
+            </div>
+          ) : (customCards !== null ? customCards : DEFAULT_HOME_CARDS.filter((c) => !navHidden(c.link))).map((c, i) => {
             const gradIcon = c.color === 'give' ? faHandHoldingHeart : c.color === 'volunteer' ? faHandSparkles : faMoon
             const cTitle = L(c.title, lang), cDesc = L(c.desc, lang), cBtn = L(c.btnText, lang)
             return (

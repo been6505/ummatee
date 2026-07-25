@@ -210,6 +210,13 @@
 .hf-gradient-give{background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 55%,#5b21b6 100%)}
 .hf-gradient-icon{font-size:3rem;line-height:1}
 
+/* skeleton การ์ด Hero Feed ระหว่างรอ config/homeCards จาก Firestore */
+.hf-card-skeleton{pointer-events:none}
+.hf-card-skeleton:hover{transform:none}
+/* .hf-poster ประกาศ animation:mc-fade ไว้ และไฟล์นี้ import หลัง shop.css จึงทับ sk-shimmer ของ .sk-block
+   ต้องสั่ง shimmer ซ้ำที่นี่ ไม่งั้น skeleton จะนิ่งไม่มีการเคลื่อนไหว */
+.hf-card-skeleton .hf-poster.sk-block{animation:sk-shimmer 1.4s ease-in-out infinite}
+
 /* การ์ดใบเดียวบนจอกว้าง — จัดเป็นแนวนอน (โปสเตอร์ซ้าย เนื้อหาขวา) เพราะถ้าปล่อยเป็นแนวตั้งเต็มความกว้าง
    900px โปสเตอร์ aspect-ratio 4/5 จะสูงกว่า 1100px ล้นจอ ต้องเลื่อนหาปุ่มกด */
 @media (min-width:801px){

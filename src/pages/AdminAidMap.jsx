@@ -221,6 +221,16 @@ export default function AdminAidMap() {
             <div className="admin-card" style={{ marginBottom: 20 }}>
               <h4>{editId ? 'แก้ไขจุดลงพื้นที่' : 'เพิ่มจุดลงพื้นที่ใหม่'}</h4>
 
+              {/* ── ส่วนที่ 1: พิกัด ── */}
+              <div className="aid-fieldset">
+                <div className="aid-fieldset-head">
+                  <span className="aid-fieldset-num">1</span>
+                  <div>
+                    <h5>พิกัด</h5>
+                    <p>ตำแหน่งที่ลงพื้นที่ — ค้นหาชื่อสถานที่เพื่อเติมพิกัดอัตโนมัติ หรือกรอกเองก็ได้</p>
+                  </div>
+                </div>
+
               {/* ค้นหาพิกัดจากชื่อสถานที่ — ไม่ต้องไปเปิด Google Maps หาพิกัดมาวางเอง */}
               <div className="aid-geo-search">
                 <input
@@ -248,17 +258,31 @@ export default function AdminAidMap() {
                 </div>
               )}
 
-              <div className="admin-form-grid">
-                <label>ประเทศ<input value={form.country} onChange={set('country')} /></label>
-                <label>จังหวัด<input value={form.province} onChange={set('province')} /></label>
-                <label>ชื่อหมู่บ้าน<input value={form.villageName} onChange={set('villageName')} /></label>
-                <label>Latitude<input type="number" step="any" value={form.latitude} onChange={set('latitude')} /></label>
-                <label>Longitude<input type="number" step="any" value={form.longitude} onChange={set('longitude')} /></label>
-                <label>จำนวนคนที่ช่วย<input type="number" value={form.peopleHelped} onChange={set('peopleHelped')} /></label>
-                <label>รายการที่บริจาค<input value={form.itemsDonatedDescription} onChange={set('itemsDonatedDescription')} /></label>
-                <label>จำนวนที่บริจาค<input type="number" value={form.itemsDonatedCount} onChange={set('itemsDonatedCount')} /></label>
-                <label>วันที่ลงพื้นที่<input type="date" value={form.visitDate || ''} onChange={set('visitDate')} /></label>
-                <label>หมายเหตุ<input value={form.notes} onChange={set('notes')} /></label>
+                <div className="admin-form-grid">
+                  <label>ประเทศ<input value={form.country} onChange={set('country')} /></label>
+                  <label>จังหวัด<input value={form.province} onChange={set('province')} /></label>
+                  <label>ชื่อหมู่บ้าน<input value={form.villageName} onChange={set('villageName')} /></label>
+                  <label>Latitude<input type="number" step="any" value={form.latitude} onChange={set('latitude')} /></label>
+                  <label>Longitude<input type="number" step="any" value={form.longitude} onChange={set('longitude')} /></label>
+                </div>
+              </div>
+
+              {/* ── ส่วนที่ 2: ความช่วยเหลือ ── */}
+              <div className="aid-fieldset">
+                <div className="aid-fieldset-head">
+                  <span className="aid-fieldset-num">2</span>
+                  <div>
+                    <h5>ความช่วยเหลือ</h5>
+                    <p>สิ่งที่มอบให้ในพื้นที่นี้ — ใช้รวมเป็นสถิติจำนวนคนที่ช่วยและของบริจาคทั้งหมด</p>
+                  </div>
+                </div>
+                <div className="admin-form-grid">
+                  <label>จำนวนคนที่ช่วย<input type="number" value={form.peopleHelped} onChange={set('peopleHelped')} /></label>
+                  <label>รายการที่บริจาค<input value={form.itemsDonatedDescription} onChange={set('itemsDonatedDescription')} placeholder="เช่น ข้าวสาร 500 ถุง, ผ้าห่ม 200 ผืน" /></label>
+                  <label>จำนวนที่บริจาค<input type="number" value={form.itemsDonatedCount} onChange={set('itemsDonatedCount')} /></label>
+                  <label>วันที่ลงพื้นที่<input type="date" value={form.visitDate || ''} onChange={set('visitDate')} /></label>
+                  <label>หมายเหตุ<input value={form.notes} onChange={set('notes')} /></label>
+                </div>
               </div>
               <div style={{ marginTop: 14, display: 'flex', gap: 12 }}>
                 <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มจุด'}</button>

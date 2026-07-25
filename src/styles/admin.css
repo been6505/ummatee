@@ -266,6 +266,14 @@
 .admin-cal-social-row{display:flex;align-items:center;gap:12px;border:1px solid #eee;border-radius:10px;padding:10px 14px}
 .admin-cal-social-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
+/* ฟอร์มเพิ่มจุดลงพื้นที่ แบ่งเป็น 2 ส่วน (พิกัด / ความช่วยเหลือ) — เดิมเป็นตะแกรงเดียว 10 ช่องเรียงติดกัน
+   แยกไม่ออกว่าช่องไหนเกี่ยวกับอะไร */
+.aid-fieldset{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:16px;background:rgba(46,125,82,.02)}
+.aid-fieldset-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.aid-fieldset-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--green-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
+.aid-fieldset-head h5{margin:0;font-size:.98rem;color:var(--green-deep);font-weight:800}
+.aid-fieldset-head p{margin:2px 0 0;font-size:.8rem;color:var(--ink-soft);font-weight:400;line-height:1.5}
+
 /* ค้นหาพิกัดจากชื่อสถานที่ (หน้า /admin/aid-map) */
 /* input ต้องมี min-width:0 ไม่งั้น intrinsic width ของ input ดันปุ่มล้นกรอบการ์ดบนจอแคบ */
 .aid-geo-search{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}

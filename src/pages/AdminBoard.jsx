@@ -97,36 +97,30 @@ export default function AdminBoard() {
             </div>
 
             {loading ? <p>กำลังโหลดข้อมูล...</p> : (
-              <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12 }}>
+              <div className="admin-board-row">
                 {lists.map((l) => (
                   <div
                     key={l.id}
-                    className="admin-card"
-                    style={{ minWidth: 280, flex: '0 0 280px' }}
+                    className="admin-card admin-board-col"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => onDrop(l.id)}
                   >
                     <h4>{l.name} ({cardsByList[l.id]?.length || 0})</h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 40 }}>
+                    <div className="admin-board-cards">
                       {(cardsByList[l.id] || []).map((c) => (
-                        <div
-                          key={c.id}
-                          draggable
-                          onDragStart={() => setDragCardId(c.id)}
-                          style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, background: '#fff', cursor: 'grab' }}
-                        >
-                          <div style={{ fontWeight: 700, marginBottom: 6 }}>{c.title}</div>
+                        <div key={c.id} className="admin-board-card" draggable onDragStart={() => setDragCardId(c.id)}>
+                          <div className="admin-board-card-title">{c.title}</div>
                           <input
                             type="date"
                             value={c.dueDate || ''}
                             onChange={(e) => setDueDate(c, e.target.value)}
-                            style={{ fontSize: '.8rem', width: '100%', marginBottom: 6 }}
+                            className="admin-board-card-date"
                           />
                           <button className="admin-btn-danger" style={{ fontSize: '.75rem' }} onClick={() => removeCard(c)}>ลบ</button>
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+                    <div className="admin-board-add-card">
                       <input
                         placeholder="เพิ่มการ์ด..."
                         value={newCardTitle[l.id] || ''}

@@ -57,6 +57,16 @@
 .admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
 .admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
 .admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}
+
+/* บอร์ดวางแผน (/admin/board) — scroll-snap กันคอลัมน์โดนตัดครึ่งแบบไม่มีจังหวะเลื่อนที่ชัดเจนบนมือถือ
+   ความกว้างคอลัมน์ใช้ min() กันคอลัมน์แรกกว้างเกินจอมือถือ (280px คงที่เดิมทำให้คอลัมน์ 2 โผล่มาแค่เศษเสี้ยว) */
+.admin-board-row{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.admin-board-col{min-width:min(85vw,280px);flex:0 0 min(85vw,280px);scroll-snap-align:start}
+.admin-board-cards{display:flex;flex-direction:column;gap:8px;min-height:40px}
+.admin-board-card{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fff;cursor:grab}
+.admin-board-card-title{font-weight:700;margin-bottom:6px}
+.admin-board-card-date{font-size:.8rem;width:100%;margin-bottom:6px}
+.admin-board-add-card{margin-top:10px;display:flex;gap:6px}
 /* การ์ดผู้เข้าชมเว็บไซต์ (หน้า admin/dashboard) */
 .admin-visitors-card{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,var(--green-deep) 0%,var(--green-mid) 100%);border:none;color:#fff;box-shadow:0 12px 32px -12px rgba(27,94,54,.45)}
 .admin-visitors-icon{font-size:2.6rem;width:72px;height:72px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:18px;flex-shrink:0}

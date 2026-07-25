@@ -169,6 +169,9 @@
 .hf-feed{display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(14px,2.5vw,24px)}
 @media (max-width:800px){.hf-feed{grid-template-columns:1fr 1fr}}
 @media (max-width:500px){.hf-feed{grid-template-columns:1fr}}
+/* การ์ดใบเดียว — grid 3 คอลัมน์ตายตัวทำให้การ์ดไปกองอยู่คอลัมน์แรกแล้วเหลือที่ว่างโบ๋อีก 2 คอลัมน์
+   ให้ยุบเหลือคอลัมน์เดียวแล้วขยายเต็มความกว้าง (ตัวจัดวางแนวนอนอยู่ในบล็อกจอกว้างด้านล่าง) */
+.hf-feed:has(> .hf-card:only-child){grid-template-columns:minmax(0,1fr)}
 .hf-card{position:relative;background:#fff;border:none;border-radius:22px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.22),0 2px 8px rgba(0,0,0,.12);transition:transform .22s,box-shadow .22s}
 .hf-card:hover{transform:translateY(-5px);box-shadow:0 20px 56px rgba(0,0,0,.28),0 4px 12px rgba(0,0,0,.14)}
 .hf-card-poster-link{display:block;overflow:hidden}
@@ -206,5 +209,16 @@
 .hf-gradient-iftar{background:linear-gradient(135deg,#2E7D52 0%,#1B5E36 60%,#0f3d23 100%)}
 .hf-gradient-give{background:linear-gradient(135deg,#8b5cf6 0%,#7c3aed 55%,#5b21b6 100%)}
 .hf-gradient-icon{font-size:3rem;line-height:1}
+
+/* การ์ดใบเดียวบนจอกว้าง — จัดเป็นแนวนอน (โปสเตอร์ซ้าย เนื้อหาขวา) เพราะถ้าปล่อยเป็นแนวตั้งเต็มความกว้าง
+   900px โปสเตอร์ aspect-ratio 4/5 จะสูงกว่า 1100px ล้นจอ ต้องเลื่อนหาปุ่มกด */
+@media (min-width:801px){
+  .hf-card:only-child{flex-direction:row;align-items:stretch}
+  .hf-card:only-child .hf-poster-carousel,
+  .hf-card:only-child .hf-card-gradient-hero{flex:0 0 46%;max-width:46%}
+  /* ยกเลิก aspect-ratio ให้รูปสูงเท่าการ์ด (ความสูงกำหนดโดยเนื้อหาฝั่งขวา) แต่ไม่เตี้ยกว่า 380px */
+  .hf-card:only-child .hf-poster{height:100%;min-height:380px;aspect-ratio:auto}
+  .hf-card:only-child .hf-card-body{justify-content:center;padding:32px 36px}
+}
 .hf-gradient-label{font-size:.85rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85)}
 .hf-tag-teal{background:rgba(8,145,178,.12);color:#0e7490;border:1px solid rgba(8,145,178,.25)}

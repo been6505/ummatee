@@ -274,6 +274,15 @@
 .aid-fieldset-head h5{margin:0;font-size:.98rem;color:var(--green-deep);font-weight:800}
 .aid-fieldset-head p{margin:2px 0 0;font-size:.8rem;color:var(--ink-soft);font-weight:400;line-height:1.5}
 
+/* รูปภาพหน้างานในฟอร์มจุดลงพื้นที่ */
+.aid-photos{margin-top:14px}
+.aid-photos-label{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+.aid-photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.aid-photo-thumb{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb}
+.aid-photo-thumb img{width:100%;height:100%;object-fit:cover}
+.aid-photo-thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.aid-photo-thumb button:hover{background:#c0392b}
+
 /* ค้นหาพิกัดจากชื่อสถานที่ (หน้า /admin/aid-map) */
 /* input ต้องมี min-width:0 ไม่งั้น intrinsic width ของ input ดันปุ่มล้นกรอบการ์ดบนจอแคบ */
 .aid-geo-search{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}

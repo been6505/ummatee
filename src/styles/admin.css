@@ -355,3 +355,13 @@
 /* แถวบัญชีที่สมัครเข้ามาแล้วยังรอแอดมินเลื่อน role (role: 'pending' — ยังไม่มีสิทธิ์ใดๆ) */
 .staff-pending-row{background:#fffbeb}
 .staff-pending-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:#f59e0b;color:#fff;font-size:.7rem;font-weight:700}
+
+/* ปุ่ม/เส้นคั่น "เข้าสู่ระบบด้วย Google" ในหน้าล็อกอิน
+   ปุ่มต้องพื้นขาวตัวหนังสือเข้มตามไกด์ไลน์แบรนด์ Google (ห้ามย้อมสีเขียวตามธีมเว็บ) */
+.admin-login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--ink-soft);font-size:.8rem}
+.admin-login-divider::before,.admin-login-divider::after{content:'';flex:1;height:1px;background:#e0e0e0}
+/* ต้องเจาะจงกว่า `.admin-login-box button` (ที่บังคับพื้นเขียวทึบ/ตัวอักษรขาวกับปุ่มทุกตัวในกล่อง)
+   ไม่งั้นปุ่ม Google จะกลายเป็นพื้นเขียว โลโก้หลากสีไปอยู่บนพื้นเข้ม ผิดไกด์ไลน์และอ่านยาก */
+.admin-login-box .admin-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #dadce0;border-radius:10px;background:#fff;color:#3c4043;font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,box-shadow .15s}
+.admin-login-box .admin-google-btn:hover:not(:disabled){background:#f8f9fa;box-shadow:0 1px 3px rgba(60,64,67,.2)}
+.admin-login-box .admin-google-btn:disabled{opacity:.6;cursor:default}

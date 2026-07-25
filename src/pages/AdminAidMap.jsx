@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { db } from '../firebase.js'
@@ -22,6 +22,27 @@ L.Icon.Default.mergeOptions({
 
 const EMPTY = { country: '', province: '', villageName: '', latitude: '', longitude: '', peopleHelped: '', itemsDonatedDescription: '', itemsDonatedCount: '', visitDate: '', notes: '' }
 const THAILAND_CENTER = [13.7563, 100.5018]
+
+// MapContainer ของ react-leaflet ไม่ย้ายมุมกล้องตาม prop ที่เปลี่ยน (center/zoom ใช้แค่ค่าตั้งต้น)
+// ต้องสั่งผ่าน instance ของแผนที่เอง จึงต้องมี component ลูกที่เรียก useMap() แบบนี้
+// - มีจุดที่เลือกไว้ (จากการกดผลค้นหา) → บินไปที่จุดนั้นแบบซูมใกล้
+// - มีแต่ผลค้นหาหลายจุด → ซูมให้เห็นทุกจุดพอดี
+function MapFocus({ focus, results }) {
+  const map = useMap()
+  useEffect(() => {
+    if (focus) {
+      map.flyTo([focus.lat, focus.lng], 13, { duration: 0.8 })
+      return
+    }
+    if (results && results.length > 0) {
+      const pts = results.map((r) => [Number(r.lat), Number(r.lon)])
+      // จุดเดียวใช้ fitBounds ไม่ได้ (กรอบกว้างศูนย์ ทำให้ซูมสุด) ใช้ setView แทน
+      if (pts.length === 1) map.setView(pts[0], 13)
+      else map.fitBounds(pts, { padding: [40, 40] })
+    }
+  }, [focus, results, map])
+  return null
+}
 
 export default function AdminAidMap() {
   const [list, setList] = useState([])
@@ -54,6 +75,7 @@ export default function AdminAidMap() {
   const [geoResults, setGeoResults] = useState(null) // null = ยังไม่ค้นหา, [] = ค้นแล้วไม่เจอ
   const [geoBusy, setGeoBusy] = useState(false)
   const [geoError, setGeoError] = useState('')
+  const [picked, setPicked] = useState(null) // จุดที่เลือกจากผลค้นหา — โชว์เป็นหมุดตัวอย่างบนแผนที่ก่อนกดบันทึก
 
   const searchPlace = async () => {
     const q = geoQuery.trim()
@@ -61,6 +83,7 @@ export default function AdminAidMap() {
     setGeoBusy(true)
     setGeoError('')
     setGeoResults(null)
+    setPicked(null) // ค้นใหม่ → ล้างหมุดที่เลือกไว้เดิม ให้แผนที่ไปโฟกัสผลชุดใหม่แทน
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=1&accept-language=th&q=${encodeURIComponent(q)}`
       const res = await fetch(url)
@@ -85,6 +108,8 @@ export default function AdminAidMap() {
       province: a.state || a.province || a.region || a.county || f.province,
       villageName: f.villageName.trim() || a.village || a.hamlet || a.town || a.suburb || a.city || String(r.display_name || '').split(',')[0],
     }))
+    // เก็บไว้โชว์เป็นหมุดบนแผนที่ + สั่งให้แผนที่บินไปหา (ดู MapFocus)
+    setPicked({ lat: Number(r.lat), lng: Number(r.lon), label: r.display_name })
     setGeoResults(null)
     setGeoQuery('')
   }
@@ -107,11 +132,11 @@ export default function AdminAidMap() {
       const ref = await addDoc(collection(db, 'aidLocations'), { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
       writeAuditLog({ action: 'create', entityType: 'aidLocation', entityId: ref.id, summary: `เพิ่มจุด ${form.villageName}` })
     }
-    setForm(EMPTY); setEditId(null)
+    setForm(EMPTY); setEditId(null); setPicked(null) // เคลียร์หมุดตัวอย่างหลังบันทึก (จุดจริงจะขึ้นเป็นหมุดปกติจาก Firestore แทน)
   }
 
-  const edit = (l) => { setEditId(l.id); setForm({ ...EMPTY, ...l, latitude: String(l.latitude ?? ''), longitude: String(l.longitude ?? '') }) }
-  const cancel = () => { setEditId(null); setForm(EMPTY) }
+  const edit = (l) => { setEditId(l.id); setPicked(null); setGeoResults(null); setForm({ ...EMPTY, ...l, latitude: String(l.latitude ?? ''), longitude: String(l.longitude ?? '') }) }
+  const cancel = () => { setEditId(null); setForm(EMPTY); setPicked(null); setGeoResults(null) }
 
   const remove = async (l) => {
     if (!window.confirm(`ลบจุด "${l.villageName}" ถาวร?`)) return
@@ -156,6 +181,40 @@ export default function AdminAidMap() {
                     </Popup>
                   </Marker>
                 ))}
+
+                {/* ผลค้นหา (ยังไม่ได้เลือก) — วงกลมส้ม แยกให้ต่างจากหมุดจุดที่บันทึกไว้แล้วชัดเจน */}
+                {!picked && (geoResults || []).map((r) => (
+                  <CircleMarker
+                    key={r.place_id}
+                    center={[Number(r.lat), Number(r.lon)]}
+                    radius={9}
+                    pathOptions={{ color: '#b45309', fillColor: '#f59e0b', fillOpacity: 0.85, weight: 2 }}
+                    eventHandlers={{ click: () => pickPlace(r) }}
+                  >
+                    <Popup>
+                      <strong>ผลค้นหา</strong><br />
+                      {r.display_name}<br />
+                      <em>คลิกหมุดนี้เพื่อใช้พิกัดนี้</em>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+
+                {/* จุดที่เลือกแล้ว — วงกลมเขียว รอกดบันทึก */}
+                {picked && (
+                  <CircleMarker
+                    center={[picked.lat, picked.lng]}
+                    radius={11}
+                    pathOptions={{ color: '#166534', fillColor: '#22c55e', fillOpacity: 0.9, weight: 3 }}
+                  >
+                    <Popup>
+                      <strong>จุดที่เลือก (ยังไม่บันทึก)</strong><br />
+                      {picked.label}<br />
+                      {picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}
+                    </Popup>
+                  </CircleMarker>
+                )}
+
+                <MapFocus focus={picked} results={geoResults} />
               </MapContainer>
             </div>
 

@@ -217,6 +217,13 @@
    ต้องสั่ง shimmer ซ้ำที่นี่ ไม่งั้น skeleton จะนิ่งไม่มีการเคลื่อนไหว */
 .hf-card-skeleton .hf-poster.sk-block{animation:sk-shimmer 1.4s ease-in-out infinite}
 
+/* ขนาดตัวอักษรของการ์ดปกติถูกคุมไว้ให้พอดีการ์ดแคบ (3 คอลัมน์) พอเหลือใบเดียวแล้วขยายเต็มความกว้าง
+   ตัวอักษรเดิมจะดูเล็กลอยไม่สมส่วนกับพื้นที่ จึงขยายขึ้นเฉพาะกรณีใบเดียว (ทุกขนาดจอ) */
+.hf-card:only-child .hf-tag{font-size:.82rem;padding:5px 13px}
+.hf-card:only-child .hf-card-title{font-size:clamp(1.5rem,4vw,2.15rem)}
+.hf-card:only-child .hf-card-desc{font-size:clamp(.95rem,2.2vw,1.08rem);line-height:1.75}
+.hf-card:only-child .hf-card-btn{font-size:1rem;padding:14px 28px}
+
 /* การ์ดใบเดียวบนจอกว้าง — จัดเป็นแนวนอน (โปสเตอร์ซ้าย เนื้อหาขวา) เพราะถ้าปล่อยเป็นแนวตั้งเต็มความกว้าง
    900px โปสเตอร์ aspect-ratio 4/5 จะสูงกว่า 1100px ล้นจอ ต้องเลื่อนหาปุ่มกด */
 @media (min-width:801px){

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
-import { db, auth, functions } from '../firebase.js'
+import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
@@ -10,8 +9,8 @@ import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin,
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner,
-  faPlug, faLink, faUnlink, faPaperPlane, faTriangleExclamation, faCalendarDays,
-  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faRotate, faMessage,
+  faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
+  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage,
 } from '@fortawesome/free-solid-svg-icons'
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
@@ -115,121 +114,58 @@ function ChatInboxTab() {
     </div>
   )
 }
+// เว็บ Content Hub (Vercel) ที่ทำหน้าที่เชื่อม OAuth + โพสต์จริง — ประกาศไว้บนสุดเพราะใช้หลายจุดในไฟล์นี้
+const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
 
-// แท็บ "คอมเมนต์" — เฉพาะโพสต์ที่โพสต์จริงแล้ว (มี publishResults จาก socialPublishNow/Scheduled)
-function CommentsTab({ posts }) {
-  const publishedPosts = useMemo(
-    () => posts.filter((p) => p.publishResults && Object.values(p.publishResults).some((r) => r?.ok)).sort((a, b) => (b.date || '').localeCompare(a.date || '')),
-    [posts]
-  )
-  const [openId, setOpenId] = useState(null)
-  const [loadingId, setLoadingId] = useState(null)
-  const [dataById, setDataById] = useState({}) // { [postId]: { comments, errors } }
-
-  const loadComments = async (postId) => {
-    if (openId === postId) { setOpenId(null); return }
-    setOpenId(postId)
-    if (dataById[postId]) return
-    setLoadingId(postId)
-    try {
-      const res = await httpsCallable(functions, 'socialGetComments')({ postId })
-      setDataById((d) => ({ ...d, [postId]: res.data }))
-    } catch (e) {
-      setDataById((d) => ({ ...d, [postId]: { comments: [], errors: { _: e.message } } }))
-    } finally {
-      setLoadingId(null)
-    }
-  }
-
+// แท็บ "คอมเมนต์" และ "ภาพรวมเพจ" — ดึงข้อมูลจริงจากแพลตฟอร์มต้องใช้ access token ที่เก็บฝั่งเซิร์ฟเวอร์
+// ซึ่งอยู่ในฐานข้อมูลของ Content Hub หน้านี้เข้าถึงไม่ได้ (เดิมเรียก Cloud Functions ที่ไม่เคย deploy
+// ทำให้เด้ง alert error ทุกครั้งที่เปิดแท็บ) จึงเปลี่ยนเป็นบอกทางไป Content Hub ตรงๆ แทน
+function HubOnlyTab({ icon, title, desc, hubPath }) {
   return (
     <div className="admin-card">
-      <h4><FontAwesomeIcon icon={faMessage} /> คอมเมนต์บนโพสต์ที่โพสต์จริงแล้ว</h4>
-      {publishedPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ที่โพสต์จริงแล้ว</p>}
-      {publishedPosts.map((p) => (
-        <div className="admin-post" key={p.id}>
-          <div className="admin-post-top">
-            <strong>{p.date} · {p.title}</strong>
-            <button className="admin-btn" onClick={() => loadComments(p.id)}>
-              <FontAwesomeIcon icon={loadingId === p.id ? faSpinner : faMessage} spin={loadingId === p.id} /> {openId === p.id ? 'ซ่อนคอมเมนต์' : 'ดูคอมเมนต์'}
-            </button>
-          </div>
-          {openId === p.id && dataById[p.id] && (
-            <div style={{ marginTop: 10 }}>
-              {Object.entries(dataById[p.id].errors || {}).map(([pf, msg]) => (
-                <p key={pf} style={{ color: '#c0392b', fontSize: '.8rem' }}><FontAwesomeIcon icon={faTriangleExclamation} /> {pf}: {msg}</p>
-              ))}
-              {(dataById[p.id].comments || []).length === 0 && !loadingId
-                ? <p style={{ color: '#999', fontSize: '.85rem' }}>ยังไม่มีคอมเมนต์</p>
-                : dataById[p.id].comments.map((c, i) => (
-                  <div key={i} style={{ borderTop: '1px solid var(--line, #eee)', padding: '8px 0', fontSize: '.85rem' }}>
-                    <strong>{c.platform}</strong> — {c.author} <span style={{ color: '#999' }}>{c.createdAt ? new Date(c.createdAt).toLocaleString('th-TH') : ''}</span>
-                    <div>{c.text}</div>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      ))}
+      <h4><FontAwesomeIcon icon={icon} /> {title}</h4>
+      <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 14 }}>{desc}</p>
+      <button
+        className="admin-btn-primary"
+        onClick={() => window.open(`${CONTENT_HUB_URL}${hubPath}`, '_blank', 'noopener,noreferrer')}
+      >
+        <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เปิดใน Content Hub
+      </button>
     </div>
   )
 }
 
-// แท็บ "ภาพรวมเพจ" — เรียก socialGetPageInsights (มี cache ฝั่งเซิร์ฟเวอร์ 1 ชม. อยู่แล้ว)
+function CommentsTab() {
+  return (
+    <HubOnlyTab
+      icon={faMessage}
+      title="คอมเมนต์บนโพสต์"
+      desc="คอมเมนต์ของโพสต์ที่เผยแพร่จริงดูได้ที่ Content Hub เพราะต้องใช้ token ของแต่ละแพลตฟอร์มที่เก็บไว้ฝั่งเซิร์ฟเวอร์ที่นั่น"
+      hubPath="/posts"
+    />
+  )
+}
+
 function InsightsTab() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  const load = async (forceRefresh = false) => {
-    setLoading(true)
-    try {
-      const res = await httpsCallable(functions, 'socialGetPageInsights')({ forceRefresh })
-      setData(res.data)
-    } catch (e) {
-      window.alert('โหลดข้อมูลไม่สำเร็จ: ' + e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-  useEffect(() => { load(false) }, [])
-
   return (
-    <div className="admin-card">
-      <div className="admin-post-top">
-        <h4 style={{ margin: 0 }}><FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ</h4>
-        <button className="admin-btn" disabled={loading} onClick={() => load(true)}>
-          <FontAwesomeIcon icon={faRotate} spin={loading} /> รีเฟรช
-        </button>
-      </div>
-      {!data && <p style={{ color: '#999', fontSize: '.9rem' }}>กำลังโหลด...</p>}
-      {data && Object.keys(data).length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่ได้เชื่อมต่อแพลตฟอร์มไหน</p>}
-      {data && Object.entries(data).map(([platform, res]) => (
-        <div key={platform} className="admin-post" style={{ marginBottom: 10 }}>
-          <div className="admin-post-top"><strong>{platform}</strong></div>
-          {res.error
-            ? <p style={{ color: '#c0392b', fontSize: '.85rem' }}><FontAwesomeIcon icon={faTriangleExclamation} /> {res.error}</p>
-            : (
-              <>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: '.85rem' }}>
-                  {Object.entries(res.metrics || {}).map(([k, v]) => (
-                    <div key={k}><span style={{ color: '#999' }}>{k}</span>: <strong>{v ?? '—'}</strong></div>
-                  ))}
-                </div>
-                <div style={{ color: '#999', fontSize: '.75rem', marginTop: 4 }}>
-                  {res.fromCache ? 'จากแคช · ' : ''}อัปเดตล่าสุด {res.fetchedAt?.toDate ? res.fetchedAt.toDate().toLocaleString('th-TH') : new Date(res.fetchedAt).toLocaleString('th-TH')}
-                </div>
-              </>
-            )}
-        </div>
-      ))}
-    </div>
+    <HubOnlyTab
+      icon={faChartLine}
+      title="ภาพรวมเพจ"
+      desc="ยอดเข้าถึง เอนเกจ และสถิติเพจดูได้ที่ Content Hub ซึ่งเป็นที่เก็บการเชื่อมต่อบัญชีของแต่ละแพลตฟอร์ม"
+      hubPath="/accounts"
+    />
   )
 }
 
-// เชื่อมบัญชีโซเชียล + โพสต์จริง ผ่าน Cloud Functions ของ ummatee เอง (ดู functions/index.js)
-// เดิมฝัง Content Hub (แอปแยกต่างหาก) เป็น iframe ไว้ทำงานนี้ แต่หน้าล็อกอินของ Google/Facebook
-// ปฏิเสธเรนเดอร์ใน iframe เสมอ (กันฟิชชิ่ง) เลยย้าย OAuth มาไว้ที่ Cloud Functions แล้วเปิดแบบ
-// full-page navigation แทน — token ทุกตัวเก็บฝั่งเซิร์ฟเวอร์ ไม่มีการส่ง credential ให้ client เห็นเลย
-const FUNCTIONS_REGION_HOST = 'https://us-central1-ummatee-app.cloudfunctions.net'
+// เชื่อมบัญชีโซเชียล + โพสต์จริง ทำที่ Content Hub (เว็บแยก บน Vercel) ไม่ใช่ที่นี่
+//
+// ทำไมไม่ทำในหน้านี้เลย: OAuth ต้องมีเซิร์ฟเวอร์ เพราะขั้นแลก code เป็น token ต้องใช้ client_secret
+// ซึ่งห้ามอยู่ในโค้ดฝั่งเบราว์เซอร์ และ access token ต้องเก็บฝั่งเซิร์ฟเวอร์ ummatee เป็น static site
+// (Firebase Hosting + Firestore บนแพลน Spark) ไม่มีเซิร์ฟเวอร์ให้ทำสองอย่างนี้
+//
+// เคยเขียน Cloud Functions ไว้ครบแล้ว (functions/index.js) แต่ deploy ไม่ได้เพราะต้องอัปเกรดเป็น
+// แพลน Blaze (ผูกบัตร) — endpoint จึงตอบ 404 เสมอ ปุ่มเดิมที่ชี้ไปที่นั้นกดแล้วพาไปหน้า error
+// จึงเปลี่ยนมาส่งต่อไป Content Hub ที่ deploy ใช้งานได้จริงอยู่แล้วแทน
 const SOCIAL_PLATFORMS = [
   { id: 'facebook', label: 'Facebook', color: '#1877f2', needsVideo: false },
   { id: 'instagram', label: 'Instagram', color: '#e1306c', needsVideo: false },
@@ -306,8 +242,6 @@ export default function AdminCalendar() {
   const [copiedId, setCopiedId] = useState(null)
   const [showHub, setShowHub] = useState(false)
   const [mainTab, setMainTab] = useState('calendar') // 'calendar' | 'chat' | 'comments' | 'insights'
-  const [socialStatus, setSocialStatus] = useState({}) // { facebook: {connected, displayName, ...}, ... }
-  const [socialBusy, setSocialBusy] = useState(null) // platform id กำลังเชื่อม/ยกเลิก หรือ postId กำลังโพสต์จริง
   const [socialNotice, setSocialNotice] = useState('')
 
   useEffect(() => {
@@ -318,41 +252,25 @@ export default function AdminCalendar() {
     return unsub
   }, [user])
 
-  const loadSocialStatus = () => {
-    httpsCallable(functions, 'socialAccountsStatus')().then((res) => setSocialStatus(res.data || {})).catch(() => {})
-  }
-  useEffect(() => {
-    if (!user) return
-    loadSocialStatus()
-    // socialOAuthCallback (Cloud Function) redirect กลับมาที่นี่พร้อม query param บอกผล เพราะเป็น full-page navigation
-    const params = new URLSearchParams(window.location.search)
-    const connected = params.get('social_connected')
-    const error = params.get('social_error')
-    if (connected) setSocialNotice(`เชื่อมต่อ ${connected} สำเร็จ ✓`)
-    else if (error) setSocialNotice(`เชื่อมต่อไม่สำเร็จ: ${params.get('social_message') || error}`)
-    if (connected || error) {
-      window.history.replaceState({}, '', window.location.pathname)
-      if (connected) loadSocialStatus()
-    }
-  }, [user])
+  // ไม่ดึงสถานะ "เชื่อมต่อแล้ว/ยังไม่เชื่อม" มาแสดงที่นี่ — token เก็บอยู่ในฐานข้อมูลของ Content Hub
+  // หน้านี้อ่านไม่ได้ (คนละระบบ) ถ้าเดาแล้วโชว์ว่า "ยังไม่ได้เชื่อมต่อ" ทุกอันจะเป็นข้อมูลผิดเสมอ
+  // สถานะจริงดูได้ที่หน้า Accounts ของ Content Hub เท่านั้น
 
-  const connectSocial = async (platformId) => {
-    const idToken = await auth.currentUser.getIdToken()
-    window.location.href = `${FUNCTIONS_REGION_HOST}/socialOAuthStart?platform=${platformId}&idToken=${encodeURIComponent(idToken)}`
+  // เปิดหน้าเชื่อมบัญชีของ Content Hub (แท็บใหม่) — ที่นั่นมีปุ่มเชื่อมต่อจริงของทั้ง 5 แพลตฟอร์ม
+  // ล็อกอินด้วยรหัสผ่านของ Content Hub เองครั้งแรก แล้วกดเชื่อมต่อได้เลย
+  const openContentHub = (path = '/accounts') => {
+    window.open(`${CONTENT_HUB_URL}${path}`, '_blank', 'noopener,noreferrer')
   }
-  const disconnectSocial = async (platformId) => {
-    if (!window.confirm('ยกเลิกการเชื่อมต่อแพลตฟอร์มนี้?')) return
-    setSocialBusy(platformId)
-    try {
-      await httpsCallable(functions, 'socialDisconnect')({ platform: platformId })
-      loadSocialStatus()
-    } catch (e) { window.alert('ยกเลิกไม่สำเร็จ: ' + e.message) } finally { setSocialBusy(null) }
-  }
+
+  // "โพสต์จริง" ทำที่ Content Hub — คัดลอกข้อความ+ลิงก์รูปของโพสต์นี้ไว้ในคลิปบอร์ดให้ก่อน
+  // แล้วเปิดหน้า compose ของ Content Hub ให้วางต่อ (สองระบบเก็บข้อมูลแยกกัน ส่งข้ามให้อัตโนมัติไม่ได้)
   const publishNow = async (postId) => {
-    setSocialBusy(postId)
-    try {
-      await httpsCallable(functions, 'socialPublishNow')({ postId })
-    } catch (e) { window.alert('โพสต์จริงไม่สำเร็จ: ' + e.message) } finally { setSocialBusy(null) }
+    const p = posts.find((x) => x.id === postId)
+    if (!p) return
+    const text = [p.title, p.text, ...(p.mediaUrls || [])].filter(Boolean).join('\n\n')
+    try { await navigator.clipboard.writeText(text) } catch { /* คลิปบอร์ดใช้ไม่ได้ก็ยังเปิดหน้าให้ */ }
+    setSocialNotice('คัดลอกเนื้อหาโพสต์แล้ว — วางในหน้า Content Hub ที่เพิ่งเปิดขึ้นมาได้เลย')
+    openContentHub('/compose')
   }
 
   // โพสต์จัดกลุ่มตามวันที่ ใช้แสดงจุดบนปฏิทิน
@@ -482,38 +400,42 @@ export default function AdminCalendar() {
           <div className="admin-card" style={{ marginBottom: 20 }}>
             <h4><FontAwesomeIcon icon={faLink} /> เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
             <p style={{ color: 'var(--ink-soft)', fontSize: '.85rem', marginBottom: 14 }}>
-              กด "เชื่อมต่อ" จะพาไปหน้าล็อกอินจริงของแต่ละแพลตฟอร์ม (เปิดเต็มหน้าจอ ไม่ใช่กรอบฝัง) กุญแจเชื่อมต่อทุกตัวเก็บไว้ฝั่งเซิร์ฟเวอร์
-              (Cloud Functions) เท่านั้น ไม่มีการส่ง token ให้เบราว์เซอร์เห็นเลย
+              การเชื่อมบัญชีและโพสต์จริงทำที่ <strong>Content Hub</strong> (เว็บแยก) เพราะการเชื่อมต่อแบบ OAuth ต้องมีเซิร์ฟเวอร์
+              เก็บกุญแจและ token ไว้อย่างปลอดภัย ซึ่งเว็บนี้ไม่มี — กดปุ่มด้านล่างเพื่อไปเชื่อมต่อ (ล็อกอินด้วยรหัสผ่านของ
+              Content Hub ครั้งแรกครั้งเดียว) เชื่อมแล้วโพสต์ได้ทั้ง 5 แพลตฟอร์มจากที่นั่น
             </p>
             {socialNotice && (
               <p style={{ background: '#eef7ee', border: '1px solid #b7ddb7', borderRadius: 8, padding: '10px 12px', fontSize: '.82rem', color: '#2e7d52', marginBottom: 14 }}>
                 {socialNotice}
               </p>
             )}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+              <button className="admin-btn-primary" onClick={() => openContentHub('/accounts')}>
+                <FontAwesomeIcon icon={faLink} /> เชื่อมต่อแพลตฟอร์ม
+              </button>
+              <button className="admin-btn" onClick={() => openContentHub('/compose')}>
+                <FontAwesomeIcon icon={faPaperPlane} /> ไปหน้าสร้างโพสต์
+              </button>
+              <button className="admin-btn" onClick={() => openContentHub('/posts')}>
+                ประวัติโพสต์
+              </button>
+            </div>
+            {/* แสดงแค่รายชื่อแพลตฟอร์มที่รองรับ ไม่โชว์สถานะเชื่อมต่อ เพราะหน้านี้อ่านสถานะจริงไม่ได้ */}
             <div className="admin-cal-social-list">
-              {SOCIAL_PLATFORMS.map((pl) => {
-                const st = socialStatus[pl.id]
-                return (
-                  <div key={pl.id} className="admin-cal-social-row">
-                    <span className="admin-cal-social-dot" style={{ background: pl.color }} />
-                    <div style={{ flex: 1 }}>
-                      <strong>{pl.label}</strong>
-                      {st?.connected
-                        ? <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)' }}>เชื่อมต่อแล้ว — {st.displayName}{st.handle ? ` (${st.handle})` : ''}</div>
-                        : <div style={{ fontSize: '.8rem', color: '#999' }}>ยังไม่ได้เชื่อมต่อ</div>}
+              {SOCIAL_PLATFORMS.map((pl) => (
+                <div key={pl.id} className="admin-cal-social-row">
+                  <span className="admin-cal-social-dot" style={{ background: pl.color }} />
+                  <div style={{ flex: 1 }}>
+                    <strong>{pl.label}</strong>
+                    <div style={{ fontSize: '.8rem', color: '#999' }}>
+                      {pl.needsVideo ? 'ต้องมีไฟล์วิดีโอ' : 'โพสต์ข้อความ/รูป/วิดีโอได้'}
                     </div>
-                    {st?.connected ? (
-                      <button className="admin-btn-danger" disabled={socialBusy === pl.id} onClick={() => disconnectSocial(pl.id)}>
-                        <FontAwesomeIcon icon={faUnlink} /> ยกเลิก
-                      </button>
-                    ) : (
-                      <button className="admin-btn" disabled={socialBusy === pl.id} onClick={() => connectSocial(pl.id)}>
-                        <FontAwesomeIcon icon={faLink} /> เชื่อมต่อ
-                      </button>
-                    )}
                   </div>
-                )
-              })}
+                  <button className="admin-btn" onClick={() => openContentHub('/accounts')}>
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เชื่อมต่อ
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -534,7 +456,7 @@ export default function AdminCalendar() {
         </div>
 
         {mainTab === 'chat' && <ChatInboxTab />}
-        {mainTab === 'comments' && <CommentsTab posts={posts} />}
+        {mainTab === 'comments' && <CommentsTab />}
         {mainTab === 'insights' && <InsightsTab />}
 
         {mainTab === 'calendar' && <div className="admin-cal-layout">
@@ -644,8 +566,9 @@ export default function AdminCalendar() {
                   <div className="admin-post-actions">
                     {p.status !== 'posted' && <button className="admin-btn" onClick={() => markPosted(p)}><FontAwesomeIcon icon={faCheck} /> โพสต์แล้ว</button>}
                     {(p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
-                      <button className="admin-btn" disabled={socialBusy === p.id} onClick={() => publishNow(p.id)}>
-                        <FontAwesomeIcon icon={socialBusy === p.id ? faSpinner : faPaperPlane} spin={socialBusy === p.id} /> โพสต์จริงตอนนี้
+                      // คัดลอกเนื้อหาแล้วเปิดหน้าสร้างโพสต์ของ Content Hub ให้วางต่อ (โพสต์จริงทำที่นั่น)
+                      <button className="admin-btn" onClick={() => publishNow(p.id)}>
+                        <FontAwesomeIcon icon={faPaperPlane} /> โพสต์จริง (ไป Content Hub)
                       </button>
                     )}
                     <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>

@@ -5,6 +5,7 @@ import useAdminAuth from '../useAdminAuth.js'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
 import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
+import { useFocusCards, saveFocusCards, EMPTY_FOCUS_CARD, FOCUS_VARIANTS, DEFAULT_FOCUS_CARDS } from '../data/focusCards.js'
 import { useSiteContent, saveSiteContent, isSiteImageValue } from '../data/siteContent.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -137,6 +138,68 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
   )
 }
 
+// ── ตัวแก้ไขการ์ดทางลัดหน้าแรก 1 ใบ ──
+// แยกจาก CardEditor เพราะฟิลด์ต่างกันเกือบทั้งหมด (ไม่มีรูป/ป้ายรอง, tag แปลได้, มี variant แทน color)
+function FocusCardEditor({ card, index, total, onChange, onMove, onRemove }) {
+  const asObj = (v) => (v && typeof v === 'object') ? v : { th: v || '', en: '', ar: '' }
+  const set = (k) => (e) => onChange({ ...card, [k]: e.target.value })
+  const setL = (k, lang) => (e) => onChange({ ...card, [k]: { ...asObj(card[k]), [lang]: e.target.value } })
+  const valL = (k, lang) => asObj(card[k])[lang] || ''
+
+  const langRow = (field, heading, placeholderTh) => (
+    <>
+      <div style={{ marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>{heading}</div>
+      <div className="admin-form-grid admin-form-grid-3col">
+        {CARD_LANGS.map(([lg, lb]) => (
+          <label key={lg}>{lb}
+            <input type="text" value={valL(field, lg)} onChange={setL(field, lg)} placeholder={lg === 'th' ? placeholderTh : `(${lb}) เว้นว่าง = ใช้ไทย`} />
+          </label>
+        ))}
+      </div>
+    </>
+  )
+
+  return (
+    <div className="admin-card" style={{ marginBottom: 14, borderLeft: card.enabled ? '4px solid var(--green-mid)' : '4px solid #ffab91' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        <strong style={{ marginRight: 'auto' }}>การ์ดทางลัดที่ {index + 1}{L(card.title, 'th') ? ` — ${L(card.title, 'th')}` : ''}</strong>
+        <button type="button" className="admin-btn" disabled={index === 0} onClick={() => onMove(index, -1)} title="เลื่อนขึ้น"><FontAwesomeIcon icon={faArrowUp} /></button>
+        <button type="button" className="admin-btn" disabled={index === total - 1} onClick={() => onMove(index, 1)} title="เลื่อนลง"><FontAwesomeIcon icon={faArrowDown} /></button>
+        <button
+          type="button" className="admin-btn"
+          onClick={() => onChange({ ...card, enabled: !card.enabled })}
+          style={card.enabled
+            ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+            : { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }}
+        >{card.enabled ? 'แสดงอยู่' : 'ซ่อนอยู่'}</button>
+        <button type="button" className="admin-btn-danger" style={{ padding: '8px 14px', fontSize: '.82rem' }} onClick={() => onRemove(index)}>ลบ</button>
+      </div>
+
+      <div className="admin-form-grid admin-form-grid-2col">
+        <label>ลิงก์ (path ภายในเว็บ)
+          <input type="text" value={card.link || ''} onChange={set('link')} placeholder="เช่น /donation" />
+        </label>
+        <label>สีการ์ด
+          <select value={card.variant || 'iftar'} onChange={set('variant')}>
+            {FOCUS_VARIANTS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {langRow('tag', 'ป้ายบนการ์ด (3 ภาษา)', 'เช่น 🌙 EVENT · กิจกรรม')}
+      {langRow('title', 'หัวข้อการ์ด (3 ภาษา)', 'เช่น Iftar For Gaza')}
+      {langRow('linkText', 'ข้อความลิงก์ท้ายการ์ด (3 ภาษา)', 'เช่น ดูบัญชีบริจาค')}
+
+      <div style={{ marginTop: 12, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>คำอธิบาย (3 ภาษา)</div>
+      {CARD_LANGS.map(([lg, lb]) => (
+        <label key={lg} style={{ display: 'block', marginBottom: 8, fontSize: '.82rem', fontWeight: 600, color: 'var(--ink-soft)' }}>{lb}
+          <textarea rows="2" value={valL('desc', lg)} onChange={setL('desc', lg)} placeholder={lg === 'th' ? 'คำอธิบายภาษาไทย' : `(${lb}) เว้นว่าง = ใช้ไทย`} style={{ display: 'block', width: '100%', marginTop: 4, fontWeight: 400, boxSizing: 'border-box', fontFamily: 'inherit', padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd' }} />
+        </label>
+      ))}
+    </div>
+  )
+}
+
 // ── แถวฟิลด์รูปภาพอิสระ 1 รายการ (key + อัพโหลดรูปผ่าน Cloudinary) ──
 function ImageFieldRow({ row, onKeyChange, onUrlChange, onRemove }) {
   const [uploading, setUploading] = useState(false)
@@ -181,6 +244,7 @@ export default function AdminWebsite() {
   const { announcement, loading: annLoading } = useAnnouncement()
   const { visibility, loading: navLoading } = useNavVisibility()
   const { cards: savedCards, loading: cardsLoading } = useHomeCards(true)
+  const { cards: savedFocusCards, loading: focusLoading } = useFocusCards(true)
   const { content: siteContentSaved, loading: siteContentLoading } = useSiteContent()
 
   // เนื้อหาเว็บทั่วไป (key-value) — แก้ในเครื่องก่อน กด "บันทึกเนื้อหาเว็บ" ค่อยเขียนขึ้น Firestore ทีเดียว เหมือนการ์ดหน้าแรก
@@ -214,6 +278,16 @@ export default function AdminWebsite() {
     if (cardsLoading || cardsDirty) return
     setCards(savedCards !== null ? savedCards : DEFAULT_HOME_CARDS)
   }, [savedCards, cardsLoading, cardsDirty])
+
+  // การ์ดทางลัดหน้าแรก — แยกสถานะ/ปุ่มบันทึกจากการ์ด Hero Feed คนละชุด (คนละ doc)
+  const [focusCards, setFocusCards] = useState(null)
+  const [focusDirty, setFocusDirty] = useState(false)
+  const [focusSaving, setFocusSaving] = useState(false)
+  const [focusSaved, setFocusSaved] = useState(false)
+  useEffect(() => {
+    if (focusLoading || focusDirty) return
+    setFocusCards(savedFocusCards !== null ? savedFocusCards : DEFAULT_FOCUS_CARDS)
+  }, [savedFocusCards, focusLoading, focusDirty])
 
   const [enabled, setEnabled] = useState(false)
   const [text, setText] = useState('')
@@ -291,6 +365,38 @@ export default function AdminWebsite() {
       window.alert('บันทึกไม่สำเร็จ: ' + e.message)
     } finally {
       setCardsSaving(false)
+    }
+  }
+
+  // ── จัดการการ์ดทางลัดหน้าแรก ──
+  const updateFocusCard = (i, next) => { setFocusCards((cs) => cs.map((c, j) => (j === i ? next : c))); setFocusDirty(true) }
+  const moveFocusCard = (i, dir) => {
+    setFocusCards((cs) => {
+      const next = [...cs]
+      const [item] = next.splice(i, 1)
+      next.splice(i + dir, 0, item)
+      return next
+    })
+    setFocusDirty(true)
+  }
+  const removeFocusCard = (i) => {
+    if (!window.confirm('ลบการ์ดทางลัดนี้?')) return
+    setFocusCards((cs) => cs.filter((_, j) => j !== i))
+    setFocusDirty(true)
+  }
+  const addFocusCard = () => { setFocusCards((cs) => [...(cs || []), { ...EMPTY_FOCUS_CARD }]); setFocusDirty(true) }
+  const addFocusDefaults = () => { setFocusCards((cs) => [...(cs || []), ...DEFAULT_FOCUS_CARDS.map((c) => ({ ...c }))]); setFocusDirty(true) }
+  const saveFocus = async () => {
+    setFocusSaving(true)
+    try {
+      await saveFocusCards(focusCards)
+      setFocusDirty(false)
+      setFocusSaved(true)
+      setTimeout(() => setFocusSaved(false), 1800)
+    } catch (e) {
+      window.alert('บันทึกไม่สำเร็จ: ' + e.message)
+    } finally {
+      setFocusSaving(false)
     }
   }
 
@@ -468,6 +574,46 @@ export default function AdminWebsite() {
                 </button>
                 <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || (!cardsDirty && savedCards !== null)}>
                   <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" (CMS) ── */}
+        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 760 }}>
+          <div className="admin-card-head" style={{ marginBottom: 12 }}>
+            <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)</h4>
+          </div>
+          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+            การ์ดสี 3 ใบใต้หัวข้อ "เริ่มต้นทำความดีได้ตั้งแต่วันนี้" — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดทางลัด"
+            {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
+          </p>
+
+          {focusLoading || focusCards === null ? <p>กำลังโหลด…</p> : (
+            <>
+              {focusCards.map((card, i) => (
+                <FocusCardEditor
+                  key={i} card={card} index={i} total={focusCards.length}
+                  onChange={(next) => updateFocusCard(i, next)}
+                  onMove={moveFocusCard}
+                  onRemove={removeFocusCard}
+                />
+              ))}
+              {focusCards.length === 0 && (
+                <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
+                  ⚠️ ไม่มีการ์ดทางลัดเลย — หน้าแรกจะไม่แสดงส่วนนี้
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                <button type="button" className="admin-btn" onClick={addFocusCard}>
+                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดทางลัด
+                </button>
+                <button type="button" className="admin-btn" onClick={addFocusDefaults}>
+                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดตั้งต้น (3 ใบ)
+                </button>
+                <button className="admin-btn-primary" onClick={saveFocus} disabled={focusSaving || (!focusDirty && savedFocusCards !== null)}>
+                  <FontAwesomeIcon icon={focusSaved ? faCheck : faNewspaper} /> {focusSaved ? 'บันทึกแล้ว ✓' : focusSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดทางลัด'}
                 </button>
               </div>
             </>

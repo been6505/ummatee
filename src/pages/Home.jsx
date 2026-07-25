@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 import { useHomeCards, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
+import { useFocusCards, DEFAULT_FOCUS_CARDS } from '../data/focusCards.js'
 import { useNavVisibility, navKeyForPath } from '../data/navVisibility.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
 import useParallax from '../hooks/useParallax.js'
@@ -150,15 +151,6 @@ const T = {
     ],
     waysEyebrow: 'สองหนทางแห่งการให้', waysTitle: 'เริ่มต้นทำความดีได้ตั้งแต่วันนี้',
     waysSub: 'ไม่ว่าจะเป็นการมาร่วมแบ่งปันมื้ออาหารกับพี่น้อง หรือการบริจาคเพื่อหล่อเลี้ยงชีวิต — ทุกก้าวเล็ก ๆ ของคุณสร้างความเปลี่ยนแปลงที่ยิ่งใหญ่',
-    fcEventTag: '🌙 EVENT · กิจกรรม', fcEventTitle: 'Iftar For Gaza',
-    fcEventP: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารและดุอาอ์ให้พี่น้องผู้ถูกกดขี่ ลงทะเบียนเข้าร่วมงานฟรี',
-    fcEventLink: 'ชมภาพและวิดีโอจากงาน',
-    fcDonTag: '💚 DONATE · บริจาค', fcDonTitle: 'ช่วยเหลือผู้ยากไร้',
-    fcDonP: 'บริจาคผ่านบัญชีมูลนิธิอุมมะตี เลือกได้ทั้งซะกาต ช่วยในไทย ปาเลสไตน์ ซีเรีย และอาหารทั่วโลก',
-    fcDonLink: 'ดูบัญชีบริจาค',
-    fcVolTag: '🤝 VOLUNTEER · อาสาสมัคร', fcVolTitle: 'เป็นส่วนหนึ่งกับเรา',
-    fcVolP: 'ร่วมเป็นอาสาสมัครมูลนิธิอุมมะตี ช่วยเหลือกิจกรรม งานมนุษยธรรม และการสนับสนุนชุมชน สมัครได้เลย',
-    fcVolLink: 'สมัครอาสาสมัคร',
     helpEyebrow: 'เราช่วยเหลืออะไรบ้าง', helpTitle: 'ความเมตตาที่ส่งถึงทุกชีวิต',
     help: [
       { e: '🍚', h: 'อาหาร', p: 'มื้ออาหารและน้ำสะอาดสำหรับผู้หิวโหยทั่วโลก' },
@@ -185,15 +177,6 @@ const T = {
     ],
     waysEyebrow: 'Two Ways to Give', waysTitle: 'Start Doing Good Today',
     waysSub: 'Whether sharing a meal with your brothers and sisters or donating to sustain lives — every small step you take creates great change.',
-    fcEventTag: '🌙 EVENT', fcEventTitle: 'Iftar For Gaza',
-    fcEventP: 'Break fast together for Gaza, share meals and dua for our oppressed brothers and sisters. Free registration.',
-    fcEventLink: 'Register Now',
-    fcDonTag: '💚 DONATE', fcDonTitle: 'Help Those in Need',
-    fcDonP: 'Donate via Ummatee Foundation accounts — zakat, aid for Thailand, Palestine, Syria, and food worldwide.',
-    fcDonLink: 'View Donation Accounts',
-    fcVolTag: '🤝 VOLUNTEER', fcVolTitle: 'Join Our Team',
-    fcVolP: 'Become an Ummatee volunteer — help with events, humanitarian work, and community support. Register today.',
-    fcVolLink: 'Register as Volunteer',
     helpEyebrow: 'What We Do', helpTitle: 'Mercy That Reaches Every Life',
     help: [
       { e: '🍚', h: 'Food', p: 'Meals and clean water for the hungry around the world' },
@@ -220,15 +203,6 @@ const T = {
     ],
     waysEyebrow: 'طريقان للعطاء', waysTitle: 'ابدأ فعل الخير اليوم',
     waysSub: 'سواء بمشاركة وجبة مع إخوانك أو بالتبرع لإحياء النفوس — كل خطوة صغيرة منك تصنع تغييراً عظيماً.',
-    fcEventTag: '🌙 فعالية', fcEventTitle: 'إفطار من أجل غزة',
-    fcEventP: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك الطعام والدعاء لإخواننا المستضعفين. التسجيل مجاني.',
-    fcEventLink: 'سجّل الآن',
-    fcDonTag: '💚 تبرّع', fcDonTitle: 'مساعدة المحتاجين',
-    fcDonP: 'تبرّع عبر حسابات مؤسسة أمّتي — زكاة، إغاثة في تايلاند وفلسطين وسوريا، وإطعام حول العالم.',
-    fcDonLink: 'عرض حسابات التبرع',
-    fcVolTag: '🤝 تطوّع', fcVolTitle: 'كن جزءاً منّا',
-    fcVolP: 'انضم إلى متطوعي مؤسسة أمّتي — ساعدنا في الفعاليات والعمل الإنساني ودعم المجتمع. سجّل الآن.',
-    fcVolLink: 'سجّل كمتطوع',
     helpEyebrow: 'مجالات عملنا', helpTitle: 'رحمةٌ تصل إلى كل حياة',
     help: [
       { e: '🍚', h: 'الطعام', p: 'وجبات ومياه نظيفة للجائعين حول العالم' },
@@ -253,6 +227,8 @@ export default function Home() {
   // การ์ด Hero Feed จากแอดมิน (config/homeCards) — null = ยังไม่ตั้งค่า ให้ใช้การ์ดมาตรฐาน 3 ใบเดิม
   // ต้องใช้ loading แยกจาก cards ด้วย เพราะ cards เป็น null ทั้งตอน "ยังโหลดไม่เสร็จ" และ "แอดมินไม่เคยตั้งค่า"
   const { cards: adminCards, loading: cardsLoading } = useHomeCards()
+  // การ์ดทางลัดใต้หัวข้อ "สองหนทางแห่งการให้" (config/focusCards) — null = ยังไม่ตั้งค่า ใช้ชุดตั้งต้น
+  const { cards: focusAdminCards, loading: focusLoading } = useFocusCards()
   // ผูกกับการเปิด/ปิดเมนู — ปิดเมนูไหน การ์ดที่ลิงก์ไปหน้านั้นถูกซ่อนตามด้วย
   const { visibility: navVis } = useNavVisibility()
   const ctaParallaxRef = useParallax(0.15) // ลาย fc-pattern ของแถบ CTA ท้ายหน้าแรก เลื่อนช้ากว่าเนื้อหาตอน scroll
@@ -416,30 +392,24 @@ export default function Home() {
             <p>{t.waysSub}</p>
             <div className="gold-rule"></div>
           </FadeUp>
-          {/* การ์ดทางลัด 3 ใบ: ลงทะเบียน Iftar / บริจาค / อาสาสมัคร */}
-          <div className="focus-grid focus-grid-3">
-            <FadeUp className="focus-card focus-iftar" onClick={() => go('iftar')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcEventTag}</span>
-              <h3>{t.fcEventTitle}</h3>
-              <p>{t.fcEventP}</p>
-              <span className="fc-link">{t.fcEventLink} <span className="arrow">→</span></span>
-            </FadeUp>
-            <FadeUp className="focus-card focus-donate" onClick={() => go('donation')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcDonTag}</span>
-              <h3>{t.fcDonTitle}</h3>
-              <p>{t.fcDonP}</p>
-              <span className="fc-link">{t.fcDonLink} <span className="arrow">→</span></span>
-            </FadeUp>
-            <FadeUp className="focus-card focus-volunteer" onClick={() => go('volunteer')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcVolTag}</span>
-              <h3>{t.fcVolTitle}</h3>
-              <p>{t.fcVolP}</p>
-              <span className="fc-link">{t.fcVolLink} <span className="arrow">→</span></span>
-            </FadeUp>
-          </div>
+          {/* การ์ดทางลัด (เดิม hardcode 3 ใบ) — แอดมินจัดการได้จาก /admin/website (config/focusCards)
+              ระหว่างโหลดไม่เรนเดอร์อะไรเลย ห้าม fallback ไป DEFAULT_FOCUS_CARDS เพราะการ์ดที่แอดมินลบไปแล้ว
+              จะแวบขึ้นมาทุกครั้งที่รีเฟรช (cards=null ยังแยกไม่ได้ว่า "ยังโหลดไม่เสร็จ" หรือ "ไม่เคยตั้งค่า") */}
+          {!focusLoading && (
+            <div className="focus-grid focus-grid-3">
+              {(focusAdminCards !== null ? focusAdminCards : DEFAULT_FOCUS_CARDS)
+                .filter((c) => c.enabled !== false && !navHidden(c.link))
+                .map((c, i) => (
+                  <FadeUp className={`focus-card focus-${c.variant || 'iftar'}`} key={i} onClick={() => goPath(c.link || '/')}>
+                    <div className="fc-pattern hero-pattern"></div>
+                    <span className="fc-tag">{L(c.tag, lang)}</span>
+                    <h3>{L(c.title, lang)}</h3>
+                    <p>{L(c.desc, lang)}</p>
+                    <span className="fc-link">{L(c.linkText, lang)} <span className="arrow">→</span></span>
+                  </FadeUp>
+                ))}
+            </div>
+          )}
         </div>
       </section>
 

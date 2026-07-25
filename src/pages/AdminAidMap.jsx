@@ -46,6 +46,49 @@ export default function AdminAidMap() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
+  // ── ค้นหาพิกัดจากชื่อสถานที่ (geocoding) ──
+  // ใช้ Nominatim ของ OpenStreetMap: ฟรี ไม่ต้องมี API key และรองรับ CORS จึงเรียกจากเบราว์เซอร์ตรงได้
+  // (ต้องเพิ่มโดเมนนี้ใน connect-src ของ CSP ใน firebase.json ไม่งั้นเบราว์เซอร์บล็อก)
+  // กติกาการใช้ของ Nominatim จำกัด ~1 คำขอ/วินาที — ที่นี่ยิงเฉพาะตอนกดปุ่มค้นหา ไม่ยิงตามการพิมพ์ จึงไม่เกิน
+  const [geoQuery, setGeoQuery] = useState('')
+  const [geoResults, setGeoResults] = useState(null) // null = ยังไม่ค้นหา, [] = ค้นแล้วไม่เจอ
+  const [geoBusy, setGeoBusy] = useState(false)
+  const [geoError, setGeoError] = useState('')
+
+  const searchPlace = async () => {
+    const q = geoQuery.trim()
+    if (!q || geoBusy) return
+    setGeoBusy(true)
+    setGeoError('')
+    setGeoResults(null)
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=1&accept-language=th&q=${encodeURIComponent(q)}`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`ค้นหาไม่สำเร็จ (${res.status})`)
+      setGeoResults(await res.json())
+    } catch (e) {
+      setGeoError(e.message || 'ค้นหาไม่สำเร็จ')
+    } finally {
+      setGeoBusy(false)
+    }
+  }
+
+  // เลือกผลลัพธ์ → เติมพิกัดและที่อยู่ให้ ชื่อหมู่บ้านเติมเฉพาะตอนยังว่าง
+  // (แอดมินอาจพิมพ์ชื่อท้องถิ่นที่ OSM ไม่รู้จักไว้แล้ว ไม่ควรทับทิ้ง)
+  const pickPlace = (r) => {
+    const a = r.address || {}
+    setForm((f) => ({
+      ...f,
+      latitude: String(r.lat),
+      longitude: String(r.lon),
+      country: a.country || f.country,
+      province: a.state || a.province || a.region || a.county || f.province,
+      villageName: f.villageName.trim() || a.village || a.hamlet || a.town || a.suburb || a.city || String(r.display_name || '').split(',')[0],
+    }))
+    setGeoResults(null)
+    setGeoQuery('')
+  }
+
   const save = async () => {
     if (!form.villageName.trim() || !form.latitude || !form.longitude) { window.alert('กรอกชื่อหมู่บ้าน + พิกัด (lat/lng)'); return }
     const payload = {
@@ -118,6 +161,34 @@ export default function AdminAidMap() {
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
               <h4>{editId ? 'แก้ไขจุดลงพื้นที่' : 'เพิ่มจุดลงพื้นที่ใหม่'}</h4>
+
+              {/* ค้นหาพิกัดจากชื่อสถานที่ — ไม่ต้องไปเปิด Google Maps หาพิกัดมาวางเอง */}
+              <div className="aid-geo-search">
+                <input
+                  value={geoQuery}
+                  onChange={(e) => setGeoQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); searchPlace() } }}
+                  placeholder="พิมพ์ชื่อสถานที่/หมู่บ้าน/อำเภอ เช่น Rafah Gaza หรือ อ.เมือง ปัตตานี"
+                />
+                <button type="button" className="admin-btn-primary" onClick={searchPlace} disabled={geoBusy || !geoQuery.trim()}>
+                  {geoBusy ? 'กำลังค้นหา...' : 'ค้นหาพิกัด'}
+                </button>
+              </div>
+              {geoError && <p className="aid-geo-msg aid-geo-err">{geoError}</p>}
+              {geoResults && geoResults.length === 0 && (
+                <p className="aid-geo-msg">ไม่พบสถานที่นี้ — ลองพิมพ์ให้กว้างขึ้น (เช่น ใส่ชื่ออำเภอ/จังหวัด/ประเทศ) หรือพิมพ์เป็นภาษาอังกฤษ</p>
+              )}
+              {geoResults && geoResults.length > 0 && (
+                <div className="aid-geo-results">
+                  {geoResults.map((r) => (
+                    <button type="button" key={r.place_id} className="aid-geo-result" onClick={() => pickPlace(r)}>
+                      <span className="aid-geo-name">{r.display_name}</span>
+                      <span className="aid-geo-coord">{Number(r.lat).toFixed(5)}, {Number(r.lon).toFixed(5)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="admin-form-grid">
                 <label>ประเทศ<input value={form.country} onChange={set('country')} /></label>
                 <label>จังหวัด<input value={form.province} onChange={set('province')} /></label>

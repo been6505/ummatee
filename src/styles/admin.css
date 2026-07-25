@@ -266,6 +266,19 @@
 .admin-cal-social-row{display:flex;align-items:center;gap:12px;border:1px solid #eee;border-radius:10px;padding:10px 14px}
 .admin-cal-social-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
+/* ค้นหาพิกัดจากชื่อสถานที่ (หน้า /admin/aid-map) */
+/* input ต้องมี min-width:0 ไม่งั้น intrinsic width ของ input ดันปุ่มล้นกรอบการ์ดบนจอแคบ */
+.aid-geo-search{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.aid-geo-search input{flex:1;min-width:0;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;font-family:inherit;box-sizing:border-box}
+.aid-geo-search button{flex-shrink:0;white-space:nowrap}
+.aid-geo-msg{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px}
+.aid-geo-err{color:#c0392b}
+.aid-geo-results{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:260px;overflow-y:auto}
+.aid-geo-result{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.aid-geo-result:hover{background:rgba(46,125,82,.06);border-color:var(--green-mid)}
+.aid-geo-name{font-size:.88rem;color:var(--ink)}
+.aid-geo-coord{font-size:.78rem;color:var(--ink-soft);font-family:monospace}
+
 /* การ์ดโพสต์ในวันที่เลือก */
 .admin-post{border:1px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fafcfa}
 .admin-post-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}

@@ -264,7 +264,7 @@ export default function Home() {
   }
 
   return (
-    <main className="page">
+    <main className="page home-page">
       {showAnnouncement && (
         <div className="site-announcement">
           <span className="site-announcement-text">

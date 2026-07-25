@@ -17,10 +17,13 @@
     "@fortawesome/react-fontawesome": "^3.3.1",
     "firebase": "^12.14.0",
     "jsqr": "^1.4.0",
+    "leaflet": "^1.9.4",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tesseract.js": "^5.1.1"
+    "react-leaflet": "^4.2.1",
+    "tesseract.js": "^5.1.1",
+    "thai-address-database": "^0.0.31"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

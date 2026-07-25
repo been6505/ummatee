@@ -70,9 +70,25 @@ service cloud.firestore {
       allow read, write: if isFullAdmin();
     }
 
-    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมินตัวจริง
+    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมินตัวจริง (ฟิลด์โพสต์จริง realStatus/publishResults
+    // ถูกเขียนจาก Cloud Functions ด้วย Admin SDK เท่านั้น แต่แอดมินยังแก้ไฟล์แผนผ่าน client ได้ตามปกติ)
     match /contentPosts/{id} {
       allow read, write: if isFullAdmin();
+    }
+
+    // บัญชีโซเชียลที่เชื่อมต่อ OAuth ไว้ (access/refresh token) — ห้ามฝั่ง client อ่าน/เขียนตรงเด็ดขาด
+    // เขียนได้เฉพาะ Cloud Functions ผ่าน Admin SDK เท่านั้น (bypass rules อยู่แล้ว) หน้าเว็บต้องเรียกผ่าน
+    // callable function (socialAccountsStatus) ที่กรอง token ออกก่อนส่งกลับ ไม่ใช่ query คอลเลกชันนี้ตรงๆ
+    match /socialAccounts/{id} {
+      allow read, write: if false;
+    }
+
+    // แคชผล Page/Account Insights ต่อแพลตฟอร์ม (socialGetPageInsights) — ไม่มี token อยู่ในนี้ (แค่ตัวเลข
+    // เมทริก) แต่ยังคุมให้เขียนได้เฉพาะ Cloud Functions (Admin SDK bypass rules) เหมือน socialAccounts
+    // และอ่านได้เฉพาะแอดมินตัวจริง (isFullAdmin) ให้สอดคล้อง contentPosts/socialAccounts ที่เป็นชุดข้อมูลเดียวกัน
+    match /socialInsightsCache/{platform} {
+      allow read: if isFullAdmin();
+      allow write: if false;
     }
 
     // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะแอดมินตัวจริง
@@ -89,8 +105,12 @@ service cloud.firestore {
             && request.resource.data.stock >= 0
             && request.resource.data.stock < resource.data.stock
             && (!('sizeStock' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.sizeStock is map)
+            // บั๊กเดิม: resource.data.sold is int พังทั้งเงื่อนไข (permission-denied ทั้ง write) ตอนสินค้าเก่าที่สร้างก่อนมีฟีเจอร์ sold
+            // ไม่มีฟิลด์ sold เลย — Firestore rules error ทันทีที่เข้าถึงฟิลด์ที่ไม่มีอยู่แบบ dot notation โดยไม่ guard 'sold' in resource.data ก่อน
+            // ทำให้สั่งซื้อสินค้าเก่าไม่ได้เลยทุกครั้ง (permission error ที่ดูเหมือนมาจากข้อมูลลูกค้า แต่จริงๆ มาจากจุดนี้)
             && (!('sold' in request.resource.data.diff(resource.data).affectedKeys())
-                || (request.resource.data.sold is int && request.resource.data.sold > (resource.data.sold is int ? resource.data.sold : 0))));
+                || (request.resource.data.sold is int
+                    && request.resource.data.sold > (('sold' in resource.data && resource.data.sold is int) ? resource.data.sold : 0))));
     }
 
     // ประวัติการเคลื่อนไหวสต็อก Um Shop — บันทึกทุกครั้งที่ตัด/รับเข้า อ่านได้เฉพาะแอดมิน
@@ -130,8 +150,13 @@ service cloud.firestore {
         && d.shippingFee is number && d.shippingFee >= 0
         && d.total is number && d.total == d.itemsTotal + d.shippingFee
         && d.customer is map
-        && d.customer.firstName is string && d.customer.firstName.size() > 0 && d.customer.firstName.size() <= 100
-        && d.customer.lastName is string && d.customer.lastName.size() > 0 && d.customer.lastName.size() <= 100
+        // ฟอร์มเช็คเอาท์รวมช่องชื่อ-นามสกุลเป็นช่องเดียว (fullName) แล้ว แต่ยอมรับ firstName แบบเก่าด้วยชั่วคราว
+        // (เผื่อเบราว์เซอร์ลูกค้าแคช JS เก่าค้างไว้ผ่าน PWA service worker ยังไม่รีเฟรชมาใช้ฟอร์มใหม่ —
+        // ถ้าบังคับ fullName อย่างเดียวทันที ลูกค้าที่ค้าง JS เก่าจะสั่งซื้อไม่ได้เลยเงียบๆ ด้วย permission error)
+        && (
+          (d.customer.fullName is string && d.customer.fullName.size() > 0 && d.customer.fullName.size() <= 200)
+          || (d.customer.firstName is string && d.customer.firstName.size() > 0 && d.customer.firstName.size() <= 100)
+        )
         && d.customer.phone is string && d.customer.phone.size() > 0 && d.customer.phone.size() <= 20
         && optStr(d.customer, 'email', 200)
         && d.customer.address is string && d.customer.address.size() > 0 && d.customer.address.size() <= 500
@@ -324,6 +349,118 @@ service cloud.firestore {
     match /missionMedia/{id} {
       allow read: if true;
       allow write: if isFullAdmin();
+    }
+
+    // แชทเว็บ — chatId คือ visitor id แบบสุ่มที่เก็บไว้ใน localStorage ของผู้เยี่ยมชม (ไม่ล็อกอิน)
+    // get รายตัว (รู้ id ตรง) เปิดให้ทุกคน แต่ list ทั้งคอลเลกชัน (อ่านแชททุกคนพร้อมกัน) เฉพาะแอดมิน
+    // ป้องกัน field แปลกปลอม/spam ด้วย hasOnly + จำกัดความยาว เหมือน collection อื่นๆ ในไฟล์นี้
+    function validChatDoc() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['createdAt', 'lastMessageAt', 'lastMessageText', 'lastSender', 'unreadByAdmin', 'unreadByVisitor', 'visitorName'])
+        && d.lastMessageText is string && d.lastMessageText.size() <= 2000
+        && d.lastSender in ['visitor', 'admin']
+        // ต้องเป็นแอดมินจริงถึงจะตั้ง lastSender เป็น 'admin' ได้ กัน user ทั่วไปปลอมข้อความว่ามาจากแอดมิน
+        && (d.lastSender == 'visitor' || isAdmin())
+        && d.unreadByAdmin is bool && d.unreadByVisitor is bool
+        && optStr(d, 'visitorName', 100);
+    }
+    match /chats/{chatId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if validChatDoc();
+      // ฝั่งผู้เยี่ยมชมแก้ได้เฉพาะตอนส่งข้อความตัวเอง (lastSender ต้องเป็น visitor) แอดมินแก้ได้ทุกฟิลด์ (รวม unreadByAdmin ตอนกดอ่าน)
+      allow update: if isAdmin() || (validChatDoc() && request.resource.data.lastSender == 'visitor');
+      allow delete: if isAdmin();
+
+      // การ์ดสินค้าที่แนบมากับข้อความ (กดปุ่ม "แชท" จากหน้ารายละเอียดสินค้า) — ไม่มี text ก็ได้ ถ้ามี product แทน
+      // image/url ฝั่งแอดมินเอาไปเรนเดอร์ตรงๆ เป็น <img src>/<a href> (ดู AdminChat.jsx) — ต้องบังคับ http(s):// เท่านั้น
+      // กัน visitor ปลอมข้อความ (เขียนตรงผ่าน Firestore SDK ข้าม UI) ยัด scheme อันตรายเช่น javascript: เข้ามาโจมตีแอดมินตอนคลิก
+      function optHttpUrl(d, k, max) {
+        return !(k in d) || (d[k] is string && d[k].size() <= max && d[k].matches('^https?://.+'));
+      }
+      function validProductCard() {
+        let p = request.resource.data.product;
+        return p.keys().hasOnly(['name', 'price', 'image', 'url'])
+          && p.name is string && p.name.size() > 0 && p.name.size() <= 200
+          && (!('price' in p) || p.price is number)
+          && optHttpUrl(p, 'image', 500)
+          && optHttpUrl(p, 'url', 500);
+      }
+      match /messages/{msgId} {
+        allow get, list: if true;
+        allow create: if request.resource.data.keys().hasOnly(['sender', 'text', 'createdAt', 'type', 'product'])
+          && request.resource.data.sender in ['visitor', 'admin']
+          // ต้องเป็นแอดมินจริงถึงจะส่งข้อความที่ sender: 'admin' ได้ ไม่งั้นใครก็ปลอมข้อความแอดมินได้
+          // (อันตรายเพราะ onAdminReply ใน functions/index.js จะ push ข้อความ sender:'admin' ออกไปยัง LINE/Facebook จริงของผู้ใช้)
+          && (request.resource.data.sender == 'visitor' || isAdmin())
+          && (
+            (!('type' in request.resource.data)
+              && request.resource.data.text is string
+              && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
+            || (request.resource.data.type == 'product' && request.resource.data.sender == 'visitor' && validProductCard())
+          );
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ระบบ Staff role ใหม่ (staff/{uid}) + CRM/บอร์ด/audit log ─────
+    // เพิ่มใหม่ทั้งหมดตั้งแต่ตรงนี้ลงไป ไม่แตะ collection เดิมด้านบนเลย
+    // ══════════════════════════════════════════════════════════════════
+
+    // อ่าน role ของผู้ใช้ที่ล็อกอินอยู่เองจาก staff/{uid} แล้วเช็คว่าอยู่ใน roles ที่อนุญาต + ต้อง active
+    function isStaffRole(roles) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
+    }
+
+    // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
+    match /staff/{staffId} {
+      allow read: if request.auth != null && (request.auth.uid == staffId || isStaffRole(['admin']));
+      // สมัครตัวเองครั้งแรก (bootstrap): สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เริ่มต้นเป็น 'staff' เท่านั้น
+      // (สิทธิ์ต่ำสุด กัน self-elevate เป็น admin) แอดมินคนแรกต้องตั้งเองผ่าน Firebase Console (ดูรายงาน)
+      allow create: if request.auth != null && request.auth.uid == staffId
+        && request.resource.data.role == 'staff'
+        && request.resource.data.active == true;
+      // แก้ไขข้อมูลตัวเอง (เช่น lastLoginAt) ได้ แต่ห้ามเปลี่ยน role/active ของตัวเอง (กัน self-elevate)
+      // แอดมินแก้ของใครก็ได้ทุกฟิลด์ (ตั้ง role/active ให้คนอื่น)
+      allow update: if isStaffRole(['admin'])
+        || (request.auth.uid == staffId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.active == resource.data.active);
+      allow delete: if isStaffRole(['admin']);
+    }
+
+    // CRM: องค์กรพันธมิตร / จุดลงพื้นที่ (แผนที่) / วิทยากร — admin, staff, field เข้าถึงได้
+    match /partnerOrganizations/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /aidLocations/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /speakers/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // บอร์ดวางแผนสไตล์ Trello
+    match /boards/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /boardLists/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /boardCards/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // Audit log — เขียนได้ทุก staff role ที่ยังมีสิทธิ์แก้ข้อมูล (เพื่อบันทึกการกระทำของตัวเอง)
+    // แต่อ่าน (ดูประวัติทั้งหมด) ได้เฉพาะ admin เท่านั้น และห้ามแก้/ลบใครทั้งนั้น (append-only)
+    match /auditLog/{id} {
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow read: if isStaffRole(['admin']);
+      allow update, delete: if false;
     }
 
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน

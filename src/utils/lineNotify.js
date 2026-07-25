@@ -41,7 +41,7 @@ export function notifyAdminNewOrder(orderCode, total, customer, items) {
   const itemLines = (items || []).map((i) => `- ${i.name}${i.colors ? ` (${i.colors}${i.sizes ? '/' + i.sizes : ''})` : i.sizes ? ` (${i.sizes})` : ''} x${i.qty}`).join('\n')
   notifyAdmin(
     `🛒 ออเดอร์ใหม่ ${orderCode}`,
-    `🛒 มีคำสั่งซื้อใหม่ ${orderCode}\nลูกค้า: ${customer.firstName} ${customer.lastName} (${customer.phone})\nยอดรวม: ฿${Number(total).toLocaleString('th-TH')}\n${itemLines}`
+    `🛒 มีคำสั่งซื้อใหม่ ${orderCode}\nลูกค้า: ${customer.fullName} (${customer.phone})\nยอดรวม: ฿${Number(total).toLocaleString('th-TH')}\n${itemLines}`
   )
 }
 
@@ -60,5 +60,20 @@ export function notifyAdminLowStock(alerts) {
   notifyAdmin(
     `⚠️ สต็อกใกล้หมด (${alerts.length} รายการ)`,
     `⚠️ สินค้าต่อไปนี้สต็อกใกล้หมด/หมดแล้ว กรุณารับเข้าคลังเพิ่ม:\n${lines}`
+  )
+}
+
+// แจ้งเตือนแอดมินมีข้อความแชทใหม่จากผู้เยี่ยมชม — กันสแปม: ต่อ 1 แชท แจ้งได้ไม่เกิน 1 ครั้งทุก 10 นาที
+// (ผู้เยี่ยมชมพิมพ์หลายข้อความติดกันไม่ควรยิง LINE รัวๆ) เก็บ throttle ไว้ในหน่วยความจำฝั่ง browser พอ
+const CHAT_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000
+const lastChatNotifyAt = new Map()
+export function notifyAdminNewChatMessage(chatId, text) {
+  const now = Date.now()
+  const last = lastChatNotifyAt.get(chatId) || 0
+  if (now - last < CHAT_NOTIFY_COOLDOWN_MS) return
+  lastChatNotifyAt.set(chatId, now)
+  notifyAdmin(
+    '💬 ข้อความแชทใหม่',
+    `💬 มีข้อความใหม่จากผู้เยี่ยมชมเว็บไซต์:\n"${text}"\n\nตอบกลับได้ที่หน้าแอดมิน: https://ummatee-app.web.app/admin/chat`
   )
 }

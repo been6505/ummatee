@@ -8,6 +8,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import CopyIcon from '../components/CopyIcon.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass, faClipboardList } from '@fortawesome/free-solid-svg-icons'
+import useParallax from '../hooks/useParallax.js'
 
 const IFTAR_POSTERS = ['/poster-iftar.webp', '/poster-line1.webp', '/poster-line2.webp']
 
@@ -251,6 +252,7 @@ const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', jo
 export default function Iftar() {
   const { lang } = useLang()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   const [form, setForm] = useState(EMPTY)
   const [gender, setGender] = useState('')
   const [channel, setChannel] = useState([])
@@ -344,7 +346,7 @@ export default function Iftar() {
   return (
     <main className="page gaza-page">
       <section className="iftar-hero">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
 
         <div className="inner">
           <h1><span className="moon">Iftar</span> For Gaza</h1>

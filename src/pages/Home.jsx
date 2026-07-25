@@ -10,6 +10,7 @@ import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 import { useHomeCards, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
 import { useNavVisibility, navKeyForPath } from '../data/navVisibility.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
+import useParallax from '../hooks/useParallax.js'
 
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
 // pushState แล้วยิง popstate ให้ App.jsx จับและเรนเดอร์หน้าใหม่ — ไม่ต้อง reload ทั้งเว็บ
@@ -253,6 +254,7 @@ export default function Home() {
   const { cards: adminCards } = useHomeCards()
   // ผูกกับการเปิด/ปิดเมนู — ปิดเมนูไหน การ์ดที่ลิงก์ไปหน้านั้นถูกซ่อนตามด้วย
   const { visibility: navVis } = useNavVisibility()
+  const ctaParallaxRef = useParallax(0.15) // ลาย fc-pattern ของแถบ CTA ท้ายหน้าแรก เลื่อนช้ากว่าเนื้อหาตอน scroll
   const navHidden = (link) => { const k = navKeyForPath(link); return !!k && !!navVis && navVis[k] === false }
   const customCards = adminCards ? adminCards.filter((c) => c.enabled !== false && !navHidden(c.link)) : null
   const [dismissedAt, setDismissedAt] = useState(() => localStorage.getItem('umAnnouncementDismissed') || '')
@@ -450,7 +452,7 @@ export default function Home() {
       <section style={{ padding: '0 0 96px' }}>
         <div className="wrap">
           <FadeUp className="cta-strip">
-            <div className="fc-pattern hero-pattern"></div>
+            <div className="fc-pattern hero-pattern" ref={ctaParallaxRef}></div>
             <h2>{t.ctaStripTitle}</h2>
             <p>{t.ctaStripP}</p>
             <div className="hero-actions">

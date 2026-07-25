@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../firebase.js'
 import {
-  collection, doc, updateDoc, onSnapshot, runTransaction, query, orderBy, arrayUnion,
+  collection, doc, updateDoc, deleteDoc, onSnapshot, runTransaction, query, orderBy, arrayUnion,
 } from 'firebase/firestore'
 import { LOW_STOCK_THRESHOLD } from './inventory.js'
 import { notifyAdminLowStock } from '../utils/lineNotify.js'
@@ -117,6 +117,12 @@ export async function createOrder({ items, itemsTotal, customer }) {
   return { id: orderRef.id, orderCode }
 }
 
+// ลบคำสั่งซื้อ — เฉพาะแอดมินตัวจริง (rules บังคับ) ไม่คืนสต็อกที่ตัดไปแล้วให้อัตโนมัติ
+// ใช้ตอนลบออเดอร์ทดสอบ/ผิดพลาด ถ้าออเดอร์จริงตัดสต็อกไปแล้วต้องไปเติมคลังคืนเองที่หน้าคลังสินค้า
+export function deleteOrder(orderId) {
+  return deleteDoc(doc(db, 'orders', orderId))
+}
+
 // อ่านคำสั่งซื้อ 1 รายการแบบเรียลไทม์ (ใช้ทั้งฝั่งลูกค้าและแอดมิน)
 export function useOrder(orderId) {
   const [order, setOrder] = useState(null)
@@ -137,20 +143,41 @@ export function useOrder(orderId) {
 }
 
 // รายการคำสั่งซื้อทั้งหมด (สำหรับหน้าแอดมิน) — เรียงใหม่ล่าสุดก่อน
-export function useOrders() {
+// list ทั้ง collection ต้อง isFullAdmin() ตาม firestore.rules — ส่ง enabled:false เพื่อข้าม subscribe
+// (เช่นตอนล็อกอินเป็นบัญชีอาสาสมัคร ซึ่งเป็น isAdmin() แต่ไม่ใช่ isFullAdmin() จะโดน permission-denied)
+export function useOrders(enabled = true) {
   const [orders, setOrders] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(enabled)
 
   useEffect(() => {
+    if (!enabled) return
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'))
     const unsub = onSnapshot(q, (snap) => {
       setOrders(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setLoading(false)
     }, () => setLoading(false))
     return unsub
-  }, [])
+  }, [enabled])
 
   return { orders, loading }
+}
+
+// ออเดอร์ "ใหม่" ที่แอดมินยังไม่เคยเปิดดูหน้ารายการคำสั่งซื้อ — เทียบเวลาสร้างกับเวลาที่แอดมิน
+// เข้าหน้า /admin/shop/orders ครั้งล่าสุด (เก็บใน localStorage ต่อเบราว์เซอร์ ไม่มีฟิลด์ "อ่านแล้ว" ใน Firestore)
+const ORDERS_SEEN_KEY = 'adminOrdersSeenAt'
+
+export function markOrdersSeen() {
+  try { localStorage.setItem(ORDERS_SEEN_KEY, String(Date.now())) } catch { /* noop */ }
+}
+
+export function useNewOrders(enabled = true) {
+  const { orders } = useOrders(enabled)
+  const seenAt = (() => { try { return Number(localStorage.getItem(ORDERS_SEEN_KEY)) || 0 } catch { return 0 } })()
+  return orders.filter((o) => (o.createdAt || 0) > seenAt)
+}
+
+export function useNewOrdersCount(enabled = true) {
+  return useNewOrders(enabled).length
 }
 
 // ── ฝั่งลูกค้า ───────────────────────────────────────────────────────

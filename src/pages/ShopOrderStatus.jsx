@@ -8,8 +8,11 @@ import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
 import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot, faComments } from '@fortawesome/free-solid-svg-icons'
 import { optImg } from '../utils/cloudinaryUrl.js'
+
+// เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — เหมือนหน้าอื่นๆ ในร้าน
+const openChat = () => window.dispatchEvent(new Event('ummatee-open-chat'))
 
 // หน้าติดตามคำสั่งซื้อสำหรับลูกค้า (/um-shop/order/:orderId) — ดูสถานะ + อัพหลักฐานการโอนเท่านั้น
 // การจัดการฝั่งแอดมิน (ยืนยันชำระเงิน/แพ็คของ/อัปเดตจัดส่ง) ย้ายไปหน้า /admin/shop/orders/:id แล้ว
@@ -113,7 +116,8 @@ export default function ShopOrderStatus({ orderId }) {
   }
 
   return (
-    <main className="page">
+    <>
+    <main className={`page${order.status === 'pending_payment' ? ' shop-checkout-page' : ''}`}>
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
@@ -163,7 +167,7 @@ export default function ShopOrderStatus({ orderId }) {
 
           {/* ── สถานะที่ 1: รอการชำระเงิน ── */}
           {order.status === 'pending_payment' && (
-            <div className="admin-card" style={{ marginBottom: 20 }}>
+            <div className="admin-card" style={{ marginBottom: 20 }} id="payment-section">
               <h4>การชำระเงิน</h4>
               {!order.paymentProofUrl && <PaymentAccountBox amount={order.total} />}
               {order.paymentProofUrl ? (
@@ -175,21 +179,10 @@ export default function ShopOrderStatus({ orderId }) {
                 <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem' }}>โอนเงินตามยอดด้านบน แล้วอัพโหลดหลักฐานการโอนด้านล่าง</p>
               )}
               <UploadButton label="อัพโหลดหลักฐานการชำระเงิน" uploading={uploadingProof} onFiles={handleProofUpload} />
-<br/> 
-              {order.paymentDeclaredAt ? (
+              {order.paymentDeclaredAt && (
                 <p style={{ color: '#15803d', fontSize: '.88rem', marginTop: 12 }}>
                   <FontAwesomeIcon icon={faCheck} /> แจ้งชำระเงินแล้วเมื่อ {order.paymentDeclaredAt} — รอทีมงานยืนยัน
                 </p>
-              ) : (
-                <button
-                  type="button"
-                  className="shop-addcart-btn"
-                  style={{ marginTop: 12 }}
-                  onClick={handleDeclarePayment}
-                  disabled={!order.paymentProofUrl || declaring}
-                >
-                  {declaring ? 'กำลังส่ง...' : 'ชำระเงิน'}
-                </button>
               )}
             </div>
           )}
@@ -266,5 +259,35 @@ export default function ShopOrderStatus({ orderId }) {
       </section>
       <Footer />
     </main>
+
+    {/* แถบลอยติดขอบล่างจอ (แชท / ชำระเงิน) — โชว์เฉพาะตอนยังรอชำระเงินและยังไม่เคยแจ้งชำระ
+        สถานะอื่น (global ChatWidget fab ถูกซ่อนไว้ทั้งหน้านี้ใน App.jsx) เหลือปุ่มแชทกลมลอยธรรมดาแทน กันไม่มีทางเข้าแชทเลย */}
+    {order.status === 'pending_payment' && !order.paymentDeclaredAt ? (
+      <div className="shop-detail-bar shop-checkout-bar">
+        <button type="button" onClick={openChat} className="shop-detail-bar-line" aria-label="แชท">
+          <FontAwesomeIcon icon={faComments} />
+          <span>แชท</span>
+        </button>
+        <div className="shop-detail-bar-price">
+          <span className="cart-bar-total-label">ยอดที่ต้องโอน</span>
+          <span className="shop-detail-bar-price-now">{THB(order.total)}</span>
+        </div>
+        <button
+          type="button"
+          className="shop-detail-bar-cart"
+          onClick={order.paymentProofUrl
+            ? handleDeclarePayment
+            : () => document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          disabled={declaring}
+        >
+          {declaring ? 'กำลังส่ง...' : order.paymentProofUrl ? 'ยืนยันการชำระเงิน' : 'ชำระเงิน'}
+        </button>
+      </div>
+    ) : (
+      <button className="chat-fab" onClick={openChat} aria-label="แชทกับแอดมิน">
+        <FontAwesomeIcon icon={faComments} />
+      </button>
+    )}
+    </>
   )
 }

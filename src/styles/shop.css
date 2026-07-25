@@ -37,6 +37,9 @@
 .shop-img{position:relative;aspect-ratio:1/1;background:#f4f6f4;overflow:hidden}
 .shop-img img{width:100%;height:100%;object-fit:cover;display:block}
 .shop-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;color:#ccc}
+/* สลับรูปหลายตัวเลือก (เช่น แขนสั้น/แขนยาว) แบบ fade — ซ้อนทุกรูปไว้ตำแหน่งเดียวกัน โชว์ทีละใบด้วย opacity */
+.shop-img-fade{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s ease}
+.shop-img-fade.active{opacity:1}
 .shop-badge-out{position:absolute;top:10px;left:10px;background:#d84315;color:#fff;font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:999px}
 .shop-badge-discount{position:absolute;top:10px;left:10px;background:#dc2626;color:#fff;font-size:.75rem;font-weight:800;padding:4px 10px;border-radius:999px}
 .shop-badge-variants{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.65);color:#fff;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px}
@@ -213,7 +216,7 @@
 .shop-detail-bar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:stretch;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.1);height:64px}
 .shop-detail-bar-price{display:flex;flex-direction:column;justify-content:center;padding:0 16px;min-width:100px}
 .shop-detail-bar-price-now{font-size:2.2rem;font-weight:900;color:var(--gold);line-height:1.1} /* แสดงราคาส่วนลดอย่างเดียว ตัวใหญ่เท่าปุ่มข้างๆ — ไม่โชว์ราคาเดิมขีดฆ่าคู่กันแล้ว */
-.shop-detail-bar-line{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;flex-shrink:0;background:#06c755;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none}
+.shop-detail-bar-line{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;flex-shrink:0;background:#06c755;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-family:inherit}
 .shop-detail-bar-line svg{font-size:1.3rem}
 .shop-detail-bar-line:hover{background:#05b34c}
 .shop-detail-bar-cart{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:none;background:var(--green-deep);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;transition:opacity .15s}
@@ -234,6 +237,18 @@
   .shop-detail-bar-viewcart{width:52px;font-size:1.05rem}
 }
 
+/* แถบราคารวม/สั่งซื้อลอยของหน้าตะกร้า+หน้ายืนยันคำสั่งซื้อ — ใช้โครง .shop-detail-bar ร่วมกัน แต่ต้องคงแสดงผลทุกจอกว้าง
+   (ต่างจากหน้ารายละเอียดสินค้าที่ซ่อนแถบลอยบนจอกว้างแล้วใช้แถบในการ์ดแทน หน้าเหล่านี้ไม่มีแถบในการ์ดสำรอง) */
+.shop-cart-page,
+.shop-checkout-page{padding-bottom:76px}
+.shop-cart-bar,
+.shop-checkout-bar{display:flex !important}
+.cart-bar-total-label{display:block;font-size:.7rem;color:var(--ink-soft);font-weight:400}
+@media (min-width:901px){
+  .shop-cart-page,
+  .shop-checkout-page{padding-bottom:76px}
+}
+
 /* แถบในการ์ด (จอกว้าง) — ราคา/ปุ่มชุดเดียวกับแถบลอยมือถือ แต่วางไว้ในพื้นที่ว่างท้ายคอลัมน์ข้อมูลแทน ไม่ลอยทับ Footer
    ซ่อนไว้เป็นค่าเริ่มต้น (มือถือใช้แถบลอย .shop-detail-bar แทน) */
 .shop-detail-inline-bar{display:none}
@@ -248,8 +263,8 @@
   }
   .shop-detail-inline-actions{display:flex; gap:10px; flex-shrink:0}
   .shop-detail-inline-line{
-    display:flex; align-items:center; gap:8px; padding:13px 20px; border-radius:999px;
-    background:#06c755; color:#fff; font-weight:700; font-size:.92rem; text-decoration:none; transition:background .15s;
+    display:flex; align-items:center; gap:8px; padding:13px 20px; border-radius:999px; border:none;
+    background:#06c755; color:#fff; font-weight:700; font-size:.92rem; text-decoration:none; cursor:pointer; font-family:inherit; transition:background .15s;
   }
   .shop-detail-inline-line:hover{background:#05b34c}
   .shop-detail-inline-line svg{font-size:1.1rem}

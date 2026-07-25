@@ -7,10 +7,11 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { ACCOUNTS } from '../data/accounts.js'
 import { isVolunteerEmail } from '../useAdminRole.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe } from '@fortawesome/free-solid-svg-icons'
+import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe, faComments } from '@fortawesome/free-solid-svg-icons'
 
 const ALL_LINKS = [
   { href: '/admin/website', icon: faGlobe, title: 'จัดการเว็บ', desc: 'แบนเนอร์/ประกาศที่แสดงบนหน้าแรกของเว็บฝั่ง public' },
+  { href: '/admin/chat', icon: faComments, title: 'แชท', desc: 'ตอบแชทจากผู้เยี่ยมชมเว็บไซต์ พร้อมแจ้งเตือนทาง LINE เมื่อมีข้อความใหม่' },
   { href: '/admin/event/iftar2026', icon: faFlag, title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน', volunteer: true },
   { href: '/admin/qrcode', icon: faCamera, title: 'เช็คอินหน้างาน', desc: 'เปิดกล้องมือถือสแกน QR รหัส IFG เช็คอินผู้มาร่วมงาน', volunteer: true },
   { href: '/admin/give', icon: faGift, title: 'ส่งต่อของ', desc: 'รายการสิ่งของที่ผู้บริจาคลงทะเบียนมอบในงาน "ให้" ครั้งที่ 6', volunteer: true },

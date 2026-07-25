@@ -6,27 +6,29 @@ import { ProductCard, SHOP_T } from './Shop.jsx'
 import { useLang } from '../i18n.jsx'
 import { useNavigate } from '../navContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBagShopping, faArrowLeft, faMinus, faPlus, faCartPlus, faCheck, faCartShopping } from '@fortawesome/free-solid-svg-icons'
-import { faLine } from '@fortawesome/free-brands-svg-icons'
+import { faBagShopping, faArrowLeft, faMinus, faPlus, faCartPlus, faCheck, faCartShopping, faComments } from '@fortawesome/free-solid-svg-icons'
 
-// หน้ารายละเอียดสินค้า (/um-shop/:productId) — แกลเลอรีหลายรูป + ปุ่มเพิ่ม/ลดจำนวน + แถบล่างลอย (แชท LINE / เพิ่มตะกร้า / ราคา)
+// เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — หน้านี้ไม่ได้ import ตัว widget ตรงๆ
+// แนบข้อมูลสินค้าไปด้วย (การ์ดสินค้า) เผื่อลูกค้าทักถามรายละเอียดจากสินค้านั้น — แอดมินจะได้รู้ทันทีว่าถามเรื่องอะไร
+const openChatWithProduct = (product) => window.dispatchEvent(new CustomEvent('ummatee-open-chat', { detail: { product } }))
+
+// หน้ารายละเอียดสินค้า (/um-shop/:productId) — แกลเลอรีหลายรูป + ปุ่มเพิ่ม/ลดจำนวน + แถบล่างลอย (แชท / เพิ่มตะกร้า / ราคา)
 // รองรับค้นหาสินค้าทั้งจาก productId (um001, um002, ...) หรือ Firestore doc id (สินค้าเก่าก่อนมี productId)
 
 import { optImg } from '../utils/cloudinaryUrl.js'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
-const LINE_URL = 'https://line.me/R/ti/p/@745bvvgx'
 
 const T = {
   th: {
     back: 'กลับไปหน้าร้านค้า', color: 'สี', size: 'ขนาด', type: 'ประเภท', stock: 'คงเหลือ', out: 'สินค้าหมด',
     pickColor: 'กรุณาเลือกสี', pickSize: 'กรุณาเลือกขนาด', pickType: 'กรุณาเลือกประเภท',
-    qty: 'จำนวน', addToCart: 'เพิ่มลงตะกร้า', added: 'เพิ่มลงตะกร้าแล้ว ✓', chat: 'ทักไลน์', viewCart: 'ดูตะกร้าสินค้า',
+    qty: 'จำนวน', addToCart: 'เพิ่มลงตะกร้า', added: 'เพิ่มลงตะกร้าแล้ว ✓', chat: 'แชท', viewCart: 'ดูตะกร้าสินค้า',
     notFound: 'ไม่พบสินค้านี้', notFoundDesc: 'สินค้าอาจถูกลบหรือย้ายไปแล้ว', related: 'สินค้าที่น่าสนใจ',
   },
   en: {
     back: 'Back to shop', color: 'Color', size: 'Size', type: 'Type', stock: 'In stock', out: 'Out of stock',
     pickColor: 'Please select a color', pickSize: 'Please select a size', pickType: 'Please select a type',
-    qty: 'Quantity', addToCart: 'Add to cart', added: 'Added to cart ✓', chat: 'Chat on LINE', viewCart: 'View cart',
+    qty: 'Quantity', addToCart: 'Add to cart', added: 'Added to cart ✓', chat: 'Chat', viewCart: 'View cart',
     notFound: 'Product not found', notFoundDesc: 'This product may have been removed or moved.', related: 'You may also like',
   },
   ar: {
@@ -166,6 +168,14 @@ export default function ShopProductDetail({ productId }) {
   }
 
   const images = product.images?.length ? product.images : []
+
+  // เปิดแชทพร้อมแนบการ์ดสินค้าที่กำลังดูอยู่ — ใช้ราคาที่ตรงกับที่ลูกค้าเห็นจริง (ลดแล้วถ้ามีส่วนลด)
+  const handleOpenChat = () => openChatWithProduct({
+    name: product.name,
+    price: hasDiscount(product) ? product.discountPrice : product.price,
+    image: images[0] ? optImg(images[0], 300) : undefined,
+    url: window.location.href,
+  })
   const hasSizes = dedupedSizes.length > 0
   // ไซซ์นี้ยังมีของไหม — ใช้ข้อมูลสต็อกที่แม่นสุดที่มี: sizeStock (จำนวนแยกไซซ์เป๊ะๆ) ถ้ามี
   // ไม่มีก็ดูจากลิสต์ "sizes" ที่ doc นี้บันทึกไว้ว่าเปิดขายไซซ์ไหนบ้าง (เช่น เด็กเล็กอาจไม่มี XL/2XL/3XL เลย)
@@ -336,13 +346,13 @@ export default function ShopProductDetail({ productId }) {
 
               {/* จอกว้าง — แถบราคา/ปุ่มเดียวกัน วางไว้ในพื้นที่ว่างท้ายคอลัมน์ข้อมูล (margin-top:auto ดันลงล่างสุดของการ์ด) แทนแถบลอยแบบมือถือ */}
               <div className="shop-detail-inline-bar">
+                <button type="button" onClick={handleOpenChat} className="shop-detail-inline-line" aria-label={t.chat}>
+                  <FontAwesomeIcon icon={faComments} /> {t.chat}
+                </button>
                 <div className="shop-detail-bar-price">
                   <span className="shop-detail-bar-price-now">{THB(hasDiscount(product) ? product.discountPrice : product.price)}</span>
                 </div>
                 <div className="shop-detail-inline-actions">
-                  <a href={LINE_URL} target="_blank" rel="noopener noreferrer" className="shop-detail-inline-line" aria-label={t.chat}>
-                    <FontAwesomeIcon icon={faLine} /> {t.chat}
-                  </a>
                   <button type="button" className="shop-detail-inline-cart" onClick={handleAddToCart} disabled={outOfStock}>
                     <FontAwesomeIcon icon={added ? faCheck : faCartPlus} />
                     {outOfStock ? t.out : added ? t.added : t.addToCart}
@@ -375,13 +385,13 @@ export default function ShopProductDetail({ productId }) {
         ทำให้กลายเป็น containing block ของ position:fixed ลูกข้างใน เลื่อนตามเนื้อหาแทนที่จะติดขอบจอจริง
         อยู่ก่อน Footer เสมอ — บนจอกว้างจะไม่ fixed แล้ว (ดู shop.css) เลยต้องอยู่ตำแหน่งนี้พอดีเพื่อให้ติดขอบล่างการ์ดสินค้า ไม่ใช่ลอยทับ Footer */}
     <div className="shop-detail-bar">
+      <button type="button" onClick={handleOpenChat} className="shop-detail-bar-line" aria-label={t.chat}>
+        <FontAwesomeIcon icon={faComments} />
+        <span>{t.chat}</span>
+      </button>
       <div className="shop-detail-bar-price">
         <span className="shop-detail-bar-price-now">{THB(hasDiscount(product) ? product.discountPrice : product.price)}</span>
       </div>
-      <a href={LINE_URL} target="_blank" rel="noopener noreferrer" className="shop-detail-bar-line" aria-label={t.chat}>
-        <FontAwesomeIcon icon={faLine} />
-        <span>{t.chat}</span>
-      </a>
       <button
         type="button"
         className="shop-detail-bar-cart"

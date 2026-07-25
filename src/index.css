@@ -10,3 +10,4 @@
 @import './styles/pages2.css'; /* Give2 redesign, Volunteer top nav, Hero feed หน้าแรก */
 @import './styles/missions.css'; /* Missions band หน้าแรก + หน้า /missions */
 @import './styles/mobile.css'; /* มือถือ: form 16px, checkout/ตะกร้า/ออเดอร์, chips, bottom sheet */
+@import './styles/chat.css'; /* วิดเจ็ตแชทลอย + หน้าแอดมินจัดการแชท */

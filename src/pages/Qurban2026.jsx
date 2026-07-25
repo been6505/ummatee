@@ -4,6 +4,7 @@ import { useLang } from '../i18n.jsx'
 import { useQurbanData } from '../data/qurbanData.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faCow, faDrumstickBite, faBox } from '@fortawesome/free-solid-svg-icons'
+import useParallax from '../hooks/useParallax.js'
 
 // หน้า public สรุปภารกิจกุรบาน 1447/2026 — สถิติรวม รายละเอียดราย missions และโดนัทชาร์ต 100 วัว
 // ข้อความแยกตามภาษา
@@ -103,6 +104,7 @@ function DonutChart({ unit, countries, colors, total }) {
 export default function Qurban2026() {
   const { lang } = useLang()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   const { data: q, loading } = useQurbanData()
 
   if (loading) return null
@@ -131,7 +133,7 @@ export default function Qurban2026() {
   return (
     <main className="page qurban-page">
       <section className="iftar-hero">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
         <div className="inner">
           <span className="iftar-eyebrow"><FontAwesomeIcon icon={faDrumstickBite} /> {t.eyebrow}</span>
           <h1>{t.h1a}<span className="accent">1447</span></h1>

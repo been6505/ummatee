@@ -42,9 +42,10 @@ export function Stepper({ status }) {
 }
 
 // ปุ่มอัพโหลดรูป — มี 2 ตัวเลือก: เลือกจากคลังรูปภาพ / ถ่ายภาพด้วยกล้องโดยตรง (capture="environment" เปิดกล้องหลังทันทีบนมือถือ)
+// จัดเป็น grid 2 คอลัมน์แถวเดียวเสมอ (ไม่ใช้ flex-wrap ที่จะตกบรรทัดเมื่อ label ยาวเกินความกว้างจอ)
 export function UploadButton({ label, multiple, uploading, onFiles }) {
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <div className="upload-btn-row">
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
         <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
         {uploading ? ' กำลังอัพโหลด...' : ` ${label}`}
@@ -99,7 +100,7 @@ export function CustomerInfoCard({ order }) {
   return (
     <div className="admin-card" style={{ marginBottom: 20 }}>
       <h4>ข้อมูลลูกค้า</h4>
-      <p style={{ margin: '4px 0' }}>{order.customer.firstName} {order.customer.lastName} · {order.customer.phone}</p>
+      <p style={{ margin: '4px 0' }}>{order.customer.fullName} · {order.customer.phone}</p>
       {order.customer.email && <p style={{ margin: '4px 0', color: 'var(--ink-soft)' }}>{order.customer.email}</p>}
       <p style={{ margin: '4px 0', color: 'var(--ink-soft)' }}>{order.customer.address}</p>
     </div>

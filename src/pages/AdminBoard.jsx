@@ -20,7 +20,10 @@ export default function AdminBoard() {
   const [dragCardId, setDragCardId] = useState(null)
 
   useEffect(() => {
-    const unsubLists = onSnapshot(query(collection(db, 'boardLists'), where('boardId', '==', DEFAULT_BOARD_ID), orderBy('position')), async (snap) => {
+    // ตัด orderBy('position') ออก — where + orderBy คนละฟิลด์ต้องมี composite index ใน Firestore ซึ่งไม่มี
+    // ให้อัตโนมัติ ทำให้ query พังเงียบๆ (onSnapshot error callback ทำแค่ setLoading(false) ไม่โชว์ error)
+    // หน้าจอเลยว่างเปล่าไม่มีคอลัมน์ขึ้นเลย — เรียงฝั่ง client แทน จำนวน list น้อยมากไม่กระทบ perf
+    const unsubLists = onSnapshot(query(collection(db, 'boardLists'), where('boardId', '==', DEFAULT_BOARD_ID)), async (snap) => {
       if (snap.empty) {
         // สร้าง list เริ่มต้นให้อัตโนมัติครั้งแรกที่เปิดบอร์ด
         await Promise.all(DEFAULT_LISTS.map((name, i) =>
@@ -28,7 +31,7 @@ export default function AdminBoard() {
         ))
         return
       }
-      setLists(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      setLists(snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.position || 0) - (b.position || 0)))
       setLoading(false)
     }, () => setLoading(false))
     const unsubCards = onSnapshot(query(collection(db, 'boardCards'), where('boardId', '==', DEFAULT_BOARD_ID)), (snap) => {
@@ -42,6 +45,15 @@ export default function AdminBoard() {
     for (const l of lists) m[l.id] = cards.filter((c) => c.listId === l.id).sort((a, b) => (a.position || 0) - (b.position || 0))
     return m
   }, [lists, cards])
+
+  const addList = async () => {
+    const name = window.prompt('ชื่อคอลัมน์ใหม่')?.trim()
+    if (!name) return
+    const ref = await addDoc(collection(db, 'boardLists'), {
+      boardId: DEFAULT_BOARD_ID, name, position: lists.length, createdAt: serverTimestamp(),
+    })
+    writeAuditLog({ action: 'create', entityType: 'boardList', entityId: ref.id, summary: `เพิ่มคอลัมน์ "${name}"` })
+  }
 
   const addCard = async (listId) => {
     const title = (newCardTitle[listId] || '').trim()
@@ -81,6 +93,7 @@ export default function AdminBoard() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>บอร์ดวางแผน</h1><p>ลากการ์ดข้ามคอลัมน์เพื่อย้ายสถานะ</p></div>
+              <button className="admin-btn-primary" onClick={addList}>+ เพิ่มคอลัมน์</button>
             </div>
 
             {loading ? <p>กำลังโหลดข้อมูล...</p> : (

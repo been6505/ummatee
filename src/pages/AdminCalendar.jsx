@@ -1,25 +1,243 @@
 import { useEffect, useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
-import { db } from '../firebase.js'
+import { httpsCallable } from 'firebase/functions'
+import { db, auth, functions } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
+import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner, faLink, faArrowUpRightFromSquare, faPlug } from '@fortawesome/free-solid-svg-icons'
+import {
+  faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner,
+  faPlug, faLink, faUnlink, faPaperPlane, faTriangleExclamation, faCalendarDays,
+  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faRotate, faMessage,
+} from '@fortawesome/free-solid-svg-icons'
+import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 
-// Content Hub — แอปแยกต่างหาก (Next.js + Firebase Admin) ที่เก็บ OAuth secret ของแต่ละแพลตฟอร์มไว้ฝั่งเซิร์ฟเวอร์
-// ummatee เป็น static site (Vite SPA) เชื่อม OAuth ตรงๆ ไม่ได้ (ไม่มีที่เก็บ client secret อย่างปลอดภัย)
-// เลยฝัง Content Hub เป็น iframe แทน — ล็อกอิน/เชื่อมบัญชี/โพสต์จริง ทำผ่านเซสชันของ Content Hub เอง ไม่มีการส่ง credential ข้าม origin
-const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
-const CONTENT_HUB_TABS = [
-  { path: '/accounts', label: 'เชื่อมต่อแพลตฟอร์ม' },
-  { path: '/compose', label: 'สร้างโพสต์' },
-  { path: '/calendar', label: 'ปฏิทินโพสต์จริง' },
-  { path: '/posts', label: 'ประวัติโพสต์' },
+// ป้ายแพลตฟอร์มของกล่องข้อความ — เหมือน AdminChat.jsx (เพิ่ม instagram ที่ยังไม่มีในไฟล์นั้น)
+const CHAT_PLATFORM_BADGE = {
+  web: { icon: faGlobe, label: 'เว็บไซต์', color: '#16a34a' },
+  line: { icon: faLine, label: 'LINE', color: '#06c755' },
+  facebook: { icon: faFacebookMessenger, label: 'Messenger', color: '#0084ff' },
+  instagram: { icon: faInstagram, label: 'Instagram', color: '#e1306c' },
+}
+function ChatPlatformBadge({ platform }) {
+  const p = CHAT_PLATFORM_BADGE[platform] || CHAT_PLATFORM_BADGE.web
+  return <FontAwesomeIcon icon={p.icon || faComment} style={{ color: p.color }} title={p.label} />
+}
+function chatTimeLabel(ts) {
+  if (!ts?.toDate) return ''
+  const d = ts.toDate()
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  return sameDay
+    ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+}
+
+// แท็บ "กล่องข้อความ" — ดึงข้อมูล chats ทุกแพลตฟอร์ม (LINE/Messenger/Instagram) จาก Firestore เดียวกับ AdminChat.jsx
+// ใช้ hook เดิม (useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin) ไม่แก้ AdminChat.jsx เอง
+function ChatInboxTab() {
+  const { chats, loading: chatsLoading } = useAdminChatList()
+  const [openChatId, setOpenChatId] = useState(null)
+  const { messages } = useChatMessages(openChatId)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => { if (openChatId) markChatReadByAdmin(openChatId).catch(() => {}) }, [openChatId])
+
+  const openChat = chats.find((c) => c.id === openChatId)
+  const title = openChat ? (openChat.visitorName || `ผู้เยี่ยมชม ${openChatId.slice(0, 6)}`) : ''
+
+  const submit = async (e) => {
+    e.preventDefault()
+    const trimmed = text.trim()
+    if (!trimmed || sending || !openChatId) return
+    setSending(true)
+    setText('')
+    try { await sendAdminReply(openChatId, trimmed) } catch { setText(trimmed) } finally { setSending(false) }
+  }
+
+  if (openChatId) {
+    return (
+      <div className="admin-card">
+        <div className="admin-chat-thread-head">
+          <button className="admin-chat-back" onClick={() => setOpenChatId(null)} aria-label="กลับไปรายการแชท">
+            <FontAwesomeIcon icon={faArrowLeft} />
+          </button>
+          <span><ChatPlatformBadge platform={openChat?.platform} /> {title}</span>
+        </div>
+        <div className="admin-chat-body">
+          {messages.map((m) => (
+            m.type === 'product' && m.product ? (
+              <a
+                key={m.id} href={isSafeHttpUrl(m.product.url) ? m.product.url : '#'}
+                {...(isSafeHttpUrl(m.product.url) ? { target: '_blank', rel: 'noopener noreferrer' } : { onClick: (e) => e.preventDefault() })}
+                className={`chat-bubble admin-msg-${m.sender === 'admin' ? 'mine' : 'theirs'} chat-product-card`}
+              >
+                {isSafeHttpUrl(m.product.image) && <img src={m.product.image} alt={m.product.name} />}
+                <div className="chat-product-info">
+                  <div className="chat-product-name">{m.product.name}</div>
+                  {m.product.price != null && <div className="chat-product-price">฿{Number(m.product.price).toLocaleString('th-TH')}</div>}
+                </div>
+              </a>
+            ) : (
+              <div key={m.id} className={`chat-bubble admin-msg-${m.sender === 'admin' ? 'mine' : 'theirs'}`}>{m.text}</div>
+            )
+          ))}
+        </div>
+        <form className="admin-chat-input" onSubmit={submit}>
+          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับ..." maxLength={2000} />
+          <button type="submit" disabled={!text.trim() || sending}>ส่ง</button>
+        </form>
+      </div>
+    )
+  }
+
+  return (
+    <div className="admin-card">
+      <h4><FontAwesomeIcon icon={faComments} /> กล่องข้อความ (LINE / Messenger / Instagram)</h4>
+      <div className="admin-chat-list">
+        {!chatsLoading && chats.length === 0 && <div className="admin-chat-empty">ยังไม่มีแชทเข้ามา</div>}
+        {chats.map((c) => (
+          <div key={c.id} className="admin-chat-item" onClick={() => setOpenChatId(c.id)}>
+            <div className="admin-chat-item-top">
+              <span className="admin-chat-item-name"><ChatPlatformBadge platform={c.platform} /> {c.visitorName || `ผู้เยี่ยมชม ${c.id.slice(0, 6)}`}</span>
+              <span>{chatTimeLabel(c.lastMessageAt)}{c.unreadByAdmin && <span className="admin-chat-dot" />}</span>
+            </div>
+            <div className="admin-chat-item-text">{c.lastSender === 'admin' ? 'คุณ: ' : ''}{c.lastMessageText}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// แท็บ "คอมเมนต์" — เฉพาะโพสต์ที่โพสต์จริงแล้ว (มี publishResults จาก socialPublishNow/Scheduled)
+function CommentsTab({ posts }) {
+  const publishedPosts = useMemo(
+    () => posts.filter((p) => p.publishResults && Object.values(p.publishResults).some((r) => r?.ok)).sort((a, b) => (b.date || '').localeCompare(a.date || '')),
+    [posts]
+  )
+  const [openId, setOpenId] = useState(null)
+  const [loadingId, setLoadingId] = useState(null)
+  const [dataById, setDataById] = useState({}) // { [postId]: { comments, errors } }
+
+  const loadComments = async (postId) => {
+    if (openId === postId) { setOpenId(null); return }
+    setOpenId(postId)
+    if (dataById[postId]) return
+    setLoadingId(postId)
+    try {
+      const res = await httpsCallable(functions, 'socialGetComments')({ postId })
+      setDataById((d) => ({ ...d, [postId]: res.data }))
+    } catch (e) {
+      setDataById((d) => ({ ...d, [postId]: { comments: [], errors: { _: e.message } } }))
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  return (
+    <div className="admin-card">
+      <h4><FontAwesomeIcon icon={faMessage} /> คอมเมนต์บนโพสต์ที่โพสต์จริงแล้ว</h4>
+      {publishedPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ที่โพสต์จริงแล้ว</p>}
+      {publishedPosts.map((p) => (
+        <div className="admin-post" key={p.id}>
+          <div className="admin-post-top">
+            <strong>{p.date} · {p.title}</strong>
+            <button className="admin-btn" onClick={() => loadComments(p.id)}>
+              <FontAwesomeIcon icon={loadingId === p.id ? faSpinner : faMessage} spin={loadingId === p.id} /> {openId === p.id ? 'ซ่อนคอมเมนต์' : 'ดูคอมเมนต์'}
+            </button>
+          </div>
+          {openId === p.id && dataById[p.id] && (
+            <div style={{ marginTop: 10 }}>
+              {Object.entries(dataById[p.id].errors || {}).map(([pf, msg]) => (
+                <p key={pf} style={{ color: '#c0392b', fontSize: '.8rem' }}><FontAwesomeIcon icon={faTriangleExclamation} /> {pf}: {msg}</p>
+              ))}
+              {(dataById[p.id].comments || []).length === 0 && !loadingId
+                ? <p style={{ color: '#999', fontSize: '.85rem' }}>ยังไม่มีคอมเมนต์</p>
+                : dataById[p.id].comments.map((c, i) => (
+                  <div key={i} style={{ borderTop: '1px solid var(--line, #eee)', padding: '8px 0', fontSize: '.85rem' }}>
+                    <strong>{c.platform}</strong> — {c.author} <span style={{ color: '#999' }}>{c.createdAt ? new Date(c.createdAt).toLocaleString('th-TH') : ''}</span>
+                    <div>{c.text}</div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// แท็บ "ภาพรวมเพจ" — เรียก socialGetPageInsights (มี cache ฝั่งเซิร์ฟเวอร์ 1 ชม. อยู่แล้ว)
+function InsightsTab() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const load = async (forceRefresh = false) => {
+    setLoading(true)
+    try {
+      const res = await httpsCallable(functions, 'socialGetPageInsights')({ forceRefresh })
+      setData(res.data)
+    } catch (e) {
+      window.alert('โหลดข้อมูลไม่สำเร็จ: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => { load(false) }, [])
+
+  return (
+    <div className="admin-card">
+      <div className="admin-post-top">
+        <h4 style={{ margin: 0 }}><FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ</h4>
+        <button className="admin-btn" disabled={loading} onClick={() => load(true)}>
+          <FontAwesomeIcon icon={faRotate} spin={loading} /> รีเฟรช
+        </button>
+      </div>
+      {!data && <p style={{ color: '#999', fontSize: '.9rem' }}>กำลังโหลด...</p>}
+      {data && Object.keys(data).length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่ได้เชื่อมต่อแพลตฟอร์มไหน</p>}
+      {data && Object.entries(data).map(([platform, res]) => (
+        <div key={platform} className="admin-post" style={{ marginBottom: 10 }}>
+          <div className="admin-post-top"><strong>{platform}</strong></div>
+          {res.error
+            ? <p style={{ color: '#c0392b', fontSize: '.85rem' }}><FontAwesomeIcon icon={faTriangleExclamation} /> {res.error}</p>
+            : (
+              <>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: '.85rem' }}>
+                  {Object.entries(res.metrics || {}).map(([k, v]) => (
+                    <div key={k}><span style={{ color: '#999' }}>{k}</span>: <strong>{v ?? '—'}</strong></div>
+                  ))}
+                </div>
+                <div style={{ color: '#999', fontSize: '.75rem', marginTop: 4 }}>
+                  {res.fromCache ? 'จากแคช · ' : ''}อัปเดตล่าสุด {res.fetchedAt?.toDate ? res.fetchedAt.toDate().toLocaleString('th-TH') : new Date(res.fetchedAt).toLocaleString('th-TH')}
+                </div>
+              </>
+            )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// เชื่อมบัญชีโซเชียล + โพสต์จริง ผ่าน Cloud Functions ของ ummatee เอง (ดู functions/index.js)
+// เดิมฝัง Content Hub (แอปแยกต่างหาก) เป็น iframe ไว้ทำงานนี้ แต่หน้าล็อกอินของ Google/Facebook
+// ปฏิเสธเรนเดอร์ใน iframe เสมอ (กันฟิชชิ่ง) เลยย้าย OAuth มาไว้ที่ Cloud Functions แล้วเปิดแบบ
+// full-page navigation แทน — token ทุกตัวเก็บฝั่งเซิร์ฟเวอร์ ไม่มีการส่ง credential ให้ client เห็นเลย
+const FUNCTIONS_REGION_HOST = 'https://us-central1-ummatee-app.cloudfunctions.net'
+const SOCIAL_PLATFORMS = [
+  { id: 'facebook', label: 'Facebook', color: '#1877f2', needsVideo: false },
+  { id: 'instagram', label: 'Instagram', color: '#e1306c', needsVideo: false },
+  { id: 'threads', label: 'Threads', color: '#000', needsVideo: false },
+  { id: 'youtube', label: 'YouTube', color: '#ff0000', needsVideo: true },
+  { id: 'tiktok', label: 'TikTok', color: '#111', needsVideo: true },
 ]
+const REAL_STATUS_LABEL = { publishing: 'กำลังโพสต์...', posted: 'โพสต์จริงแล้ว', partial: 'โพสต์สำเร็จบางแพลตฟอร์ม', failed: 'โพสต์จริงไม่สำเร็จ' }
 
 const PLATFORM_OPEN = {
   facebook: 'https://www.facebook.com/',
@@ -70,7 +288,7 @@ const pad = (n) => String(n).padStart(2, '0')
 const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()) }
 
-const EMPTY_FORM = { title: '', text: '', time: '10:00', platforms: [], status: 'scheduled', mediaUrls: [] }
+const EMPTY_FORM = { title: '', text: '', time: '10:00', platforms: [], status: 'scheduled', mediaUrls: [], mediaPublicIds: [], realPublish: false }
 
 export default function AdminCalendar() {
   const { user, loading } = useAdminAuth()
@@ -86,8 +304,11 @@ export default function AdminCalendar() {
   const [status, setStatus] = useState('')
   const [uploading, setUploading] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
-  const [hubTab, setHubTab] = useState(CONTENT_HUB_TABS[0].path)
   const [showHub, setShowHub] = useState(false)
+  const [mainTab, setMainTab] = useState('calendar') // 'calendar' | 'chat' | 'comments' | 'insights'
+  const [socialStatus, setSocialStatus] = useState({}) // { facebook: {connected, displayName, ...}, ... }
+  const [socialBusy, setSocialBusy] = useState(null) // platform id กำลังเชื่อม/ยกเลิก หรือ postId กำลังโพสต์จริง
+  const [socialNotice, setSocialNotice] = useState('')
 
   useEffect(() => {
     if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
@@ -96,6 +317,43 @@ export default function AdminCalendar() {
     })
     return unsub
   }, [user])
+
+  const loadSocialStatus = () => {
+    httpsCallable(functions, 'socialAccountsStatus')().then((res) => setSocialStatus(res.data || {})).catch(() => {})
+  }
+  useEffect(() => {
+    if (!user) return
+    loadSocialStatus()
+    // socialOAuthCallback (Cloud Function) redirect กลับมาที่นี่พร้อม query param บอกผล เพราะเป็น full-page navigation
+    const params = new URLSearchParams(window.location.search)
+    const connected = params.get('social_connected')
+    const error = params.get('social_error')
+    if (connected) setSocialNotice(`เชื่อมต่อ ${connected} สำเร็จ ✓`)
+    else if (error) setSocialNotice(`เชื่อมต่อไม่สำเร็จ: ${params.get('social_message') || error}`)
+    if (connected || error) {
+      window.history.replaceState({}, '', window.location.pathname)
+      if (connected) loadSocialStatus()
+    }
+  }, [user])
+
+  const connectSocial = async (platformId) => {
+    const idToken = await auth.currentUser.getIdToken()
+    window.location.href = `${FUNCTIONS_REGION_HOST}/socialOAuthStart?platform=${platformId}&idToken=${encodeURIComponent(idToken)}`
+  }
+  const disconnectSocial = async (platformId) => {
+    if (!window.confirm('ยกเลิกการเชื่อมต่อแพลตฟอร์มนี้?')) return
+    setSocialBusy(platformId)
+    try {
+      await httpsCallable(functions, 'socialDisconnect')({ platform: platformId })
+      loadSocialStatus()
+    } catch (e) { window.alert('ยกเลิกไม่สำเร็จ: ' + e.message) } finally { setSocialBusy(null) }
+  }
+  const publishNow = async (postId) => {
+    setSocialBusy(postId)
+    try {
+      await httpsCallable(functions, 'socialPublishNow')({ postId })
+    } catch (e) { window.alert('โพสต์จริงไม่สำเร็จ: ' + e.message) } finally { setSocialBusy(null) }
+  }
 
   // โพสต์จัดกลุ่มตามวันที่ ใช้แสดงจุดบนปฏิทิน
   const byDate = useMemo(() => {
@@ -129,7 +387,12 @@ export default function AdminCalendar() {
     setUploading(true)
     try {
       const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'auto')))
-      setForm((f) => ({ ...f, mediaUrls: [...f.mediaUrls, ...results.map((r) => r.url)] }))
+      setForm((f) => ({
+        ...f,
+        mediaUrls: [...f.mediaUrls, ...results.map((r) => r.url)],
+        // เก็บคู่กับ mediaUrls (index ตรงกัน) ไว้ใช้ตอนลบไฟล์จริงออกจาก Cloudinary หลังโพสต์สำเร็จ (ดู cleanupPublishedMedia)
+        mediaPublicIds: [...(f.mediaPublicIds || []), ...results.map((r) => ({ publicId: r.publicId, resourceType: r.type }))],
+      }))
     } catch (err) {
       setStatus('อัพโหลดไม่สำเร็จ: ' + err.message)
     } finally {
@@ -138,7 +401,11 @@ export default function AdminCalendar() {
     }
   }
 
-  const removeMedia = (i) => setForm((f) => ({ ...f, mediaUrls: f.mediaUrls.filter((_, j) => j !== i) }))
+  const removeMedia = (i) => setForm((f) => ({
+    ...f,
+    mediaUrls: f.mediaUrls.filter((_, j) => j !== i),
+    mediaPublicIds: (f.mediaPublicIds || []).filter((_, j) => j !== i),
+  }))
 
   const copyAndOpen = async (p, platform) => {
     const text = [p.title, p.text, ...(p.mediaUrls || [])].filter(Boolean).join('\n\n')
@@ -153,7 +420,7 @@ export default function AdminCalendar() {
 
   const startEdit = (p) => {
     setEditId(p.id)
-    setForm({ title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled', mediaUrls: p.mediaUrls || [] })
+    setForm({ title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled', mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
@@ -169,6 +436,8 @@ export default function AdminCalendar() {
         platforms: form.platforms,
         status: form.status,
         mediaUrls: form.mediaUrls,
+        mediaPublicIds: form.mediaPublicIds,
+        realPublish: form.realPublish,
       }
       if (editId) {
         await updateDoc(doc(db, 'contentPosts', editId), payload)
@@ -205,45 +474,70 @@ export default function AdminCalendar() {
             <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา เลือกแพลตฟอร์ม</p>
           </div>
           <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
-            <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิด Content Hub' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
+            <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
           </button>
         </div>
 
         {showHub && (
           <div className="admin-card" style={{ marginBottom: 20 }}>
-            <div className="admin-card-head" style={{ flexWrap: 'wrap', gap: 10 }}>
-              <h4><FontAwesomeIcon icon={faLink} /> Content Hub — เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
-              <a href={`${CONTENT_HUB_URL}${hubTab}`} target="_blank" rel="noopener noreferrer" className="admin-btn">
-                <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เปิดเต็มหน้าจอ
-              </a>
-            </div>
+            <h4><FontAwesomeIcon icon={faLink} /> เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
             <p style={{ color: 'var(--ink-soft)', fontSize: '.85rem', marginBottom: 14 }}>
-              ระบบเชื่อมต่อ OAuth และโพสต์จริงแยกรันอยู่ที่ Content Hub (เก็บกุญแจเชื่อมต่อของแต่ละแพลตฟอร์มไว้ฝั่งเซิร์ฟเวอร์อย่างปลอดภัย) —
-              ล็อกอินครั้งแรกด้วยรหัสผ่านของ Content Hub เอง จากนั้นเชื่อมบัญชี Facebook/Instagram/Threads/YouTube ฯลฯ ได้จากแท็บด้านล่าง
+              กด "เชื่อมต่อ" จะพาไปหน้าล็อกอินจริงของแต่ละแพลตฟอร์ม (เปิดเต็มหน้าจอ ไม่ใช่กรอบฝัง) กุญแจเชื่อมต่อทุกตัวเก็บไว้ฝั่งเซิร์ฟเวอร์
+              (Cloud Functions) เท่านั้น ไม่มีการส่ง token ให้เบราว์เซอร์เห็นเลย
             </p>
-            <div className="admin-cal-platforms" style={{ marginBottom: 12 }}>
-              {CONTENT_HUB_TABS.map((t) => (
-                <button
-                  key={t.path}
-                  type="button"
-                  className={hubTab === t.path ? 'on' : ''}
-                  style={hubTab === t.path ? { background: 'var(--green-mid)', borderColor: 'var(--green-mid)', color: '#fff' } : {}}
-                  onClick={() => setHubTab(t.path)}
-                >
-                  {t.label}
-                </button>
-              ))}
+            {socialNotice && (
+              <p style={{ background: '#eef7ee', border: '1px solid #b7ddb7', borderRadius: 8, padding: '10px 12px', fontSize: '.82rem', color: '#2e7d52', marginBottom: 14 }}>
+                {socialNotice}
+              </p>
+            )}
+            <div className="admin-cal-social-list">
+              {SOCIAL_PLATFORMS.map((pl) => {
+                const st = socialStatus[pl.id]
+                return (
+                  <div key={pl.id} className="admin-cal-social-row">
+                    <span className="admin-cal-social-dot" style={{ background: pl.color }} />
+                    <div style={{ flex: 1 }}>
+                      <strong>{pl.label}</strong>
+                      {st?.connected
+                        ? <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)' }}>เชื่อมต่อแล้ว — {st.displayName}{st.handle ? ` (${st.handle})` : ''}</div>
+                        : <div style={{ fontSize: '.8rem', color: '#999' }}>ยังไม่ได้เชื่อมต่อ</div>}
+                    </div>
+                    {st?.connected ? (
+                      <button className="admin-btn-danger" disabled={socialBusy === pl.id} onClick={() => disconnectSocial(pl.id)}>
+                        <FontAwesomeIcon icon={faUnlink} /> ยกเลิก
+                      </button>
+                    ) : (
+                      <button className="admin-btn" disabled={socialBusy === pl.id} onClick={() => connectSocial(pl.id)}>
+                        <FontAwesomeIcon icon={faLink} /> เชื่อมต่อ
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            <iframe
-              key={hubTab}
-              src={`${CONTENT_HUB_URL}${hubTab}`}
-              title="Content Hub"
-              style={{ width: '100%', height: 640, border: '1px solid #e5e7eb', borderRadius: 12, background: '#fff' }}
-            />
           </div>
         )}
 
-        <div className="admin-cal-layout">
+        <div className="admin-cal-tabs" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <button className="admin-btn" style={mainTab === 'calendar' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('calendar')}>
+            <FontAwesomeIcon icon={faCalendarDays} /> ปฏิทิน
+          </button>
+          <button className="admin-btn" style={mainTab === 'chat' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('chat')}>
+            <FontAwesomeIcon icon={faComments} /> กล่องข้อความ
+          </button>
+          <button className="admin-btn" style={mainTab === 'comments' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('comments')}>
+            <FontAwesomeIcon icon={faMessage} /> คอมเมนต์
+          </button>
+          <button className="admin-btn" style={mainTab === 'insights' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('insights')}>
+            <FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ
+          </button>
+        </div>
+
+        {mainTab === 'chat' && <ChatInboxTab />}
+        {mainTab === 'comments' && <CommentsTab posts={posts} />}
+        {mainTab === 'insights' && <InsightsTab />}
+
+        {mainTab === 'calendar' && <div className="admin-cal-layout">
           {/* ปฏิทินรายเดือน */}
           <div className="admin-card admin-cal-card">
             <div className="admin-cal-head">
@@ -335,8 +629,25 @@ export default function AdminCalendar() {
                       })}
                     </div>
                   )}
+                  {p.realStatus && (
+                    <div className="admin-post-platforms" style={{ marginTop: 6 }}>
+                      <span style={{ background: p.realStatus === 'posted' ? '#2e7d52' : p.realStatus === 'failed' ? '#c0392b' : '#c9a84c' }}>
+                        {REAL_STATUS_LABEL[p.realStatus] || p.realStatus}
+                      </span>
+                      {Object.entries(p.publishResults || {}).filter(([, r]) => !r.ok).map(([pf, r]) => (
+                        <span key={pf} title={r.error} style={{ background: '#c0392b' }}>
+                          <FontAwesomeIcon icon={faTriangleExclamation} /> {pf}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="admin-post-actions">
                     {p.status !== 'posted' && <button className="admin-btn" onClick={() => markPosted(p)}><FontAwesomeIcon icon={faCheck} /> โพสต์แล้ว</button>}
+                    {(p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
+                      <button className="admin-btn" disabled={socialBusy === p.id} onClick={() => publishNow(p.id)}>
+                        <FontAwesomeIcon icon={socialBusy === p.id ? faSpinner : faPaperPlane} spin={socialBusy === p.id} /> โพสต์จริงตอนนี้
+                      </button>
+                    )}
                     <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
                     <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
                   </div>
@@ -397,6 +708,10 @@ export default function AdminCalendar() {
                     </button>
                   ))}
                 </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row', fontWeight: 400 }}>
+                  <input type="checkbox" checked={form.realPublish} onChange={(e) => setForm({ ...form, realPublish: e.target.checked })} />
+                  ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
+                </label>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
                   <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
                   {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
@@ -405,7 +720,7 @@ export default function AdminCalendar() {
               </div>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </main>
   </VolunteerGuard>)

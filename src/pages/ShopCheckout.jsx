@@ -7,14 +7,18 @@ import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
 import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faCartShopping, faCheck, faUserPen } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCartShopping, faCheck, faUserPen, faComments } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faLine } from '@fortawesome/free-brands-svg-icons'
+import { THAILAND_PROVINCES, getAmphoes, getDistricts, getZipcode, isBangkok } from '../data/thailandAddress.js'
+
+// เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — เหมือนหน้าอื่นๆ ในร้าน
+const openChat = () => window.dispatchEvent(new Event('ummatee-open-chat'))
 
 // หน้ายืนยันการสั่งซื้อ (/um-shop/checkout) — ขั้นแรกให้ลงทะเบียน (กรอกเอง / Google / LINE)
 // แล้วค่อยกรอกที่อยู่ กด "ยืนยันข้อมูล" จึงแสดงค่าจัดส่ง + ปุ่มยืนยันคำสั่งซื้อจริง
 import { optImg } from '../utils/cloudinaryUrl.js'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
-const EMPTY = { firstName: '', lastName: '', phone: '', email: '', address: '' }
+const EMPTY = { fullName: '', phone: '', email: '', address: '', province: '', amphoe: '', district: '', postalCode: '' }
 
 // ปุ่มลงทะเบียนด้วย LINE/Google — ซ่อนไว้จนกว่าจะตั้งค่า provider ใน Firebase Console เสร็จ
 // เปิดใช้: เปลี่ยนเป็น true อย่างเดียว (โค้ด sign-in พร้อมอยู่แล้ว)
@@ -35,15 +39,12 @@ async function socialSignIn(providerKey) {
   const provider = providerKey === 'google' ? new GoogleAuthProvider() : new OAuthProvider('oidc.line')
   const result = await signInWithPopup(auth, provider)
   const u = result.user
-  const displayName = (u.displayName || '').trim()
-  const sp = displayName.indexOf(' ')
   // เก็บ LINE userId ไว้ในข้อมูลลูกค้า — ใช้ส่งแจ้งเตือนสถานะออเดอร์ผ่าน LINE OA ภายหลัง
   const lineUserId = providerKey === 'line'
     ? (u.providerData.find((p) => p.providerId === 'oidc.line')?.uid || '')
     : ''
   return {
-    firstName: sp > 0 ? displayName.slice(0, sp) : displayName,
-    lastName: sp > 0 ? displayName.slice(sp + 1) : '',
+    fullName: (u.displayName || '').trim(),
     email: u.email || '',
     phone: u.phoneNumber || '',
     lineUserId,
@@ -55,7 +56,14 @@ export default function ShopCheckout() {
   const go = useNavigate()
 
   // ลูกค้าเก่าที่เคยลงทะเบียนแล้ว ข้ามขั้นเลือกวิธีลงทะเบียนไปกรอก/เช็คข้อมูลได้เลย
-  const [form, setForm] = useState(() => ({ ...EMPTY, ...(savedCustomer() || {}), address: savedCustomer()?.address || '' }))
+  // ข้อมูลเก่าใน localStorage (ก่อนรวมช่องชื่อ-นามสกุล) อาจมีแค่ firstName/lastName แยกกัน — รวมเป็น fullName ให้อัตโนมัติ
+  const [form, setForm] = useState(() => {
+    const saved = savedCustomer() || {}
+    const legacyFullName = !saved.fullName && (saved.firstName || saved.lastName)
+      ? `${saved.firstName || ''} ${saved.lastName || ''}`.trim()
+      : undefined
+    return { ...EMPTY, ...saved, ...(legacyFullName ? { fullName: legacyFullName } : {}) }
+  })
   const [registered, setRegistered] = useState(() => !SOCIAL_LOGIN_ENABLED || !!savedCustomer())
   const [infoConfirmed, setInfoConfirmed] = useState(false)
   const [error, setError] = useState('')
@@ -66,6 +74,14 @@ export default function ShopCheckout() {
   const shippingFee = getShippingFee()
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  // เลือกจังหวัด/อำเภอ-เขต ใหม่ ต้องล้างตัวเลือกที่อยู่ล่างลงไปด้วย (เดิมอาจเลือกไว้แล้วแต่ไม่ตรงกับตัวเลือกใหม่) — รหัสไปรษณีย์เติมอัตโนมัติตอนเลือกตำบล/แขวงครบ
+  const setProvince = (e) => setForm((f) => ({ ...f, province: e.target.value, amphoe: '', district: '', postalCode: '' }))
+  const setAmphoe = (e) => setForm((f) => ({ ...f, amphoe: e.target.value, district: '', postalCode: '' }))
+  const setDistrict = (e) => {
+    const district = e.target.value
+    setForm((f) => ({ ...f, district, postalCode: district ? getZipcode(f.province, f.amphoe, district) : '' }))
+  }
 
   const registerWith = async (providerKey) => {
     setError('')
@@ -85,37 +101,41 @@ export default function ShopCheckout() {
   }
 
   const confirmInfo = () => {
-    if (!form.firstName.trim()) return setError('กรุณากรอกชื่อ')
-    if (!form.lastName.trim()) return setError('กรุณากรอกนามสกุล')
+    if (!form.fullName.trim()) return setError('กรุณากรอกชื่อ-นามสกุล')
     if (!form.phone.trim()) return setError('กรุณากรอกเบอร์โทรศัพท์')
     if (!/^[0-9+\-\s]{6,15}$/.test(form.phone.trim())) return setError('เบอร์โทรศัพท์ไม่ถูกต้อง')
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setError('อีเมลไม่ถูกต้อง')
     if (!form.address.trim()) return setError('กรุณากรอกที่อยู่จัดส่ง')
+    if (!form.province) return setError('กรุณาเลือกจังหวัด')
+    if (!form.amphoe) return setError(isBangkok(form.province) ? 'กรุณาเลือกเขต' : 'กรุณาเลือกอำเภอ')
+    if (!form.district) return setError(isBangkok(form.province) ? 'กรุณาเลือกแขวง' : 'กรุณาเลือกตำบล')
     setError('')
     setInfoConfirmed(true)
     // จำข้อมูลไว้ในเครื่อง (ไม่ใช่ server) — สั่งซื้อครั้งหน้าฟอร์มเติมให้อัตโนมัติ
     try { localStorage.setItem(CUSTOMER_KEY, JSON.stringify(form)) } catch { /* noop */ }
   }
 
+  // กด "แก้ไขข้อมูล" หลังยืนยันแล้ว — ปลดล็อกฟอร์มกลับมาแก้ได้ (ไม่ต้องกดลงทะเบียนใหม่)
+  const editInfo = () => { setInfoConfirmed(false); setError('') }
+
   const confirmOrder = async () => {
     if (submitting) return
     setSubmitting(true)
     try {
-      const { id, orderCode } = await createOrder({
-        items,
-        itemsTotal,
-        customer: {
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          phone: formatPhone(form.phone),
-          email: form.email.trim(),
-          address: form.address.trim(),
-          // มีค่าเฉพาะลูกค้าที่ลงทะเบียนด้วย LINE — ใช้แจ้งเตือนสถานะออเดอร์ผ่าน LINE
-          ...(form.lineUserId ? { lineUserId: form.lineUserId } : {}),
-        },
-      })
+      // ที่อยู่ที่บันทึกจริง (Firestore/แอดมิน) ยังเป็นสตริงเดียวเหมือนเดิม — ต่อตำบล/อำเภอ/จังหวัด/รหัสไปรษณีย์
+      // เข้าไปท้ายที่อยู่ที่กรอก เพื่อไม่ต้องแก้ทุกจุดที่อ่าน customer.address อยู่ทั่วระบบ
+      const bkk = isBangkok(form.province)
+      const customer = {
+        fullName: form.fullName.trim(),
+        phone: formatPhone(form.phone),
+        email: form.email.trim(),
+        address: `${form.address.trim()} ${bkk ? 'แขวง' : 'ตำบล'}${form.district} ${bkk ? 'เขต' : 'อำเภอ'}${form.amphoe} ${form.province} ${form.postalCode}`,
+        // มีค่าเฉพาะลูกค้าที่ลงทะเบียนด้วย LINE — ใช้แจ้งเตือนสถานะออเดอร์ผ่าน LINE
+        ...(form.lineUserId ? { lineUserId: form.lineUserId } : {}),
+      }
+      const { id, orderCode } = await createOrder({ items, itemsTotal, customer })
       clearCart()
-      notifyAdminNewOrder(orderCode, itemsTotal + shippingFee, form, items)
+      notifyAdminNewOrder(orderCode, itemsTotal + shippingFee, customer, items)
       // จำออเดอร์ไว้ในเครื่อง — ใช้แสดงหน้า "คำสั่งซื้อของฉัน" (ลิงก์ออเดอร์ไม่หายแม้ลืมแคปหน้าจอ)
       try {
         const mine = JSON.parse(localStorage.getItem('umShopMyOrders') || '[]')
@@ -144,7 +164,8 @@ export default function ShopCheckout() {
   }
 
   return (
-    <main className="page">
+    <>
+    <main className="page shop-checkout-page">
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
@@ -215,28 +236,46 @@ export default function ShopCheckout() {
           <div className="admin-card" style={{ marginBottom: 20 }}>
             <h4>ข้อมูลลูกค้า</h4>
             <div className="admin-form-grid">
-              <label>ชื่อ
-                <input type="text" value={form.firstName} onChange={set('firstName')} disabled={infoConfirmed} />
+              <label style={{ gridColumn: '1 / -1' }}>ชื่อ-นามสกุล
+                <input type="text" value={form.fullName} onChange={set('fullName')} disabled={infoConfirmed} />
               </label>
-              <label>นามสกุล
-                <input type="text" value={form.lastName} onChange={set('lastName')} disabled={infoConfirmed} />
-              </label>
-              <label>เบอร์โทรศัพท์
+              <label style={{ gridColumn: '1 / -1' }}>เบอร์โทรศัพท์
                 <input type="tel" value={form.phone} onChange={set('phone')} disabled={infoConfirmed} />
               </label>
-              <label>อีเมล (ไม่บังคับ)
+              <label style={{ gridColumn: '1 / -1' }}>อีเมล (ไม่บังคับ)
                 <input type="email" value={form.email} onChange={set('email')} disabled={infoConfirmed} placeholder="example@email.com" autoComplete="email" />
               </label>
               <label style={{ gridColumn: '1 / -1' }}>ที่อยู่จัดส่ง
-                <textarea rows="3" value={form.address} onChange={set('address')} disabled={infoConfirmed} />
+                <textarea rows="3" value={form.address} onChange={set('address')} disabled={infoConfirmed} placeholder="บ้านเลขที่ ถนน ซอย" />
+              </label>
+              <label style={{ gridColumn: '1 / -1' }}>จังหวัด
+                <select value={form.province} onChange={setProvince} disabled={infoConfirmed}>
+                  <option value="">เลือกจังหวัด</option>
+                  {THAILAND_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </label>
+              <label>{isBangkok(form.province) ? 'เขต' : 'อำเภอ'}
+                <select value={form.amphoe} onChange={setAmphoe} disabled={infoConfirmed || !form.province}>
+                  <option value="">{form.province ? `เลือก${isBangkok(form.province) ? 'เขต' : 'อำเภอ'}` : 'เลือกจังหวัดก่อน'}</option>
+                  {getAmphoes(form.province).map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+              <label>{isBangkok(form.province) ? 'แขวง' : 'ตำบล'}
+                <select value={form.district} onChange={setDistrict} disabled={infoConfirmed || !form.amphoe}>
+                  <option value="">{form.amphoe ? `เลือก${isBangkok(form.province) ? 'แขวง' : 'ตำบล'}` : `เลือก${isBangkok(form.province) ? 'เขต' : 'อำเภอ'}ก่อน`}</option>
+                  {getDistricts(form.province, form.amphoe).map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </label>
+              <label style={{ gridColumn: '1 / -1' }}>รหัสไปรษณีย์
+                <input type="text" value={form.postalCode} disabled placeholder="เลือกที่อยู่ให้ครบเพื่อเติมอัตโนมัติ" />
               </label>
             </div>
             {error && <p style={{ color: '#dc2626', fontSize: '.9rem', marginTop: 10 }}>{error}</p>}
-            {!infoConfirmed && (
-              <button className="admin-btn-primary" style={{ marginTop: 14 }} onClick={confirmInfo}>ยืนยันข้อมูล</button>
-            )}
             {infoConfirmed && (
-              <p style={{ color: '#15803d', fontSize: '.9rem', marginTop: 10 }}><FontAwesomeIcon icon={faCheck} /> ยืนยันข้อมูลแล้ว</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+                <p style={{ color: '#15803d', fontSize: '.9rem', margin: 0 }}><FontAwesomeIcon icon={faCheck} /> ยืนยันข้อมูลแล้ว</p>
+                <button className="admin-btn" onClick={editInfo}><FontAwesomeIcon icon={faUserPen} /> แก้ไขข้อมูล</button>
+              </div>
             )}
           </div>
           )}
@@ -246,14 +285,33 @@ export default function ShopCheckout() {
               <div className="cart-summary-row"><span>ราคาสินค้ารวม</span><span>{THB(itemsTotal)}</span></div>
               <div className="cart-summary-row"><span>ค่าจัดส่ง</span><span>{THB(shippingFee)}</span></div>
               <div className="cart-summary-row cart-summary-total"><span>ยอดชำระทั้งหมด</span><span>{THB(itemsTotal + shippingFee)}</span></div>
-              <button className="shop-addcart-btn" style={{ width: '100%', marginTop: 14 }} onClick={confirmOrder} disabled={submitting}>
-                {submitting ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันคำสั่งซื้อ'}
-              </button>
             </div>
           )}
         </div>
       </section>
       <Footer />
     </main>
+
+    {/* แถบลอยติดขอบล่างจอ (แชท / ราคา / ยืนยันข้อมูล-สั่งซื้อ) — โชว์เฉพาะตอนเข้าสู่ขั้นกรอกข้อมูลแล้ว (ลงทะเบียนเสร็จ) */}
+    {registered && (
+      <div className="shop-detail-bar shop-checkout-bar">
+        <button type="button" onClick={openChat} className="shop-detail-bar-line" aria-label="แชท">
+          <FontAwesomeIcon icon={faComments} />
+          <span>แชท</span>
+        </button>
+        <div className="shop-detail-bar-price">
+          <span className="cart-bar-total-label">ราคารวม</span>
+          <span className="shop-detail-bar-price-now">{THB(itemsTotal + shippingFee)}</span>
+        </div>
+        {infoConfirmed ? (
+          <button type="button" className="shop-detail-bar-cart" onClick={confirmOrder} disabled={submitting}>
+            {submitting ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันคำสั่งซื้อ'}
+          </button>
+        ) : (
+          <button type="button" className="shop-detail-bar-cart" onClick={confirmInfo}>ยืนยันข้อมูล</button>
+        )}
+      </div>
+    )}
+    </>
   )
 }

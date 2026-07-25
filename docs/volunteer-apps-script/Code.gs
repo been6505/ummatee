@@ -35,6 +35,17 @@ function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents)
 
+    // --- [ชั่วคราว] LINE Webhook event logger — ใช้หา ADMIN_LINE_USER_ID ครั้งเดียวตอนตั้งค่า ---
+    // LINE ส่ง payload เป็น { events: [...] } ไม่มี data.token เลย เช็คก่อนโดน SHEET_TOKEN gate ด้านล่างปัดตก
+    // เมื่อมีคนทัก OA จะ log userId ไว้ใน Executions ให้เอาไปตั้งเป็น Script Property — ลบ block นี้ทิ้งหลังใช้เสร็จ
+    if (data.events) {
+      data.events.forEach(function (ev) {
+        Logger.log('LINE event type=' + ev.type + ' userId=' + (ev.source && ev.source.userId))
+      })
+      return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+        .setMimeType(ContentService.MimeType.JSON)
+    }
+
     // ⚠️ ความปลอดภัย: ก่อนหน้านี้ endpoint นี้ไม่ตรวจ token เลยสักฟังก์ชัน — ใครก็ได้ที่เจอ URL นี้
     // (public constant ใน src/utils/endpoints.js) สามารถยิง POST ตรงมาสั่งส่งอีเมล/LINE ข้อความ
     // "ใดก็ได้" ถึงผู้รับ "ใดก็ได้" ผ่านบัญชี Gmail/LINE OA ของมูลนิธิ (adminNotify/lineNotify)

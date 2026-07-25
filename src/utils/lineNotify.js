@@ -4,27 +4,26 @@ import { VOLUNTEER_ENDPOINT, GIVE_SHEET_TOKEN, fetchWithTimeout } from './endpoi
 // (มี customer.lineUserId) ส่งผ่าน Apps Script (ถือ channel access token ฝั่ง server)
 // เป็น best-effort: ล้มเหลวเงียบๆ ไม่กระทบการอัปเดตสถานะออเดอร์
 
-const trackUrl = (orderId) => `https://ummatee-app.web.app/um-shop/order/${orderId}`
-
-const MESSAGES = {
-  payment_confirmed: (o) =>
-    `✅ ยืนยันการชำระเงินแล้ว\nคำสั่งซื้อ ${o.orderCode} กำลังเตรียมการจัดส่ง\n\nติดตามสถานะ: ${trackUrl(o.id)}`,
-  shipping: (o, extra) =>
-    `📦 คำสั่งซื้อ ${o.orderCode} จัดส่งแล้ว\n${extra?.trackingNumber ? `เลขพัสดุ: ${extra.trackingNumber}\n` : ''}\nติดตามสถานะ: ${trackUrl(o.id)}`,
-  shipping_update: (o, extra) =>
-    `🚚 อัปเดตการจัดส่ง ${o.orderCode}\n${extra?.text || ''}\n\nติดตามสถานะ: ${trackUrl(o.id)}`,
-  delivered: (o) =>
-    `🎉 คำสั่งซื้อ ${o.orderCode} จัดส่งเรียบร้อยแล้ว\nขอบคุณที่อุดหนุน Um Shop — รายได้นำไปช่วยเหลือผู้ยากไร้\nJazakallahu khairan 💚`,
-}
+// เนื้อความทั้งหมดย้ายไปอยู่ฝั่ง Apps Script แล้ว (ดู docs/volunteer-apps-script/Code.gs)
+// เพราะ GIVE_SHEET_TOKEN เป็น token ที่อ่านได้จาก bundle — ถ้าฝั่งนี้ยังส่งผู้รับ+ข้อความไปเอง
+// ใครก็สั่ง LINE OA ของมูลนิธิให้ส่งข้อความอะไรก็ได้ไปหาผู้ติดตามคนไหนก็ได้ ที่นี่จึงส่งแค่
+// orderId + ชื่อ event ให้ Apps Script ไปอ่านผู้รับจากตัวออเดอร์และประกอบข้อความเองทั้งหมด
+const LINE_EVENTS = ['payment_confirmed', 'shipping', 'shipping_update', 'delivered']
 
 export function notifyLineOrderStatus(order, event, extra) {
-  const lineUserId = order?.customer?.lineUserId
-  const build = MESSAGES[event]
-  if (!lineUserId || !build) return
+  // ยังเช็ค lineUserId ฝั่งนี้ไว้เพื่อไม่ยิง request ที่ยังไงก็ไม่ได้ส่ง (ฝั่ง server เช็คซ้ำอยู่แล้ว)
+  if (!order?.id || !order?.customer?.lineUserId || !LINE_EVENTS.includes(event)) return
   fetchWithTimeout(VOLUNTEER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'lineNotify', lineUserId, message: build(order, extra) }),
+    body: JSON.stringify({
+      token: GIVE_SHEET_TOKEN,
+      type: 'lineNotify',
+      orderId: order.id,
+      event,
+      trackingNumber: extra?.trackingNumber || '',
+      text: extra?.text || '',
+    }),
   }).catch(() => {})
 }
 

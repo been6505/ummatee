@@ -6,10 +6,10 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
 
 // จัดการบัญชี staff (/admin/staff) — เฉพาะ admin เท่านั้น เปลี่ยน role/active ได้
-// ไม่มีปุ่ม "เพิ่ม staff" ตรงนี้ เพราะบัญชีสมัครตัวเองอัตโนมัติ (role: 'staff') ตอนล็อกอินครั้งแรก
-// (ดู src/useStaffRole.js) — หน้านี้ใช้แค่ปรับ role/เปิดปิดใช้งานคนที่สมัครเข้ามาแล้ว
-const ROLES = ['admin', 'staff', 'social', 'field']
-const ROLE_LABEL = { admin: 'แอดมิน', staff: 'พนักงาน', social: 'ทีมโซเชียล', field: 'ทีมภาคสนาม' }
+// ไม่มีปุ่ม "เพิ่ม staff" ตรงนี้ เพราะบัญชีสมัครตัวเองอัตโนมัติตอนล็อกอินครั้งแรก แต่ได้ role 'pending'
+// ที่ยังไม่มีสิทธิ์อะไรเลย (ดู src/useStaffRole.js) — แอดมินต้องมาเลื่อน role ให้ที่หน้านี้ก่อนถึงใช้งานได้
+const ROLES = ['pending', 'admin', 'staff', 'social', 'field']
+const ROLE_LABEL = { pending: 'รออนุมัติ (ยังเข้าใช้ไม่ได้)', admin: 'แอดมิน', staff: 'พนักงาน', social: 'ทีมโซเชียล', field: 'ทีมภาคสนาม' }
 
 export default function AdminStaff() {
   const [list, setList] = useState([])
@@ -58,8 +58,8 @@ export default function AdminStaff() {
                     </thead>
                     <tbody>
                       {list.map((s) => (
-                        <tr key={s.id}>
-                          <td>{s.email}</td>
+                        <tr key={s.id} className={s.role === 'pending' ? 'staff-pending-row' : ''}>
+                          <td>{s.email}{s.role === 'pending' && <span className="staff-pending-tag">รออนุมัติ</span>}</td>
                           <td>{s.name || '—'}</td>
                           <td>
                             <select value={s.role} onChange={(e) => setRole(s, e.target.value)}>

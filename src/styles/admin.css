@@ -351,3 +351,7 @@
 .asc-status-btn{font-size:.8rem;padding:6px 12px}
 /* ปุ่มในการ์ดมือถือแตะง่ายขึ้น (สูง ~38px) */
 .admin-shop-card .admin-btn,.admin-shop-card .admin-btn-danger{padding:8px 14px;font-size:.82rem}
+
+/* แถวบัญชีที่สมัครเข้ามาแล้วยังรอแอดมินเลื่อน role (role: 'pending' — ยังไม่มีสิทธิ์ใดๆ) */
+.staff-pending-row{background:#fffbeb}
+.staff-pending-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:#f59e0b;color:#fff;font-size:.7rem;font-weight:700}

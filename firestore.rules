@@ -419,10 +419,14 @@ service cloud.firestore {
     // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
     match /staff/{staffId} {
       allow read: if request.auth != null && (request.auth.uid == staffId || isStaffRole(['admin']));
-      // สมัครตัวเองครั้งแรก (bootstrap): สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เริ่มต้นเป็น 'staff' เท่านั้น
-      // (สิทธิ์ต่ำสุด กัน self-elevate เป็น admin) แอดมินคนแรกต้องตั้งเองผ่าน Firebase Console (ดูรายงาน)
+      // สมัครตัวเองครั้งแรก: สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เป็น 'pending' เท่านั้น
+      //
+      // สำคัญ: ห้ามให้ default เป็น 'staff' เด็ดขาด — 'staff' มีสิทธิ์ read/write/delete ข้อมูล CRM ทั้งหมด
+      // (partnerOrganizations/aidLocations/speakers/boards) ซึ่งมี PII ผู้ติดต่อและยอดเงินที่จ่ายวิทยากร
+      // ถ้าใครสมัคร Firebase Auth ได้ก็จะได้สิทธิ์นั้นทันที ต่างจาก collection เดิมที่กันด้วย email allowlist
+      // 'pending' ไม่อยู่ใน allowedRoles ของ collection ไหนเลย = เข้าอะไรไม่ได้จนกว่าแอดมินจะเลื่อน role ให้
       allow create: if request.auth != null && request.auth.uid == staffId
-        && request.resource.data.role == 'staff'
+        && request.resource.data.role == 'pending'
         && request.resource.data.active == true;
       // แก้ไขข้อมูลตัวเอง (เช่น lastLoginAt) ได้ แต่ห้ามเปลี่ยน role/active ของตัวเอง (กัน self-elevate)
       // แอดมินแก้ของใครก็ได้ทุกฟิลด์ (ตั้ง role/active ให้คนอื่น)
@@ -458,7 +462,8 @@ service cloud.firestore {
     // Audit log — เขียนได้ทุก staff role ที่ยังมีสิทธิ์แก้ข้อมูล (เพื่อบันทึกการกระทำของตัวเอง)
     // แต่อ่าน (ดูประวัติทั้งหมด) ได้เฉพาะ admin เท่านั้น และห้ามแก้/ลบใครทั้งนั้น (append-only)
     match /auditLog/{id} {
-      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        && request.resource.data.staffUid == request.auth.uid;
       allow read: if isStaffRole(['admin']);
       allow update, delete: if false;
     }

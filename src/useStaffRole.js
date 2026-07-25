@@ -22,13 +22,14 @@ export default function useStaffRole(user) {
         setStaff({ id: snap.id, ...snap.data() })
         setLoading(false)
       } else if (!bootstrapped) {
-        // สมัครตัวเองเป็น staff (role ต่ำสุด) ครั้งแรกที่ล็อกอิน — rules อนุญาตแค่ path นี้ (สร้าง doc ตัวเอง role:'staff' เท่านั้น)
+        // สมัครตัวเองครั้งแรกที่ล็อกอิน — ได้ role 'pending' ที่ยังไม่มีสิทธิ์อะไรเลย
+        // ต้องรอแอดมินเลื่อน role ให้ที่ /admin/staff ก่อนถึงจะเข้าส่วนไหนได้ (rules บังคับ path นี้ทางเดียว)
         setBootstrapped(true)
         try {
           await setDoc(ref, {
             email: user.email || '',
             name: user.displayName || '',
-            role: 'staff',
+            role: 'pending',
             active: true,
             createdAt: serverTimestamp(),
             lastLoginAt: serverTimestamp(),

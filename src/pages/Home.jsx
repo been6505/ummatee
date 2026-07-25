@@ -397,8 +397,11 @@ export default function Home() {
               จะแวบขึ้นมาทุกครั้งที่รีเฟรช (cards=null ยังแยกไม่ได้ว่า "ยังโหลดไม่เสร็จ" หรือ "ไม่เคยตั้งค่า") */}
           {!focusLoading && (
             <div className="focus-grid focus-grid-3">
+              {/* กรองด้วยสวิตช์เปิด/ปิดของการ์ดเองเท่านั้น — ไม่ผูกกับการซ่อนเมนู (navHidden) เพราะแอดมิน
+                  ปิดเมนู Iftar/อาสาสมัครไว้ การ์ด 2 ใบจะหายจากหน้าแรกไปเงียบๆ ทั้งที่ยังอยากโชว์อยู่
+                  ตอนนี้มีสวิตช์ต่อการ์ดใน /admin/website ให้สั่งซ่อนตรงๆ ได้แล้ว ชัดเจนกว่า */}
               {(focusAdminCards !== null ? focusAdminCards : DEFAULT_FOCUS_CARDS)
-                .filter((c) => c.enabled !== false && !navHidden(c.link))
+                .filter((c) => c.enabled !== false)
                 .map((c, i) => (
                   <FadeUp className={`focus-card focus-${c.variant || 'iftar'}`} key={i} onClick={() => goPath(c.link || '/')}>
                     <div className="fc-pattern hero-pattern"></div>

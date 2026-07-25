@@ -66,7 +66,11 @@
 .admin-board-card{border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fff;cursor:grab}
 .admin-board-card-title{font-weight:700;margin-bottom:6px}
 .admin-board-card-date{font-size:.8rem;width:100%;margin-bottom:6px}
+/* input ไม่มี width กำหนดไว้เลย browser ให้ intrinsic width ~20 ตัวอักษรและไม่ยอมหดในแถว flex
+   (ไม่มี min-width:0) ปุ่ม + เลยถูกดันล้นออกนอกการ์ดไปทับพื้นหลัง gradient ด้านนอก */
 .admin-board-add-card{margin-top:10px;display:flex;gap:6px}
+.admin-board-add-card input{flex:1;min-width:0;box-sizing:border-box}
+.admin-board-add-card button{flex-shrink:0}
 /* การ์ดผู้เข้าชมเว็บไซต์ (หน้า admin/dashboard) */
 .admin-visitors-card{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,var(--green-deep) 0%,var(--green-mid) 100%);border:none;color:#fff;box-shadow:0 12px 32px -12px rgba(27,94,54,.45)}
 .admin-visitors-icon{font-size:2.6rem;width:72px;height:72px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:18px;flex-shrink:0}

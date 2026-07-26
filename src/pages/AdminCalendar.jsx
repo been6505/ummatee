@@ -200,6 +200,12 @@ const PLATFORMS = [
 const STATUS = { draft: 'ฉบับร่าง', scheduled: 'ตั้งเวลาแล้ว', posted: 'โพสต์แล้ว' }
 const STATUS_COLOR = { draft: '#999', scheduled: '#c9a84c', posted: '#2e7d52' }
 
+// ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
+const CONTENT_TYPE_LABEL = { post: 'โพสต์', live: 'ไลฟ์สด' }
+const APPROVAL_LABEL = { draft: 'ร่าง', pending_review: 'รอตรวจ', approved: 'อนุมัติแล้ว', rejected: 'ถูกตีกลับ' }
+const APPROVAL_COLOR = { draft: '#999', pending_review: '#c9a84c', approved: '#2e7d52', rejected: '#c0392b' }
+const LIVE_PLATFORM_OPTIONS = ['facebook', 'tiktok', 'youtube']
+
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
 const TH_DAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
 
@@ -224,7 +230,10 @@ const pad = (n) => String(n).padStart(2, '0')
 const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()) }
 
-const EMPTY_FORM = { title: '', text: '', time: '10:00', platforms: [], status: 'scheduled', mediaUrls: [], mediaPublicIds: [], realPublish: false }
+const EMPTY_FORM = {
+  title: '', text: '', time: '10:00', platforms: [], status: 'scheduled', mediaUrls: [], mediaPublicIds: [], realPublish: false,
+  campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
+}
 
 export default function AdminCalendar() {
   const { user, loading } = useAdminAuth()
@@ -235,6 +244,7 @@ export default function AdminCalendar() {
   const [selected, setSelected] = useState(todayKey())
 
   const [posts, setPosts] = useState([])
+  const [campaigns, setCampaigns] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [status, setStatus] = useState('')
@@ -249,6 +259,12 @@ export default function AdminCalendar() {
     const unsub = onSnapshot(collection(db, 'contentPosts'), (snap) => {
       setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
     })
+    return unsub
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    const unsub = onSnapshot(collection(db, 'campaigns'), (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
     return unsub
   }, [user])
 
@@ -338,7 +354,12 @@ export default function AdminCalendar() {
 
   const startEdit = (p) => {
     setEditId(p.id)
-    setForm({ title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled', mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false })
+    setForm({
+      title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled',
+      mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false,
+      campaignId: p.campaignId || '', contentType: p.contentType || 'post', liveScheduledAt: p.liveScheduledAt || '',
+      livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
+    })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
@@ -356,6 +377,14 @@ export default function AdminCalendar() {
         mediaUrls: form.mediaUrls,
         mediaPublicIds: form.mediaPublicIds,
         realPublish: form.realPublish,
+        campaignId: form.campaignId || null,
+        contentType: form.contentType,
+        approvalStatus: form.approvalStatus,
+        ...(form.contentType === 'live' ? {
+          liveScheduledAt: form.liveScheduledAt || '',
+          livePlatforms: form.livePlatforms,
+          liveHost: form.liveHost.trim(),
+        } : {}),
       }
       if (editId) {
         await updateDoc(doc(db, 'contentPosts', editId), payload)
@@ -377,6 +406,13 @@ export default function AdminCalendar() {
 
   const markPosted = async (p) => {
     try { await updateDoc(doc(db, 'contentPosts', p.id), { status: 'posted' }) } catch (e) { window.alert(e.message) }
+  }
+
+  // เปลี่ยนสถานะอนุมัติ — บังคับที่ UI เท่านั้นในรอบนี้ (contentPosts ทั้ง collection เขียนได้เฉพาะ isFullAdmin()
+  // อยู่แล้วตาม firestore.rules เดิม ซึ่งเข้มกว่า "เฉพาะ admin" ที่โจทย์ขอสำหรับฟิลด์นี้อยู่แล้ว จึงไม่ต้องเพิ่ม
+  // rule แยกฟิลด์ — แต่ไม่ได้แยกสิทธิ์ staff/field ที่ไม่ใช่ isFullAdmin ออกจาก field อื่นๆ ของโพสต์เดียวกัน)
+  const setApproval = async (p, approvalStatus) => {
+    try { await updateDoc(doc(db, 'contentPosts', p.id), { approvalStatus }) } catch (e) { window.alert(e.message) }
   }
 
   const dayPosts = byDate[selected] || []
@@ -518,9 +554,26 @@ export default function AdminCalendar() {
               {dayPosts.map((p) => (
                 <div className="admin-post" key={p.id}>
                   <div className="admin-post-top">
-                    <strong>{p.time} · {p.title}</strong>
+                    <strong>{p.time} · {p.title} {p.contentType === 'live' && '🔴 ไลฟ์'}</strong>
                     <span className="admin-post-status" style={{ background: STATUS_COLOR[p.status] }}>{STATUS[p.status]}</span>
                   </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                    <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, color: '#fff', background: APPROVAL_COLOR[p.approvalStatus || 'draft'] }}>
+                      {APPROVAL_LABEL[p.approvalStatus || 'draft']}
+                    </span>
+                    {p.campaignId && (
+                      <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, background: '#eee' }}>
+                        แคมเปญ: {campaigns.find((c) => c.id === p.campaignId)?.name || p.campaignId}
+                      </span>
+                    )}
+                  </div>
+                  {p.contentType === 'live' && (
+                    <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)', marginBottom: 6 }}>
+                      {p.liveScheduledAt && <>เวลาไลฟ์: {p.liveScheduledAt} · </>}
+                      {(p.livePlatforms || []).length > 0 && <>แพลตฟอร์ม: {p.livePlatforms.join(', ')} · </>}
+                      {p.liveHost && <>ผู้ดำเนินรายการ: {p.liveHost}</>}
+                    </div>
+                  )}
                   {p.text && <p className="admin-post-text">{p.text}</p>}
                   {(p.mediaUrls || []).length > 0 && (
                     <div className="admin-post-media">
@@ -563,6 +616,14 @@ export default function AdminCalendar() {
                       ))}
                     </div>
                   )}
+                  <div className="admin-post-actions" style={{ marginBottom: 6 }}>
+                    {Object.entries(APPROVAL_LABEL).map(([k, v]) => (
+                      <button
+                        key={k} className="admin-btn" style={(p.approvalStatus || 'draft') === k ? { background: APPROVAL_COLOR[k], color: '#fff' } : {}}
+                        onClick={() => setApproval(p, k)}
+                      >{v}</button>
+                    ))}
+                  </div>
                   <div className="admin-post-actions">
                     {p.status !== 'posted' && <button className="admin-btn" onClick={() => markPosted(p)}><FontAwesomeIcon icon={faCheck} /> โพสต์แล้ว</button>}
                     {(p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
@@ -597,6 +658,42 @@ export default function AdminCalendar() {
                     </select>
                   </label>
                 </div>
+                <div className="admin-cal-form-row">
+                  <label>ชนิดคอนเทนต์
+                    <select value={form.contentType} onChange={(e) => setForm({ ...form, contentType: e.target.value })}>
+                      {Object.entries(CONTENT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </label>
+                  <label>แคมเปญที่เกี่ยวข้อง
+                    <select value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })}>
+                      <option value="">-- ไม่ระบุ --</option>
+                      {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {form.contentType === 'live' && (
+                  <div className="admin-cal-form-row" style={{ flexWrap: 'wrap' }}>
+                    <label>วันเวลาไลฟ์
+                      <input type="datetime-local" value={form.liveScheduledAt} onChange={(e) => setForm({ ...form, liveScheduledAt: e.target.value })} />
+                    </label>
+                    <label>ผู้ดำเนินรายการ
+                      <input value={form.liveHost} onChange={(e) => setForm({ ...form, liveHost: e.target.value })} />
+                    </label>
+                    <div>
+                      <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แพลตฟอร์มไลฟ์</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {LIVE_PLATFORM_OPTIONS.map((pf) => (
+                          <button
+                            key={pf} type="button"
+                            className={form.livePlatforms.includes(pf) ? 'admin-btn-primary' : 'admin-btn'}
+                            style={{ fontSize: '.8rem', padding: '6px 14px' }}
+                            onClick={() => setForm((f) => ({ ...f, livePlatforms: f.livePlatforms.includes(pf) ? f.livePlatforms.filter((x) => x !== pf) : [...f.livePlatforms, pf] }))}
+                          >{pf}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>รูป / วิดีโอ</div>
                   <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>

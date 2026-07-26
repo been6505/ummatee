@@ -7,7 +7,8 @@ import { writeAuditLog } from '../lib/auditLog.js'
 import { downloadCsv } from '../lib/csv.js'
 
 // องค์กรพันธมิตร (/admin/partners) — CRM พื้นฐาน มิเรอร์จากเวอร์ชัน Next.js (PartnerOrganization model)
-const EMPTY = { name: '', country: '', isInternational: false, type: '', contactName: '', contactPhone: '', contactEmail: '', website: '', notes: '' }
+// partnerType: 'organization' (ค่าเริ่มต้น รวมของเก่าที่ไม่มี field นี้) | 'store' (ร้านค้าที่ผูกกับแคมเปญได้ที่ /admin/campaigns)
+const EMPTY = { name: '', country: '', isInternational: false, type: '', contactName: '', contactPhone: '', contactEmail: '', website: '', notes: '', partnerType: 'organization' }
 
 export default function AdminPartners() {
   const [list, setList] = useState([])
@@ -45,7 +46,7 @@ export default function AdminPartners() {
     setForm(EMPTY); setEditId(null)
   }
 
-  const edit = (p) => { setEditId(p.id); setForm({ ...EMPTY, ...p }) }
+  const edit = (p) => { setEditId(p.id); setForm({ ...EMPTY, ...p, partnerType: p.partnerType || 'organization' }) }
   const cancel = () => { setEditId(null); setForm(EMPTY) }
 
   const remove = async (p) => {
@@ -56,8 +57,8 @@ export default function AdminPartners() {
 
   const exportCsv = () => {
     downloadCsv('partner-organizations.csv',
-      ['ชื่อ', 'ประเทศ', 'ต่างประเทศ', 'ประเภท', 'ผู้ติดต่อ', 'เบอร์โทร', 'อีเมล', 'เว็บไซต์', 'หมายเหตุ'],
-      filtered.map((p) => [p.name, p.country, p.isInternational ? 'ใช่' : 'ไม่', p.type, p.contactName, p.contactPhone, p.contactEmail, p.website, p.notes])
+      ['ชื่อ', 'ประเภทพันธมิตร', 'ประเทศ', 'ต่างประเทศ', 'ประเภท', 'ผู้ติดต่อ', 'เบอร์โทร', 'อีเมล', 'เว็บไซต์', 'หมายเหตุ'],
+      filtered.map((p) => [p.name, (p.partnerType || 'organization') === 'store' ? 'ร้านค้า' : 'องค์กร', p.country, p.isInternational ? 'ใช่' : 'ไม่', p.type, p.contactName, p.contactPhone, p.contactEmail, p.website, p.notes])
     )
   }
 
@@ -76,6 +77,12 @@ export default function AdminPartners() {
               <h4>{editId ? 'แก้ไของค์กร' : 'เพิ่มองค์กรใหม่'}</h4>
               <div className="admin-form-grid">
                 <label>ชื่อองค์กร<input value={form.name} onChange={set('name')} /></label>
+                <label>ประเภทพันธมิตร
+                  <select value={form.partnerType || 'organization'} onChange={set('partnerType')}>
+                    <option value="organization">องค์กร</option>
+                    <option value="store">ร้านค้า (ผูกกับแคมเปญได้)</option>
+                  </select>
+                </label>
                 <label>ประเทศ<input value={form.country} onChange={set('country')} /></label>
                 <label>ประเภท<input value={form.type} onChange={set('type')} placeholder="NGO, มูลนิธิ, ฯลฯ" /></label>
                 <label style={{ flexDirection: 'row', alignItems: 'center', gap: 8, display: 'flex' }}>
@@ -101,11 +108,12 @@ export default function AdminPartners() {
               {loading ? <p>กำลังโหลดข้อมูล...</p> : (
                 <div className="admin-table-wrap">
                   <table className="admin-table">
-                    <thead><tr><th>ชื่อ</th><th>ประเทศ</th><th>ประเภท</th><th>ผู้ติดต่อ</th><th></th></tr></thead>
+                    <thead><tr><th>ชื่อ</th><th>ประเภทพันธมิตร</th><th>ประเทศ</th><th>ประเภท</th><th>ผู้ติดต่อ</th><th></th></tr></thead>
                     <tbody>
                       {filtered.map((p) => (
                         <tr key={p.id}>
                           <td>{p.name}</td>
+                          <td>{(p.partnerType || 'organization') === 'store' ? 'ร้านค้า' : 'องค์กร'}</td>
                           <td>{p.country}{p.isInternational ? ' (ต่างประเทศ)' : ''}</td>
                           <td>{p.type || '—'}</td>
                           <td>{p.contactName || '—'}</td>
@@ -115,7 +123,7 @@ export default function AdminPartners() {
                           </td>
                         </tr>
                       ))}
-                      {filtered.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีข้อมูล</td></tr>}
+                      {filtered.length === 0 && <tr><td colSpan="6" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีข้อมูล</td></tr>}
                     </tbody>
                   </table>
                 </div>

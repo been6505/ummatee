@@ -15,6 +15,7 @@ const DEFAULT_LISTS = ['ต้องทำ', 'กำลังทำ', 'เสร
 export default function AdminBoard() {
   const [lists, setLists] = useState([])
   const [cards, setCards] = useState([])
+  const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [newCardTitle, setNewCardTitle] = useState({})
   const [dragCardId, setDragCardId] = useState(null)
@@ -40,6 +41,15 @@ export default function AdminBoard() {
     return () => { unsubLists(); unsubCards() }
   }, [])
 
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'campaigns'), (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+    return unsub
+  }, [])
+
+  const setCampaign = async (c, campaignId) => {
+    await updateDoc(doc(db, 'boardCards', c.id), { campaignId: campaignId || null, updatedAt: serverTimestamp() })
+  }
+
   const cardsByList = useMemo(() => {
     const m = {}
     for (const l of lists) m[l.id] = cards.filter((c) => c.listId === l.id).sort((a, b) => (a.position || 0) - (b.position || 0))
@@ -60,7 +70,7 @@ export default function AdminBoard() {
     if (!title) return
     const ref = await addDoc(collection(db, 'boardCards'), {
       boardId: DEFAULT_BOARD_ID, listId, title, description: '', position: (cardsByList[listId]?.length || 0),
-      dueDate: null, assignedToStaffId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      dueDate: null, assignedToStaffId: null, campaignId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     })
     writeAuditLog({ action: 'create', entityType: 'boardCard', entityId: ref.id, summary: `เพิ่มการ์ด "${title}"` })
     setNewCardTitle((s) => ({ ...s, [listId]: '' }))
@@ -116,6 +126,14 @@ export default function AdminBoard() {
                             onChange={(e) => setDueDate(c, e.target.value)}
                             className="admin-board-card-date"
                           />
+                          <select
+                            value={c.campaignId || ''}
+                            onChange={(e) => setCampaign(c, e.target.value)}
+                            style={{ fontSize: '.75rem', width: '100%', marginTop: 4 }}
+                          >
+                            <option value="">-- ไม่ผูกแคมเปญ --</option>
+                            {campaigns.map((camp) => <option key={camp.id} value={camp.id}>{camp.name}</option>)}
+                          </select>
                           <button className="admin-btn-danger" style={{ fontSize: '.75rem' }} onClick={() => removeCard(c)}>ลบ</button>
                         </div>
                       ))}

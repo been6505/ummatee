@@ -15,7 +15,7 @@ import { useAdminChatList } from '../data/chat.js'
 import { useNewOrdersCount, useNewOrders } from '../data/orders.js'
 import useSunGradient from '../hooks/useSunGradient.js'
 import useStaffRole, { hasStaffRole } from '../useStaffRole.js'
-import { faUsers, faMapLocationDot, faTableColumns, faClockRotateLeft, faMicrophone } from '@fortawesome/free-solid-svg-icons'
+import { faUsers, faMapLocationDot, faTableColumns, faClockRotateLeft, faMicrophone, faBullseye, faVideo } from '@fortawesome/free-solid-svg-icons'
 
 const NAV_GROUPS = [
   { label: 'หน้าหลัก', icon: faHouse, href: '/admin/dashboard' },
@@ -66,7 +66,10 @@ const STAFF_NAV_GROUPS = [
       { href: '/admin/speakers', label: 'วิทยากร/อินฟลูเอนเซอร์', icon: faMicrophone },
     ]
   },
+  { label: 'แคมเปญบริจาค', icon: faBullseye, href: '/admin/campaigns', requireRoles: ['admin', 'staff', 'field'] },
+  { label: 'งาน/อีเวนต์', icon: faFlag, href: '/admin/events', requireRoles: ['admin', 'staff', 'field'] },
   { label: 'บอร์ดวางแผน', icon: faTableColumns, href: '/admin/board', requireRoles: ['admin', 'staff', 'field'] },
+  { label: 'ประชุมวิดีโอ', icon: faVideo, href: '/admin/video-call', requireRoles: ['admin', 'staff', 'field', 'social'] },
   { label: 'ประวัติการเปลี่ยนแปลง', icon: faClockRotateLeft, href: '/admin/audit-log', requireRoles: ['admin'] },
   { label: 'จัดการ Staff', icon: faUsers, href: '/admin/staff', requireRoles: ['admin'] },
 ]

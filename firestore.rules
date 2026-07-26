@@ -468,6 +468,45 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // ── Campaign / Event / campaignPartners (แผนแอดมิน-อินทราเน็ต ข้อ 2/3/6) ─
+    // gating เดียวกับ CRM/บอร์ดด้านบน (admin/staff/field) ไม่แตะ collection เดิมเลย
+    // ══════════════════════════════════════════════════════════════════
+
+    // แคมเปญบริจาค — campaignId ที่ contentPosts/boardCards อ้างถึงเป็นแค่ string เชื่อมโยงฝั่ง client
+    // (ไม่บังคับ referential integrity ใน rules เพราะ contentPosts/boardCards เขียนได้กว้างอยู่แล้ว)
+    match /campaigns/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // งาน/อีเวนต์ทั่วไป (ยกระบบจาก Iftar ให้ใช้ซ้ำได้ทุกงาน)
+    match /events/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // ผู้ลงทะเบียนงาน — เลือกเป็น flat collection (มี eventId อ้างอิง) เหมือน boardCards/boardLists
+    // ไม่ใช้ subcollection เพราะหน้าแอดมินต้อง query ข้ามอีเวนต์ได้ (เช่นนับผู้ลงทะเบียนรวมทุกงาน)
+    // ซึ่งทำกับ subcollection แยกต่อ doc อีเวนต์ลำบากกว่า (ต้อง query ซ้อนหลายชั้นเหมือนเหตุผลของ boardCards)
+    // สาธารณะ create ได้ (ลงทะเบียนเองแบบ iftarRegs/volunteerRegs) แต่อ่าน/แก้/ลบเฉพาะ staff
+    function validEventReg() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['eventId', 'name', 'phone', 'email', 'checkedIn', 'checkedInAt', 'createdAt'])
+        && d.eventId is string && d.eventId.size() > 0 && d.eventId.size() <= 100
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'email', 200)
+        && d.checkedIn is bool && d.checkedIn == false;
+    }
+    match /eventRegistrations/{id} {
+      allow create: if validEventReg();
+      allow read, update, delete: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // ร้านค้าร่วม campaign — เชื่อม campaignId <-> partnerId (partnerOrganizations ที่ partnerType == 'store')
+    match /campaignPartners/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
     match /{document=**} {
       allow read, write: if false;

@@ -714,3 +714,138 @@ select.iftar-input option{color:#222;background:#fff}
 .social-row-footer{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .social-btn-sm{display:inline-flex;align-items:center;gap:6px;color:rgba(255,255,255,.85);text-decoration:none;font-size:.85rem;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.25);transition:background .15s}
 .social-btn-sm:hover{background:rgba(255,255,255,.12);color:#fff}
+
+/* ===== แอปรายรับ-รายจ่าย (/admin/money) ===== */
+.admin-money .admin-head h1{font-size:1.8rem;font-weight:800}
+.admin-money .admin-stat .v.pos{color:#1B5E36}
+.admin-money .admin-stat .v.neg{color:#c62828}
+
+/* แท็บ */
+.money-tabs{display:flex;gap:6px;flex-wrap:wrap;background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:14px;padding:6px;margin-bottom:20px;box-shadow:0 6px 20px -14px rgba(27,94,54,.3)}
+.money-tabs button{padding:9px 16px;border-radius:10px;font-size:.9rem;font-weight:700;color:var(--ink-soft);font-family:inherit;background:transparent;transition:background .12s,color .12s}
+.money-tabs button:hover{background:#EAF6EE;color:var(--green-deep)}
+.money-tabs button.active{background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;box-shadow:0 6px 16px -8px rgba(27,94,54,.6)}
+
+/* แถบสรุปสถานะงบสัปดาห์นี้ */
+.money-banner{border-radius:14px;padding:14px 18px;margin-bottom:20px;font-weight:700;font-size:.95rem;border:1px solid}
+.money-banner.good{background:#EAF6EE;border-color:rgba(46,125,82,.25);color:var(--green-deep)}
+.money-banner.warn{background:#fff4e5;border-color:rgba(230,126,34,.3);color:#a35200}
+
+/* ตารางแจกแจงตัวเลข */
+.money-breakdown{display:flex;flex-direction:column;gap:2px;font-size:.92rem}
+.money-breakdown>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px dashed #eee}
+.money-breakdown>div:last-child{border-bottom:none}
+.money-breakdown span{color:var(--ink-soft)}
+.money-breakdown strong{font-weight:800;white-space:nowrap}
+.money-breakdown .total{border-top:2px solid #eee;border-bottom:none;margin-top:4px;padding-top:10px}
+.money-breakdown .total span{color:var(--black);font-weight:700}
+.money-breakdown .pos{color:var(--green-deep)}
+.money-breakdown .neg{color:#c62828}
+.money-hint{font-size:.82rem;color:var(--ink-soft);line-height:1.6;margin-top:10px}
+
+/* คำแนะนำ */
+.plan-tips{list-style:none;display:flex;flex-direction:column;gap:8px}
+.plan-tips .tip{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;line-height:1.6;padding:11px 14px;border-radius:12px;border-left:4px solid}
+.plan-tips .tip-icon{flex:0 0 auto}
+.plan-tips .good{background:#EAF6EE;border-color:var(--green-mid)}
+.plan-tips .warn{background:#fff4e5;border-color:#e67e22}
+.plan-tips .danger{background:#fdecea;border-color:#c62828}
+.plan-tips .info{background:#eef4fb;border-color:#2196f3}
+
+/* แผนสัปดาห์หน้า */
+.plan-hero{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;border:none}
+.plan-hero h4{color:#fff;margin-bottom:4px;font-size:1.15rem}
+.plan-range{color:rgba(255,255,255,.8);font-size:.92rem}
+.plan-hero-budget{text-align:right}
+.plan-hero-budget .v{font-size:2.4rem;font-weight:800;line-height:1.1}
+.plan-hero-budget .l{font-size:.85rem;color:rgba(255,255,255,.8)}
+.plan-days{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.plan-day{border:1px solid #eee;border-radius:12px;padding:12px 8px;text-align:center;background:#fff;display:flex;flex-direction:column;gap:4px;min-width:0}
+.plan-day.payday{border-color:var(--gold);background:#fffdf5}
+.plan-day.has-bill{border-color:rgba(230,126,34,.4)}
+.pd-name{font-size:.8rem;font-weight:800;color:var(--green-deep)}
+.pd-date{font-size:.72rem;color:var(--ink-soft)}
+.pd-budget{font-size:1.05rem;font-weight:800;margin:4px 0}
+.pd-tag{font-size:.68rem;font-weight:700;padding:3px 6px;border-radius:8px;word-break:break-word}
+.pd-tag.pay{background:#fff4d6;color:#8a6100}
+.pd-tag.bill{background:#fdecea;color:#c62828}
+
+/* ความคืบหน้าการบริจาค */
+.give-progress{margin-bottom:16px}
+.give-bar{height:16px;background:#eee;border-radius:999px;overflow:hidden}
+.give-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--green-mid),var(--gold));transition:width .4s}
+.give-progress-label{margin-top:8px;font-size:.9rem;color:var(--ink-soft)}
+.give-quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;font-size:.88rem;color:var(--ink-soft)}
+.give-accounts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.give-account{display:flex;gap:12px;align-items:flex-start;border:1px solid #eee;border-radius:12px;padding:12px 14px;background:#fafcfa}
+.ga-icon{font-size:1.6rem}
+.ga-body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ga-acc{font-size:.85rem;font-weight:700;color:var(--green-deep);letter-spacing:.5px}
+.ga-reason{font-size:.78rem;color:var(--ink-soft);line-height:1.5}
+
+/* ค่าใช้จ่ายคงที่ */
+.money-settings{display:flex;flex-direction:column;gap:16px}
+.fixed-list{display:flex;flex-direction:column;gap:8px}
+.fixed-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid #eee;border-radius:12px;padding:10px 12px;background:#fafcfa}
+.fixed-row input,.fixed-row select{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.9rem;font-family:inherit;background:#fff}
+.fixed-row input:focus,.fixed-row select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.fx-name{flex:2 1 160px;min-width:0}
+.fx-amount{flex:1 1 100px;min-width:0}
+.fx-cat{flex:1 1 150px;min-width:0}
+.fx-due{display:flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+.fx-due input{width:64px}
+.money-save-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:.9rem;color:var(--ink-soft);margin-top:14px}
+
+/* อ่านสลิป */
+.slip-drop{border:2px dashed rgba(46,125,82,.4);border-radius:16px;background:#fff;padding:32px 20px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+.slip-drop:hover,.slip-drop.over{background:#EAF6EE;border-color:var(--green-mid)}
+.slip-drop-icon{font-size:2.6rem;margin-bottom:6px}
+.slip-drop h4{color:var(--green-deep);font-size:1.05rem;margin-bottom:6px}
+.slip-drop p{font-size:.85rem;color:var(--ink-soft);max-width:640px;margin:0 auto;line-height:1.6}
+.slip-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.slip-status{font-size:.88rem;color:var(--ink-soft)}
+.slip-list{display:flex;flex-direction:column;gap:14px}
+.slip-item{display:flex;gap:14px;background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:14px;padding:14px;box-shadow:0 6px 20px -14px rgba(27,94,54,.3)}
+.slip-item.saved{border-color:rgba(46,125,82,.45);background:#fafdfb}
+.slip-thumb{flex:0 0 110px}
+.slip-thumb img{width:110px;height:150px;object-fit:cover;border-radius:10px;border:1px solid #eee}
+.slip-thumb-empty{width:110px;height:150px;border-radius:10px;background:#f2f4f3;display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.slip-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.slip-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.slip-badge{font-size:.72rem;font-weight:800;padding:3px 10px;border-radius:999px}
+.slip-badge.ok{background:#EAF6EE;color:var(--green-deep)}
+.slip-badge.low{background:#fff4e5;color:#a35200}
+.slip-progress-bar{height:8px;background:#eee;border-radius:999px;overflow:hidden;margin-bottom:4px}
+.slip-progress-bar span{display:block;height:100%;background:var(--green-mid);transition:width .2s}
+.slip-progress small{font-size:.78rem;color:var(--ink-soft)}
+.slip-parsed{display:flex;gap:8px;flex-wrap:wrap;font-size:.78rem}
+.slip-parsed span{background:#f2f6f3;border-radius:8px;padding:3px 9px;color:var(--ink-soft);font-weight:600}
+.slip-warn{font-size:.84rem;color:#a35200;background:#fff4e5;border-radius:10px;padding:8px 12px}
+.slip-error{font-size:.86rem;color:#c62828;background:#fdecea;border-radius:10px;padding:10px 14px}
+.slip-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.slip-form label{display:flex;flex-direction:column;gap:5px;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.slip-form input,.slip-form select{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.9rem;font-family:inherit;background:#fff;min-width:0}
+.slip-form input:focus,.slip-form select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.slip-form .slip-note{grid-column:1/-1}
+.slip-alts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.78rem;color:var(--ink-soft)}
+.slip-alts button{padding:4px 10px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.78rem;font-weight:700;color:var(--ink-soft);font-family:inherit}
+.slip-alts button.active{background:var(--green-deep);color:#fff;border-color:transparent}
+.slip-item-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.slip-raw summary{font-size:.78rem;color:var(--ink-soft);cursor:pointer}
+.slip-raw pre{white-space:pre-wrap;font-size:.72rem;background:#f7f9f8;border-radius:8px;padding:10px;margin-top:6px;max-height:220px;overflow:auto;color:#444}
+
+/* ตารางรายการ */
+.tx-in{color:var(--green-deep);font-weight:800}
+.tx-out{color:#c62828;font-weight:800}
+
+@media (max-width:900px){
+  .plan-days{grid-template-columns:repeat(2,1fr)}
+  .plan-hero-budget{text-align:left}
+}
+@media (max-width:640px){
+  .money-tabs{overflow-x:auto;flex-wrap:nowrap}
+  .money-tabs button{white-space:nowrap;font-size:.82rem;padding:8px 12px}
+  .slip-item{flex-direction:column}
+  .slip-thumb img,.slip-thumb-empty{width:100%;height:180px}
+  .plan-days{grid-template-columns:1fr}
+}

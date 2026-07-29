@@ -8,8 +8,8 @@ import { faLaptop, faUtensils, faCircleCheck, faPhone, faCamera, faCheck, faXmar
 import { GIVE_SHEET_ENDPOINT as SHEET_ENDPOINT, GIVE_SHEET_TOKEN as SHEET_TOKEN, fetchWithTimeout } from '../utils/endpoints.js'
 
 import { formatPhone } from '../utils/formatPhone.js'
-const CLD_CLOUD = 'dei5jktuw'
-const CLD_PRESET = 'Ummatee'
+// ดึงจากแหล่งเดียว (utils/cloudinary.js) ไม่ copy ค่ามาเขียนซ้ำ — ย้ายบัญชี/เปลี่ยน preset แก้ที่เดียวจบ
+import { CLOUDINARY_CLOUD as CLD_CLOUD, CLOUDINARY_PRESET as CLD_PRESET } from '../utils/cloudinary.js'
 
 const TYPES = [
   {

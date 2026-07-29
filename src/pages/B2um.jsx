@@ -146,7 +146,7 @@ export default function B2um() {
                 <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
                   <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
                   {uploading ? ' กำลังอัพโหลด...' : ' เพิ่มภาพ'}
-                  <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
+                  <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadImages} />
                 </label>
               </div>
 

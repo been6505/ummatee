@@ -2,8 +2,13 @@
 // อ่าน/สร้าง doc staff/{uid} — ใช้ uid แทน email เพราะ Firestore rules เช็ค request.auth.uid ได้ตรงๆ
 //
 // การ bootstrap แอดมินคนแรก "ไม่" ทำอัตโนมัติแบบยกสิทธิ์ตัวเองเป็น admin (เสี่ยง race/ช่องโหว่ในระบบที่ไม่มี
-// server ตรวจสอบ) — ผู้ใช้ที่ล็อกอินแล้วยังไม่มี staff doc จะถูกสร้างเป็น role: 'staff' (สิทธิ์ต่ำสุด) ให้เอง
-// ส่วนแอดมินคนแรกต้องตั้งเองผ่าน Firebase Console (ดูรายงานท้ายงานสำหรับขั้นตอน)
+// server ตรวจสอบ) — ผู้ใช้ที่ล็อกอินแล้วยังไม่มี staff doc จะถูกสร้างเป็น role: 'pending' ซึ่ง "เข้าถึงอะไรไม่ได้เลย"
+// (ไม่ปรากฏใน isStaffRole([...]) ของ collection ใดๆ ใน firestore.rules) แล้วรอแอดมินอนุมัติเปลี่ยน role ให้
+//
+// ⚠️ ห้ามเปลี่ยนกลับเป็น 'staff': ใครก็สมัคร Firebase Auth เองได้ (มี Google Sign-In เปิดอยู่) ถ้า default เป็น
+// 'staff' คนนอกที่ล็อกอินมาจะได้สิทธิ์อ่าน/เขียน/ลบ CRM ทั้งหมดทันที รวมข้อมูลส่วนบุคคลของผู้รับความช่วยเหลือ
+// firestore.rules บังคับไว้อีกชั้นแล้วว่า self-create ได้เฉพาะ role == 'pending' เท่านั้น (ดูคอมเมนต์ที่ staff/{staffId})
+// ส่วนแอดมินคนแรกต้องตั้งเองผ่าน Firebase Console
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from './firebase.js'

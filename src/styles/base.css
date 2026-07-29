@@ -247,6 +247,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   color: white;
   font-size: 32px;
   cursor: pointer;
+  /* บังคับพื้นที่กดอย่างน้อย 44x44 (เกณฑ์ที่ Apple/Google แนะนำ) — เดิมเป็นแค่ตัวอักษร ×
+     ที่วัดได้จริงแค่ 16px กว้าง กดพลาดง่ายมากบนมือถือ ตัวอักษรยังเท่าเดิม แค่ขยายพื้นที่รับสัมผัส */
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* Grouped nav items */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyPromotion, hasDiscount, effectivePrice, discountPercent, groupProductsByName, dedupeSortSizes } from './pricing.js'
+import { applyPromotion, hasDiscount, effectivePrice, discountPercent, groupProductsByName, dedupeSortSizes, groupOrderItemsByProduct, planStockRestore } from './pricing.js'
 
 // เทสต์ logic เงินทั้งหมดของ Um Shop — กันพังเงียบๆ เวลาแก้โค้ด
 // รัน: npm test
@@ -136,5 +136,49 @@ describe('dedupeSortSizes — ตัดไซซ์ซ้ำ + เรียง�
   it('ไม่มีข้อมูล — คืน array ว่าง ไม่ crash', () => {
     expect(dedupeSortSizes(undefined, undefined)).toEqual([])
     expect(dedupeSortSizes([], 'เสื้อ')).toEqual([])
+  })
+})
+
+// การคืนสต็อกตอนยกเลิกออเดอร์ (cancelOrder) — เคยมีบั๊กที่เสื้อตัวเดียวกันคนละไซซ์
+// เขียนทับกันจนคืนได้แค่ไซซ์เดียว อีกไซซ์หายถาวร เทสต์ชุดนี้กันไม่ให้กลับมาอีก
+describe('groupOrderItemsByProduct', () => {
+  it('รวมรายการที่เป็น product doc เดียวกัน (คนละไซซ์) เข้าด้วยกัน', () => {
+    const map = groupOrderItemsByProduct([
+      { productDocId: 'p1', sizes: 'S', qty: 2 },
+      { productDocId: 'p1', sizes: 'M', qty: 1 },
+      { productDocId: 'p2', qty: 5 },
+    ])
+    expect(map.size).toBe(2)
+    expect(map.get('p1')).toHaveLength(2)
+    expect(map.get('p2')).toHaveLength(1)
+  })
+  it('ใช้ it.id เป็น key ถ้าไม่มี productDocId (ตะกร้าเวอร์ชันเก่า)', () => {
+    expect([...groupOrderItemsByProduct([{ id: 'old', qty: 1 }]).keys()]).toEqual(['old'])
+  })
+})
+
+describe('planStockRestore', () => {
+  it('คืนสต็อกครบทุกไซซ์ของสินค้าเดียวกันในการเขียนครั้งเดียว', () => {
+    const data = { sizeStock: { S: 0, M: 3, L: 4 }, sold: 10 }
+    const lines = [{ sizes: 'S', qty: 2 }, { sizes: 'M', qty: 1 }]
+    const plan = planStockRestore(data, lines)
+    expect(plan.sizeStock).toEqual({ S: 2, M: 4, L: 4 })   // คืนครบทั้ง S และ M
+    expect(plan.stock).toBe(10)                             // stock รวมต้องตรงกับผลรวมไซซ์ใหม่
+    expect(plan.sold).toBe(7)                               // ลด sold ด้วยจำนวนรวม 3 ชิ้น
+  })
+  it('สินค้าไม่มีไซซ์ — บวกคืนที่ stock รวม', () => {
+    expect(planStockRestore({ stock: 4, sold: 6 }, [{ qty: 3 }])).toEqual({ stock: 7, sold: 3 })
+  })
+  it('sold ไม่ติดลบแม้จำนวนที่คืนมากกว่ายอดขายสะสมที่บันทึกไว้', () => {
+    expect(planStockRestore({ stock: 0, sold: 1 }, [{ qty: 5 }]).sold).toBe(0)
+  })
+  it('สินค้าที่ไม่เคยมี stock เป็นตัวเลข — ห้ามบวกคืน (ตอนสั่งซื้อก็ไม่ได้ตัด)', () => {
+    const plan = planStockRestore({ sold: 3 }, [{ qty: 2 }])
+    expect(plan).toEqual({ sold: 1 })
+    expect(plan.stock).toBeUndefined()
+  })
+  it('มี sizeStock แต่รายการไม่ได้ระบุไซซ์ — ใช้ stock รวมแทน ไม่ไปยุ่ง sizeStock', () => {
+    const plan = planStockRestore({ sizeStock: { S: 1 }, stock: 1, sold: 2 }, [{ qty: 1 }])
+    expect(plan).toEqual({ stock: 2, sold: 1 })
   })
 })

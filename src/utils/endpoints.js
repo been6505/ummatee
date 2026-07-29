@@ -11,6 +11,13 @@ export const GIVE_SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
 // Iftar For Gaza — ลงทะเบียน + Broadcast อีเมล
 export const IFTAR_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
 
+// ส่งข้อมูลจากหน้าแอดมินเข้า Google Sheets (docs/sheets-export-apps-script/Code.gs)
+// ปล่อยว่าง = ปิดฟีเจอร์ ปุ่ม "ส่งเข้า Google Sheets" จะซ่อน (ปุ่มดาวน์โหลด CSV ยังใช้ได้ตามปกติ)
+// SHEETS_EXPORT_TOKEN ต้องตรงกับ EXPORT_TOKEN ใน Code.gs — เป็น write-token กันยิงมั่วเท่านั้น
+// ไม่ใช่ความลับจริง (อยู่ใน bundle) จึงห้ามเปิดสิทธิ์ "อ่าน" ใน Apps Script ตัวนั้นเด็ดขาด
+export const SHEETS_EXPORT_ENDPOINT = ''
+export const SHEETS_EXPORT_TOKEN = ''
+
 // อาสาสมัคร
 export const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
 

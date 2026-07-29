@@ -49,12 +49,12 @@ export function UploadButton({ label, multiple, uploading, onFiles }) {
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
         <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
         {uploading ? ' กำลังอัพโหลด...' : ` ${label}`}
-        <input type="file" accept="image/*" multiple={multiple} hidden onChange={onFiles} />
+        <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple={multiple} hidden onChange={onFiles} />
       </label>
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }} title="ถ่ายภาพด้วยกล้อง">
         <FontAwesomeIcon icon={faCamera} />
         {' ถ่ายภาพ'}
-        <input type="file" accept="image/*" capture="environment" hidden onChange={onFiles} />
+        <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" capture="environment" hidden onChange={onFiles} />
       </label>
     </div>
   )

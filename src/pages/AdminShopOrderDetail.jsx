@@ -2,7 +2,7 @@ import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import {
   useOrder, STATUS_LABEL, adminStatusLabel,
   uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, confirmDelivered, setTrackingNumber,
@@ -14,6 +14,7 @@ import { notifyLineOrderStatus } from '../utils/lineNotify.js'
 import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, COURIERS } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // หน้าจัดการคำสั่งซื้อของแอดมิน (/admin/shop/orders/:id) — ทำทุกขั้นตอน:
 // ยืนยันการชำระเงิน, แนบรูปสินค้าที่แพ็ค + ยืนยันจัดส่ง, อัปเดตสถานะการจัดส่ง, ยืนยันจัดส่งเรียบร้อย
@@ -26,9 +27,9 @@ const SHIP_STATUS_PRESETS = [
   'นำจ่ายไม่สำเร็จ ลองใหม่วันถัดไป',
 ]
 export default function AdminShopOrderDetail({ orderId }) {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const { order, loading, error } = useOrder(orderId)
-  const { products } = useProducts()
+  const { products, loading: productsLoading } = useProducts()
 
   // ราคาต่อชิ้นในออเดอร์มาจากฝั่งลูกค้า (client) — เทียบกับราคาสินค้าปัจจุบัน ถ้าไม่ตรงให้เตือนแอดมินก่อนยืนยันรับเงิน
   // (ราคาอาจต่างเพราะแอดมินเพิ่งแก้ราคา/โปรฯ หลังลูกค้าสั่ง — ไม่ใช่การโกงเสมอไป แต่ควรเช็คยอดโอนกับราคาที่ถูกต้อง)
@@ -106,6 +107,22 @@ export default function AdminShopOrderDetail({ orderId }) {
   }
 
   const handleConfirmPayment = async () => {
+    // ราคาไม่ตรงกับสินค้าปัจจุบัน = อาจเป็นออเดอร์ที่ถูกปลอมยอดจากฝั่ง client (rules ตรวจได้แค่ว่ายอดรวม
+    // สอดคล้องกันเองในเอกสาร ไม่ได้เทียบกับราคาจริงของสินค้า — ดูคอมเมนต์ validOrderCreate ใน firestore.rules)
+    // จึงต้องให้แอดมินยืนยันซ้ำอย่างตั้งใจก่อน ไม่ปล่อยให้กดผ่านไปเงียบๆ เพราะพลาดมองแบนเนอร์เตือน
+    // ระหว่างที่รายการสินค้ายังโหลดไม่เสร็จ products เป็น [] ⇒ priceMismatches ว่างเสมอ
+    // ถ้าไม่กันไว้ แอดมินที่กดยืนยันเร็วภายในเสี้ยววินาทีแรกจะข้ามด่านตรวจราคาไปเงียบๆ
+    // ซึ่งเป็นด่านสุดท้ายที่กันออเดอร์ปลอมยอด (ดูคอมเมนต์ validOrderCreate ใน firestore.rules)
+    if (productsLoading) {
+      window.alert('กำลังโหลดข้อมูลสินค้าเพื่อตรวจสอบราคา กรุณารอสักครู่แล้วกดใหม่')
+      return
+    }
+    if (priceMismatches.length > 0) {
+      const detail = priceMismatches
+        .map((m) => `• ${m.name}: ในออเดอร์ ฿${m.orderPrice.toLocaleString('th-TH')} / ราคาปัจจุบัน ฿${m.currentPrice.toLocaleString('th-TH')}`)
+        .join('\n')
+      if (!window.confirm(`⚠️ ราคาในออเดอร์ไม่ตรงกับราคาสินค้าปัจจุบัน\n\n${detail}\n\nกรุณาตรวจยอดที่ลูกค้าโอนมาจริงก่อน ยืนยันรับเงินต่อหรือไม่?`)) return
+    }
     setConfirming(true)
     try {
       await confirmPayment(order.id)
@@ -169,7 +186,7 @@ export default function AdminShopOrderDetail({ orderId }) {
           </div>
         </div>
 
-        {loading && <p>กำลังโหลดข้อมูล...</p>}
+        {loading && <ListSkeleton />}
         {!loading && (error || !order) && <p style={{ color: '#dc2626' }}>ไม่พบคำสั่งซื้อนี้</p>}
 
         {!loading && order && (
@@ -219,8 +236,8 @@ export default function AdminShopOrderDetail({ orderId }) {
                   uploading={uploadingProof}
                   onFiles={handleProofUpload}
                 />
-                <button className="admin-btn-primary" style={{ marginTop: 12, display: 'block' }} onClick={handleConfirmPayment} disabled={!order.paymentProofUrl || confirming}>
-                  {confirming ? 'กำลังยืนยัน...' : 'ยืนยันการชำระเงิน'}
+                <button className="admin-btn-primary" style={{ marginTop: 12, display: 'block' }} onClick={handleConfirmPayment} disabled={!order.paymentProofUrl || confirming || productsLoading}>
+                  {confirming ? 'กำลังยืนยัน...' : (productsLoading ? 'กำลังตรวจสอบราคา...' : 'ยืนยันการชำระเงิน')}
                 </button>
               </div>
             )}

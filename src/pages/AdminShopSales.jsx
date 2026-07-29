@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useOrders } from '../data/orders.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChartLine } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // รายงานยอดขาย Um Shop (/admin/shop/sales) — สรุปจากคำสั่งซื้อทั้งหมดใน Firestore
 // "ยอดขาย" นับเฉพาะออเดอร์ที่ยืนยันการชำระเงินแล้ว (สถานะพ้น pending_payment ไปแล้ว)
@@ -23,7 +24,7 @@ const monthLabel = (key) => {
 }
 
 export default function AdminShopSales() {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const { orders, loading } = useOrders()
 
   const paid = useMemo(() => orders.filter((o) => PAID_STATUSES.includes(o.status)), [orders])
@@ -70,7 +71,7 @@ export default function AdminShopSales() {
           </div>
         </div>
 
-        {loading ? <p style={{ padding: 40, textAlign: 'center' }}>กำลังโหลดข้อมูล...</p> : (<>
+        {loading ? <ListSkeleton /> : (<>
           <div className="admin-stats">
             <div className="admin-stat"><div className="v">{THB(totalRevenue)}</div><div className="l">ยอดขายสินค้า</div></div>
             <div className="admin-stat"><div className="v">{THB(totalShipping)}</div><div className="l">ค่าจัดส่งที่เก็บ</div></div>
@@ -78,7 +79,7 @@ export default function AdminShopSales() {
             <div className="admin-stat"><div className="v" style={pending.length ? { color: '#b45309' } : {}}>{pending.length}</div><div className="l">รอชำระเงิน</div></div>
           </div>
 
-          <div className="admin-shop-top-grid" style={{ marginTop: 20 }}>
+          <div className="admin-shop-top-grid sales-split" style={{ marginTop: 20 }}>
             <div className="admin-card">
               <h4>ยอดขายรายเดือน</h4>
               <div className="admin-table-wrap">

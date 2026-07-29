@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { watchVolunteerRegs, retrySync } from '../data/volunteer.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faHandshake, faDownload, faRotate, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 function ChartCard({ title, data, colors, types = ['donut', 'hbar', 'column'], showLegend = true, topN }) {
   const [type, setType] = useState(types[0])
@@ -89,7 +90,7 @@ const FILTER_FIELDS = [
 ]
 
 export default function AdminVolunteer() {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const authed = !!user
   const [regs, setRegs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -222,7 +223,7 @@ export default function AdminVolunteer() {
         </div>
 
         {loading ? (
-          <p style={{ textAlign: 'center', padding: 40 }}>กำลังโหลดข้อมูล...</p>
+          <ListSkeleton />
         ) : (
           <>
             <div className="admin-grid-3">

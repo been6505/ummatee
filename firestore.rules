@@ -56,13 +56,37 @@ service cloud.firestore {
     // ลงทะเบียน Iftar — ส่งฟอร์มได้ทุกคน (มีการตรวจรูปแบบ) แต่อ่าน/แก้/ลบเฉพาะแอดมิน
     match /iftarRegs/{id} {
       allow create: if validIftarReg();
-      allow read, update, delete: if isAdmin();
+      // อาสาสมัครเช็คอินหน้างานได้ (read/update) แต่ลบเอกสารผู้ลงทะเบียนถาวรต้องเป็นแอดมินตัวจริง
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin();
     }
 
-    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะแอดมิน
+    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะแอดมินตัวจริง
+    //
+    // เขียนต้องเป็น isFullAdmin() ไม่ใช่ isAdmin() เพราะ config/ คุมทั้งเว็บฝั่ง public:
+    //   config/site         → maintenance mode (ปิดเว็บทั้งเว็บได้)
+    //   config/homeCards, focusCards, siteContent, navVisibility → เนื้อหา/เมนูหน้าแรกทั้งหมด
+    //   config/announcement → แบนเนอร์ประกาศ (มี linkUrl ที่ไปโผล่ใน href ของผู้เข้าชมทุกคน)
+    //   config/financialDashboard → ยอดบริจาคและเลขบัญชีธนาคารที่โชว์หน้า /challenge
+    // บัญชี ummatee.volunteer@gmail.com แชร์กับทีมอาสาสมัครกลุ่มกว้าง (ดูคอมเมนต์ isFullAdmin ด้านบน)
+    // และไม่มีหน้าไหนในขอบเขตงานอาสาที่ต้องแก้ค่าพวกนี้ — ยกเว้น config/iftarMeta ที่แยกกฎไว้ด้านล่าง
+    //
+    // หมายเหตุ: counter สาธารณะ (shopOrderCounter/volunteerRefCounter/give2Counter/give2CookCounter)
+    // มี match เฉพาะของตัวเองอยู่ด้านล่าง ซึ่ง OR กับกฎนี้ — guest checkout/ลงทะเบียนจึงยังทำงานปกติ
     match /config/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isFullAdmin();
+    }
+
+    // ตั้งจำนวนที่นั่ง/ปิดรับลงทะเบียนงาน Iftar — อยู่ในขอบเขตงานอาสาสมัคร (หน้า /admin/event/iftar2026)
+    // จำกัดเฉพาะ 2 ฟิลด์นี้ ไม่ให้ยัดฟิลด์อื่นเข้ามาผ่าน doc นี้
+    match /config/iftarMeta {
+      allow read: if true;
+      // create ใช้ keys() (ยังไม่มี resource.data ให้ diff) / update ใช้ diff เพราะเขียนแบบ merge ทีละฟิลด์
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['seatLimit', 'isClosed']);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seatLimit', 'isClosed']);
     }
 
     // บันทึกเงินบริจาค — เฉพาะแอดมินตัวจริง (ไม่ใช่ขอบเขตงานอาสาสมัคร)
@@ -123,14 +147,17 @@ service cloud.firestore {
         && optStr(d, 'productCode', 30)
         && optStr(d, 'productName', 200)
         && d.qty is int && d.qty != 0 && d.qty >= -100000 && d.qty <= 100000
-        && d.type in ['order', 'stock-in']
+        && d.type in ['order', 'stock-in', 'cancel']
         && optStr(d, 'reason', 300)
         && optStr(d, 'orderCode', 20)
         && d.at is number;
     }
     match /stockMovements/{id} {
+      // guest ต้องอ้าง productId ที่มีสินค้าอยู่จริงเท่านั้น กันการยัด log ปลอมใส่รหัสสินค้าที่ไม่มีอยู่
+      // (ยังกันไม่ได้ว่า qty ตรงกับที่ตัดจริง — rules เทียบข้ามเอกสารแบบนั้นไม่ได้ ต้องพึ่ง transaction ใน createOrder)
       allow create: if isFullAdmin()
-        || (validStockMovement() && request.resource.data.type == 'order' && request.resource.data.qty < 0);
+        || (validStockMovement() && request.resource.data.type == 'order' && request.resource.data.qty < 0
+            && exists(/databases/$(database)/documents/products/$(request.resource.data.productId)));
       allow read, list, update, delete: if isFullAdmin();
     }
 
@@ -141,6 +168,12 @@ service cloud.firestore {
 
     // คำสั่งซื้อ Um Shop — สั่งซื้อได้โดยไม่ต้องล็อกอิน (guest checkout)
     // อ่านทีละรายการได้ทุกคน (เข้าผ่านลิงก์ติดตามคำสั่งซื้อที่เดา id ยาก) แต่ list ทั้งคอลเลกชันได้เฉพาะแอดมินตัวจริง
+    //
+    // ⚠️ ข้อจำกัดที่ยังปิดไม่ได้: rules ตรวจได้แค่ว่ายอดในเอกสารสอดคล้องกันเอง (total == itemsTotal + shippingFee)
+    // แต่เทียบ items[].price กับราคาจริงใน products/{id} ไม่ได้ เพราะ rules วน list เพื่อ get() ทีละสินค้าไม่ได้
+    // ⇒ คนที่เขียน Firestore ตรงๆ ข้าม UI ยังสร้างออเดอร์ราคาปลอมได้ ตัวกันชั้นสุดท้ายจึงเป็นฝั่งแอดมิน:
+    //    AdminShopOrderDetail เทียบราคากับสินค้าปัจจุบันแล้วบังคับ confirm ซ้ำก่อนกดยืนยันรับเงิน
+    // ปิดจริงต้องมี Cloud Functions (ต้องขึ้น Blaze plan) มาสร้างออเดอร์ฝั่งเซิร์ฟเวอร์แล้วล็อก create ของ client ทิ้ง
     function validOrderCreate() {
       let d = request.resource.data;
       return d.size() <= 9
@@ -254,7 +287,8 @@ service cloud.firestore {
     }
     match /give2Regs/{id} {
       allow create: if validGive2Reg();
-      allow read, update, delete: if isAdmin();
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin(); // ลบถาวร = นอกขอบเขตงานอาสาสมัคร
     }
 
     // Give2Cook — มอบเครื่องมือประกอบอาชีพ
@@ -267,6 +301,10 @@ service cloud.firestore {
         && d.refCode is string && d.refCode.size() <= 20
         && d.types is list && d.types.size() > 0 && d.types.size() <= 10
         && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        // items เป็น list ของ { name, qty } — จำกัดจำนวนรายการไว้ ไม่งั้นยัด list ยาวๆ กินพื้นที่ได้
+        // (เนื้อในแต่ละ element ตรวจไม่ได้ละเอียดใน rules แต่ต้องกันขนาดรวมไว้อย่างน้อย)
+        && (!('items' in d) || (d.items is list && d.items.size() <= 20))
+        && (!('canAttend' in d) || d.canAttend is bool)
         && optStr(d, 'email', 200)
         && optStr(d, 'detail', 2000)
         && optStr(d, 'typeLabels', 500)
@@ -274,7 +312,8 @@ service cloud.firestore {
     }
     match /give2CookRegs/{id} {
       allow create: if validGive2CookReg();
-      allow read, update, delete: if isAdmin();
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin(); // ลบถาวร = นอกขอบเขตงานอาสาสมัคร
     }
     // ตัวนับ ref code — อนุญาตเพิ่มทีละ 1 เท่านั้น (ป้องกันการรีเซ็ตหรือข้ามค่า)
     match /config/give2CookCounter {
@@ -297,21 +336,37 @@ service cloud.firestore {
     // สถิติหน้าบริจาค — Firestore Rules ประเมิน request.resource.data.keys() ผิดพลาดเมื่อ field ที่แก้ไข
     // ใช้ FieldValue.increment() ร่วมกับ hasOnly() ที่มีมากกว่า 1 field ในลิสต์ (พิสูจน์แล้วด้วยการทดสอบเขียนจริง
     // — เขียนไม่ได้แม้ field/ข้อมูลถูกต้องทุกอย่าง) ต้องใช้ diff().affectedKeys() แทนสำหรับ update เพื่อเลี่ยงบั๊กนี้
+    //
+    // ต้องตรวจ "ค่า" ด้วย ไม่ใช่แค่ชื่อ field — ไม่งั้นใครก็ยิง REST เซ็ต views กลับเป็น 0 (หรือเป็น string ยาวๆ)
+    // ทำให้สถิติที่สะสมมาหายถาวรโดยไม่มี audit log ไว้สืบ ทุกจุดในแอปเพิ่มทีละ 1 เสมอจึงบังคับ +1 เป๊ะได้
     match /stats/donation {
-      allow create: if request.resource.data.keys().hasOnly(['views', 'copies']);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'copies']);
+      allow create: if request.resource.data.keys().hasOnly(['views', 'copies'])
+        && (!('views' in request.resource.data) || request.resource.data.views == 1)
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is map && request.resource.data.copies.keys().size() <= 20));
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'copies'])
+        // views เพิ่มได้ทีละ 1 เท่านั้น (ห้ามลด/รีเซ็ต) — copies เป็น map แยกตามปุ่มที่กดคัดลอก จำกัดจำนวนคีย์ไว้
+        && (!('views' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.views is int && request.resource.data.views == resource.data.views + 1))
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is map && request.resource.data.copies.keys().size() <= 20));
       allow read: if isAdmin();
     }
 
-    // สถิติหน้า Iftar — นับจำนวนกดคัดลอกเลขบัญชี
+    // สถิติหน้า Iftar — นับจำนวนกดคัดลอกเลขบัญชี (เพิ่มทีละ 1 ห้ามรีเซ็ต ดูเหตุผลด้านบน)
     match /stats/iftar {
-      allow create, update: if request.resource.data.keys().hasOnly(['copies']);
+      allow create: if request.resource.data.keys().hasOnly(['copies'])
+        && request.resource.data.copies is int && request.resource.data.copies == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['copies'])
+        && request.resource.data.copies is int && request.resource.data.copies == resource.data.copies + 1;
       allow read: if isAdmin();
     }
 
     // นับผู้เข้าชมเว็บไซต์ — ทุกคนเพิ่มยอด views ได้ (เฉพาะ field views) แต่อ่านได้เฉพาะ admin
     match /stats/site {
-      allow create, update: if request.resource.data.keys().hasOnly(['views']);
+      allow create: if request.resource.data.keys().hasOnly(['views'])
+        && request.resource.data.views is int && request.resource.data.views == 1;
+      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดผู้เข้าชมสะสมกู้คืนไม่ได้ถ้าถูกทับ)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+        && request.resource.data.views is int && request.resource.data.views == resource.data.views + 1;
       allow read: if isAdmin();
     }
 
@@ -327,6 +382,8 @@ service cloud.firestore {
 
     // Give Receive — ลงทะเบียนรับคอมมือสอง / อุปกรณ์ประกอบอาชีพ
     match /giveReceiveRegs/{id} {
+      // ทุกฟิลด์ต้องมีเพดานความยาว ไม่ใช่แค่บางฟิลด์ — ฟอร์มนี้ส่งได้โดยไม่ต้องล็อกอิน ถ้าเว้นช่องไหนไว้
+      // ไม่ตรวจ ใครก็ยิง REST ใส่ string ขนาดใหญ่วนซ้ำจนพื้นที่ Spark plan (1GiB) เต็ม แล้วฟอร์มทุกหน้าในเว็บพังหมด
       allow create: if request.resource.data.size() <= 13
         && request.resource.data.fname is string && request.resource.data.fname.size() <= 100
         && request.resource.data.lname is string && request.resource.data.lname.size() <= 100
@@ -335,7 +392,14 @@ service cloud.firestore {
         && optStr(request.resource.data, 'email', 200)
         && optStr(request.resource.data, 'address', 500)
         && optStr(request.resource.data, 'reason', 2000)
-        && optStr(request.resource.data, 'wantedItems', 500);
+        && optStr(request.resource.data, 'wantedItems', 500)
+        && optStr(request.resource.data, 'date', 60)
+        && optStr(request.resource.data, 'age', 10)
+        && optStr(request.resource.data, 'school', 200)
+        && optStr(request.resource.data, 'teacherName', 100)
+        && optStr(request.resource.data, 'teacherPhone', 20)
+        && optStr(request.resource.data, 'job', 200)
+        && optStr(request.resource.data, 'detail', 2000);
       // อ่านทีละรายการ (สแกน QR RCV-{id}) และแก้เฉพาะ received/receivedAt ได้ทุกแอดมิน
       // แต่ list ทั้งคอลเลกชัน (ดึง PII ผู้รับทั้งหมดทีเดียว) และลบ เฉพาะแอดมินตัวจริง
       allow get: if isAdmin();
@@ -360,17 +424,24 @@ service cloud.firestore {
         && d.lastMessageText is string && d.lastMessageText.size() <= 2000
         && d.lastSender in ['visitor', 'admin']
         // ต้องเป็นแอดมินจริงถึงจะตั้ง lastSender เป็น 'admin' ได้ กัน user ทั่วไปปลอมข้อความว่ามาจากแอดมิน
-        && (d.lastSender == 'visitor' || isAdmin())
+        && (d.lastSender == 'visitor' || isFullAdmin())
         && d.unreadByAdmin is bool && d.unreadByVisitor is bool
         && optStr(d, 'visitorName', 100);
     }
+    // แชทของผู้เยี่ยมชมมี PII (ชื่อ/ข้อความที่คุยกับแอดมิน) และไม่อยู่ในขอบเขตงานอาสาสมัคร (ไม่มีเมนูแชท
+    // ใน VOLUNTEER_NAV) จึงจำกัด list/update/delete ไว้ที่ isFullAdmin()
+    //
+    // ⚠️ get ยังต้องเป็น true เพราะผู้เยี่ยมชมไม่ได้ล็อกอิน (chatId = visitorId แบบสุ่มใน localStorage)
+    // จึงเป็นความปลอดภัยแบบ "รู้ URL = เข้าถึงได้" — chatId เดาไม่ได้ (crypto.randomUUID) แต่รั่วได้ถ้า
+    // แอดมินแชร์ลิงก์ /admin/chat/<chatId> หรือแคปหน้าจอที่ติด URL ปิดสนิทต้องเปิด Anonymous Auth
+    // ให้ผู้เยี่ยมชมแล้วผูก chatId กับ request.auth.uid
     match /chats/{chatId} {
       allow get: if true;
-      allow list: if isAdmin();
+      allow list: if isFullAdmin();
       allow create: if validChatDoc();
       // ฝั่งผู้เยี่ยมชมแก้ได้เฉพาะตอนส่งข้อความตัวเอง (lastSender ต้องเป็น visitor) แอดมินแก้ได้ทุกฟิลด์ (รวม unreadByAdmin ตอนกดอ่าน)
-      allow update: if isAdmin() || (validChatDoc() && request.resource.data.lastSender == 'visitor');
-      allow delete: if isAdmin();
+      allow update: if isFullAdmin() || (validChatDoc() && request.resource.data.lastSender == 'visitor');
+      allow delete: if isFullAdmin();
 
       // การ์ดสินค้าที่แนบมากับข้อความ (กดปุ่ม "แชท" จากหน้ารายละเอียดสินค้า) — ไม่มี text ก็ได้ ถ้ามี product แทน
       // image/url ฝั่งแอดมินเอาไปเรนเดอร์ตรงๆ เป็น <img src>/<a href> (ดู AdminChat.jsx) — ต้องบังคับ http(s):// เท่านั้น
@@ -392,14 +463,14 @@ service cloud.firestore {
           && request.resource.data.sender in ['visitor', 'admin']
           // ต้องเป็นแอดมินจริงถึงจะส่งข้อความที่ sender: 'admin' ได้ ไม่งั้นใครก็ปลอมข้อความแอดมินได้
           // (อันตรายเพราะ onAdminReply ใน functions/index.js จะ push ข้อความ sender:'admin' ออกไปยัง LINE/Facebook จริงของผู้ใช้)
-          && (request.resource.data.sender == 'visitor' || isAdmin())
+          && (request.resource.data.sender == 'visitor' || isFullAdmin())
           && (
             (!('type' in request.resource.data)
               && request.resource.data.text is string
               && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
             || (request.resource.data.type == 'product' && request.resource.data.sender == 'visitor' && validProductCard())
           );
-        allow update, delete: if isAdmin();
+        allow update, delete: if isFullAdmin();
       }
     }
 
@@ -418,7 +489,7 @@ service cloud.firestore {
 
     // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
     match /staff/{staffId} {
-      allow read: if request.auth != null && (request.auth.uid == staffId || isStaffRole(['admin']));
+      allow read: if request.auth != null && (request.auth.uid == staffId || isStaffRole(['admin']) || isFullAdmin());
       // สมัครตัวเองครั้งแรก: สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เป็น 'pending' เท่านั้น
       //
       // สำคัญ: ห้ามให้ default เป็น 'staff' เด็ดขาด — 'staff' มีสิทธิ์ read/write/delete ข้อมูล CRM ทั้งหมด
@@ -430,11 +501,16 @@ service cloud.firestore {
         && request.resource.data.active == true;
       // แก้ไขข้อมูลตัวเอง (เช่น lastLoginAt) ได้ แต่ห้ามเปลี่ยน role/active ของตัวเอง (กัน self-elevate)
       // แอดมินแก้ของใครก็ได้ทุกฟิลด์ (ตั้ง role/active ให้คนอื่น)
-      allow update: if isStaffRole(['admin'])
+      // isFullAdmin() เป็นทางออกฉุกเฉินที่ขาดไม่ได้ (break-glass):
+      // ถ้าไม่มีใครมี staff doc ที่ role=='admin' อยู่เลย จะไม่มีใครตั้ง role ให้ใครได้ตลอดไป — รวมถึงเจ้าของเว็บเอง
+      // เพราะการสมัครเองบังคับเป็น 'pending' เสมอ ⇒ ล็อกทุกคนออกจากหน้า CRM/บอร์ด/จัดการพนักงานถาวร
+      // แก้ได้ทางเดียวคือเข้าไปแก้ Firestore ผ่าน Console ด้วยมือ ซึ่งไม่ควรเป็นขั้นตอนที่จำเป็น
+      // isFullAdmin คือ 2 อีเมลเจ้าของ (ระดับความเชื่อถือสูงสุดในระบบอยู่แล้ว) จึงไม่ได้ลดความปลอดภัยลง
+      allow update: if isStaffRole(['admin']) || isFullAdmin()
         || (request.auth.uid == staffId
             && request.resource.data.role == resource.data.role
             && request.resource.data.active == resource.data.active);
-      allow delete: if isStaffRole(['admin']);
+      allow delete: if isStaffRole(['admin']) || isFullAdmin();
     }
 
     // CRM: องค์กรพันธมิตร / จุดลงพื้นที่ (แผนที่) / วิทยากร — admin, staff, field เข้าถึงได้
@@ -472,6 +548,57 @@ service cloud.firestore {
     // ── Campaign / Event / campaignPartners (แผนแอดมิน-อินทราเน็ต ข้อ 2/3/6) ─
     // gating เดียวกับ CRM/บอร์ดด้านบน (admin/staff/field) ไม่แตะ collection เดิมเลย
     // ══════════════════════════════════════════════════════════════════
+
+    // ไฟล์แนบ (ลิงก์ Google Sheet/Doc/Slides/Drive) ผูกกับงานต่างๆ — staff เท่านั้น ทั้งอ่านและเขียน
+    // แยกเป็น collection เดียวคุมที่นี่จบ ไม่ต้องแก้ rules ของทุก collection ที่อยากแนบไฟล์ได้
+    // url บังคับ http(s) ตั้งแต่ใน rules — กัน scheme อันตราย (javascript:) หลุดไปอยู่ใน href ฝั่งแอดมิน
+    function validAttachment() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['entityType', 'entityId', 'url', 'title', 'kind', 'addedBy', 'addedAt'])
+        && d.entityType is string && d.entityType.size() > 0 && d.entityType.size() <= 40
+        && d.entityId is string && d.entityId.size() > 0 && d.entityId.size() <= 100
+        && d.url is string && d.url.size() <= 1000 && d.url.matches('^https?://.+')
+        && d.title is string && d.title.size() <= 200
+        && d.kind is string && d.kind.size() <= 20
+        && d.addedBy is string && d.addedBy.size() <= 200
+        && d.addedAt is number;
+    }
+    match /attachments/{id} {
+      allow read, list: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']) && validAttachment();
+      allow delete: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow update: if false; // แก้ไม่ได้ ให้ลบแล้วแนบใหม่ (ประวัติชัดกว่า และไม่ต้องตรวจ diff ซับซ้อน)
+    }
+
+    // ห้องประชุมวิดีโอ (Jitsi) — staff สร้าง/ปิด/ลบ ได้ คนนอกเข้าร่วมได้ด้วยลิงก์เชิญ /meet/<id>
+    //
+    // allow get: if true — จำเป็น เพราะคนนอกที่ได้รับลิงก์เชิญไม่ได้ล็อกอิน ต้องอ่าน doc เพื่อรู้ชื่อห้อง Jitsi
+    // ความปลอดภัยมาจาก doc id ที่เป็น UUID สุ่มเดาไม่ได้ (capability link แบบเดียวกับลิงก์ติดตามคำสั่งซื้อ)
+    // แต่ห้าม list เด็ดขาด ไม่งั้นคนนอกไล่ดูห้องประชุมทั้งหมด (พร้อมชื่อห้อง Jitsi) ได้ทีเดียว
+    //
+    // ปิดห้อง/ต่ออายุทำผ่าน update ที่แก้ได้แค่ active/expiresAt — กันการแก้ชื่อห้องหรือหัวข้อย้อนหลัง
+    function validMeeting() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['room', 'title', 'createdBy', 'createdAt', 'expiresAt', 'active'])
+        && d.room is string && d.room.size() > 0 && d.room.size() <= 100
+        && d.title is string && d.title.size() <= 200
+        && d.createdBy is string && d.createdBy.size() <= 200
+        && d.createdAt is number
+        && d.expiresAt is number
+        && d.active is bool;
+    }
+    match /meetings/{id} {
+      // คนนอกอ่านได้เฉพาะห้องที่ยัง "เปิด" และยังไม่หมดอายุ — บังคับที่ rules ไม่ใช่แค่ซ่อนฝั่ง client
+      // ไม่งั้นกด "ปิดห้อง" แล้วลิงก์เดิมยังอ่าน doc ได้ = อ่านชื่อห้อง Jitsi ไปเข้า meet.jit.si ตรงได้อยู่ดี
+      // (staff ยังอ่านได้ทุกห้องเพื่อจัดการห้องที่ปิด/หมดอายุไปแล้ว)
+      allow get: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        || (resource.data.active == true && resource.data.expiresAt > request.time.toMillis());
+      allow list: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']) && validMeeting();
+      allow update: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'expiresAt']);
+      allow delete: if isStaffRole(['admin', 'staff', 'field', 'social']);
+    }
 
     // แคมเปญบริจาค — campaignId ที่ contentPosts/boardCards อ้างถึงเป็นแค่ string เชื่อมโยงฝั่ง client
     // (ไม่บังคับ referential integrity ใน rules เพราะ contentPosts/boardCards เขียนได้กว้างอยู่แล้ว)

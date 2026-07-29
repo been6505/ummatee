@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { db } from '../firebase.js'
 import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPhone, faBoxOpen, faLaptop, faUtensils, faSchool, faUser, faQrcode, faArrowLeft, faTrash, faTriangleExclamation, faEnvelope, faLocationDot, faClipboardList, faQuoteLeft, faCheckCircle, faHandshake } from '@fortawesome/free-solid-svg-icons'
 import { QRCodeSVG } from 'qrcode.react'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 function ConfirmDelete({ item, onConfirm, onCancel }) {
   return (
@@ -157,7 +158,7 @@ function ReceiverCard({ item, onDelete }) {
 }
 
 export default function AdminGiveReceiver() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const [receivers, setReceivers] = useState([])
   const [tab, setTab] = useState('all')
   const [fetching, setFetching] = useState(true)
@@ -212,7 +213,7 @@ export default function AdminGiveReceiver() {
         </div>
 
         {fetching ? (
-          <p style={{ color: 'var(--ink-soft)', textAlign: 'center', padding: '40px 0' }}>กำลังโหลด...</p>
+          <ListSkeleton />
         ) : displayed.length === 0 ? (
           <p style={{ color: 'var(--ink-soft)', textAlign: 'center', padding: '40px 0' }}>ยังไม่มีข้อมูล</p>
         ) : (

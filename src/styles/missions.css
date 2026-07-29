@@ -22,8 +22,17 @@
 .hm-gaza-btn:hover{background:rgba(0,0,0,.8)}
 .hm-gaza-prev{left:10px}
 .hm-gaza-next{right:10px}
-.hm-gaza-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:5px}
-.hm-gaza-dot{width:6px;height:6px;border-radius:50%;border:none;background:rgba(255,255,255,.4);cursor:pointer;padding:0;transition:background .15s,transform .15s}
+/* ระยะห่างต้องกว้างพอให้พื้นที่กดของแต่ละจุดไม่ทับกัน ไม่งั้นกดแล้วไปโดนจุดข้างๆ
+   pitch = ขนาดจุด 6px + gap 14px = 20px ⇒ พื้นที่กดกว้าง 20px พอดี ไม่ล้ำเพื่อนบ้าน */
+.hm-gaza-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:14px}
+/* จุดยังเล็กเท่าเดิมเพื่อความสวย แต่ขยาย "พื้นที่กด" ด้วย ::after ที่โปร่งใสคลุม 28x28
+   (เดิมกดโดนแค่ 6px จริงๆ พลาดตลอดบนมือถือ) — ใช้ ::after แทนการเพิ่ม padding
+   เพราะ padding จะดันจุดให้ห่างกันจนเสียหน้าตาแถบจุด */
+/* flex:0 0 auto กันจุดถูกบีบให้เล็กลงเมื่อมีรูปหลายรูป (เจอจริง 19 จุด จุดหดเหลือ 5px) */
+.hm-gaza-dot{position:relative;flex:0 0 auto;width:6px;height:6px;border-radius:50%;border:none;background:rgba(255,255,255,.4);cursor:pointer;padding:0;transition:background .15s,transform .15s}
+/* กว้าง = 100% (ตัวจุด) + gap = ระยะพิตช์พอดี ⇒ พื้นที่กดของจุดที่ติดกันชนขอบกันแต่ไม่ทับกัน
+   ถ้าตั้งกว้างตายตัวเกินพิตช์ จะทับกันแล้วกดโดนจุดข้างๆ (จุดขวาทับซ้ายเพราะวาดทีหลัง) */
+.hm-gaza-dot::after{content:'';position:absolute;left:50%;top:50%;width:calc(100% + 14px);height:30px;transform:translate(-50%,-50%)}
 .hm-gaza-dot.active{background:#fff;transform:scale(1.3)}
 .hm-gaza-right{background:#fff;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:28px 24px}
 .hm-gaza-tag{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#C9302C;display:flex;align-items:center;gap:7px}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
 
 // สินค้า Um Shop — เก็บใน Firestore collection "products"
 // โครงสร้างสินค้า: { name, images: [url...], price, description, colors: [..], sizes: [..], stock, category, createdAt }
@@ -20,8 +21,10 @@ export function useProducts() {
   return { products, loading }
 }
 
-export const addProduct = (data) => addDoc(collection(db, 'products'), { ...data, createdAt: Date.now() })
-export const updateProduct = (id, data) => updateDoc(doc(db, 'products', id), data)
+// ใส่ searchTokens ทุกครั้งที่บันทึก เพื่อให้ค้นคำกลางชื่อสินค้าเจอ (ดู lib/searchIndex.js)
+const PRODUCT_SEARCH_FIELDS = ['name', 'productId', 'category']
+export const addProduct = (data) => addDoc(collection(db, 'products'), withSearchTokens({ ...data, createdAt: Date.now() }, PRODUCT_SEARCH_FIELDS))
+export const updateProduct = (id, data) => updateDoc(doc(db, 'products', id), withSearchTokens(data, PRODUCT_SEARCH_FIELDS))
 export const deleteProduct = (id) => deleteDoc(doc(db, 'products', id))
 
 // โปรโมชั่นส่วนลด Um Shop — เก็บใน Firestore collection "shopPromotions" (แอดมินเท่านั้นที่เห็น/จัดการ)

@@ -1,4 +1,5 @@
 import { useNavigate } from '../navContext'
+import { PAGE_TO_PATH } from '../data/routes.js'
 import { useLang } from '../i18n.jsx'
 import SocialLinks from './SocialLinks.jsx'
 import { useSiteContent, siteText } from '../data/siteContent.js'
@@ -60,12 +61,12 @@ export default function Footer() {
           </div>
           <div className="foot-col">
             <h5>{t.menu}</h5>
-            <a href="#" onClick={(e) => link(e, 'home')}>{t.home}</a>
-            <a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a>
-            <a href="#" onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a>
-            <a href="#" onClick={(e) => link(e, 'iftar')}>{t.iftar}</a>
-            <a href="#" onClick={(e) => link(e, 'give')}><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a>
-            <a href="#" onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a>
+            <a href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home')}>{t.home}</a>
+            <a href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => link(e, 'donation')}>{t.donation}</a>
+            <a href={PAGE_TO_PATH['qurban'] || '/'} onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a>
+            <a href={PAGE_TO_PATH['iftar'] || '/'} onClick={(e) => link(e, 'iftar')}>{t.iftar}</a>
+            <a href={PAGE_TO_PATH['give'] || '/'} onClick={(e) => link(e, 'give')}><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a>
+            <a href={PAGE_TO_PATH['volunteer'] || '/'} onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a>
 
           </div>
           <div className="foot-col">

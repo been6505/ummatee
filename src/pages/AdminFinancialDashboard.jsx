@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useFinancialData, saveFinancialData, DEFAULT_FINANCIAL } from '../data/financialData.js'
 import { DonutChart } from '../components/AdminCharts.jsx'
 import { ACCOUNTS } from '../data/accounts.js'
@@ -16,7 +16,7 @@ const BANK_NAME = 'ธนาคารอิสลามแห่งประเ�
 // หน้าแดชบอร์ดสาธารณะ /challenge จะอ่านค่านี้ไปแสดงอัตโนมัติ
 
 export default function AdminFinancialDashboard() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { data, loading: dataLoading } = useFinancialData()
   const [form, setForm] = useState(DEFAULT_FINANCIAL)
   const [status, setStatus] = useState('')

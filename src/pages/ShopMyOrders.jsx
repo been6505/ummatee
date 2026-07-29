@@ -12,6 +12,7 @@ import { faArrowLeft, faBoxOpen, faChevronRight } from '@fortawesome/free-solid-
 // ลูกค้ายังเข้าผ่านลิงก์/QR ที่แคปไว้ได้เสมอ)
 
 import { optImg } from '../utils/cloudinaryUrl.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 
 function myOrderIds() {
@@ -55,7 +56,7 @@ export default function ShopMyOrders() {
           </a>
 
           {orders === null ? (
-            <p style={{ textAlign: 'center', padding: 40, color: 'var(--ink-soft)' }}>กำลังโหลด...</p>
+            <ListSkeleton />
           ) : orders.length === 0 ? (
             <div className="shop-empty">
               <FontAwesomeIcon icon={faBoxOpen} className="shop-empty-icon" />

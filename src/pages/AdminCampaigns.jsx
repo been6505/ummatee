@@ -4,7 +4,13 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
-import { downloadCsv } from '../lib/csv.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
+
+import FileAttachments from '../components/FileAttachments.jsx'
+import ExportButtons from '../components/ExportButtons.jsx'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['name']
 
 // แคมเปญบริจาค (/admin/campaigns) — ข้อ 2 ของแผน admin-intranet-plan.md
 // currentAmount เป็นตัวเลขที่แอดมินอัปเดตเอง (ยังไม่ auto-sync จาก donations เพราะ donations ยังไม่มี field เชื่อม campaign)
@@ -100,10 +106,10 @@ export default function AdminCampaigns() {
       updatedAt: serverTimestamp(),
     }
     if (editId) {
-      await updateDoc(doc(db, 'campaigns', editId), payload)
+      await updateDoc(doc(db, 'campaigns', editId), withSearchTokens(payload, SEARCH_FIELDS))
       writeAuditLog({ action: 'update', entityType: 'campaign', entityId: editId, summary: `แก้ไขแคมเปญ ${payload.name}` })
     } else {
-      const ref = await addDoc(collection(db, 'campaigns'), { ...payload, createdAt: serverTimestamp() })
+      const ref = await addDoc(collection(db, 'campaigns'), withSearchTokens({ ...payload, createdAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'create', entityType: 'campaign', entityId: ref.id, summary: `เพิ่มแคมเปญ ${payload.name}` })
     }
     setForm(EMPTY); setEditId(null)
@@ -124,16 +130,17 @@ export default function AdminCampaigns() {
     writeAuditLog({ action: 'delete', entityType: 'campaign', entityId: c.id, summary: `ลบแคมเปญ ${c.name}` })
   }
 
-  const exportCsv = () => {
-    downloadCsv('campaigns.csv',
-      ['ชื่อ', 'เป้าหมาย', 'ยอดปัจจุบัน', '%', 'เริ่ม', 'สิ้นสุด', 'ช่องทาง', 'ผู้รับผิดชอบ', 'สถานะ'],
-      filtered.map((c) => [
+  // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
+  const buildExport = () => ({
+    filename: 'campaigns.csv',
+    sheetName: 'แคมเปญบริจาค',
+    headers: ['ชื่อ', 'เป้าหมาย', 'ยอดปัจจุบัน', '%', 'เริ่ม', 'สิ้นสุด', 'ช่องทาง', 'ผู้รับผิดชอบ', 'สถานะ'],
+    rows: filtered.map((c) => [
         c.name, c.goalAmount, c.currentAmount,
         c.goalAmount ? Math.round((c.currentAmount / c.goalAmount) * 100) + '%' : '-',
         c.startDate, c.endDate, (c.channels || []).join('; '), c.ownerName, STATUS_LABEL[c.status] || c.status,
-      ])
-    )
-  }
+      ]),
+  })
 
   const linkPartner = async (campaignId) => {
     if (!linkAddPartnerId) return
@@ -162,7 +169,7 @@ export default function AdminCampaigns() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>แคมเปญบริจาค</h1><p>วางแผนแคมเปญ เป้าหมาย งบ ช่วงเวลา และร้านค้าที่ร่วมสนับสนุน</p></div>
-              <button className="admin-btn" onClick={exportCsv}>ส่งออก CSV</button>
+              <ExportButtons build={buildExport} />
             </div>
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -198,6 +205,12 @@ export default function AdminCampaigns() {
                 <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มแคมเปญ'}</button>
                 {editId && <button className="admin-btn" onClick={cancel}>ยกเลิก</button>}
               </div>
+              {/* แนบไฟล์ได้เฉพาะตอนแก้ของที่บันทึกแล้ว — ของใหม่ยังไม่มี id ให้ผูกไฟล์ */}
+              {editId && (
+                <div style={{ marginTop: 4 }}>
+                  <FileAttachments entityType="campaign" entityId={editId} />
+                </div>
+              )}
             </div>
 
             <div className="admin-card-head" style={{ marginBottom: 12 }}>
@@ -205,7 +218,7 @@ export default function AdminCampaigns() {
               <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
 
-            {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+            {loading ? <ListSkeleton /> : (
               <div style={{ display: 'grid', gap: 16 }}>
                 {filtered.map((c) => {
                   const pct = c.goalAmount ? Math.min(100, Math.round((c.currentAmount / c.goalAmount) * 100)) : 0

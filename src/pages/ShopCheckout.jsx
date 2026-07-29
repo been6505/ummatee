@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useCart, clearCart } from '../data/cart.js'
+import { useCart, clearCart, updateCartPrices } from '../data/cart.js'
 import { createOrder, getShippingFee } from '../data/orders.js'
 import { notifyAdminNewOrder } from '../utils/lineNotify.js'
 import { formatPhone } from '../utils/formatPhone.js'
@@ -144,6 +144,9 @@ export default function ShopCheckout() {
       } catch { /* noop */ }
       go('shop-order', id)
     } catch (e) {
+      // ราคาเปลี่ยนตั้งแต่ตอนหยิบใส่ตะกร้า — เขียนราคาใหม่ลงตะกร้าก่อน ให้ยอดบนหน้าจอตรงกับของจริงทันที
+      // ลูกค้าจะได้เห็นยอดที่ถูกต้องแล้วตัดสินใจกดสั่งซื้อใหม่เอง (ดู createOrder ใน data/orders.js)
+      if (e.pricedItems) updateCartPrices(e.pricedItems)
       setError('สั่งซื้อไม่สำเร็จ กรุณาลองใหม่: ' + e.message)
       setSubmitting(false)
     }

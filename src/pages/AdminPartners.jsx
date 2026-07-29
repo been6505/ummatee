@@ -4,7 +4,12 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
-import { downloadCsv } from '../lib/csv.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
+
+import ExportButtons from '../components/ExportButtons.jsx'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['name', 'contactName']
 
 // องค์กรพันธมิตร (/admin/partners) — CRM พื้นฐาน มิเรอร์จากเวอร์ชัน Next.js (PartnerOrganization model)
 // partnerType: 'organization' (ค่าเริ่มต้น รวมของเก่าที่ไม่มี field นี้) | 'store' (ร้านค้าที่ผูกกับแคมเปญได้ที่ /admin/campaigns)
@@ -37,10 +42,10 @@ export default function AdminPartners() {
   const save = async () => {
     if (!form.name.trim()) { window.alert('กรอกชื่อองค์กร'); return }
     if (editId) {
-      await updateDoc(doc(db, 'partnerOrganizations', editId), { ...form, updatedAt: serverTimestamp() })
+      await updateDoc(doc(db, 'partnerOrganizations', editId), withSearchTokens({ ...form, updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'update', entityType: 'partnerOrganization', entityId: editId, summary: `แก้ไของค์กร ${form.name}` })
     } else {
-      const ref = await addDoc(collection(db, 'partnerOrganizations'), { ...form, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      const ref = await addDoc(collection(db, 'partnerOrganizations'), withSearchTokens({ ...form, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'create', entityType: 'partnerOrganization', entityId: ref.id, summary: `เพิ่มองค์กร ${form.name}` })
     }
     setForm(EMPTY); setEditId(null)
@@ -55,12 +60,13 @@ export default function AdminPartners() {
     writeAuditLog({ action: 'delete', entityType: 'partnerOrganization', entityId: p.id, summary: `ลบองค์กร ${p.name}` })
   }
 
-  const exportCsv = () => {
-    downloadCsv('partner-organizations.csv',
-      ['ชื่อ', 'ประเภทพันธมิตร', 'ประเทศ', 'ต่างประเทศ', 'ประเภท', 'ผู้ติดต่อ', 'เบอร์โทร', 'อีเมล', 'เว็บไซต์', 'หมายเหตุ'],
-      filtered.map((p) => [p.name, (p.partnerType || 'organization') === 'store' ? 'ร้านค้า' : 'องค์กร', p.country, p.isInternational ? 'ใช่' : 'ไม่', p.type, p.contactName, p.contactPhone, p.contactEmail, p.website, p.notes])
-    )
-  }
+  // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
+  const buildExport = () => ({
+    filename: 'partner-organizations.csv',
+    sheetName: 'องค์กรเครือข่าย',
+    headers: ['ชื่อ', 'ประเภทพันธมิตร', 'ประเทศ', 'ต่างประเทศ', 'ประเภท', 'ผู้ติดต่อ', 'เบอร์โทร', 'อีเมล', 'เว็บไซต์', 'หมายเหตุ'],
+    rows: filtered.map((p) => [p.name, (p.partnerType || 'organization') === 'store' ? 'ร้านค้า' : 'องค์กร', p.country, p.isInternational ? 'ใช่' : 'ไม่', p.type, p.contactName, p.contactPhone, p.contactEmail, p.website, p.notes]),
+  })
 
   return (
     <StaffRoleGuard allowedRoles={['admin', 'staff', 'field']}>
@@ -70,7 +76,7 @@ export default function AdminPartners() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>องค์กรพันธมิตร</h1><p>รายชื่อองค์กร/เครือข่ายพันธมิตรที่ทำงานร่วมกัน</p></div>
-              <button className="admin-btn" onClick={exportCsv}>ส่งออก CSV</button>
+              <ExportButtons build={buildExport} />
             </div>
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -105,7 +111,7 @@ export default function AdminPartners() {
                 <h4>รายชื่อองค์กร ({filtered.length})</h4>
                 <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-              {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+              {loading ? <ListSkeleton /> : (
                 <div className="admin-table-wrap">
                   <table className="admin-table">
                     <thead><tr><th>ชื่อ</th><th>ประเภทพันธมิตร</th><th>ประเทศ</th><th>ประเภท</th><th>ผู้ติดต่อ</th><th></th></tr></thead>

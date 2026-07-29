@@ -2,6 +2,7 @@ import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { useNavigate } from '../navContext'
+import { PAGE_TO_PATH } from '../data/routes.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLaptop, faUtensils, faCartShopping, faHandsHolding, faLandmark, faGift, faHandshake, faMicrophone, faGem, faMobileScreen, faBagShopping, faPaintbrush, faCalendar, faLocationDot, faClock, faBoxOpen, faTruckFast, faClipboardCheck, faHandHoldingHeart } from '@fortawesome/free-solid-svg-icons'
 
@@ -190,7 +191,7 @@ export default function GiveForUm() {
             </div>
           </div>
           <FadeUp style={{ textAlign: 'center', marginTop: 32 }}>
-            <a className="give-cta-btn" href="#" onClick={(e) => { e.preventDefault(); go('give2') }}>{t.campaignBtn}</a>
+            <a className="give-cta-btn" href={PAGE_TO_PATH['give2'] || '/'} onClick={(e) => { e.preventDefault(); go('give2') }}>{t.campaignBtn}</a>
           </FadeUp>
         </div>
       </section>
@@ -247,7 +248,7 @@ export default function GiveForUm() {
             ))}
           </div>
           <FadeUp style={{ textAlign: 'center', marginTop: 32 }}>
-            <a className="give-cta-btn donation-btn" href="#" onClick={(e) => { e.preventDefault(); go('donation') }}>{t.donateBtn}</a>
+            <a className="give-cta-btn donation-btn" href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => { e.preventDefault(); go('donation') }}>{t.donateBtn}</a>
           </FadeUp>
         </div>
       </section>

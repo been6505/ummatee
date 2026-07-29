@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '../navContext'
+import { PAGE_TO_PATH } from '../data/routes.js'
 import { useLang } from '../i18n.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHandSparkles, faCow, faFlag, faStore, faEarthAsia } from '@fortawesome/free-solid-svg-icons'
@@ -58,18 +59,18 @@ export default function Nav({ scrolled }) {
   return (
     <>
       <nav id="main-nav" className={scrolled ? 'scrolled' : ''}>
-        <a className="nav-logo" href="#" onClick={(e) => link(e, 'home')}>
+        <a className="nav-logo" href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home')}>
           <img src="/logo-trim.png" alt="UMMATEE มูลนิธิอุมมะตี" />
         </a>
         <ul className="nav-links">
-          <li><a href="#" onClick={(e) => link(e, 'home')}>{t.home}</a></li>
-          {show('donation') && <li><a href="#" onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>}
-          {show('missions') && <li><a href="#" onClick={(e) => link(e, 'missions')}><FontAwesomeIcon icon={faEarthAsia} /> {t.missions}</a></li>}
-          {show('qurban') && <li><a href="#" onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a></li>}
-          {show('shop') && <li><a href="#" onClick={(e) => link(e, 'shop')}><FontAwesomeIcon icon={faStore} /> {t.shop}</a></li>}
-          {show('iftar') && <li><a href="#" onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><FontAwesomeIcon icon={faFlag} /> {t.iftar}</a></li>}
-          {show('give') && <li><a href="#" onClick={(e) => link(e, 'give')} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a></li>}
-          {show('volunteer') && <li><a href="#" onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a></li>}
+          <li><a href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home')}>{t.home}</a></li>
+          {show('donation') && <li><a href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => link(e, 'donation')}>{t.donation}</a></li>}
+          {show('missions') && <li><a href={PAGE_TO_PATH['missions'] || '/'} onClick={(e) => link(e, 'missions')}><FontAwesomeIcon icon={faEarthAsia} /> {t.missions}</a></li>}
+          {show('qurban') && <li><a href={PAGE_TO_PATH['qurban'] || '/'} onClick={(e) => link(e, 'qurban')}><FontAwesomeIcon icon={faCow} /> {t.qurban}</a></li>}
+          {show('shop') && <li><a href={PAGE_TO_PATH['shop'] || '/'} onClick={(e) => link(e, 'shop')}><FontAwesomeIcon icon={faStore} /> {t.shop}</a></li>}
+          {show('iftar') && <li><a href={PAGE_TO_PATH['iftar'] || '/'} onClick={(e) => link(e, 'iftar')} style={{ color: '#ff6b78', fontWeight: 600 }}><FontAwesomeIcon icon={faFlag} /> {t.iftar}</a></li>}
+          {show('give') && <li><a href={PAGE_TO_PATH['give'] || '/'} onClick={(e) => link(e, 'give')} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.give}</a></li>}
+          {show('volunteer') && <li><a href={PAGE_TO_PATH['volunteer'] || '/'} onClick={(e) => link(e, 'volunteer')}><FontAwesomeIcon icon={faHandSparkles} /> {t.volunteer}</a></li>}
         </ul>
         <div className="nav-right">
           <div className="lang-switch">
@@ -86,7 +87,7 @@ export default function Nav({ scrolled }) {
               </div>
             )}
           </div>
-          <a href="#" className="nav-cta" onClick={(e) => link(e, 'donation')}>{t.cta}</a>
+          <a href={PAGE_TO_PATH['donation'] || '/'} className="nav-cta" onClick={(e) => link(e, 'donation')}>{t.cta}</a>
           <button className="nav-hamburger" onClick={() => setOpen(true)} aria-label="menu">
             <span></span><span></span><span></span>
           </button>
@@ -97,14 +98,14 @@ export default function Nav({ scrolled }) {
       <div className={`scrim ${open ? 'show' : ''}`} onClick={close}></div>
       <div className={`nav-drawer ${open ? 'open' : ''}`}>
         <button className="drawer-close" onClick={close} aria-label="close">×</button>
-        <a href="#" onClick={(e) => link(e, 'home', true)}>{t.dHome}</a>
-        {show('donation') && <a href="#" onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>}
-        {show('iftar') && <a href="#" onClick={(e) => link(e, 'iftar', true)} className="iftar-link"><FontAwesomeIcon icon={faFlag} /> {t.dIftar}</a>}
-        {show('give') && <a href="#" onClick={(e) => link(e, 'give', true)} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.dGive}</a>}
-        {show('volunteer') && <a href="#" onClick={(e) => link(e, 'volunteer', true)}><FontAwesomeIcon icon={faHandSparkles} /> {t.dVolunteer}</a>}
-        {show('missions') && <a href="#" onClick={(e) => link(e, 'missions', true)}><FontAwesomeIcon icon={faEarthAsia} /> {t.dMissions}</a>}
-        {show('qurban') && <a href="#" onClick={(e) => link(e, 'qurban', true)}><FontAwesomeIcon icon={faCow} /> {t.dQurban}</a>}
-        {show('shop') && <a href="#" onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>}
+        <a href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home', true)}>{t.dHome}</a>
+        {show('donation') && <a href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>}
+        {show('iftar') && <a href={PAGE_TO_PATH['iftar'] || '/'} onClick={(e) => link(e, 'iftar', true)} className="iftar-link"><FontAwesomeIcon icon={faFlag} /> {t.dIftar}</a>}
+        {show('give') && <a href={PAGE_TO_PATH['give'] || '/'} onClick={(e) => link(e, 'give', true)} className="give-nav-link"><FontAwesomeIcon icon={faHandHoldingHeart} /> {t.dGive}</a>}
+        {show('volunteer') && <a href={PAGE_TO_PATH['volunteer'] || '/'} onClick={(e) => link(e, 'volunteer', true)}><FontAwesomeIcon icon={faHandSparkles} /> {t.dVolunteer}</a>}
+        {show('missions') && <a href={PAGE_TO_PATH['missions'] || '/'} onClick={(e) => link(e, 'missions', true)}><FontAwesomeIcon icon={faEarthAsia} /> {t.dMissions}</a>}
+        {show('qurban') && <a href={PAGE_TO_PATH['qurban'] || '/'} onClick={(e) => link(e, 'qurban', true)}><FontAwesomeIcon icon={faCow} /> {t.dQurban}</a>}
+        {show('shop') && <a href={PAGE_TO_PATH['shop'] || '/'} onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>}
 
       </div>
     </>

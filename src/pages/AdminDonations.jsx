@@ -4,11 +4,12 @@ import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from '
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { Chart, ChartTypeSwitch, PALETTE } from '../components/AdminCharts.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // แดชบอร์ดเงินบริจาค (/admin/donations) — บันทึกยอดบริจาคแยกตาม 8 บัญชี ibank ลง Firestore (collection: donations)
 // มีกราฟหลายแบบ ค้นหา/กรอง/เรียงได้ และเพิ่ม/ลบรายการได้
@@ -22,7 +23,7 @@ const monthLabel = (ym) => {
 }
 
 export default function AdminDonations() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
 
   const [records, setRecords] = useState([])
   const [recLoading, setRecLoading] = useState(true)
@@ -177,7 +178,7 @@ export default function AdminDonations() {
           </div>
         </div>
 
-        {recLoading ? <p>กำลังโหลดข้อมูล...</p> : (
+        {recLoading ? <ListSkeleton /> : (
           <>
             <div className="admin-grid">
               <div className="admin-card admin-card-center">

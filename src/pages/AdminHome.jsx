@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { db } from '../firebase.js'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { ACCOUNTS } from '../data/accounts.js'
@@ -23,7 +23,7 @@ const ALL_LINKS = [
 ]
 
 export default function AdminHome() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const [stats, setStats] = useState(null)
   const [siteViews, setSiteViews] = useState(null)
   const [iftarCopies, setIftarCopies] = useState(null)

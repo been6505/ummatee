@@ -7,6 +7,21 @@
   background:url('/shop-sale-banner.webp') center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
 }
+/* จอกว้างกว่ามือถือ: โปสเตอร์เป็นแนวตั้ง 4:5 ถ้าปล่อยให้ aspect-ratio คุมความสูงตามความกว้างเต็มจอ
+   แถบจะสูง = กว้าง x 1.25 (จอ 1900px -> สูง 2375px) ผู้ใช้ต้องเลื่อนหลายหน้าจอกว่าจะพ้นแบนเนอร์
+   -> ล็อกความสูงไว้แล้วให้ contain ย่อรูปลงมาพอดี ไม่ครอปภาพ (เจตนาเดิมของ contain ยังอยู่ครบ)
+   ที่ว่างสองข้างเติมด้วยไล่สีแดงชุดเดียวกับขอบโปสเตอร์ (#EE1A26 บน -> #CF232B ล่าง วัดจากไฟล์จริง)
+   จึงกลืนเป็นกรอบเดียวกัน ไม่เห็นเป็นแถบขาวคั่น */
+@media (min-width:560px){
+  .shop-page-band{
+    aspect-ratio:auto;
+    height:min(76vh,660px);
+    background-image:url('/shop-sale-banner.webp'),linear-gradient(180deg,#EE1A26,#CF232B);
+    background-position:center,center;
+    background-size:contain,cover;
+    background-repeat:no-repeat,no-repeat;
+  }
+}
 
 /* ===== Social media follow ===== */
 .social-section{padding:0 0 96px}
@@ -24,8 +39,17 @@
 /* Um Shop — public */
 .admin-form-grid textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;resize:vertical}
 .admin-shop-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover}
-.admin-shop-top-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;margin-bottom:24px}
-@media (max-width:860px){.admin-shop-top-grid{grid-template-columns:1fr}}
+.admin-shop-top-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start;margin-bottom:24px}
+@media (max-width:860px){.admin-shop-top-grid{grid-template-columns:minmax(0,1fr)}}
+/* 1fr = minmax(auto,1fr) ซึ่ง auto = min-content ของเนื้อใน ⇒ ถ้าในการ์ดมีตารางกว้างๆ
+   คอลัมน์จะยืดตามตารางจนล้นจอ (บนมือถือ 375px คอลัมน์กลายเป็น 475px ทั้งที่ที่ว่างมีแค่ 343px)
+   ต้อง minmax(0,1fr) + min-width:0 ที่ตัวลูก ให้ยุบได้แล้วปล่อยให้ .admin-table-wrap เลื่อนแนวนอนแทน */
+.admin-shop-top-grid > *{min-width:0}
+
+/* หน้ารายงานยอดขาย: ตารางยอดขายรายเดือนมีแค่ 3 คอลัมน์สั้นๆ ไม่ต้องกว้าง
+   ส่วน "สินค้าขายดี" มีชื่อสินค้ายาว ถ้าเหลือ 320px ชื่อจะถูกตัดจนอ่านไม่จบ ⇒ สลับสัดส่วนกัน */
+.admin-shop-top-grid.sales-split{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
+@media (max-width:860px){.admin-shop-top-grid.sales-split{grid-template-columns:minmax(0,1fr)}}
 .shop-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:28px}
 .shop-search{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
 .shop-search:focus{outline:2px solid var(--green-mid);border-color:transparent}
@@ -312,3 +336,16 @@
 .shop-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
 .shop-card-foot .shop-stock{margin-top:0}
 .shop-sold{font-size:.78rem;color:var(--ink-soft);white-space:nowrap}
+
+/* แจ้งเตือนกลางจอ (หน้ารายละเอียดสินค้า) — ตอนกดเพิ่มลงตะกร้าโดยยังเลือกสี/ขนาดไม่ครบ
+   z-index สูงกว่า .shop-detail-bar (500) เพราะแถบปุ่มล่างลอยติดจอ ถ้าต่ำกว่าจะโดนทับ */
+.shop-alert-overlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px;animation:sa-fade .15s ease}
+@keyframes sa-fade{from{opacity:0}to{opacity:1}}
+@keyframes sa-pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+.shop-alert{background:#fff;border-radius:18px;padding:28px 26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.3);animation:sa-pop .18s ease}
+.shop-alert-icon{width:56px;height:56px;margin:0 auto 14px;border-radius:50%;background:#fff4e5;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.shop-alert h3{font-size:1.1rem;font-weight:800;color:var(--ink);margin:0 0 6px}
+.shop-alert p{font-size:.95rem;color:var(--ink-soft);margin:0 0 20px;line-height:1.6}
+.shop-alert-btn{width:100%;padding:13px;border:none;border-radius:99px;background:var(--green-deep);color:#fff;font-weight:800;font-size:.95rem;font-family:inherit;cursor:pointer;transition:background .15s}
+.shop-alert-btn:hover{background:var(--green-mid)}
+@media (prefers-reduced-motion:reduce){.shop-alert-overlay,.shop-alert{animation:none}}

@@ -5,21 +5,21 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe, faComments, faBell } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell } from '@fortawesome/free-solid-svg-icons'
 
-import { isVolunteerEmail } from '../useAdminRole.js'
+import { isVolunteerEmail, isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
 import AdminChatFab from './AdminChatFab.jsx'
 import AdminGlobalSearch from './AdminGlobalSearch.jsx'
 import { useAdminChatList } from '../data/chat.js'
 import { useNewOrdersCount, useNewOrders } from '../data/orders.js'
 import useSunGradient from '../hooks/useSunGradient.js'
-import useStaffRole, { hasStaffRole } from '../useStaffRole.js'
-import { faUsers, faMapLocationDot, faTableColumns, faClockRotateLeft, faMicrophone, faBullseye, faVideo } from '@fortawesome/free-solid-svg-icons'
+import useStaffRole from '../useStaffRole.js'
+import { visibleStaffNav } from '../data/staffNav.js'
+import useAdminAuth from '../useAdminAuth.js'
 
 const NAV_GROUPS = [
   { label: 'หน้าหลัก', icon: faHouse, href: '/admin/dashboard' },
-  { label: 'จัดการเว็บ', icon: faGlobe, href: '/admin/website' },
   { label: 'แชท', icon: faComments, href: '/admin/chat' },
   {
     label: 'Missions', icon: faEarthAsia, children: [
@@ -44,7 +44,6 @@ const NAV_GROUPS = [
       { href: '/admin/shop/sales', label: 'รายงานยอดขาย' },
     ]
   },
-  { label: 'ปฏิทิน', icon: faCalendar, href: '/admin/calendar' },
   {
     label: 'เงินบริจาค', icon: faMoneyBill, children: [
       { href: '/admin/donations', label: 'บันทึกเงินบริจาค' },
@@ -55,24 +54,6 @@ const NAV_GROUPS = [
   { label: 'Email Broadcast', icon: faBullhorn, href: '/admin/dashboard/broadcast' },
 ]
 
-// เมนู CRM/บอร์ด/staff ใหม่ — ใช้ระบบ staff role ใหม่ (staff/{uid}) แยกจาก isAdmin/isVolunteer เดิม
-// requireRoles: null = แค่ต้องมี staff doc ที่ active (ไม่จำกัด role) ไม่ null = ต้องอยู่ใน role list นั้น
-const STAFF_NAV_GROUPS = [
-  { label: 'แดชบอร์ด Staff', icon: faTableColumns, href: '/admin/staff-dashboard', requireRoles: ['admin', 'staff', 'social', 'field'] },
-  {
-    label: 'CRM', icon: faUsers, requireRoles: ['admin', 'staff', 'field'], children: [
-      { href: '/admin/partners', label: 'องค์กรพันธมิตร' },
-      { href: '/admin/aid-map', label: 'แผนที่จุดลงพื้นที่', icon: faMapLocationDot },
-      { href: '/admin/speakers', label: 'วิทยากร/อินฟลูเอนเซอร์', icon: faMicrophone },
-    ]
-  },
-  { label: 'แคมเปญบริจาค', icon: faBullseye, href: '/admin/campaigns', requireRoles: ['admin', 'staff', 'field'] },
-  { label: 'งาน/อีเวนต์', icon: faFlag, href: '/admin/events', requireRoles: ['admin', 'staff', 'field'] },
-  { label: 'บอร์ดวางแผน', icon: faTableColumns, href: '/admin/board', requireRoles: ['admin', 'staff', 'field'] },
-  { label: 'ประชุมวิดีโอ', icon: faVideo, href: '/admin/video-call', requireRoles: ['admin', 'staff', 'field', 'social'] },
-  { label: 'ประวัติการเปลี่ยนแปลง', icon: faClockRotateLeft, href: '/admin/audit-log', requireRoles: ['admin'] },
-  { label: 'จัดการ Staff', icon: faUsers, href: '/admin/staff', requireRoles: ['admin'] },
-]
 
 const VOLUNTEER_NAV = [
   {
@@ -278,7 +259,10 @@ export default function AdminNav() {
     return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
   }, [open])
 
-  const email = auth.currentUser?.email || ''
+  // ใช้ useAdminAuth (subscribe onAuthStateChanged) ไม่ใช่ auth.currentUser ตรงๆ — ตอน hard reload
+  // Firebase Auth ยังกู้ session ไม่เสร็จ currentUser เป็น null ทำให้เมนู staff/CRM หายไปจนกดลิงก์อื่นให้ re-render
+  const { user: authUser } = useAdminAuth()
+  const email = authUser?.email || ''
   const isVolunteer = isVolunteerEmail(email)
   const groups = isVolunteer ? VOLUNTEER_NAV : NAV_GROUPS
   const newOrders = useNewOrdersCount(!isVolunteer)
@@ -286,8 +270,12 @@ export default function AdminNav() {
 
   // ระบบ staff role ใหม่ (CRM/บอร์ด/audit log) — ซ่อนกลุ่มเมนูที่บัญชีปัจจุบันไม่มีสิทธิ์เข้าถึง
   // แค่ระดับ UI เท่านั้น ของจริงบังคับที่ firestore.rules (isStaffRole) เสมอ
-  const { staff } = useStaffRole(auth.currentUser)
-  const visibleStaffGroups = STAFF_NAV_GROUPS.filter((g) => !g.requireRoles || hasStaffRole(staff, g.requireRoles))
+  const { staff } = useStaffRole(authUser)
+  // เจ้าของระบบเห็นเมนู staff ครบเสมอ (break-glass ชุดเดียวกับ StaffRoleGuard) — ถ้ายังไม่มีใครถูกตั้ง
+  // เป็น role 'admin' เลย เจ้าของจะเข้าหน้าได้แต่ไม่มีลิงก์ให้กด ต้องพิมพ์ URL เองซึ่งไม่ควรเป็นขั้นตอนปกติ
+  const isOwner = isFullAdminEmail(email)
+  const isSuper = isSuperAdminEmail(email)
+  const visibleStaffGroups = visibleStaffNav(staff, { isOwner, isSuper })
 
   const navContent = (
     <>

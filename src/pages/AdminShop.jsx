@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import {
   useProducts, updateProduct, deleteProduct,
   usePromotions, applyPromotion,
 } from '../data/shop.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretUp, faCaretDown, faPencil, faCheck, faCopy, faTrash, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // จัดการสินค้า Um Shop (/admin/shop) — รายการสินค้า ค้นหา/กรอง/เรียง/ลบ/แสดง-ซ่อน
 // เพิ่มสินค้าใหม่/แก้ไข/โปรโมชั่น อยู่ที่หน้าแยก /admin/shop/new (AdminShopNew.jsx)
@@ -100,7 +101,7 @@ function DiscountCell({ product, promotions }) {
 const EMPTY_PROMO = { label: '', type: 'percent', value: '' }
 
 export default function AdminShop() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { products, loading: prodLoading } = useProducts()
   const { promotions } = usePromotions()
 
@@ -161,7 +162,7 @@ export default function AdminShop() {
           <a className="admin-btn-primary" href="/admin/shop/new">+ เพิ่มสินค้าใหม่ / โปรโมชั่น</a>
         </div>
 
-        {prodLoading ? <p>กำลังโหลดข้อมูล...</p> : (
+        {prodLoading ? <ListSkeleton /> : (
           <div className="admin-card">
             <div className="admin-card-head">
               <h4>รายการสินค้า ({filtered.length}/{products.length})</h4>

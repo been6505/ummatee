@@ -168,7 +168,19 @@
 .hf-brand-sub{font-size:.78rem;color:rgba(255,255,255,.8);font-weight:500;margin-top:1px}
 .hf-feed{display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(14px,2.5vw,24px)}
 @media (max-width:800px){.hf-feed{grid-template-columns:1fr 1fr}}
-@media (max-width:500px){.hf-feed{grid-template-columns:1fr}}
+/* จอแคบ ≤500px — แทนที่จะเรียงการ์ดซ้อนกันแนวตั้งยาวๆ ให้เลื่อนดูทีละใบแบบ carousel (scroll-snap)
+   พร้อมเลื่อนอัตโนมัติ + จุดบอกตำแหน่งจาก JS (ดู hfFeedRef/hfActive ใน Home.jsx) */
+@media (max-width:500px){
+  .hf-feed{display:flex;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;padding-bottom:4px;scrollbar-width:none}
+  .hf-feed::-webkit-scrollbar{display:none}
+  .hf-feed>*{flex:0 0 92%;scroll-snap-align:center}
+}
+.hf-dots{display:none}
+@media (max-width:500px){
+  .hf-dots{display:flex;justify-content:center;gap:8px;margin-top:14px}
+  .hf-dot{width:8px;height:8px;border-radius:50%;border:none;background:rgba(255,255,255,.35);padding:0;cursor:pointer;transition:background .2s,transform .2s}
+  .hf-dot.active{background:#fff;transform:scale(1.25)}
+}
 /* การ์ดใบเดียว — grid 3 คอลัมน์ตายตัวทำให้การ์ดไปกองอยู่คอลัมน์แรกแล้วเหลือที่ว่างโบ๋อีก 2 คอลัมน์
    ให้ยุบเหลือคอลัมน์เดียวแล้วขยายเต็มความกว้าง (ตัวจัดวางแนวนอนอยู่ในบล็อกจอกว้างด้านล่าง) */
 .hf-feed:has(> .hf-card:only-child){grid-template-columns:minmax(0,1fr)}

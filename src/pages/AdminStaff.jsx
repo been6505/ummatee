@@ -2,14 +2,39 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
-import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
+import AdminLogin from '../components/AdminLogin.jsx'
+import useAdminAuth from '../useAdminAuth.js'
+import { isSuperAdminEmail } from '../useAdminRole.js'
 import { writeAuditLog } from '../lib/auditLog.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // จัดการบัญชี staff (/admin/staff) — เฉพาะ admin เท่านั้น เปลี่ยน role/active ได้
 // ไม่มีปุ่ม "เพิ่ม staff" ตรงนี้ เพราะบัญชีสมัครตัวเองอัตโนมัติตอนล็อกอินครั้งแรก แต่ได้ role 'pending'
 // ที่ยังไม่มีสิทธิ์อะไรเลย (ดู src/useStaffRole.js) — แอดมินต้องมาเลื่อน role ให้ที่หน้านี้ก่อนถึงใช้งานได้
 const ROLES = ['pending', 'admin', 'staff', 'social', 'field']
 const ROLE_LABEL = { pending: 'รออนุมัติ (ยังเข้าใช้ไม่ได้)', admin: 'แอดมิน', staff: 'พนักงาน', social: 'ทีมโซเชียล', field: 'ทีมภาคสนาม' }
+
+// เข้าได้เฉพาะแอดมินสูงสุดบัญชีเดียว (ตรงกับ isSuperAdmin() ใน firestore.rules)
+// ซ่อนเมนูอย่างเดียวไม่พอ — คนอื่นพิมพ์ URL เข้ามาตรงๆ ได้ ต้องกันที่หน้าด้วย
+function SuperAdminOnly({ children }) {
+  const { user, loading } = useAdminAuth()
+  if (loading) return null
+  if (!user) return <AdminLogin />
+  if (!isSuperAdminEmail(user.email || '')) {
+    return (
+      <main className="admin-dash">
+        <AdminNav />
+        <div className="admin-wrap">
+          <div className="admin-card" style={{ marginTop: 40, textAlign: 'center' }}>
+            <h3>เฉพาะแอดมินสูงสุดเท่านั้น</h3>
+            <p>บัญชี {user.email} ไม่มีสิทธิ์เข้าหน้านี้</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+  return children
+}
 
 export default function AdminStaff() {
   const [list, setList] = useState([])
@@ -37,52 +62,50 @@ export default function AdminStaff() {
   }
 
   return (
-    <StaffRoleGuard allowedRoles={['admin']}>
-      {() => (
-        <main className="admin-dash">
-          <AdminNav />
-          <div className="admin-wrap">
-            <div className="admin-head">
-              <div>
-                <h1>จัดการ Staff</h1>
-                <p>ดู/ปรับ role และเปิดปิดใช้งานบัญชี staff ที่ล็อกอินเข้ามาแล้ว</p>
+    <SuperAdminOnly>
+      <main className="admin-dash">
+        <AdminNav />
+        <div className="admin-wrap">
+          <div className="admin-head">
+            <div>
+              <h1>จัดการ Staff</h1>
+              <p>ดู/ปรับ role และเปิดปิดใช้งานบัญชี staff ที่ล็อกอินเข้ามาแล้ว</p>
+            </div>
+          </div>
+
+          {loading ? <ListSkeleton /> : (
+            <div className="admin-card">
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr><th>อีเมล</th><th>ชื่อ</th><th>Role</th><th>สถานะ</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {list.map((s) => (
+                      <tr key={s.id} className={s.role === 'pending' ? 'staff-pending-row' : ''}>
+                        <td>{s.email}{s.role === 'pending' && <span className="staff-pending-tag">รออนุมัติ</span>}</td>
+                        <td>{s.name || '—'}</td>
+                        <td>
+                          <select value={s.role} onChange={(e) => setRole(s, e.target.value)}>
+                            {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                          </select>
+                        </td>
+                        <td>{s.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</td>
+                        <td>
+                          <button className={s.active ? 'admin-btn-danger' : 'admin-btn-primary'} onClick={() => toggleActive(s)}>
+                            {s.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {list.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีใครล็อกอินเข้าระบบ staff เลย</td></tr>}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            {loading ? <p>กำลังโหลดข้อมูล...</p> : (
-              <div className="admin-card">
-                <div className="admin-table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>อีเมล</th><th>ชื่อ</th><th>Role</th><th>สถานะ</th><th></th></tr>
-                    </thead>
-                    <tbody>
-                      {list.map((s) => (
-                        <tr key={s.id} className={s.role === 'pending' ? 'staff-pending-row' : ''}>
-                          <td>{s.email}{s.role === 'pending' && <span className="staff-pending-tag">รออนุมัติ</span>}</td>
-                          <td>{s.name || '—'}</td>
-                          <td>
-                            <select value={s.role} onChange={(e) => setRole(s, e.target.value)}>
-                              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                            </select>
-                          </td>
-                          <td>{s.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}</td>
-                          <td>
-                            <button className={s.active ? 'admin-btn-danger' : 'admin-btn-primary'} onClick={() => toggleActive(s)}>
-                              {s.active ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {list.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีใครล็อกอินเข้าระบบ staff เลย</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </main>
-      )}
-    </StaffRoleGuard>
+          )}
+        </div>
+      </main>
+    </SuperAdminOnly>
   )
 }

@@ -4,6 +4,12 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTrash } from '@fortawesome/free-solid-svg-icons'
+import { withSearchTokens } from '../lib/searchIndex.js'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['title']
 
 // บอร์ดวางแผนสไตล์ Trello (/admin/board) — v1 ใช้บอร์ดเดียว (default board) ตาม Next.js เวอร์ชันเดิม
 // ใช้ collection แบบ flat (boardLists มี boardId, boardCards มี listId+boardId) ตามแบบที่ chats/{id}/messages
@@ -68,10 +74,10 @@ export default function AdminBoard() {
   const addCard = async (listId) => {
     const title = (newCardTitle[listId] || '').trim()
     if (!title) return
-    const ref = await addDoc(collection(db, 'boardCards'), {
+    const ref = await addDoc(collection(db, 'boardCards'), withSearchTokens({
       boardId: DEFAULT_BOARD_ID, listId, title, description: '', position: (cardsByList[listId]?.length || 0),
       dueDate: null, assignedToStaffId: null, campaignId: null, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-    })
+    }, SEARCH_FIELDS))
     writeAuditLog({ action: 'create', entityType: 'boardCard', entityId: ref.id, summary: `เพิ่มการ์ด "${title}"` })
     setNewCardTitle((s) => ({ ...s, [listId]: '' }))
   }
@@ -106,7 +112,7 @@ export default function AdminBoard() {
               <button className="admin-btn-primary" onClick={addList}>+ เพิ่มคอลัมน์</button>
             </div>
 
-            {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+            {loading ? <ListSkeleton /> : (
               <div className="admin-board-row">
                 {lists.map((l) => (
                   <div
@@ -119,22 +125,34 @@ export default function AdminBoard() {
                     <div className="admin-board-cards">
                       {(cardsByList[l.id] || []).map((c) => (
                         <div key={c.id} className="admin-board-card" draggable onDragStart={() => setDragCardId(c.id)}>
-                          <div className="admin-board-card-title">{c.title}</div>
-                          <input
-                            type="date"
-                            value={c.dueDate || ''}
-                            onChange={(e) => setDueDate(c, e.target.value)}
-                            className="admin-board-card-date"
-                          />
-                          <select
-                            value={c.campaignId || ''}
-                            onChange={(e) => setCampaign(c, e.target.value)}
-                            style={{ fontSize: '.75rem', width: '100%', marginTop: 4 }}
-                          >
-                            <option value="">-- ไม่ผูกแคมเปญ --</option>
-                            {campaigns.map((camp) => <option key={camp.id} value={camp.id}>{camp.name}</option>)}
-                          </select>
-                          <button className="admin-btn-danger" style={{ fontSize: '.75rem' }} onClick={() => removeCard(c)}>ลบ</button>
+                          <div className="admin-board-card-head">
+                            <div className="admin-board-card-title">{c.title}</div>
+                            {/* ปุ่มลบเป็นไอคอนมุมขวาบน โผล่ตอน hover — เดิมเป็นปุ่มแดงเต็มความกว้างที่ดึงสายตา
+                                มากกว่าตัวเนื้อหาการ์ดเอง (บนจอสัมผัสไม่มี hover จึงตั้งให้แสดงตลอดด้วย media query) */}
+                            <button className="admin-board-card-del" onClick={() => removeCard(c)} aria-label={`ลบการ์ด ${c.title}`} title="ลบการ์ด">
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          </div>
+                          <label className="admin-board-field">
+                            <span>กำหนดส่ง</span>
+                            <input
+                              type="date"
+                              value={c.dueDate || ''}
+                              onChange={(e) => setDueDate(c, e.target.value)}
+                              className="admin-board-card-date"
+                            />
+                          </label>
+                          <label className="admin-board-field">
+                            <span>แคมเปญ</span>
+                            <select
+                              className="admin-board-card-campaign"
+                              value={c.campaignId || ''}
+                              onChange={(e) => setCampaign(c, e.target.value)}
+                            >
+                              <option value="">— ไม่ผูกแคมเปญ —</option>
+                              {campaigns.map((camp) => <option key={camp.id} value={camp.id}>{camp.name}</option>)}
+                            </select>
+                          </label>
                         </div>
                       ))}
                     </div>

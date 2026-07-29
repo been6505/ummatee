@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import useAdminAuth from '../useAdminAuth.js'
+import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { useAnnouncement, saveAnnouncement } from '../data/announcement.js'
 import { useNavVisibility, saveNavVisibility, NAV_MENU_ITEMS } from '../data/navVisibility.js'
 import { useHomeCards, saveHomeCards, EMPTY_CARD, CARD_COLORS, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
@@ -10,6 +11,7 @@ import { useSiteContent, saveSiteContent, isSiteImageValue } from '../data/siteC
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash, faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // รายการ key เนื้อหาท้ายเว็บ (footer) ที่มีอยู่แล้วในโค้ด — โชว์เป็นแถวสำเร็จรูปให้แก้ง่าย
 const FOOTER_CONTENT_KEYS = [
@@ -120,7 +122,7 @@ function CardEditor({ card, index, total, onChange, onMove, onRemove }) {
         <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
           <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
           {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูป'}
-          <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
+          <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadImages} />
         </label>
         {(card.images || []).length > 0 && (
           <div className="admin-media-preview" style={{ marginTop: 10 }}>
@@ -230,7 +232,7 @@ function ImageFieldRow({ row, onKeyChange, onUrlChange, onRemove }) {
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
         <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
         {uploading ? ' กำลังอัพโหลด...' : row.url ? ' เปลี่ยนรูป' : ' เลือกรูป'}
-        <input type="file" accept="image/*" hidden onChange={uploadImage} />
+        <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" hidden onChange={uploadImage} />
       </label>
       <button type="button" className="admin-btn-danger" onClick={onRemove} aria-label="ลบฟิลด์นี้" title="ลบ">
         <FontAwesomeIcon icon={faTrash} />
@@ -435,7 +437,10 @@ export default function AdminWebsite() {
     }
   }
 
+  // ระบบ staff role คุมแทน email allowlist เดิม — ทีมงานแก้เนื้อหาเว็บได้ (firestore.rules เปิดให้เฉพาะ
+  // 5 เอกสารเนื้อหา ส่วน maintenance mode / เลขบัญชีธนาคาร ยังเป็นของเจ้าของเท่านั้น)
   return (
+    <StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (
     <main className="admin-dash">
       <AdminNav />
       <div className="admin-wrap">
@@ -446,7 +451,7 @@ export default function AdminWebsite() {
           <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
             ปิดรายการที่ไม่ต้องการให้แสดงในเมนูหลักของเว็บ (ไม่กระทบ URL เดิม เข้าตรงได้เหมือนเดิม แค่ซ่อนจากเมนู) — มีผลทันทีเมื่อกดปิด/เปิด
           </p>
-          {navLoading ? 'กำลังโหลด…' : (
+          {navLoading ? <ListSkeleton rows={2} /> : (
             <div className="admin-table-wrap">
               <table className="admin-table admin-nav-vis-table">
                 <thead>
@@ -550,7 +555,7 @@ export default function AdminWebsite() {
             {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
           </p>
 
-          {cardsLoading || cards === null ? <p>กำลังโหลด…</p> : (
+          {cardsLoading || cards === null ? <ListSkeleton /> : (
             <>
               {cards.map((card, i) => (
                 <CardEditor
@@ -590,7 +595,7 @@ export default function AdminWebsite() {
             {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
           </p>
 
-          {focusLoading || focusCards === null ? <p>กำลังโหลด…</p> : (
+          {focusLoading || focusCards === null ? <ListSkeleton /> : (
             <>
               {focusCards.map((card, i) => (
                 <FocusCardEditor
@@ -629,7 +634,7 @@ export default function AdminWebsite() {
             แก้ข้อความติดต่อ/คำโปรยท้ายเว็บได้เอง โดยไม่ต้องให้ dev แก้โค้ด — ช่องไหนเว้นว่างจะใช้ข้อความเดิมของเว็บแทน
             ด้านล่างสุดยังเพิ่มฟิลด์เนื้อหาอิสระของตัวเองได้ (key ใหม่) เผื่อใช้ในหน้าอื่นภายหลัง
           </p>
-          {siteContentLoading || siteContent === null ? <p>กำลังโหลด…</p> : (
+          {siteContentLoading || siteContent === null ? <ListSkeleton /> : (
             <>
               <div className="admin-form-grid admin-form-grid-2col">
                 {FOOTER_CONTENT_KEYS.map((f) => (
@@ -693,5 +698,6 @@ export default function AdminWebsite() {
         </div>
       </div>
     </main>
+  )}</StaffRoleGuard>
   )
 }

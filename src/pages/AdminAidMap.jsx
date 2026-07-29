@@ -7,8 +7,13 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
-import { downloadCsv } from '../lib/csv.js'
+import ExportButtons from '../components/ExportButtons.jsx'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
+import exifr from 'exifr'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+import { withSearchTokens } from '../lib/searchIndex.js'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['villageName', 'city', 'province', 'aidType']
 
 // จุดลงพื้นที่ช่วยเหลือ + แผนที่ (/admin/aid-map) — มิเรอร์จากเวอร์ชัน Next.js (AidLocation model)
 // ใช้ react-leaflet v4 (รองรับ React 18) + OpenStreetMap tiles (ฟรี ไม่ต้องมี API key)
@@ -136,13 +141,64 @@ export default function AdminAidMap() {
     setGeoQuery('')
   }
 
+  // กันเคส exifr อ่านไฟล์ RAW ขนาดใหญ่ (CR2/CR3/NEF ฯลฯ อาจใหญ่หลายสิบ MB) แล้วค้างไม่ resolve/reject เลย
+  // ถ้าเกินเวลาที่กำหนด ให้ถือว่าไม่พบพิกัด แล้วไปต่อขั้นอัปโหลดเลย ไม่ปล่อยให้ปุ่มค้าง "กำลังอัปโหลด..." ตลอดไป
+  const withTimeout = (promise, ms) => Promise.race([
+    promise,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ])
+
+  // reverse geocoding: จากพิกัด (lat/lng) หาชื่อถนน/ย่าน/เมือง/จังหวัด/ประเทศ — ใช้ตัว address mapping
+  // เดียวกับ pickPlace (Nominatim คืนคีย์เดียวกันไม่ว่าจะเป็น search หรือ reverse)
+  const reverseGeocode = async (lat, lon) => {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&addressdetails=1&accept-language=th`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`reverse geocode ไม่สำเร็จ (${res.status})`)
+    return res.json()
+  }
+
   // อัปโหลดรูปหน้างานขึ้น Cloudinary (ตัวเดียวกับที่หน้าอื่นใช้) เก็บแต่ URL ลง Firestore
+  // ก่อนอัปโหลด: อ่าน EXIF ของรูปแรกที่มี GPS ด้วย exifr — ถ้ามีพิกัดติดมากับรูป (กล้อง/มือถือส่วนใหญ่ฝังไว้อัตโนมัติ)
+  // ให้เติมพิกัด + reverse-geocode ที่อยู่ + วันที่ถ่ายภาพให้อัตโนมัติ โดยไม่ทับพิกัดที่กรอก/เลือกไว้แล้ว
   const [uploading, setUploading] = useState(false)
+  const [geoFromPhoto, setGeoFromPhoto] = useState('') // ข้อความสถานะ: กำลังอ่าน/ผลลัพธ์/ไม่พบพิกัดในรูป
   const uploadPhotos = async (e) => {
     const files = [...e.target.files]
     if (!files.length) return
     setUploading(true)
+    setGeoFromPhoto('')
     try {
+      const hadCoords = form.latitude && form.longitude
+      if (!hadCoords) {
+        setGeoFromPhoto('กำลังอ่านพิกัดจากรูปภาพ...')
+        for (const file of files) {
+          try {
+            const gps = await withTimeout(exifr.gps(file), 6000)
+            if (!gps || !Number.isFinite(gps.latitude) || !Number.isFinite(gps.longitude)) continue
+            const exif = await withTimeout(exifr.parse(file, ['DateTimeOriginal', 'CreateDate']).catch(() => null), 6000)
+            const shotAt = exif?.DateTimeOriginal || exif?.CreateDate || null
+            const place = await withTimeout(reverseGeocode(gps.latitude, gps.longitude).catch(() => null), 6000)
+            const a = place?.address || {}
+            setForm((f) => ({
+              ...f,
+              latitude: f.latitude || String(gps.latitude),
+              longitude: f.longitude || String(gps.longitude),
+              street: f.street || a.road || a.pedestrian || a.footway || '',
+              neighbourhood: f.neighbourhood || a.neighbourhood || a.suburb || a.quarter || a.city_district || a.district || a.county || '',
+              city: f.city || a.city || a.town || a.village || a.municipality || '',
+              province: f.province || a.state || a.province || '',
+              region: f.region || a.region || a.state_district || '',
+              postcode: f.postcode || a.postcode || '',
+              country: f.country || a.country || '',
+              visitDate: f.visitDate || (shotAt ? new Date(shotAt).toISOString().slice(0, 10) : ''),
+            }))
+            setPicked({ lat: gps.latitude, lng: gps.longitude, label: place?.display_name || 'พิกัดจากรูปภาพ' })
+            setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}${shotAt ? ` (ถ่ายเมื่อ ${new Date(shotAt).toLocaleString('th-TH')})` : ''}`)
+            break // เจอรูปแรกที่มี GPS พอแล้ว
+          } catch { /* รูปนี้อ่าน EXIF ไม่ได้ ข้ามไปรูปถัดไป */ }
+        }
+        setGeoFromPhoto((cur) => cur || 'ไม่พบพิกัด GPS ในรูปภาพที่เลือก — กรอกพิกัดเองหรือค้นหาด้านบนแทนได้')
+      }
       const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'image')))
       setForm((f) => ({ ...f, photoUrls: [...(f.photoUrls || []), ...results.map((r) => r.url)] }))
     } catch (err) {
@@ -173,19 +229,19 @@ export default function AdminAidMap() {
       photoUrls: form.photoUrls || [],
     }
     if (editId) {
-      await updateDoc(doc(db, 'aidLocations', editId), { ...payload, updatedAt: serverTimestamp() })
+      await updateDoc(doc(db, 'aidLocations', editId), withSearchTokens({ ...payload, updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'update', entityType: 'aidLocation', entityId: editId, summary: `แก้ไขจุด ${form.villageName}` })
     } else {
-      const ref = await addDoc(collection(db, 'aidLocations'), { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      const ref = await addDoc(collection(db, 'aidLocations'), withSearchTokens({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'create', entityType: 'aidLocation', entityId: ref.id, summary: `เพิ่มจุด ${form.villageName}` })
     }
-    setForm(EMPTY); setEditId(null); setPicked(null) // เคลียร์หมุดตัวอย่างหลังบันทึก (จุดจริงจะขึ้นเป็นหมุดปกติจาก Firestore แทน)
+    setForm(EMPTY); setEditId(null); setPicked(null); setGeoFromPhoto('') // เคลียร์หมุดตัวอย่างหลังบันทึก (จุดจริงจะขึ้นเป็นหมุดปกติจาก Firestore แทน)
   }
 
   // ...EMPTY ก่อน แล้วทับด้วยข้อมูลจริง — จุดที่บันทึกไว้ก่อนมีฟิลด์ใหม่จะได้ค่าเริ่มต้นแทน undefined
   // (ถ้าปล่อย undefined เข้า input ที่เป็น controlled component React จะเตือนและ input กลายเป็น uncontrolled)
   const edit = (l) => {
-    setEditId(l.id); setPicked(null); setGeoResults(null)
+    setEditId(l.id); setPicked(null); setGeoResults(null); setGeoFromPhoto('')
     setForm({
       ...EMPTY, ...l,
       latitude: String(l.latitude ?? ''), longitude: String(l.longitude ?? ''),
@@ -194,7 +250,7 @@ export default function AdminAidMap() {
       photoUrls: l.photoUrls || [],
     })
   }
-  const cancel = () => { setEditId(null); setForm(EMPTY); setPicked(null); setGeoResults(null) }
+  const cancel = () => { setEditId(null); setForm(EMPTY); setPicked(null); setGeoResults(null); setGeoFromPhoto('') }
 
   const remove = async (l) => {
     if (!window.confirm(`ลบจุด "${l.villageName}" ถาวร?`)) return
@@ -202,14 +258,15 @@ export default function AdminAidMap() {
     writeAuditLog({ action: 'delete', entityType: 'aidLocation', entityId: l.id, summary: `ลบจุด ${l.villageName}` })
   }
 
-  const exportCsv = () => {
-    downloadCsv('aid-locations.csv',
-      ['ชื่อจุด', 'lat', 'lng', 'ถนน', 'ย่าน/เขต', 'เมือง', 'จังหวัด', 'ภูมิภาค', 'รหัสไปรษณีย์', 'ประเทศ',
+  // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
+  const buildExport = () => ({
+    filename: 'aid-locations.csv',
+    sheetName: 'จุดลงพื้นที่',
+    headers: ['ชื่อจุด', 'lat', 'lng', 'ถนน', 'ย่าน/เขต', 'เมือง', 'จังหวัด', 'ภูมิภาค', 'รหัสไปรษณีย์', 'ประเทศ',
         'ประเภทความช่วยเหลือ', 'งบประมาณที่ใช้', 'จำนวนคนที่ช่วย', 'รายการที่บริจาค', 'จำนวนที่บริจาค', 'วันที่ลงพื้นที่', 'หมายเหตุ', 'จำนวนรูป', 'ลิงก์รูป'],
-      list.map((l) => [l.villageName, l.latitude, l.longitude, l.street || '', l.neighbourhood || '', l.city || '', l.province || '', l.region || '', l.postcode || '', l.country || '',
-        l.aidType || '', Number(l.budgetUsed) || 0, l.peopleHelped || 0, l.itemsDonatedDescription, l.itemsDonatedCount || 0, l.visitDate || '', l.notes, (l.photoUrls || []).length, (l.photoUrls || []).join(' | ')])
-    )
-  }
+    rows: list.map((l) => [l.villageName, l.latitude, l.longitude, l.street || '', l.neighbourhood || '', l.city || '', l.province || '', l.region || '', l.postcode || '', l.country || '',
+        l.aidType || '', Number(l.budgetUsed) || 0, l.peopleHelped || 0, l.itemsDonatedDescription, l.itemsDonatedCount || 0, l.visitDate || '', l.notes, (l.photoUrls || []).length, (l.photoUrls || []).join(' | ')]),
+  })
 
   return (
     <StaffRoleGuard allowedRoles={['admin', 'staff', 'field']}>
@@ -219,7 +276,7 @@ export default function AdminAidMap() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>แผนที่จุดลงพื้นที่ช่วยเหลือ</h1><p>บันทึกจุดที่เคยลงพื้นที่ + แสดงบนแผนที่</p></div>
-              <button className="admin-btn" onClick={exportCsv}>ส่งออก CSV</button>
+              <ExportButtons build={buildExport} />
             </div>
 
             <div className="admin-stats">
@@ -297,6 +354,26 @@ export default function AdminAidMap() {
                   </div>
                 </div>
 
+              {/* รูปภาพหน้างาน — อ่านพิกัด GPS + ที่อยู่ + วันที่จากรูปอัตโนมัติ (ถ้ารูปมี EXIF GPS ติดมา) */}
+              <div className="aid-photos">
+                <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
+                  {uploading ? 'กำลังอัปโหลด...' : '📷 อัปโหลดรูปภาพเพื่อดึงพิกัดอัตโนมัติ'}
+                  <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadPhotos} />
+                </label>
+                <p className="aid-photos-hint">รูปที่มีพิกัด GPS ฝังอยู่ (ถ่ายจากมือถือ/กล้องส่วนใหญ่) จะเติมพิกัด ที่อยู่ และวันที่ให้อัตโนมัติ</p>
+                {geoFromPhoto && <p className="aid-geo-msg">{geoFromPhoto}</p>}
+                {(form.photoUrls || []).length > 0 && (
+                  <div className="aid-photo-thumbs">
+                    {form.photoUrls.map((url, i) => (
+                      <div key={i} className="aid-photo-thumb">
+                        <img src={url} alt={`รูปหน้างาน ${i + 1}`} />
+                        <button type="button" onClick={() => removePhoto(i)} aria-label="ลบรูปนี้">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* ค้นหาพิกัดจากชื่อสถานที่ — ไม่ต้องไปเปิด Google Maps หาพิกัดมาวางเอง */}
               <div className="aid-geo-search">
                 <input
@@ -361,25 +438,6 @@ export default function AdminAidMap() {
                   <label>วันที่ลงพื้นที่<input type="date" value={form.visitDate || ''} onChange={set('visitDate')} /></label>
                   <label>หมายเหตุ<input value={form.notes} onChange={set('notes')} /></label>
                 </div>
-
-                {/* รูปภาพหน้างาน — อัปโหลดขึ้น Cloudinary เก็บแต่ URL (ไม่เก็บไฟล์ใน Firestore) */}
-                <div className="aid-photos">
-                  <div className="aid-photos-label">รูปภาพหน้างาน</div>
-                  <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
-                    {uploading ? 'กำลังอัปโหลด...' : '+ เลือกรูปภาพ'}
-                    <input type="file" accept="image/*" multiple hidden onChange={uploadPhotos} />
-                  </label>
-                  {(form.photoUrls || []).length > 0 && (
-                    <div className="aid-photo-thumbs">
-                      {form.photoUrls.map((url, i) => (
-                        <div key={i} className="aid-photo-thumb">
-                          <img src={url} alt={`รูปหน้างาน ${i + 1}`} />
-                          <button type="button" onClick={() => removePhoto(i)} aria-label="ลบรูปนี้">✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
               <div style={{ marginTop: 14, display: 'flex', gap: 12 }}>
                 <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มจุด'}</button>
@@ -389,7 +447,7 @@ export default function AdminAidMap() {
 
             <div className="admin-card">
               <h4>รายการจุดทั้งหมด ({list.length})</h4>
-              {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+              {loading ? <ListSkeleton /> : (
                 <div className="admin-table-wrap">
                   <table className="admin-table">
                     <thead><tr><th>ชื่อจุด</th><th>ที่อยู่</th><th>ประเภท</th><th>คนที่ช่วย</th><th>ของบริจาค</th><th>งบ (฿)</th><th>รูป</th><th></th></tr></thead>

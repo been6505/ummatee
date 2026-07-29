@@ -5,6 +5,7 @@ import {
 } from 'firebase/firestore'
 import { LOW_STOCK_THRESHOLD } from './inventory.js'
 import { notifyAdminLowStock } from '../utils/lineNotify.js'
+import { effectivePrice, groupOrderItemsByProduct, planStockRestore } from './pricing.js'
 
 // คำสั่งซื้อ Um Shop — เก็บใน Firestore collection "orders"
 // ลำดับสถานะ: pending_payment → preparing → shipping → delivered
@@ -32,8 +33,6 @@ export const getShippingFee = () => SHIPPING_FEE
 export async function createOrder({ items, itemsTotal, customer }) {
   const counterRef = doc(db, 'config', 'shopOrderCounter')
   const shippingFee = getShippingFee()
-  // ปัด 2 ตำแหน่งกันเศษ float (เช่นราคา 99.5 × 3) — rules บังคับ total == itemsTotal + shippingFee เป๊ะ
-  const cleanItemsTotal = Math.round(itemsTotal * 100) / 100
   const orderRef = doc(collection(db, 'orders'))
   // it.productDocId = doc id จริงของสินค้า (it.id เป็น line id รวมสี/ขนาด) — fallback it.id เผื่อตะกร้าเก่า
   const productRefs = items.map((it) => doc(db, 'products', it.productDocId || it.id))
@@ -63,11 +62,28 @@ export async function createOrder({ items, itemsTotal, customer }) {
       }
     })
 
+    // ราคาต้องคิดใหม่จากราคาจริงใน Firestore ตอนนี้ ห้ามเชื่อ it.price ที่ติดมากับตะกร้า
+    // (ตะกร้าอยู่ใน localStorage ฝั่งลูกค้า จับราคาไว้ตอนกดใส่ตะกร้า — อาจค้างข้ามการแก้ราคา/โปรฯ ของแอดมิน
+    //  และแก้ค่าเองได้ด้วย ส่วน firestore.rules ตรวจได้แค่ว่า total == itemsTotal + shippingFee สอดคล้องกันเอง
+    //  เทียบราคาสินค้าจริงไม่ได้ เพราะ rules อ่านเอกสารอื่นมาคำนวณผลรวมทั้งตะกร้าไม่ได้)
+    const pricedItems = items.map((it, i) => ({ ...it, price: effectivePrice(productSnaps[i].data()) }))
+    const serverItemsTotal = pricedItems.reduce((s, it) => s + it.price * it.qty, 0)
+    // ปัด 2 ตำแหน่งกันเศษ float (เช่นราคา 99.5 × 3) — rules บังคับ total == itemsTotal + shippingFee เป๊ะ
+    const cleanItemsTotal = Math.round(serverItemsTotal * 100) / 100
+
+    // ยอดที่คิดได้จริงไม่ตรงกับที่ลูกค้าเห็นบนหน้าจอ → ยกเลิกออเดอร์ ห้ามเก็บเงินยอดที่ลูกค้าไม่ได้ตกลงไว้
+    // โยน error ที่พ่วง pricedItems ไปให้หน้าเช็คเอาท์ sync ราคาในตะกร้าแล้วให้ลูกค้าทบทวนยอดใหม่
+    if (Math.round(itemsTotal * 100) / 100 !== cleanItemsTotal) {
+      const err = new Error(`ราคาสินค้ามีการเปลี่ยนแปลง ยอดที่ถูกต้องคือ ฿${(cleanItemsTotal + shippingFee).toLocaleString('th-TH')} กรุณาตรวจสอบแล้วกดสั่งซื้ออีกครั้ง`)
+      err.pricedItems = pricedItems.map((it) => ({ id: it.id, price: it.price }))
+      throw err
+    }
+
     tx.set(counterRef, { count: num })
 
     tx.set(orderRef, {
       orderCode,
-      items,
+      items: pricedItems,
       itemsTotal: cleanItemsTotal,
       shippingFee,
       // ห้ามปัด total ซ้ำ — rules ตรวจ total == itemsTotal + shippingFee ด้วย float แบบเดียวกับ JS
@@ -119,8 +135,53 @@ export async function createOrder({ items, itemsTotal, customer }) {
 
 // ลบคำสั่งซื้อ — เฉพาะแอดมินตัวจริง (rules บังคับ) ไม่คืนสต็อกที่ตัดไปแล้วให้อัตโนมัติ
 // ใช้ตอนลบออเดอร์ทดสอบ/ผิดพลาด ถ้าออเดอร์จริงตัดสต็อกไปแล้วต้องไปเติมคลังคืนเองที่หน้าคลังสินค้า
+// (ปกติควรใช้ cancelOrder ด้านล่างแทน — คืนสต็อกให้เองในทรานแซกชันเดียว)
 export function deleteOrder(orderId) {
   return deleteDoc(doc(db, 'orders', orderId))
+}
+
+// ยกเลิกออเดอร์ + คืนสต็อกที่ตัดไปแล้วกลับคลัง ในทรานแซกชันเดียว (atomic) — กันเคสคืนสต็อกครึ่งๆ กลางๆ
+// ลบเอกสารออเดอร์ทิ้งเหมือน deleteOrder แต่บวกสต็อกคืนและบันทึก stockMovements แบบ type 'cancel' ไว้เป็นหลักฐาน
+// ใช้ตอนลูกค้าไม่จ่ายเงิน/ขอยกเลิก — ไม่ต้องให้แอดมินไปกดเติมคลังคืนเองแล้วลืม (ทำให้ของค้างสต็อก 0 ทั้งที่ยังมีของ)
+export async function cancelOrder(orderId) {
+  const orderRef = doc(db, 'orders', orderId)
+  await runTransaction(db, async (tx) => {
+    const orderSnap = await tx.get(orderRef)
+    if (!orderSnap.exists()) throw new Error('ไม่พบคำสั่งซื้อนี้ (อาจถูกลบไปแล้ว)')
+    const order = orderSnap.data()
+    const items = order.items || []
+
+    // ต้องรวมรายการที่เป็น "สินค้าเดียวกัน" (doc เดียวกัน) เข้าด้วยกันก่อนเขียน
+    // เสื้อตัวเดียวกันคนละไซซ์เป็นคนละรายการในตะกร้าแต่เป็น product doc เดียวกัน ถ้าเขียนทีละรายการ
+    // แต่ละรอบจะคำนวณจาก snapshot ตั้งต้นชุดเดิม แล้ว tx.update รอบหลังทับรอบแรกทิ้ง
+    // ⇒ คืนสต็อกได้แค่ไซซ์เดียว อีกไซซ์หายถาวร (และ sold ลดน้อยกว่าที่ควร)
+    const entries = [...groupOrderItemsByProduct(items).entries()]
+    const snaps = await Promise.all(entries.map(([pid]) => tx.get(doc(db, 'products', pid))))
+
+    entries.forEach(([pid, lines], i) => {
+      const snap = snaps[i]
+      const ref = doc(db, 'products', pid)
+      // บันทึกการเคลื่อนไหวสต็อกทีละรายการเสมอ (แม้สินค้าถูกลบไปแล้ว) เพื่อให้ประวัติตรงกับที่ตัดไปตอนสั่งซื้อ
+      for (const it of lines) {
+        tx.set(doc(collection(db, 'stockMovements')), {
+          productId: pid,
+          productCode: it.productId || '',
+          productName: it.name || '',
+          qty: it.qty, // บวก = คืนเข้าคลัง (ตรงข้ามกับ type 'order' ที่เป็นลบ)
+          type: 'cancel',
+          orderCode: order.orderCode || '',
+          at: Date.now(),
+        })
+      }
+      if (!snap.exists()) return // สินค้าถูกลบไปแล้ว — ไม่มีที่ให้คืนสต็อก (ออเดอร์ยังยกเลิกได้)
+
+      // planStockRestore เป็นฟังก์ชันบริสุทธิ์ที่มีเทสต์คุมอยู่ (pricing.test.js) — รวมทุกไซซ์ของสินค้า
+      // เดียวกันเป็นการเขียนครั้งเดียว และไม่บวกคืนสต็อกให้สินค้าที่ตอนสั่งซื้อไม่เคยถูกตัด
+      tx.update(ref, planStockRestore(snap.data(), lines))
+    })
+
+    tx.delete(orderRef)
+  })
 }
 
 // อ่านคำสั่งซื้อ 1 รายการแบบเรียลไทม์ (ใช้ทั้งฝั่งลูกค้าและแอดมิน)

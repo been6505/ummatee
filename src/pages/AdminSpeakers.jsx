@@ -4,7 +4,12 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
-import { downloadCsv } from '../lib/csv.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
+
+import ExportButtons from '../components/ExportButtons.jsx'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['name', 'type']
 
 // วิทยากร/อินฟลูเอนเซอร์ (/admin/speakers) — มิเรอร์จากเวอร์ชัน Next.js (Speaker model)
 const EMPTY = { name: '', type: 'speaker', regionsWorked: '', totalPaid: '', contactInfo: '', notes: '' }
@@ -43,10 +48,10 @@ export default function AdminSpeakers() {
       contactInfo: form.contactInfo, notes: form.notes,
     }
     if (editId) {
-      await updateDoc(doc(db, 'speakers', editId), { ...payload, updatedAt: serverTimestamp() })
+      await updateDoc(doc(db, 'speakers', editId), withSearchTokens({ ...payload, updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'update', entityType: 'speaker', entityId: editId, summary: `แก้ไขวิทยากร ${form.name}` })
     } else {
-      const ref = await addDoc(collection(db, 'speakers'), { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      const ref = await addDoc(collection(db, 'speakers'), withSearchTokens({ ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'create', entityType: 'speaker', entityId: ref.id, summary: `เพิ่มวิทยากร ${form.name}` })
     }
     setForm(EMPTY); setEditId(null)
@@ -61,12 +66,13 @@ export default function AdminSpeakers() {
     writeAuditLog({ action: 'delete', entityType: 'speaker', entityId: p.id, summary: `ลบวิทยากร ${p.name}` })
   }
 
-  const exportCsv = () => {
-    downloadCsv('speakers.csv',
-      ['ชื่อ', 'ประเภท', 'พื้นที่ทำงาน', 'ค่าตอบแทนรวม', 'ติดต่อ', 'หมายเหตุ'],
-      filtered.map((p) => [p.name, p.type, (p.regionsWorked || []).join('; '), p.totalPaid || 0, p.contactInfo, p.notes])
-    )
-  }
+  // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
+  const buildExport = () => ({
+    filename: 'speakers.csv',
+    sheetName: 'วิทยากร',
+    headers: ['ชื่อ', 'ประเภท', 'พื้นที่ทำงาน', 'ค่าตอบแทนรวม', 'ติดต่อ', 'หมายเหตุ'],
+    rows: filtered.map((p) => [p.name, p.type, (p.regionsWorked || []).join('; '), p.totalPaid || 0, p.contactInfo, p.notes]),
+  })
 
   return (
     <StaffRoleGuard allowedRoles={['admin', 'staff', 'field']}>
@@ -76,7 +82,7 @@ export default function AdminSpeakers() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>วิทยากร / อินฟลูเอนเซอร์</h1><p>รายชื่อวิทยากรและอินฟลูเอนเซอร์ที่เคยร่วมงาน</p></div>
-              <button className="admin-btn" onClick={exportCsv}>ส่งออก CSV</button>
+              <ExportButtons build={buildExport} />
             </div>
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -105,7 +111,7 @@ export default function AdminSpeakers() {
                 <h4>รายชื่อ ({filtered.length})</h4>
                 <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-              {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+              {loading ? <ListSkeleton /> : (
                 <div className="admin-table-wrap">
                   <table className="admin-table">
                     <thead><tr><th>ชื่อ</th><th>ประเภท</th><th>พื้นที่</th><th>ค่าตอบแทนรวม</th><th></th></tr></thead>

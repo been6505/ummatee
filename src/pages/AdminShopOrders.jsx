@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
-import { useOrders, STATUS_LABEL, adminStatusLabel, deleteOrder, markOrdersSeen } from '../data/orders.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
+import { useOrders, STATUS_LABEL, adminStatusLabel, deleteOrder, cancelOrder, markOrdersSeen } from '../data/orders.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faTrash, faRotateLeft } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // รายการคำสั่งซื้อทั้งหมด (/admin/shop/orders) — กรองตามสถานะ คลิกแถวเพื่อไปหน้าติดตาม/จัดการคำสั่งซื้อนั้น
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
@@ -19,7 +20,7 @@ const STATUS_COLOR = {
 }
 
 export default function AdminShopOrders() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { orders, loading: ordersLoading } = useOrders()
   const [filter, setFilter] = useState('all')
 
@@ -31,9 +32,17 @@ export default function AdminShopOrders() {
   // เข้าหน้านี้แล้วถือว่าเห็นออเดอร์ทั้งหมด ณ ตอนนี้แล้ว — เคลียร์ badge "ใหม่" บน nav/กระดิ่ง
   useEffect(() => { markOrdersSeen() }, [])
 
-  // ลบออเดอร์ — ยืนยันก่อนเสมอ (ลบถาวร ไม่คืนสต็อกที่ตัดไปแล้วให้อัตโนมัติ)
+  // ออเดอร์จริงที่ลูกค้าไม่จ่าย/ขอยกเลิก — ของยังอยู่ในคลัง ต้องคืนสต็อกให้ด้วย
+  // ไม่งั้นสต็อกค้างต่ำกว่าความจริงจนกว่าจะมีคนจำได้ไปเติมคืนเองที่หน้าคลังสินค้า
+  const handleCancel = (o) => {
+    if (!window.confirm(`ยกเลิกคำสั่งซื้อ ${o.orderCode} และคืนสต็อกสินค้ากลับคลัง?\n\nใช้กรณีลูกค้าไม่จ่ายเงินหรือขอยกเลิก — ของที่ตัดไปแล้วจะถูกบวกคืนให้อัตโนมัติ`)) return
+    cancelOrder(o.id).catch((e) => alert('ยกเลิกไม่สำเร็จ: ' + e.message))
+  }
+
+  // ออเดอร์ทดสอบ/สร้างผิด — "ไม่" ต้องคืนสต็อก เพราะของไม่เคยถูกหยิบออกจากคลังจริง
+  // ถ้าใช้ปุ่มยกเลิกกับออเดอร์ทดสอบ สต็อกจะถูกบวกเกินจากของที่ไม่มีอยู่จริง
   const handleDelete = (o) => {
-    if (!window.confirm(`ลบคำสั่งซื้อ ${o.orderCode} ถาวร?\n\nการลบไม่คืนสต็อกสินค้าที่ตัดไปแล้วให้อัตโนมัติ ถ้าเป็นออเดอร์จริง (ไม่ใช่ทดสอบ) ต้องไปเติมคลังคืนเองที่หน้าคลังสินค้า`)) return
+    if (!window.confirm(`ลบคำสั่งซื้อ ${o.orderCode} ถาวร โดยไม่คืนสต็อก?\n\nใช้กับออเดอร์ทดสอบ/สร้างผิดเท่านั้น\nถ้าเป็นออเดอร์จริงที่ลูกค้ายกเลิก ให้กดปุ่ม "ยกเลิก+คืนสต็อก" แทน`)) return
     deleteOrder(o.id).catch((e) => alert('ลบไม่สำเร็จ: ' + e.message))
   }
 
@@ -73,7 +82,7 @@ export default function AdminShopOrders() {
           </div>
         </div>
 
-        {ordersLoading ? <p>กำลังโหลดข้อมูล...</p> : (
+        {ordersLoading ? <ListSkeleton /> : (
           <div className="admin-card">
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -99,7 +108,10 @@ export default function AdminShopOrders() {
                       </td>
                       <td style={{ display: 'flex', gap: 6 }}>
                         <a className="admin-btn" href={`/admin/shop/orders/${o.id}`}>จัดการ</a>
-                        <button type="button" className="admin-btn-danger admin-icon-btn" onClick={() => handleDelete(o)} aria-label="ลบคำสั่งซื้อ" title="ลบคำสั่งซื้อ">
+                        <button type="button" className="admin-btn-danger admin-icon-btn" onClick={() => handleCancel(o)} aria-label="ยกเลิกคำสั่งซื้อและคืนสต็อก" title="ยกเลิก + คืนสต็อก (ลูกค้าไม่จ่าย/ขอยกเลิก)">
+                          <FontAwesomeIcon icon={faRotateLeft} />
+                        </button>
+                        <button type="button" className="admin-btn-danger admin-icon-btn" onClick={() => handleDelete(o)} aria-label="ลบถาวรโดยไม่คืนสต็อก" title="ลบถาวร ไม่คืนสต็อก (ออเดอร์ทดสอบ)">
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </td>

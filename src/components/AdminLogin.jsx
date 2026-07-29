@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
 import { auth } from '../firebase.js'
+import { isAdminEmail } from '../useAdminRole.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faLock, faHandshake } from '@fortawesome/free-solid-svg-icons'
 
@@ -65,6 +66,26 @@ export default function AdminLogin() {
     } finally {
       setBusy(false)
     }
+  }
+
+  // ล็อกอินสำเร็จแต่อีเมลไม่อยู่ใน allowlist — ต้องบอกให้ชัดว่า "ไม่มีสิทธิ์" ไม่ใช่โชว์ฟอร์มล็อกอินเปล่าๆ
+  // (ไม่งั้นคนที่กด Sign in with Google แล้วเด้งกลับมาหน้าเดิมจะนึกว่าปุ่มเสีย แล้วกดวนไปเรื่อยๆ)
+  const signedIn = auth.currentUser
+  if (signedIn && !isAdminEmail(signedIn.email || '')) {
+    return (
+      <main className="admin-login">
+        <div className="admin-login-box">
+          <h2>ไม่มีสิทธิ์เข้าถึง</h2>
+          <p>
+            บัญชี <strong>{signedIn.email}</strong> ไม่มีสิทธิ์เข้าหน้าผู้ดูแลระบบ<br />
+            หากคุณเป็นพนักงาน กรุณาแจ้งแอดมินให้กำหนดสิทธิ์ให้ก่อน
+          </p>
+          <button type="button" className="admin-login-role-btn" style={{ marginTop: 16 }} onClick={() => signOut(auth)}>
+            <div style={{ fontWeight: 700 }}>ออกจากระบบ / เข้าด้วยบัญชีอื่น</div>
+          </button>
+        </div>
+      </main>
+    )
   }
 
   if (!mode) {

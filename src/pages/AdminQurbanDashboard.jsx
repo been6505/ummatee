@@ -2,7 +2,7 @@ import { useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useQurbanData } from '../data/qurbanData.js'
 import { Chart, ChartTypeSwitch, DonutChart, HBarChart, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,7 +12,7 @@ import { faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 // เลือกประเภทกราฟได้ ค้นหา/กรอง/เรียงตารางได้ และขยายเต็มจอ — แก้ไขข้อมูลที่ /admin/missions/qurban2026/edit
 
 export default function AdminQurbanDashboard() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { data: q, loading: dataLoading } = useQurbanData()
 
   // ประเภทกราฟของแต่ละการ์ด

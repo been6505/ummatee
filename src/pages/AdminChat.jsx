@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGlobe, faComment, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -112,7 +113,7 @@ function ChatList({ chats, chatsLoading }) {
 }
 
 export default function AdminChat({ chatId }) {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { chats, loading: chatsLoading } = useAdminChatList()
 
   if (loading) return null
@@ -121,14 +122,19 @@ export default function AdminChat({ chatId }) {
   const activeChat = chatId ? chats.find((c) => c.id === chatId) : null
   const title = activeChat ? (activeChat.visitorName || `ผู้เยี่ยมชม ${chatId.slice(0, 6)}`) : (chatId ? `ผู้เยี่ยมชม ${chatId.slice(0, 6)}` : '')
 
+  // แชทเป็นข้อมูลส่วนตัวของผู้เยี่ยมชม — firestore.rules จำกัดไว้ที่ isFullAdmin() แล้ว
+  // แต่บัญชี volunteer ยังอยู่ใน allowlist จึงเปิด URL นี้ได้และเห็นกล่องแชทว่างเปล่าโดยไม่รู้ว่าไม่มีสิทธิ์
+  // (useAdminChatList กลืน permission error เป็น setLoading(false) เฉยๆ) — บอกให้ชัดดีกว่า
   return (
-    <main className="admin-dash">
-      <AdminNav />
-      {chatId ? (
-        <ChatThread key={chatId} chatId={chatId} title={title} />
-      ) : (
-        <ChatList chats={chats} chatsLoading={chatsLoading} />
-      )}
-    </main>
+    <VolunteerGuard>
+      <main className="admin-dash">
+        <AdminNav />
+        {chatId ? (
+          <ChatThread key={chatId} chatId={chatId} title={title} />
+        ) : (
+          <ChatList chats={chats} chatsLoading={chatsLoading} />
+        )}
+      </main>
+    </VolunteerGuard>
   )
 }

@@ -1,7 +1,9 @@
 import { useIsVolunteer } from '../useAdminRole.js'
 
 export default function VolunteerGuard({ children }) {
-  const isVolunteer = useIsVolunteer()
+  const { isVolunteer, loading } = useIsVolunteer()
+  // ระหว่างที่ยังไม่รู้ว่าใครล็อกอิน ต้องไม่เรนเดอร์เนื้อหาที่หวงไว้ (ไม่งั้นแวบเห็นได้ตอนรีเฟรช)
+  if (loading) return null
   if (!isVolunteer) return children
 
   return (

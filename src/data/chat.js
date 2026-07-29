@@ -11,8 +11,9 @@ import { notifyAdminNewChatMessage } from '../utils/lineNotify.js'
 const VISITOR_ID_KEY = 'ummatee_chat_visitor_id'
 
 // product.image/product.url ในการ์ดสินค้าที่แนบมากับข้อความมาจากผู้เยี่ยมชม (ไม่ล็อกอิน) — rules บังคับ http(s)
-// แล้วก็จริง แต่กันพลาดอีกชั้นก่อนใส่ลง <img src>/<a href> ตรงๆ (ChatWidget.jsx, AdminChat.jsx) กัน scheme อันตรายเช่น javascript:
-export const isSafeHttpUrl = (u) => typeof u === 'string' && /^https?:\/\//i.test(u)
+// แล้วก็จริง แต่กันพลาดอีกชั้นก่อนใส่ลง <img src>/<a href> ตรงๆ (ChatWidget.jsx, AdminChat.jsx)
+// ตัวฟังก์ชันย้ายไป utils/safeUrl.js (ไฟล์ที่ไม่ import firebase) ให้หน้าแรกใช้ได้ไม่ต้องลาก firestore เข้า bundle หลัก
+export { isSafeHttpUrl } from '../utils/safeUrl.js'
 
 // สร้าง/อ่าน visitor id แบบสุ่ม (คงอยู่ข้ามการเข้าเว็บครั้งถัดไปในเบราว์เซอร์เดิม)
 export function getVisitorId() {

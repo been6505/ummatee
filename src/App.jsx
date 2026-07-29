@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavCtx } from './navContext'
+import { PAGE_TO_PATH } from './data/routes.js'
 import { LangProvider } from './i18n.jsx'
 import Nav from './components/Nav.jsx'
 import ChatWidget from './components/ChatWidget.jsx'
@@ -79,10 +80,10 @@ const AdminDashboard2 = lazyWithReload(() => import('./pages/AdminDashboard2.jsx
 const AdminCampaigns = lazyWithReload(() => import('./pages/AdminCampaigns.jsx'))
 const AdminEvents = lazyWithReload(() => import('./pages/AdminEvents.jsx'))
 const AdminVideoCall = lazyWithReload(() => import('./pages/AdminVideoCall.jsx'))
+const MeetGuest = lazyWithReload(() => import('./pages/MeetGuest.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
 const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/quick-donate': 'quick-donate', '/quick-donations': 'quick-donations', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2com': 'give2', '/event/give-for-um/give2cook': 'give2cook', '/event/give-for-um/b2um': 'b2um', '/event/give-for-um/receive': 'give-receive', '/event/give-for-um/receive/computer': 'give2com-receive', '/event/give-for-um/receive/equipment': 'give2cook-receive', '/missions': 'missions', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions': 'admin-missions', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/dashboard': 'admin-home', '/admin/website': 'admin-website', '/admin/chat': 'admin-chat', '/um-shop': 'shop', '/um-shop/cart': 'shop-cart', '/um-shop/checkout': 'shop-checkout', '/um-shop/my-orders': 'shop-my-orders', '/admin/shop': 'admin-shop', '/admin/shop/new': 'admin-shop-new', '/admin/shop/orders': 'admin-shop-orders', '/admin/shop/inventory': 'admin-shop-inventory', '/admin/shop/sales': 'admin-shop-sales', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/qrcode': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give', '/admin/give/receiver': 'admin-give-receiver', '/admin/dashboard/broadcast': 'admin-broadcast', '/admin/staff': 'admin-staff', '/admin/partners': 'admin-partners', '/admin/aid-map': 'admin-aid-map', '/admin/speakers': 'admin-speakers', '/admin/board': 'admin-board', '/admin/audit-log': 'admin-audit-log', '/admin/staff-dashboard': 'admin-staff-dashboard', '/admin/campaigns': 'admin-campaigns', '/admin/events': 'admin-events', '/admin/video-call': 'admin-video-call' }
-const PAGE_TO_PATH = { home: '/home', donation: '/donation', iftar: '/event/iftar-for-gaza', give: '/event/give-for-um', give2: '/event/give-for-um/give2com', b2um: '/event/give-for-um/b2um', 'give-receive': '/event/give-for-um/receive', 'give2com-receive': '/event/give-for-um/receive/computer', 'give2cook-receive': '/event/give-for-um/receive/equipment', 'give2cook': '/event/give-for-um/give2cook', qurban: '/missions/qurban2026', missions: '/missions', shop: '/um-shop', 'shop-cart': '/um-shop/cart', 'shop-checkout': '/um-shop/checkout', 'shop-my-orders': '/um-shop/my-orders', volunteer: '/volunteer/register' }
 
 // path คำสั่งซื้อแบบไดนามิก /um-shop/order/<orderId> — เช็คก่อน path สินค้าเสมอ (มี 2 ระดับ ไม่ชนกับ /um-shop/:productId)
 const shopOrderIdFromPath = () => {
@@ -108,6 +109,13 @@ const adminShopNewSeedFromPath = () => {
   return m ? { mode: m[1], id: decodeURIComponent(m[2]) } : null
 }
 
+// path ห้องประชุมสำหรับคนนอก /meet/<meeting id> — id เป็น UUID สุ่ม เข้าได้โดยไม่ต้องล็อกอิน
+// ไม่ได้อยู่ใน PATH_TO_PAGE เพราะเป็น path ไดนามิก และตั้งใจไม่ให้มีลิงก์มาจากที่ไหนในเว็บ (ดู MeetGuest.jsx)
+const meetIdFromPath = () => {
+  const m = window.location.pathname.match(/^\/meet\/([^/]+)\/?$/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
 // path สินค้าแบบไดนามิก /um-shop/<productId หรือ Firestore doc id> — แยกออกจาก PATH_TO_PAGE แบบตายตัว
 const shopDetailIdFromPath = () => {
   const m = window.location.pathname.match(/^\/um-shop\/([^/]+)\/?$/)
@@ -122,6 +130,7 @@ const pageFromPath = () => {
   if (adminShopOrderIdFromPath()) return 'admin-shop-order-detail'
   if (adminShopNewSeedFromPath()) return 'admin-shop-new'
   if (shopOrderIdFromPath()) return 'shop-order'
+  if (meetIdFromPath()) return 'meet-guest'
   if (shopDetailIdFromPath()) return 'shop-detail'
   return 'home'
 }
@@ -133,6 +142,7 @@ export default function App() {
   const [adminShopOrderId, setAdminShopOrderId] = useState(adminShopOrderIdFromPath)
   const [adminShopNewSeed, setAdminShopNewSeed] = useState(adminShopNewSeedFromPath)
   const [adminChatId, setAdminChatId] = useState(adminChatIdFromPath)
+  const [meetId, setMeetId] = useState(meetIdFromPath)
   const [scrolled, setScrolled] = useState(false)
   const [maintenance, setMaintenance] = useState(false)
 
@@ -179,6 +189,7 @@ export default function App() {
       setAdminShopOrderId(adminShopOrderIdFromPath())
       setAdminShopNewSeed(adminShopNewSeedFromPath())
       setAdminChatId(adminChatIdFromPath())
+      setMeetId(meetIdFromPath())
       window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('popstate', onPop)
@@ -248,6 +259,7 @@ export default function App() {
     'admin-campaigns': AdminCampaigns,
     'admin-events': AdminEvents,
     'admin-video-call': AdminVideoCall,
+    'meet-guest': MeetGuest,
   }
   const Standalone = STANDALONE[page]
 
@@ -272,6 +284,7 @@ export default function App() {
             mode={page === 'admin-shop-new' ? adminShopNewSeed?.mode : undefined}
             seedId={page === 'admin-shop-new' ? adminShopNewSeed?.id : undefined}
             chatId={page === 'admin-chat-thread' ? adminChatId : undefined}
+            meetId={page === 'meet-guest' ? meetId : undefined}
           />
         </Suspense>
       </ErrorBoundary>

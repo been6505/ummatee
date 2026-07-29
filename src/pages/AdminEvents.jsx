@@ -4,7 +4,16 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
+
+import FileAttachments from '../components/FileAttachments.jsx'
+import ExportButtons from '../components/ExportButtons.jsx'
+// ยังต้อง import downloadCsv ตรงๆ ด้วย เพราะรายชื่อผู้ลงทะเบียนของแต่ละงาน (exportRegsCsv) ไม่ได้ใช้
+// ExportButtons — ข้อมูลขึ้นกับงานที่เลือกอยู่ ไม่ใช่ชุดเดียวของทั้งหน้า
 import { downloadCsv } from '../lib/csv.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['name', 'location']
 
 // งาน/อีเวนต์ทั่วไป (/admin/events) — ข้อ 3 ของแผน admin-intranet-plan.md
 // eventRegistrations เป็น flat collection (มี eventId อ้างอิง) — สาธารณะ create ได้ (ลงทะเบียนเอง)
@@ -72,10 +81,10 @@ export default function AdminEvents() {
       updatedAt: serverTimestamp(),
     }
     if (editId) {
-      await updateDoc(doc(db, 'events', editId), payload)
+      await updateDoc(doc(db, 'events', editId), withSearchTokens(payload, SEARCH_FIELDS))
       writeAuditLog({ action: 'update', entityType: 'event', entityId: editId, summary: `แก้ไขงาน ${payload.name}` })
     } else {
-      const ref = await addDoc(collection(db, 'events'), { ...payload, createdAt: serverTimestamp() })
+      const ref = await addDoc(collection(db, 'events'), withSearchTokens({ ...payload, createdAt: serverTimestamp() }, SEARCH_FIELDS))
       writeAuditLog({ action: 'create', entityType: 'event', entityId: ref.id, summary: `เพิ่มงาน ${payload.name}` })
     }
     setForm(EMPTY); setEditId(null)
@@ -112,12 +121,13 @@ export default function AdminEvents() {
     writeAuditLog({ action: 'delete', entityType: 'eventRegistration', entityId: r.id, summary: `ลบผู้ลงทะเบียน ${r.name}` })
   }
 
-  const exportCsv = () => {
-    downloadCsv('events.csv',
-      ['ชื่องาน', 'วันเวลาเริ่ม', 'วันเวลาสิ้นสุด', 'สถานที่', 'งบ', 'เป้าผู้เข้าร่วม', 'สถานะ'],
-      filtered.map((e) => [e.name, e.startAt, e.endAt, e.location, e.budget, e.targetAttendees, STATUS_LABEL[e.status] || e.status])
-    )
-  }
+  // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
+  const buildExport = () => ({
+    filename: 'events.csv',
+    sheetName: 'งานอีเวนต์',
+    headers: ['ชื่องาน', 'วันเวลาเริ่ม', 'วันเวลาสิ้นสุด', 'สถานที่', 'งบ', 'เป้าผู้เข้าร่วม', 'สถานะ'],
+    rows: filtered.map((e) => [e.name, e.startAt, e.endAt, e.location, e.budget, e.targetAttendees, STATUS_LABEL[e.status] || e.status]),
+  })
 
   const exportRegsCsv = (eventName) => {
     downloadCsv(`event-registrations-${eventName}.csv`,
@@ -136,7 +146,7 @@ export default function AdminEvents() {
           <div className="admin-wrap">
             <div className="admin-head">
               <div><h1>งาน / อีเวนต์</h1><p>วางแผนงาน จัดการผู้ลงทะเบียน และเช็คอินหน้างาน</p></div>
-              <button className="admin-btn" onClick={exportCsv}>ส่งออก CSV</button>
+              <ExportButtons build={buildExport} />
             </div>
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -165,6 +175,12 @@ export default function AdminEvents() {
                 <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มงาน'}</button>
                 {editId && <button className="admin-btn" onClick={cancel}>ยกเลิก</button>}
               </div>
+              {/* แนบไฟล์ได้เฉพาะตอนแก้ของที่บันทึกแล้ว — ของใหม่ยังไม่มี id ให้ผูกไฟล์ */}
+              {editId && (
+                <div style={{ marginTop: 4 }}>
+                  <FileAttachments entityType="event" entityId={editId} />
+                </div>
+              )}
             </div>
 
             <div className="admin-card-head" style={{ marginBottom: 12 }}>
@@ -172,7 +188,7 @@ export default function AdminEvents() {
               <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
 
-            {loading ? <p>กำลังโหลดข้อมูล...</p> : (
+            {loading ? <ListSkeleton /> : (
               <div className="admin-table-wrap" style={{ marginBottom: 20 }}>
                 <table className="admin-table">
                   <thead><tr><th>ชื่องาน</th><th>วันเวลา</th><th>สถานที่</th><th>สถานะ</th><th></th></tr></thead>

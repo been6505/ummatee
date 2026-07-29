@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useProducts, SHOP_SIZES_BY_CATEGORY } from '../data/shop.js'
 import { stockIn, useStockMovements, stockLevel, LOW_STOCK_THRESHOLD } from '../data/inventory.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBoxesStacked, faTriangleExclamation, faPlus, faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // ระบบคลัง Um Shop (/admin/shop/inventory) — แจ้งเตือนสินค้าใกล้หมด/หมด + รับสินค้าเข้าคลัง + ประวัติการเคลื่อนไหวสต็อก
 // การตัดสต็อกตอนสั่งซื้อเป็นแบบอัตโนมัติอยู่แล้ว (ดู createOrder ใน src/data/orders.js) หน้านี้ไม่ต้องทำอะไรเพิ่ม
@@ -91,7 +92,7 @@ function StockInForm({ products }) {
 }
 
 export default function AdminInventory() {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const authed = !!user
   const { products, loading: prodLoading } = useProducts()
   const { rows: movements, loading: movLoading } = useStockMovements()
@@ -159,7 +160,7 @@ export default function AdminInventory() {
           </div>
         </div>
 
-        <div className="admin-stats">
+        <div className="admin-stats cols-3">
           <div className="admin-stat"><div className="v">{products.length}</div><div className="l">สินค้าทั้งหมด</div></div>
           <div className="admin-stat"><div className="v" style={{ color: '#d84315' }}>{outOfStock.length}</div><div className="l">สินค้าหมด</div></div>
           <div className="admin-stat"><div className="v" style={{ color: '#b45309' }}>{lowStock.length}</div><div className="l">ใกล้หมด (≤{LOW_STOCK_THRESHOLD})</div></div>
@@ -239,7 +240,7 @@ export default function AdminInventory() {
               </select>
             </div>
           </div>
-          {movLoading ? <p>กำลังโหลด...</p> : (
+          {movLoading ? <ListSkeleton /> : (
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead><tr><th>วันที่</th><th>สินค้า</th><th>ประเภท</th><th>จำนวน</th><th>อ้างอิง/หมายเหตุ</th></tr></thead>

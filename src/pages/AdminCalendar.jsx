@@ -4,17 +4,22 @@ import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'fireb
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
+import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
+import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner,
   faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
-  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage,
+  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage, faPenToSquare, faTrash,
 } from '@fortawesome/free-solid-svg-icons'
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
 import { uploadToCloudinary } from '../utils/cloudinary.js'
+import { withSearchTokens } from '../lib/searchIndex.js'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['title', 'text']
 
 // ป้ายแพลตฟอร์มของกล่องข้อความ — เหมือน AdminChat.jsx (เพิ่ม instagram ที่ยังไม่มีในไฟล์นั้น)
 const CHAT_PLATFORM_BADGE = {
@@ -117,6 +122,13 @@ function ChatInboxTab() {
 // เว็บ Content Hub (Vercel) ที่ทำหน้าที่เชื่อม OAuth + โพสต์จริง — ประกาศไว้บนสุดเพราะใช้หลายจุดในไฟล์นี้
 const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
 
+// ปิดทุกส่วนที่ผูกกับ Content Hub (เว็บแยกสำหรับเชื่อม OAuth + โพสต์จริง) ไว้ก่อน
+// ครอบคลุม: ปุ่ม "เชื่อมต่อแพลตฟอร์ม / โพสต์จริง" + แผงเชื่อมบัญชี, แท็บกล่องข้อความ/คอมเมนต์/
+// ภาพรวมเพจ, ตัวเลือกแพลตฟอร์ม + ติ๊กโพสต์จริงอัตโนมัติในฟอร์ม, และปุ่ม "โพสต์จริง" ในรายการโพสต์
+// เปลี่ยนเป็น true เพื่อเปิดกลับทั้งหมดพร้อมกัน — โค้ดยังอยู่ครบ ไม่ได้ลบทิ้ง
+// ข้อมูลเดิม (platforms/realPublish ของโพสต์ที่บันทึกไว้แล้ว) ไม่ถูกแตะ ยังอยู่ใน Firestore เหมือนเดิม
+const SHOW_CONTENT_HUB = false
+
 // แท็บ "คอมเมนต์" และ "ภาพรวมเพจ" — ดึงข้อมูลจริงจากแพลตฟอร์มต้องใช้ access token ที่เก็บฝั่งเซิร์ฟเวอร์
 // ซึ่งอยู่ในฐานข้อมูลของ Content Hub หน้านี้เข้าถึงไม่ได้ (เดิมเรียก Cloud Functions ที่ไม่เคย deploy
 // ทำให้เด้ง alert error ทุกครั้งที่เปิดแท็บ) จึงเปลี่ยนเป็นบอกทางไป Content Hub ตรงๆ แทน
@@ -197,13 +209,17 @@ const PLATFORMS = [
   { id: 'line', label: 'LINE', color: '#06c755' },
 ]
 
-const STATUS = { draft: 'ฉบับร่าง', scheduled: 'ตั้งเวลาแล้ว', posted: 'โพสต์แล้ว' }
-const STATUS_COLOR = { draft: '#999', scheduled: '#c9a84c', posted: '#2e7d52' }
+// เหลือ 2 สถานะเท่านั้น — ร่าง (ยังไม่ได้โพสต์) กับ โพสต์แล้ว
+// ทอง = ยังมีงานค้าง / เขียว = เสร็จแล้ว ใช้ระบายสีวันในปฏิทินด้วย (ดู dominant ในกริด)
+const STATUS = { draft: 'ร่าง', posted: 'โพสต์แล้ว' }
+const STATUS_COLOR = { draft: '#c9a84c', posted: '#2e7d52' }
+
+// ข้อมูลเก่ามีสถานะ 'scheduled' (ตั้งเวลาแล้ว) และ approvalStatus ที่เลิกใช้แล้ว
+// แปลงให้เป็น 2 สถานะใหม่ตอนแสดงผล โดยไม่ต้องไล่แก้ข้อมูลเดิมใน Firestore
+const normStatus = (s) => (s === 'posted' ? 'posted' : 'draft')
 
 // ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
 const CONTENT_TYPE_LABEL = { post: 'โพสต์', live: 'ไลฟ์สด' }
-const APPROVAL_LABEL = { draft: 'ร่าง', pending_review: 'รอตรวจ', approved: 'อนุมัติแล้ว', rejected: 'ถูกตีกลับ' }
-const APPROVAL_COLOR = { draft: '#999', pending_review: '#c9a84c', approved: '#2e7d52', rejected: '#c0392b' }
 const LIVE_PLATFORM_OPTIONS = ['facebook', 'tiktok', 'youtube']
 
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
@@ -231,8 +247,9 @@ const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()) }
 
 const EMPTY_FORM = {
-  title: '', text: '', time: '10:00', platforms: [], status: 'scheduled', mediaUrls: [], mediaPublicIds: [], realPublish: false,
+  title: '', text: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
   campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
+  sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
 }
 
 export default function AdminCalendar() {
@@ -299,6 +316,9 @@ export default function AdminCalendar() {
 
   if (loading) return null
   if (!user) return <AdminLogin />
+  // แท็บกล่องข้อความ/คอมเมนต์/ภาพรวมเพจ อ่าน chats + socialInsightsCache ซึ่ง firestore.rules
+  // จำกัดไว้ที่ isFullAdmin() — ถ้าโชว์ให้ staff เห็นจะกดแล้วเจอหน้าว่างเปล่าโดยไม่มีอะไรบอกว่าไม่มีสิทธิ์
+  const canSeeInbox = isFullAdminEmail(user.email || '')
 
   // ตารางวันของเดือนที่แสดง (เริ่มวันอาทิตย์)
   const firstDay = new Date(year, month, 1).getDay()
@@ -355,10 +375,12 @@ export default function AdminCalendar() {
   const startEdit = (p) => {
     setEditId(p.id)
     setForm({
-      title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled',
+      // normStatus: โพสต์เก่าที่เป็น 'scheduled' ต้องกลายเป็น 'draft' ไม่งั้นชิปไม่ตรงกับค่าใดเลยแล้วดูเหมือนไม่ได้เลือกอะไร
+      title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: normStatus(p.status),
       mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false,
       campaignId: p.campaignId || '', contentType: p.contentType || 'post', liveScheduledAt: p.liveScheduledAt || '',
       livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
+      sources: p.sources || [],
     })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
@@ -377,6 +399,12 @@ export default function AdminCalendar() {
         mediaUrls: form.mediaUrls,
         mediaPublicIds: form.mediaPublicIds,
         realPublish: form.realPublish,
+        // เก็บเฉพาะแหล่งที่มี url จริงและเป็น http(s) — ค่านี้ไปโผล่ใน href บนการ์ด ต้องกัน javascript: ไว้
+        // ชื่อว่างให้ใช้ url เป็นชื่อแทน จะได้ไม่มีลิงก์ที่กดได้แต่ไม่รู้ว่าไปไหน
+        sources: (form.sources || [])
+          .map((s) => ({ label: (s.label || '').trim(), url: (s.url || '').trim() }))
+          .filter((s) => isSafeHttpUrl(s.url))
+          .map((s) => ({ label: s.label || s.url, url: s.url })),
         campaignId: form.campaignId || null,
         contentType: form.contentType,
         approvalStatus: form.approvalStatus,
@@ -387,9 +415,9 @@ export default function AdminCalendar() {
         } : {}),
       }
       if (editId) {
-        await updateDoc(doc(db, 'contentPosts', editId), payload)
+        await updateDoc(doc(db, 'contentPosts', editId), withSearchTokens(payload, SEARCH_FIELDS))
       } else {
-        await addDoc(collection(db, 'contentPosts'), { ...payload, createdAt: Date.now() })
+        await addDoc(collection(db, 'contentPosts'), withSearchTokens({ ...payload, createdAt: Date.now() }, SEARCH_FIELDS))
       }
       cancelEdit()
       setStatus('บันทึกสำเร็จ ✓')
@@ -404,35 +432,39 @@ export default function AdminCalendar() {
     try { await deleteDoc(doc(db, 'contentPosts', id)) } catch (e) { window.alert('ลบไม่สำเร็จ: ' + e.message) }
   }
 
-  const markPosted = async (p) => {
-    try { await updateDoc(doc(db, 'contentPosts', p.id), { status: 'posted' }) } catch (e) { window.alert(e.message) }
-  }
+  // แหล่งข้อมูล (หลายลิงก์ต่อโพสต์)
+  const addSource = () => setForm((f) => ({ ...f, sources: [...(f.sources || []), { label: '', url: '' }] }))
+  const setSource = (i, patch) => setForm((f) => ({
+    ...f, sources: (f.sources || []).map((s, j) => (j === i ? { ...s, ...patch } : s)),
+  }))
+  const removeSource = (i) => setForm((f) => ({ ...f, sources: (f.sources || []).filter((_, j) => j !== i) }))
 
-  // เปลี่ยนสถานะอนุมัติ — บังคับที่ UI เท่านั้นในรอบนี้ (contentPosts ทั้ง collection เขียนได้เฉพาะ isFullAdmin()
-  // อยู่แล้วตาม firestore.rules เดิม ซึ่งเข้มกว่า "เฉพาะ admin" ที่โจทย์ขอสำหรับฟิลด์นี้อยู่แล้ว จึงไม่ต้องเพิ่ม
-  // rule แยกฟิลด์ — แต่ไม่ได้แยกสิทธิ์ staff/field ที่ไม่ใช่ isFullAdmin ออกจาก field อื่นๆ ของโพสต์เดียวกัน)
-  const setApproval = async (p, approvalStatus) => {
-    try { await updateDoc(doc(db, 'contentPosts', p.id), { approvalStatus }) } catch (e) { window.alert(e.message) }
+  // เปลี่ยนสถานะจากชิปบนการ์ด (ร่าง / โพสต์แล้ว)
+  const setPostStatus = async (p, status) => {
+    try { await updateDoc(doc(db, 'contentPosts', p.id), { status }) } catch (e) { window.alert(e.message) }
   }
 
   const dayPosts = byDate[selected] || []
   const selDate = new Date(selected)
 
-  return (<VolunteerGuard>
+  return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
             <h1>ปฏิทินคอนเทนต์</h1>
-            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา เลือกแพลตฟอร์ม</p>
+            {/* ข้อความหัวเรื่องต้องตรงกับสิ่งที่มีจริงในหน้า — ตัวเลือกแพลตฟอร์มถูกซ่อนไว้ตาม SHOW_CONTENT_HUB */}
+            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา{SHOW_CONTENT_HUB ? ' เลือกแพลตฟอร์ม' : ''}</p>
           </div>
-          <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
-            <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
-          </button>
+          {SHOW_CONTENT_HUB && (
+            <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
+              <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
+            </button>
+          )}
         </div>
 
-        {showHub && (
+        {SHOW_CONTENT_HUB && showHub && (
           <div className="admin-card" style={{ marginBottom: 20 }}>
             <h4><FontAwesomeIcon icon={faLink} /> เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
             <p style={{ color: 'var(--ink-soft)', fontSize: '.85rem', marginBottom: 14 }}>
@@ -480,26 +512,28 @@ export default function AdminCalendar() {
           <button className="admin-btn" style={mainTab === 'calendar' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('calendar')}>
             <FontAwesomeIcon icon={faCalendarDays} /> ปฏิทิน
           </button>
-          <button className="admin-btn" style={mainTab === 'chat' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('chat')}>
-            <FontAwesomeIcon icon={faComments} /> กล่องข้อความ
-          </button>
-          <button className="admin-btn" style={mainTab === 'comments' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('comments')}>
-            <FontAwesomeIcon icon={faMessage} /> คอมเมนต์
-          </button>
-          <button className="admin-btn" style={mainTab === 'insights' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('insights')}>
-            <FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ
-          </button>
+          {SHOW_CONTENT_HUB && canSeeInbox && <>
+            <button className="admin-btn" style={mainTab === 'chat' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('chat')}>
+              <FontAwesomeIcon icon={faComments} /> กล่องข้อความ
+            </button>
+            <button className="admin-btn" style={mainTab === 'comments' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('comments')}>
+              <FontAwesomeIcon icon={faMessage} /> คอมเมนต์
+            </button>
+            <button className="admin-btn" style={mainTab === 'insights' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('insights')}>
+              <FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ
+            </button>
+          </>}
         </div>
 
-        {mainTab === 'chat' && <ChatInboxTab />}
-        {mainTab === 'comments' && <CommentsTab />}
-        {mainTab === 'insights' && <InsightsTab />}
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'chat' && <ChatInboxTab />}
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'comments' && <CommentsTab />}
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'insights' && <InsightsTab />}
 
         {mainTab === 'calendar' && <div className="admin-cal-layout">
           {/* ปฏิทินรายเดือน */}
           <div className="admin-card admin-cal-card">
             <div className="admin-cal-head">
-              <button className="admin-btn" onClick={prevMonth}><FontAwesomeIcon icon={faChevronLeft} /></button>
+              <button type="button" className="admin-btn" onClick={prevMonth} aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า"><FontAwesomeIcon icon={faChevronLeft} /></button>
               <div style={{ textAlign: 'center' }}>
                 <h4 style={{ margin: 0 }}>{TH_MONTHS[month]} {year + 543}</h4>
                 {(() => {
@@ -512,7 +546,7 @@ export default function AdminCalendar() {
                   return <div className="admin-cal-hijri-header">{label}</div>
                 })()}
               </div>
-              <button className="admin-btn" onClick={nextMonth}><FontAwesomeIcon icon={faChevronRight} /></button>
+              <button type="button" className="admin-btn" onClick={nextMonth} aria-label="เดือนถัดไป" title="เดือนถัดไป"><FontAwesomeIcon icon={faChevronRight} /></button>
             </div>
             <div className="admin-cal-grid">
               {TH_DAYS.map((d) => <div className="admin-cal-dow" key={d}>{d}</div>)}
@@ -520,10 +554,16 @@ export default function AdminCalendar() {
                 if (d === null) return <div key={`e${i}`} />
                 const key = dateKey(year, month, d)
                 const has = byDate[key] || []
+                // สีประจำวัน: มีโพสต์ไหนยังไม่ได้โพสต์ = ทอง (ยังมีงานค้าง) / โพสต์ครบแล้ว = เขียว
+                // เพื่อให้กวาดตาดูปฏิทินแล้วเห็นวันที่ยังมีงานค้างก่อน ไม่ใช่เห็นวันที่ทำเสร็จแล้วเด่นสุด
+                const dominant = has.length === 0 ? null
+                  : has.some((p) => normStatus(p.status) !== 'posted') ? 'draft' : 'posted'
                 return (
                   <button
                     key={key}
-                    className={`admin-cal-day ${key === selected ? 'sel' : ''} ${key === todayKey() ? 'today' : ''}`}
+                    className={`admin-cal-day ${has.length > 0 ? 'has-posts' : ''} ${key === selected ? 'sel' : ''} ${key === todayKey() ? 'today' : ''}`}
+                    style={dominant ? { '--day-color': STATUS_COLOR[dominant] } : undefined}
+                    title={has.length > 0 ? `${has.length} โพสต์` : undefined}
                     onClick={() => { setSelected(key); cancelEdit() }}
                   >
                     <span>{d}</span>
@@ -555,12 +595,21 @@ export default function AdminCalendar() {
                 <div className="admin-post" key={p.id}>
                   <div className="admin-post-top">
                     <strong>{p.time} · {p.title} {p.contentType === 'live' && '🔴 ไลฟ์'}</strong>
-                    <span className="admin-post-status" style={{ background: STATUS_COLOR[p.status] }}>{STATUS[p.status]}</span>
+                    {/* แก้ไข/ลบ อยู่มุมขวาบนของการ์ด แยกออกจากปุ่มเปลี่ยนสถานะด้านล่าง
+                        เพราะเป็นคนละงานกัน — อันนี้จัดการตัวการ์ด อันนั้นเปลี่ยนสถานะเนื้อหา */}
+                    <span className="admin-post-corner">
+                      <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                        {STATUS[normStatus(p.status)]}
+                      </span>
+                      <button className="admin-post-corner-btn" onClick={() => startEdit(p)} aria-label="แก้ไขโพสต์" title="แก้ไข">
+                        <FontAwesomeIcon icon={faPenToSquare} />
+                      </button>
+                      <button className="admin-post-corner-btn danger" onClick={() => remove(p.id)} aria-label="ลบโพสต์" title="ลบ">
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                    <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, color: '#fff', background: APPROVAL_COLOR[p.approvalStatus || 'draft'] }}>
-                      {APPROVAL_LABEL[p.approvalStatus || 'draft']}
-                    </span>
                     {p.campaignId && (
                       <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, background: '#eee' }}>
                         แคมเปญ: {campaigns.find((c) => c.id === p.campaignId)?.name || p.campaignId}
@@ -575,6 +624,15 @@ export default function AdminCalendar() {
                     </div>
                   )}
                   {p.text && <p className="admin-post-text">{p.text}</p>}
+                  {(p.sources || []).length > 0 && (
+                    <div className="admin-post-sources">
+                      {p.sources.filter((s) => isSafeHttpUrl(s.url)).map((s, si) => (
+                        <a key={si} href={s.url} target="_blank" rel="noopener noreferrer" title={s.url}>
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {s.label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {(p.mediaUrls || []).length > 0 && (
                     <div className="admin-post-media">
                       {p.mediaUrls.map((url, mi) => (
@@ -616,24 +674,20 @@ export default function AdminCalendar() {
                       ))}
                     </div>
                   )}
-                  <div className="admin-post-actions" style={{ marginBottom: 6 }}>
-                    {Object.entries(APPROVAL_LABEL).map(([k, v]) => (
-                      <button
-                        key={k} className="admin-btn" style={(p.approvalStatus || 'draft') === k ? { background: APPROVAL_COLOR[k], color: '#fff' } : {}}
-                        onClick={() => setApproval(p, k)}
-                      >{v}</button>
-                    ))}
-                  </div>
                   <div className="admin-post-actions">
-                    {p.status !== 'posted' && <button className="admin-btn" onClick={() => markPosted(p)}><FontAwesomeIcon icon={faCheck} /> โพสต์แล้ว</button>}
-                    {(p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
+                    {Object.entries(STATUS).map(([k, v]) => (
+                      <button
+                        key={k} className="admin-btn" style={normStatus(p.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
+                        onClick={() => setPostStatus(p, k)}
+                      >{normStatus(p.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
+                    ))}
+                    {SHOW_CONTENT_HUB && (p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
                       // คัดลอกเนื้อหาแล้วเปิดหน้าสร้างโพสต์ของ Content Hub ให้วางต่อ (โพสต์จริงทำที่นั่น)
                       <button className="admin-btn" onClick={() => publishNow(p.id)}>
                         <FontAwesomeIcon icon={faPaperPlane} /> โพสต์จริง (ไป Content Hub)
                       </button>
                     )}
-                    <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
-                    <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
+
                   </div>
                 </div>
               ))}
@@ -652,10 +706,19 @@ export default function AdminCalendar() {
                   <label>เวลาโพสต์
                     <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
                   </label>
+                  {/* สถานะเหลือ 2 ค่า ใช้ชิปกดเลือกแทน dropdown — เห็นค่าที่เลือกอยู่ทันทีไม่ต้องกางเมนู */}
                   <label>สถานะ
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                      {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
+                    <div className="admin-cal-status-chips">
+                      {Object.entries(STATUS).map(([k, v]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          className={form.status === k ? 'on' : ''}
+                          style={form.status === k ? { background: STATUS_COLOR[k], borderColor: STATUS_COLOR[k], color: '#fff' } : {}}
+                          onClick={() => setForm({ ...form, status: k })}
+                        >{v}</button>
+                      ))}
+                    </div>
                   </label>
                 </div>
                 <div className="admin-cal-form-row">
@@ -699,7 +762,7 @@ export default function AdminCalendar() {
                   <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
                     <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
                     {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูป / วิดีโอ'}
-                    <input type="file" accept="image/*,video/*" multiple hidden onChange={uploadMedia} />
+                    <input type="file" accept="image/*,video/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadMedia} />
                   </label>
                   {form.mediaUrls.length > 0 && (
                     <div className="admin-media-preview">
@@ -714,6 +777,33 @@ export default function AdminCalendar() {
                     </div>
                   )}
                 </div>
+
+                {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
+                    เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้
+                    กรอง scheme ตอนบันทึก (ดู save) กัน javascript: เพราะค่านี้ไปโผล่ใน href บนการ์ด */}
+                <div>
+                  <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แหล่งข้อมูล</div>
+                  {form.sources.map((s, i) => (
+                    <div className="admin-cal-source-row" key={i}>
+                      <input
+                        placeholder="ชื่อแหล่ง (เช่น ข่าวต้นทาง)"
+                        value={s.label}
+                        onChange={(e) => setSource(i, { label: e.target.value })}
+                      />
+                      <input
+                        placeholder="https://..."
+                        value={s.url}
+                        onChange={(e) => setSource(i, { url: e.target.value })}
+                      />
+                      <button type="button" className="admin-cal-source-del" onClick={() => removeSource(i)} aria-label="ลบแหล่งข้อมูลนี้">
+                        <FontAwesomeIcon icon={faXmark} />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" className="admin-btn" onClick={addSource}>+ เพิ่มแหล่งข้อมูล</button>
+                </div>
+
+                {SHOW_CONTENT_HUB && <>
                 <label>แพลตฟอร์ม</label>
                 <div className="admin-cal-platforms">
                   {PLATFORMS.map((pl) => (
@@ -732,6 +822,7 @@ export default function AdminCalendar() {
                   <input type="checkbox" checked={form.realPublish} onChange={(e) => setForm({ ...form, realPublish: e.target.checked })} />
                   ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
                 </label>
+                </>}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
                   <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
                   {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
@@ -743,5 +834,5 @@ export default function AdminCalendar() {
         </div>}
       </div>
     </main>
-  </VolunteerGuard>)
+  </VolunteerGuard>)}</StaffRoleGuard>)
 }

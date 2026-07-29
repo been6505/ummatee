@@ -283,7 +283,7 @@
 .admin-cal-head h4{margin:0;font-size:1.1rem}
 .admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .admin-cal-dow{text-align:center;font-size:.75rem;font-weight:700;color:var(--ink-soft);padding:6px 0}
-.admin-cal-day{position:relative;aspect-ratio:1;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
+.admin-cal-day{position:relative;aspect-ratio:1;min-height:44px;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
 .admin-cal-day:hover{background:#EAF6EE}
 /* วันที่มีคอนเทนต์ลงไว้แล้ว — ระบายเต็มกรอบด้วยสีของสถานะที่ยังไม่เสร็จที่สุดในวันนั้น (--day-color)
    ใช้ color-mix ผสมกับขาวเพื่อให้ยังอ่านตัวเลขวันที่ออก และมี fallback สีเทาอ่อนไว้ก่อน
@@ -328,6 +328,9 @@
 .admin-cal-form input,.admin-cal-form select,.admin-cal-form textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.92rem;font-family:inherit;background:#fff;resize:vertical}
 .admin-cal-form input:focus,.admin-cal-form select:focus,.admin-cal-form textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}
 .admin-cal-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* มือถือ: สองช่องต่อแถวเหลือช่องละ ~144px — ชิปสถานะตกลงมาสองบรรทัดและ dropdown แคมเปญ
+   แคบจนอ่านชื่อแคมเปญไม่ออก จึงวางเรียงลงมาแถวละช่อง */
+@media (max-width:640px){.admin-cal-form-row{grid-template-columns:1fr}}
 .admin-cal-platforms{display:flex;gap:8px;flex-wrap:wrap}
 .admin-cal-platforms button{padding:6px 14px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);transition:all .12s}
 
@@ -463,6 +466,18 @@ a.attach-name:hover{text-decoration:underline}
 .attach-drive-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 
 /* การ์ดทางลัดในหน้าแดชบอร์ด Staff — ลิงก์ไปทุกหน้าที่บัญชีนั้นเข้าได้ (ดู data/staffNav.js) */
+/* รายการโพสต์ 3 คอลัมน์ใต้ตัวเลขสรุปในแดชบอร์ด Staff
+   มือถือซ้อนเป็นคอลัมน์เดียว — 3 คอลัมน์บนจอ 375px เหลือคอลัมน์ละ ~110px อ่านชื่อโพสต์ไม่ออก */
+.staff-post-lists{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px}
+@media (max-width:900px){.staff-post-lists{grid-template-columns:1fr}}
+.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.staff-post-list li a{display:block;padding:8px 10px;border-radius:8px;text-decoration:none;color:inherit;transition:background .12s}
+.staff-post-list li a:hover{background:#EAF6EE}
+.staff-post-title{display:block;font-size:.88rem;font-weight:600;overflow-wrap:anywhere}
+.staff-post-meta{display:block;font-size:.75rem;color:var(--ink-soft);margin-top:2px}
+.staff-post-empty{color:var(--ink-soft);font-size:.85rem}
+.staff-post-more{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:var(--green-deep)}
+
 .staff-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:24px}
 .staff-shortcut{display:flex;align-items:center;gap:12px;padding:16px;background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:14px;text-decoration:none;color:var(--ink);box-shadow:0 6px 20px -12px rgba(27,94,54,.18);transition:transform .15s,box-shadow .15s,border-color .15s}
 .staff-shortcut:hover{transform:translateY(-2px);border-color:rgba(46,125,82,.35);box-shadow:0 12px 26px -14px rgba(27,94,54,.4)}

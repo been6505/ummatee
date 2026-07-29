@@ -30,6 +30,34 @@ export default function AdminDashboard2() {
   )
 }
 
+// รายการโพสต์ในหนึ่งคอลัมน์ — เรียงตามวันที่ (ใหม่สุดก่อน) และจำกัดจำนวนกันการ์ดยาวเกินจอ
+const LIST_LIMIT = 8
+function PostList({ title, posts }) {
+  const sorted = [...posts].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+  return (
+    <div className="admin-card staff-post-list">
+      <h4>{title} ({posts.length})</h4>
+      {sorted.length === 0 ? (
+        <p className="staff-post-empty">ยังไม่มีรายการ</p>
+      ) : (
+        <ul>
+          {sorted.slice(0, LIST_LIMIT).map((p) => (
+            <li key={p.id}>
+              <a href={`/admin/calendar?date=${p.date || ''}`}>
+                <span className="staff-post-title">{p.title || '(ไม่มีชื่อ)'}</span>
+                <span className="staff-post-meta">{p.date || 'ไม่ระบุวัน'}{p.time ? ` · ${p.time}` : ''}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {sorted.length > LIST_LIMIT && (
+        <a className="staff-post-more" href="/admin/calendar">ดูทั้งหมดในปฏิทิน ({sorted.length})</a>
+      )}
+    </div>
+  )
+}
+
 function DashboardBody({ staff: staffProp }) {
   const staff = staffProp || {} // กัน null ไม่ให้ทั้งหน้าพัง ถ้า guard ปล่อยผ่านโดยยังไม่มี staff doc
   const canSeeCrm = hasStaffRole(staff, ['admin', 'staff', 'field'])
@@ -46,8 +74,8 @@ function DashboardBody({ staff: staffProp }) {
 
   // สถานะโพสต์มีสองค่าจริงคือ draft กับ posted (ดู normStatus ใน AdminCalendar.jsx)
   // อะไรที่ยังไม่ใช่ posted ถือว่า "กำลังดำเนินการ" ทั้งหมด รวมโพสต์เก่าที่เคยเป็น 'scheduled'
-  const postsPosted = posts.filter((p) => p.status === 'posted').length
-  const postsInProgress = posts.length - postsPosted
+  const posted = posts.filter((p) => p.status === 'posted')
+  const inProgress = posts.filter((p) => p.status !== 'posted')
 
   return (
     <main className="admin-dash">
@@ -60,11 +88,19 @@ function DashboardBody({ staff: staffProp }) {
         {/* ตัวเลขคอนเทนต์อยู่บนสุด — เป็นสิ่งที่ทีมต้องเห็นก่อนทางลัดเมนู
             cols-3 บังคับ 3 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
         {canSeeContent && (
-          <div className="admin-stats cols-3">
-            <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
-            <div className="admin-stat"><div className="v">{postsInProgress}</div><div className="l">กำลังดำเนินการ</div></div>
-            <div className="admin-stat"><div className="v">{postsPosted}</div><div className="l">โพสต์แล้ว</div></div>
-          </div>
+          <>
+            <div className="admin-stats cols-3">
+              <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
+              <div className="admin-stat"><div className="v">{inProgress.length}</div><div className="l">กำลังดำเนินการ</div></div>
+              <div className="admin-stat"><div className="v">{posted.length}</div><div className="l">โพสต์แล้ว</div></div>
+            </div>
+            {/* รายการจริงใต้ตัวเลขแต่ละคอลัมน์ — เดิมเห็นแค่ตัวเลขแล้วต้องเข้าปฏิทินไปหาเองว่าคืออันไหน */}
+            <div className="staff-post-lists">
+              <PostList title="แผนคอนเทนต์ทั้งหมด" posts={posts} />
+              <PostList title="กำลังดำเนินการ" posts={inProgress} />
+              <PostList title="โพสต์แล้ว" posts={posted} />
+            </div>
+          </>
         )}
 
         {/* ทางลัดไปทุกหน้าที่บัญชีนี้เข้าได้ — ดึงจาก data/staffNav.js ตัวเดียวกับเมนูซ้าย

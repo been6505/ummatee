@@ -486,6 +486,8 @@ a.attach-name:hover{text-decoration:underline}
 .staff-post-title{display:block;font-size:.88rem;font-weight:600;overflow-wrap:anywhere}
 .staff-post-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.75rem;color:var(--ink-soft);margin-top:4px}
 .staff-post-chip{display:inline-block;padding:2px 9px;border-radius:99px;color:#fff;font-size:.7rem;font-weight:700;line-height:1.5}
+/* ป้ายบอกว่าโพสต์นี้แนบลิงก์ไฟล์งานใน Google Drive มาแล้ว — เป็นเงื่อนไขที่ทำให้ขึ้นคอลัมน์ "กำลังดำเนินการ" */
+.staff-post-file{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.7rem;font-weight:700;line-height:1.5;color:var(--green-deep);background:#EAF6EE}
 .staff-post-empty{color:var(--ink-soft);font-size:.85rem}
 .staff-post-more{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:var(--green-deep)}
 

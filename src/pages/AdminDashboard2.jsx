@@ -8,6 +8,7 @@ import { auth } from '../firebase.js'
 import { isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import { visibleStaffNav, flattenStaffNav } from '../data/staffNav.js'
 import { hasStaffRole } from '../useStaffRole.js'
+import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
 
 // แดชบอร์ดสรุปตาม role (/admin/staff-dashboard) — ชื่อไฟล์ AdminDashboard2 กันชนกับ AdminHome.jsx เดิม (หน้าแรกแอดมิน)
 // social role: ข้าม stat ของ CRM/บอร์ด (ไม่มีสิทธิ์อยู่แล้วตาม firestore.rules) เหลือแค่ contentPosts (ถือเป็น
@@ -45,7 +46,12 @@ function PostList({ title, posts }) {
             <li key={p.id}>
               <a href={`/admin/calendar?date=${p.date || ''}`}>
                 <span className="staff-post-title">{p.title || '(ไม่มีชื่อ)'}</span>
-                <span className="staff-post-meta">{p.date || 'ไม่ระบุวัน'}{p.time ? ` · ${p.time}` : ''}</span>
+                <span className="staff-post-meta">
+                  <span className="staff-post-chip" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                    {STATUS[normStatus(p.status)]}
+                  </span>
+                  {p.date || 'ไม่ระบุวัน'}{p.time ? ` · ${p.time}` : ''}
+                </span>
               </a>
             </li>
           ))}

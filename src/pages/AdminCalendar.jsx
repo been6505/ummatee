@@ -17,6 +17,7 @@ import {
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
 import { withSearchTokens } from '../lib/searchIndex.js'
+import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
 
@@ -210,13 +211,11 @@ const PLATFORMS = [
 
 // เหลือ 2 สถานะเท่านั้น — ร่าง (ยังไม่ได้โพสต์) กับ โพสต์แล้ว
 // ทอง = ยังมีงานค้าง / เขียว = เสร็จแล้ว ใช้ระบายสีวันในปฏิทินด้วย (ดู dominant ในกริด)
-const STATUS = { draft: 'ร่าง', review: 'ส่งตรวจ', posted: 'โพสต์แล้ว' }
-const STATUS_COLOR = { draft: '#c9a84c', review: '#2f6db5', posted: '#2e7d52' }
+
 
 // ข้อมูลเก่ามีสถานะ 'scheduled' (ตั้งเวลาแล้ว) และ approvalStatus ที่เลิกใช้แล้ว
 // แปลงให้เป็น 2 สถานะใหม่ตอนแสดงผล โดยไม่ต้องไล่แก้ข้อมูลเดิมใน Firestore
-// ค่าที่ไม่รู้จัก (เช่น 'scheduled' ของโพสต์เก่า) ให้ถือเป็นร่าง ไม่งั้นชิปไม่ตรงกับค่าใดเลย
-const normStatus = (s) => (s in STATUS ? s : 'draft')
+
 
 // ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
 const CONTENT_TYPE_LABEL = { post: 'โพสต์', live: 'ไลฟ์สด' }

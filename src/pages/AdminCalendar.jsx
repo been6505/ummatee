@@ -10,13 +10,12 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faChevronLeft, faChevronRight, faCheck, faImage, faXmark, faCopy, faSpinner,
+  faChevronLeft, faChevronRight, faCheck, faXmark, faCopy,
   faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
   faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage, faPenToSquare, faTrash,
 } from '@fortawesome/free-solid-svg-icons'
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
-import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { withSearchTokens } from '../lib/searchIndex.js'
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
@@ -250,6 +249,7 @@ const EMPTY_FORM = {
   title: '', text: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
   campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
   sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
+  driveUrl: '', // ลิงก์ไฟล์งานใน Google Drive
 }
 
 export default function AdminCalendar() {
@@ -265,7 +265,6 @@ export default function AdminCalendar() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [status, setStatus] = useState('')
-  const [uploading, setUploading] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
   const [showHub, setShowHub] = useState(false)
   const [mainTab, setMainTab] = useState('calendar') // 'calendar' | 'chat' | 'comments' | 'insights'
@@ -335,31 +334,8 @@ export default function AdminCalendar() {
     }))
   }
 
-  const uploadMedia = async (e) => {
-    const files = [...e.target.files]
-    if (!files.length) return
-    setUploading(true)
-    try {
-      const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'auto')))
-      setForm((f) => ({
-        ...f,
-        mediaUrls: [...f.mediaUrls, ...results.map((r) => r.url)],
-        // เก็บคู่กับ mediaUrls (index ตรงกัน) ไว้ใช้ตอนลบไฟล์จริงออกจาก Cloudinary หลังโพสต์สำเร็จ (ดู cleanupPublishedMedia)
-        mediaPublicIds: [...(f.mediaPublicIds || []), ...results.map((r) => ({ publicId: r.publicId, resourceType: r.type }))],
-      }))
-    } catch (err) {
-      setStatus('อัพโหลดไม่สำเร็จ: ' + err.message)
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
-  }
-
-  const removeMedia = (i) => setForm((f) => ({
-    ...f,
-    mediaUrls: f.mediaUrls.filter((_, j) => j !== i),
-    mediaPublicIds: (f.mediaPublicIds || []).filter((_, j) => j !== i),
-  }))
+  // ช่องอัพโหลดรูป/วิดีโอถูกแทนที่ด้วยลิงก์ Google Drive แล้ว (ดูฟอร์มด้านล่าง)
+  // แต่ยังคงแสดง mediaUrls ของโพสต์เก่าที่อัพไว้ก่อนหน้า จึงไม่ลบฟิลด์ออกจากข้อมูล
 
   const copyAndOpen = async (p, platform) => {
     const text = [p.title, p.text, ...(p.mediaUrls || [])].filter(Boolean).join('\n\n')
@@ -381,6 +357,7 @@ export default function AdminCalendar() {
       campaignId: p.campaignId || '', contentType: p.contentType || 'post', liveScheduledAt: p.liveScheduledAt || '',
       livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
       sources: p.sources || [],
+      driveUrl: p.driveUrl || '',
     })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
@@ -398,6 +375,7 @@ export default function AdminCalendar() {
         status: form.status,
         mediaUrls: form.mediaUrls,
         mediaPublicIds: form.mediaPublicIds,
+        driveUrl: isSafeHttpUrl((form.driveUrl || '').trim()) ? form.driveUrl.trim() : '',
         realPublish: form.realPublish,
         // เก็บเฉพาะแหล่งที่มี url จริงและเป็น http(s) — ค่านี้ไปโผล่ใน href บนการ์ด ต้องกัน javascript: ไว้
         // ชื่อว่างให้ใช้ url เป็นชื่อแทน จะได้ไม่มีลิงก์ที่กดได้แต่ไม่รู้ว่าไปไหน
@@ -624,6 +602,13 @@ export default function AdminCalendar() {
                     </div>
                   )}
                   {p.text && <p className="admin-post-text">{p.text}</p>}
+                  {isSafeHttpUrl(p.driveUrl) && (
+                    <div className="admin-post-sources">
+                      <a href={p.driveUrl} target="_blank" rel="noopener noreferrer" title={p.driveUrl}>
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
+                      </a>
+                    </div>
+                  )}
                   {(p.sources || []).length > 0 && (
                     <div className="admin-post-sources">
                       {p.sources.filter((s) => isSafeHttpUrl(s.url)).map((s, si) => (
@@ -757,26 +742,18 @@ export default function AdminCalendar() {
                     </div>
                   </div>
                 )}
-                <div>
-                  <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>รูป / วิดีโอ</div>
-                  <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
-                    <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
-                    {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูป / วิดีโอ'}
-                    <input type="file" accept="image/*,video/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadMedia} />
-                  </label>
-                  {form.mediaUrls.length > 0 && (
-                    <div className="admin-media-preview">
-                      {form.mediaUrls.map((url, i) => (
-                        <div key={i} className="admin-media-thumb">
-                          {url.match(/\.(mp4|mov|webm)/i)
-                            ? <video src={url} muted />
-                            : <img src={url} alt="" />}
-                          <button type="button" className="admin-media-remove" onClick={() => removeMedia(i)}><FontAwesomeIcon icon={faXmark} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
+                    ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
+                    ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
+                    กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                <label>ลิงก์งานจาก Google Drive
+                  <input
+                    type="url"
+                    value={form.driveUrl}
+                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                  />
+                </label>
 
                 {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
                     เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้

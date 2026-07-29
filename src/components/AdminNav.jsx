@@ -10,7 +10,6 @@ import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXma
 import { isVolunteerEmail, isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
 import AdminChatFab from './AdminChatFab.jsx'
-import AdminGlobalSearch from './AdminGlobalSearch.jsx'
 import { useAdminChatList } from '../data/chat.js'
 import { useNewOrdersCount, useNewOrders } from '../data/orders.js'
 import useSunGradient from '../hooks/useSunGradient.js'
@@ -298,7 +297,6 @@ export default function AdminNav() {
       <nav className="admin-nav">
         <div className="admin-nav-brand">
           <span><FontAwesomeIcon icon={faScrewdriverWrench} /> {isVolunteer ? 'Volunteer' : 'Admin'}</span>
-          {!isVolunteer && <AdminGlobalSearch />}
           <NotifBell canSeeOrders={!isVolunteer} />
           <button
             type="button"

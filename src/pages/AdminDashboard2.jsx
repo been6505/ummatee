@@ -44,12 +44,10 @@ function DashboardBody({ staff: staffProp }) {
     visibleStaffNav(staff, { isOwner: isFullAdminEmail(email), isSuper: isSuperAdminEmail(email) })
   ).filter((s) => s.href !== '/admin/staff-dashboard' && s.group !== 'CRM')
 
-  const soon = new Date(); soon.setDate(soon.getDate() + 7)
-  // โพสต์ที่ยังไม่ได้โพสต์และถึงกำหนดภายใน 7 วัน — ตัวเลขที่ทีมโซเชียลต้องรีบเห็นที่สุด
-  const soonKey = soon.toISOString().slice(0, 10)
-  const todayKey = new Date().toISOString().slice(0, 10)
-  const postsDueSoon = posts.filter((p) => p.status !== 'posted' && p.date && p.date >= todayKey && p.date <= soonKey).length
-  const postsWaiting = posts.filter((p) => p.approvalStatus === 'pending').length
+  // สถานะโพสต์มีสองค่าจริงคือ draft กับ posted (ดู normStatus ใน AdminCalendar.jsx)
+  // อะไรที่ยังไม่ใช่ posted ถือว่า "กำลังดำเนินการ" ทั้งหมด รวมโพสต์เก่าที่เคยเป็น 'scheduled'
+  const postsPosted = posts.filter((p) => p.status === 'posted').length
+  const postsInProgress = posts.length - postsPosted
 
   return (
     <main className="admin-dash">
@@ -64,8 +62,8 @@ function DashboardBody({ staff: staffProp }) {
         {canSeeContent && (
           <div className="admin-stats cols-3">
             <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
-            <div className="admin-stat"><div className="v">{postsDueSoon}</div><div className="l">ถึงกำหนดโพสต์ใน 7 วัน</div></div>
-            <div className="admin-stat"><div className="v">{postsWaiting}</div><div className="l">รออนุมัติ</div></div>
+            <div className="admin-stat"><div className="v">{postsInProgress}</div><div className="l">กำลังดำเนินการ</div></div>
+            <div className="admin-stat"><div className="v">{postsPosted}</div><div className="l">โพสต์แล้ว</div></div>
           </div>
         )}
 

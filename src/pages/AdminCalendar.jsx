@@ -210,12 +210,13 @@ const PLATFORMS = [
 
 // เหลือ 2 สถานะเท่านั้น — ร่าง (ยังไม่ได้โพสต์) กับ โพสต์แล้ว
 // ทอง = ยังมีงานค้าง / เขียว = เสร็จแล้ว ใช้ระบายสีวันในปฏิทินด้วย (ดู dominant ในกริด)
-const STATUS = { draft: 'ร่าง', posted: 'โพสต์แล้ว' }
-const STATUS_COLOR = { draft: '#c9a84c', posted: '#2e7d52' }
+const STATUS = { draft: 'ร่าง', review: 'ส่งตรวจ', posted: 'โพสต์แล้ว' }
+const STATUS_COLOR = { draft: '#c9a84c', review: '#2f6db5', posted: '#2e7d52' }
 
 // ข้อมูลเก่ามีสถานะ 'scheduled' (ตั้งเวลาแล้ว) และ approvalStatus ที่เลิกใช้แล้ว
 // แปลงให้เป็น 2 สถานะใหม่ตอนแสดงผล โดยไม่ต้องไล่แก้ข้อมูลเดิมใน Firestore
-const normStatus = (s) => (s === 'posted' ? 'posted' : 'draft')
+// ค่าที่ไม่รู้จัก (เช่น 'scheduled' ของโพสต์เก่า) ให้ถือเป็นร่าง ไม่งั้นชิปไม่ตรงกับค่าใดเลย
+const normStatus = (s) => (s in STATUS ? s : 'draft')
 
 // ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
 const CONTENT_TYPE_LABEL = { post: 'โพสต์', live: 'ไลฟ์สด' }
@@ -542,10 +543,10 @@ export default function AdminCalendar() {
                 if (d === null) return <div key={`e${i}`} />
                 const key = dateKey(year, month, d)
                 const has = byDate[key] || []
-                // สีประจำวัน: มีโพสต์ไหนยังไม่ได้โพสต์ = ทอง (ยังมีงานค้าง) / โพสต์ครบแล้ว = เขียว
+                // สีประจำวัน: เอาสถานะที่ "ค้างที่สุด" ของวันนั้นมาแสดง (ร่าง > ส่งตรวจ > โพสต์แล้ว)
                 // เพื่อให้กวาดตาดูปฏิทินแล้วเห็นวันที่ยังมีงานค้างก่อน ไม่ใช่เห็นวันที่ทำเสร็จแล้วเด่นสุด
                 const dominant = has.length === 0 ? null
-                  : has.some((p) => normStatus(p.status) !== 'posted') ? 'draft' : 'posted'
+                  : ['draft', 'review', 'posted'].find((st) => has.some((p) => normStatus(p.status) === st))
                 return (
                   <button
                     key={key}
@@ -752,19 +753,6 @@ export default function AdminCalendar() {
                     </div>
                   </div>
                 )}
-                {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
-                    ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
-                    ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
-                    กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
-                <label>ลิงก์งานจาก Google Drive
-                  <input
-                    type="url"
-                    value={form.driveUrl}
-                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
-                    placeholder="https://drive.google.com/..."
-                  />
-                </label>
-
                 {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
                     เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้
                     กรอง scheme ตอนบันทึก (ดู save) กัน javascript: เพราะค่านี้ไปโผล่ใน href บนการ์ด */}
@@ -789,6 +777,20 @@ export default function AdminCalendar() {
                   ))}
                   <button type="button" className="admin-btn" onClick={addSource}>+ เพิ่มแหล่งข้อมูล</button>
                 </div>
+
+                {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
+                    ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
+                    ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
+                    กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                <label>ลิงก์งานจาก Google Drive
+                  <input
+                    type="url"
+                    value={form.driveUrl}
+                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                  />
+                </label>
+
 
                 {SHOW_CONTENT_HUB && <>
                 <label>แพลตฟอร์ม</label>

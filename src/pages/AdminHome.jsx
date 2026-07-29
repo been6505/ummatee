@@ -128,12 +128,14 @@ export default function AdminHome() {
         )}
 
         {/* ── เมนูแดชบอร์ด ── */}
-        <div className="admin-grid">
+        {/* สไตล์อยู่ใน admin.css (.admin-menu-grid) ไม่ใช่ inline — บนมือถือย่อเป็น 4 คอลัมน์
+            แบบไอคอน+ชื่อ ซึ่งทับ inline style ไม่ได้ถ้าไม่ใส่ !important */}
+        <div className="admin-grid admin-menu-grid">
           {LINKS.map((l) => (
             <a key={l.href} className="admin-card admin-link-card" href={l.href}>
-              <div className="he" style={{ fontSize: '2rem', marginBottom: 10 }}><FontAwesomeIcon icon={l.icon} /></div>
+              <div className="he admin-link-icon"><FontAwesomeIcon icon={l.icon} /></div>
               <h4>{l.title}</h4>
-              <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', marginTop: 6 }}>{l.desc}</p>
+              <p className="admin-link-desc">{l.desc}</p>
             </a>
           ))}
         </div>

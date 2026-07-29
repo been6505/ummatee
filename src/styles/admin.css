@@ -164,6 +164,19 @@
 .admin-status-filter-table tbody tr.active td:first-child{box-shadow:inset 3px 0 0 var(--green-mid)}
 .admin-link-card{display:block;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
 .admin-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.admin-link-icon{font-size:2rem;margin-bottom:10px}
+.admin-link-desc{color:var(--ink-soft);font-size:.9rem;margin-top:6px}
+/* มือถือ: การ์ดเมนูเต็มความกว้าง 1 ใบต่อแถว ทำให้ต้องเลื่อนยาวมากกว่าจะเห็นเมนูครบ
+   ย่อเหลือไอคอน+ชื่อ 4 คอลัมน์ (ซ่อนคำอธิบาย) เห็นเมนูทั้งหมดในจอเดียว
+   ต้องประกาศคอลัมน์เป็น minmax(0,1fr) — auto (ค่าเริ่มต้นของ 1fr) คือ min-content
+   ชื่อเมนูยาวๆ จะดันคอลัมน์จนล้นจอ */
+@media (max-width:900px){
+  .admin-menu-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .admin-menu-grid .admin-link-card{padding:12px 6px;text-align:center}
+  .admin-menu-grid .admin-link-icon{font-size:1.45rem;margin-bottom:6px}
+  .admin-menu-grid .admin-link-card h4{font-size:.72rem;line-height:1.3;overflow-wrap:anywhere}
+  .admin-menu-grid .admin-link-desc{display:none}
+}
 
 /* หน้า admin Qurban — ตัวอักษรใหญ่และหนาขึ้นเป็นพิเศษ อ่านง่าย */
 /* กฎนี้ specificity สูงกว่า .admin-head h1 จึงต้อง clamp ที่นี่ด้วย ไม่งั้นหัวข้อยาวๆ

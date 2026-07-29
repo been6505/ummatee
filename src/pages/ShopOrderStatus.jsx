@@ -6,6 +6,7 @@ import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
+import ShopAlert from '../components/ShopAlert.jsx'
 import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot, faComments } from '@fortawesome/free-solid-svg-icons'
@@ -117,6 +118,9 @@ export default function ShopOrderStatus({ orderId }) {
 
   return (
     <>
+    {/* ข้อผิดพลาด (อัพโหลดสลิป / แจ้งชำระเงิน) ขึ้นเป็นกล่องกลางจอ — ปุ่ม "ยืนยันการชำระเงิน"
+        อยู่ในแถบล่างที่ลอยติดจอ แต่แถบข้อความเดิมอยู่บนสุดของหน้า ผู้ใช้กดแล้วไม่เห็นว่าพลาดอะไร */}
+    <ShopAlert message={actionStatus} title="แจ้งเตือน" onClose={() => setActionStatus('')} />
     <main className={`page${order.status === 'pending_payment' ? ' shop-checkout-page' : ''}`}>
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
@@ -144,11 +148,6 @@ export default function ShopOrderStatus({ orderId }) {
 
           <Stepper status={order.status} />
 
-          {actionStatus && (
-            <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: '.88rem' }}>
-              {actionStatus}
-            </div>
-          )}
 
           {/* QR โค้ด + คำเตือนให้แคปหน้าจอเก็บไว้ — ลิงก์นี้เป็นทางเดียวที่ลูกค้ากลับมาติดตามสถานะภายหลังได้ */}
           <div className="admin-card" style={{ marginBottom: 20, textAlign: 'center' }}>

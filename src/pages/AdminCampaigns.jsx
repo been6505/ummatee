@@ -213,9 +213,12 @@ export default function AdminCampaigns() {
               )}
             </div>
 
-            <div className="admin-card-head" style={{ marginBottom: 12 }}>
-              <h4>รายชื่อแคมเปญ ({filtered.length})</h4>
-              <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            {/* หัวข้อ + ช่องค้นหา อยู่บนการ์ดขาวเหมือนเนื้อหาที่เหลือ — เดิมลอยอยู่บนพื้นเขียวของหน้า อ่านยาก */}
+            <div className="admin-card" style={{ marginBottom: 16 }}>
+              <div className="admin-card-head" style={{ marginBottom: 0 }}>
+                <h4>รายชื่อแคมเปญ ({filtered.length})</h4>
+                <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
             </div>
 
             {loading ? <ListSkeleton /> : (

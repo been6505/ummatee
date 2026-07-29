@@ -218,7 +218,8 @@ const PLATFORMS = [
 
 
 // ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
-const CONTENT_TYPE_LABEL = { post: 'โพสต์', live: 'ไลฟ์สด' }
+// ชนิดคอนเทนต์ — 'live' มีฟิลด์เพิ่ม (เวลาไลฟ์/ผู้ดำเนินรายการ) ชนิดอื่นเป็นโพสต์ธรรมดาที่ต่างกันแค่ป้าย
+const CONTENT_TYPE_LABEL = { post: 'โพสต์', video: 'โพสต์ VDO', picture: 'โพสต์ Picture', live: 'ไลฟ์สด' }
 const LIVE_PLATFORM_OPTIONS = ['facebook', 'tiktok', 'youtube']
 
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
@@ -582,7 +583,13 @@ export default function AdminCalendar() {
               {dayPosts.map((p) => (
                 <div className="admin-post" key={p.id}>
                   <div className="admin-post-top">
-                    <strong>{p.time} · {p.title} {p.contentType === 'live' && '🔴 ไลฟ์'}</strong>
+                    {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
+                    <strong>
+                      {p.time} · {p.title}
+                      {p.contentType === 'live' && ' 🔴 ไลฟ์'}
+                      {p.contentType === 'video' && ' 🎬 VDO'}
+                      {p.contentType === 'picture' && ' 🖼 Picture'}
+                    </strong>
                     {/* แก้ไข/ลบ อยู่มุมขวาบนของการ์ด แยกออกจากปุ่มเปลี่ยนสถานะด้านล่าง
                         เพราะเป็นคนละงานกัน — อันนี้จัดการตัวการ์ด อันนั้นเปลี่ยนสถานะเนื้อหา */}
                     <span className="admin-post-corner">

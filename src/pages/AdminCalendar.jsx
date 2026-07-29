@@ -255,10 +255,20 @@ const EMPTY_FORM = {
 export default function AdminCalendar() {
   const { user, loading } = useAdminAuth()
 
+  // เปิดหน้านี้พร้อม ?date=YYYY-MM-DD (เช่น กดรายการจากแดชบอร์ด Staff) ให้เด้งไปเดือน/วันนั้นเลย
+  // ไม่งั้นกดจากรายการแล้วมาโผล่ที่เดือนปัจจุบัน ต้องไล่หาวันเองอีกที
+  const initial = (() => {
+    const q = new URLSearchParams(window.location.search).get('date')
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(q || '')
+    if (!m) return null
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    return Number.isNaN(d.getTime()) ? null : { y: d.getFullYear(), mo: d.getMonth(), key: q }
+  })()
+
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth()) // 0-11
-  const [selected, setSelected] = useState(todayKey())
+  const [year, setYear] = useState(initial?.y ?? now.getFullYear())
+  const [month, setMonth] = useState(initial?.mo ?? now.getMonth()) // 0-11
+  const [selected, setSelected] = useState(initial?.key ?? todayKey())
 
   const [posts, setPosts] = useState([])
   const [campaigns, setCampaigns] = useState([])

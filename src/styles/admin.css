@@ -470,8 +470,9 @@ a.attach-name:hover{text-decoration:underline}
    มือถือซ้อนเป็นคอลัมน์เดียว — 3 คอลัมน์บนจอ 375px เหลือคอลัมน์ละ ~110px อ่านชื่อโพสต์ไม่ออก */
 .staff-post-lists{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px}
 @media (max-width:900px){.staff-post-lists{grid-template-columns:1fr}}
-.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.staff-post-list li a{display:block;padding:8px 10px;border-radius:8px;text-decoration:none;color:inherit;transition:background .12s}
+.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.staff-post-list li+li{border-top:1px solid #eef1ee}
+.staff-post-list li a{display:block;padding:10px;border-radius:8px;text-decoration:none;color:inherit;transition:background .12s}
 .staff-post-list li a:hover{background:#EAF6EE}
 .staff-post-title{display:block;font-size:.88rem;font-weight:600;overflow-wrap:anywhere}
 .staff-post-meta{display:block;font-size:.75rem;color:var(--ink-soft);margin-top:2px}

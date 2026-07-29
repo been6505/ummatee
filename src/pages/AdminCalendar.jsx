@@ -448,7 +448,7 @@ export default function AdminCalendar() {
   const selDate = new Date(selected)
 
   return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
-    <main className="admin-dash admin-qurban">
+    <main className="admin-dash admin-qurban admin-full">
       <AdminNav />
       <div className="admin-wrap">
         <div className="admin-head">

@@ -13,8 +13,6 @@ import { hasStaffRole } from '../useStaffRole.js'
 // แดชบอร์ดสรุปตาม role (/admin/staff-dashboard) — ชื่อไฟล์ AdminDashboard2 กันชนกับ AdminHome.jsx เดิม (หน้าแรกแอดมิน)
 // social role: ข้าม stat ของ CRM/บอร์ด (ไม่มีสิทธิ์อยู่แล้วตาม firestore.rules) เหลือแค่ contentPosts (ถือเป็น
 // ส่วน "โซเชียล/โพสต์" ของเว็บนี้ — โปรเจกต์นี้มี AdminCalendar.jsx ที่จัดการ contentPosts collection อยู่แล้ว)
-const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
-
 function useCollectionCount(name, enabled) {
   const [docs, setDocs] = useState([])
   useEffect(() => {
@@ -40,14 +38,8 @@ function DashboardBody({ staff: staffProp }) {
   // มาแล้วเจอแค่ข้อความว่าไม่มีสิทธิ์ ไม่มีตัวเลขอะไรให้ดูเลยทั้งที่มีงานของตัวเองอยู่
   const canSeeContent = hasStaffRole(staff, ['admin', 'staff', 'social'])
   const posts = useCollectionCount('contentPosts', canSeeContent)
-  const partners = useCollectionCount('partnerOrganizations', canSeeCrm)
-  const aidLocations = useCollectionCount('aidLocations', canSeeCrm)
-  const speakers = useCollectionCount('speakers', canSeeCrm)
-  const cards = useCollectionCount('boardCards', canSeeCrm)
-
-  const peopleHelped = aidLocations.reduce((s, l) => s + (Number(l.peopleHelped) || 0), 0)
-  const itemsDonated = aidLocations.reduce((s, l) => s + (Number(l.itemsDonatedCount) || 0), 0)
-  const totalPaid = speakers.reduce((s, sp) => s + (Number(sp.totalPaid) || 0), 0)
+  // สถิติ CRM (พันธมิตร/จุดลงพื้นที่/วิทยากร/การ์ดบอร์ด) ถูกถอดออกจากหน้านี้แล้ว
+  // จึงไม่เปิด onSnapshot ค้างไว้ทั้งสี่คอลเลกชัน — ดูตัวเลขเหล่านั้นได้ในหน้าของมันเอง
   const email = auth.currentUser?.email || ''
   const shortcuts = flattenStaffNav(
     visibleStaffNav(staff, { isOwner: isFullAdminEmail(email), isSuper: isSuperAdminEmail(email) })
@@ -66,7 +58,6 @@ function DashboardBody({ staff: staffProp }) {
   }
 
   const soon = new Date(); soon.setDate(soon.getDate() + 7)
-  const dueSoon = cards.filter((c) => c.dueDate && new Date(c.dueDate) <= soon).length
   // โพสต์ที่ยังไม่ได้โพสต์และถึงกำหนดภายใน 7 วัน — ตัวเลขที่ทีมโซเชียลต้องรีบเห็นที่สุด
   const soonKey = soon.toISOString().slice(0, 10)
   const todayKey = new Date().toISOString().slice(0, 10)
@@ -80,6 +71,16 @@ function DashboardBody({ staff: staffProp }) {
         <div className="admin-head">
           <div><h1>แดชบอร์ด Staff</h1><p>สรุปภาพรวมตามสิทธิ์ของบัญชี ({staff.role})</p></div>
         </div>
+
+        {/* ตัวเลขคอนเทนต์อยู่บนสุด — เป็นสิ่งที่ทีมต้องเห็นก่อนทางลัดเมนู
+            cols-3 บังคับ 3 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
+        {canSeeContent && (
+          <div className="admin-stats cols-3">
+            <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
+            <div className="admin-stat"><div className="v">{postsDueSoon}</div><div className="l">ถึงกำหนดโพสต์ใน 7 วัน</div></div>
+            <div className="admin-stat"><div className="v">{postsWaiting}</div><div className="l">รออนุมัติ</div></div>
+          </div>
+        )}
 
         {/* ทางลัดไปทุกหน้าที่บัญชีนี้เข้าได้ — ดึงจาก data/staffNav.js ตัวเดียวกับเมนูซ้าย
             เพิ่มเมนูใหม่ที่นั่นที่เดียวแล้วขึ้นทั้งสองที่ ไม่ต้องมาเพิ่มซ้ำจนหลุดกันทีหลัง
@@ -131,34 +132,8 @@ function DashboardBody({ staff: staffProp }) {
           </div>
         )}
 
-        {canSeeContent && (
-          <>
-            {/* ตัวเลข 3 ตัวอยู่แถวเดียว 3 คอลัมน์เสมอ (cols-3 ย่อฟอนต์/ระยะให้พอดีจอมือถือ)
-                ปุ่มเปิดปฏิทินแยกออกมาเป็นแถวของตัวเอง ไม่งั้น auto-fit จะจับ 4 กล่องแล้วตกเป็น 2x2 บนมือถือ */}
-            <div className="admin-stats cols-3" style={{ marginBottom: 14 }}>
-              <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
-              <div className="admin-stat"><div className="v">{postsDueSoon}</div><div className="l">ถึงกำหนดโพสต์ใน 7 วัน</div></div>
-              <div className="admin-stat"><div className="v">{postsWaiting}</div><div className="l">รออนุมัติ</div></div>
-            </div>
-            <div className="admin-stats" style={{ gridTemplateColumns: '1fr', marginBottom: canSeeCrm ? 20 : 0 }}>
-              <a className="admin-stat" href="/admin/calendar" style={{ textDecoration: 'none', display: 'block' }}>
-                <div className="v">→</div><div className="l">เปิดปฏิทินคอนเทนต์</div>
-              </a>
-            </div>
-          </>
-        )}
-
-        {!canSeeCrm ? (
-          !canSeeContent && <div className="admin-card"><p>บัญชี role "{staff.role}" ยังไม่มีสิทธิ์เข้าถึงข้อมูลส่วนไหนเลย — ติดต่อแอดมินเพื่อกำหนดสิทธิ์</p></div>
-        ) : (
-          <div className="admin-stats">
-            <div className="admin-stat"><div className="v">{partners.length}</div><div className="l">องค์กรพันธมิตร</div></div>
-            <div className="admin-stat"><div className="v">{peopleHelped.toLocaleString('th-TH')}</div><div className="l">คนที่ช่วยรวม</div></div>
-            <div className="admin-stat"><div className="v">{itemsDonated.toLocaleString('th-TH')}</div><div className="l">ของบริจาครวม</div></div>
-            <div className="admin-stat"><div className="v">{speakers.length}</div><div className="l">วิทยากร/อินฟลูเอนเซอร์</div></div>
-            <div className="admin-stat"><div className="v">{THB(totalPaid)}</div><div className="l">ค่าตอบแทนวิทยากรรวม</div></div>
-            <div className="admin-stat"><div className="v">{dueSoon}</div><div className="l">การ์ดใกล้ครบกำหนด (7 วัน)</div></div>
-          </div>
+        {!canSeeCrm && !canSeeContent && (
+          <div className="admin-card"><p>บัญชี role "{staff.role}" ยังไม่มีสิทธิ์เข้าถึงข้อมูลส่วนไหนเลย — ติดต่อแอดมินเพื่อกำหนดสิทธิ์</p></div>
         )}
       </div>
     </main>

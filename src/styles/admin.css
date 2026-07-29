@@ -283,7 +283,7 @@
 .admin-cal-head h4{margin:0;font-size:1.1rem}
 .admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .admin-cal-dow{text-align:center;font-size:.75rem;font-weight:700;color:var(--ink-soft);padding:6px 0}
-.admin-cal-day{position:relative;aspect-ratio:1;min-height:44px;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
+.admin-cal-day{position:relative;aspect-ratio:1;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
 .admin-cal-day:hover{background:#EAF6EE}
 /* วันที่มีคอนเทนต์ลงไว้แล้ว — ระบายเต็มกรอบด้วยสีของสถานะที่ยังไม่เสร็จที่สุดในวันนั้น (--day-color)
    ใช้ color-mix ผสมกับขาวเพื่อให้ยังอ่านตัวเลขวันที่ออก และมี fallback สีเทาอ่อนไว้ก่อน
@@ -331,6 +331,15 @@
 /* มือถือ: สองช่องต่อแถวเหลือช่องละ ~144px — ชิปสถานะตกลงมาสองบรรทัดและ dropdown แคมเปญ
    แคบจนอ่านชื่อแคมเปญไม่ออก จึงวางเรียงลงมาแถวละช่อง */
 @media (max-width:640px){.admin-cal-form-row{grid-template-columns:1fr}}
+/* มือถือ: ย่อปฏิทินให้พอดีจอ
+   ⚠️ ห้ามใส่ min-height คู่กับ aspect-ratio:1 บนช่องวัน — aspect-ratio จะดันความ "กว้าง" ตามความสูงด้วย
+   ทำให้ 7 ช่อง (44px + gap) รวมกว้างเกินการ์ดแล้วปฏิทินล้นออกนอกจอ
+   จึงปลด aspect-ratio บนจอเล็กแล้วคุมด้วย min-height อย่างเดียว (ช่องสูงกว่ากว้างเล็กน้อย แต่ยังกดง่าย)
+   ลด padding การ์ดลงด้วย เพื่อคืนความกว้างให้ช่องวัน */
+@media (max-width:640px){
+  .admin-cal-card{padding:12px}
+  .admin-cal-day{aspect-ratio:auto;min-height:44px}
+}
 .admin-cal-platforms{display:flex;gap:8px;flex-wrap:wrap}
 .admin-cal-platforms button{padding:6px 14px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);transition:all .12s}
 

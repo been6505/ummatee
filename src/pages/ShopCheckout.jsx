@@ -5,6 +5,7 @@ import { notifyAdminNewOrder } from '../utils/lineNotify.js'
 import { formatPhone } from '../utils/formatPhone.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
+import ShopAlert from '../components/ShopAlert.jsx'
 import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCartShopping, faCheck, faUserPen, faComments } from '@fortawesome/free-solid-svg-icons'
@@ -166,8 +167,14 @@ export default function ShopCheckout() {
     )
   }
 
+  // ข้อความเตือนขึ้นเป็นกล่องกลางจอ ไม่ใช่ตัวแดงเล็กๆ ในฟอร์มอีกต่อไป — ปุ่ม "ยืนยันข้อมูล"/"ยืนยันคำสั่งซื้อ"
+  // อยู่ในแถบล่างที่ลอยติดจอ ผู้ใช้ที่เลื่อนอยู่ท้ายหน้าจะไม่เห็นข้อความที่อยู่ในฟอร์มด้านบน (ดู ShopAlert.jsx)
+  // หัวข้อกล่องแยกเป็นสองแบบ: ข้อมูลกรอกไม่ครบ/ไม่ถูกต้อง กับข้อผิดพลาดตอนส่งคำสั่งซื้อ
+  const alertTitle = /^(กรุณา|เบอร์|อีเมล)/.test(error) ? 'ข้อมูลยังไม่ครบ' : 'แจ้งเตือน'
+
   return (
     <>
+    <ShopAlert message={error} title={alertTitle} onClose={() => setError('')} />
     <main className="page shop-checkout-page">
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
@@ -231,7 +238,6 @@ export default function ShopCheckout() {
                   <FontAwesomeIcon icon={faGoogle} /> {signingIn === 'google' ? 'กำลังเชื่อมต่อ...' : 'ลงทะเบียนด้วย Google'}
                 </button>
               </div>
-              {error && <p style={{ color: '#dc2626', fontSize: '.9rem', marginTop: 10 }}>{error}</p>}
             </div>
           )}
 
@@ -273,7 +279,6 @@ export default function ShopCheckout() {
                 <input type="text" value={form.postalCode} disabled placeholder="เลือกที่อยู่ให้ครบเพื่อเติมอัตโนมัติ" />
               </label>
             </div>
-            {error && <p style={{ color: '#dc2626', fontSize: '.9rem', marginTop: 10 }}>{error}</p>}
             {infoConfirmed && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
                 <p style={{ color: '#15803d', fontSize: '.9rem', margin: 0 }}><FontAwesomeIcon icon={faCheck} /> ยืนยันข้อมูลแล้ว</p>

@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useProducts, hasDiscount, discountPercent, dedupeSortSizes, SHOP_SIZES_BY_CATEGORY, groupProductsByName } from '../data/shop.js'
 import { addToCart, useCartCount } from '../data/cart.js'
 import Footer from '../components/Footer.jsx'
+import ShopAlert from '../components/ShopAlert.jsx'
 import { ProductCard, SHOP_T } from './Shop.jsx'
 import { useLang } from '../i18n.jsx'
 import { useNavigate } from '../navContext'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faBagShopping, faArrowLeft, faMinus, faPlus, faCartPlus, faCheck, faCartShopping, faComments, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import { faBagShopping, faArrowLeft, faMinus, faPlus, faCartPlus, faCheck, faCartShopping, faComments } from '@fortawesome/free-solid-svg-icons'
 
 // เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — หน้านี้ไม่ได้ import ตัว widget ตรงๆ
 // แนบข้อมูลสินค้าไปด้วย (การ์ดสินค้า) เผื่อลูกค้าทักถามรายละเอียดจากสินค้านั้น — แอดมินจะได้รู้ทันทีว่าถามเรื่องอะไร
@@ -238,22 +239,8 @@ export default function ShopProductDetail({ productId }) {
 
   return (
     <>
-    {/* แจ้งเตือนกลางจอตอนกดเพิ่มลงตะกร้าโดยยังเลือกตัวเลือกไม่ครบ
-        เดิมเป็นข้อความแดงเล็กๆ ใต้รายการตัวเลือก ซึ่งลูกค้ามองไม่เห็นเพราะปุ่มเพิ่มลงตะกร้า
-        อยู่แถบล่างที่ลอยติดจอ (คนละที่กับข้อความ) กดแล้วเหมือนปุ่มไม่ทำงาน
-        z-index ต้องสูงกว่า .shop-detail-bar (500) ไม่งั้นโดนแถบล่างทับ */}
-    {variantError && (
-      <div className="shop-alert-overlay" role="dialog" aria-modal="true" onClick={() => setVariantError('')}>
-        <div className="shop-alert" onClick={(e) => e.stopPropagation()}>
-          <div className="shop-alert-icon"><FontAwesomeIcon icon={faTriangleExclamation} /></div>
-          <h3>{t.alertTitle}</h3>
-          <p>{variantError}</p>
-          <button type="button" className="shop-alert-btn" onClick={() => setVariantError('')} autoFocus>
-            {t.alertOk}
-          </button>
-        </div>
-      </div>
-    )}
+    {/* แจ้งเตือนกลางจอตอนกดเพิ่มลงตะกร้าโดยยังเลือกตัวเลือกไม่ครบ (ดูเหตุผลใน ShopAlert.jsx) */}
+    <ShopAlert message={variantError} title={t.alertTitle} okLabel={t.alertOk} onClose={() => setVariantError('')} />
     <main className="page shop-detail-page">
       <section className="section">
         <div className="wrap">

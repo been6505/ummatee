@@ -132,14 +132,20 @@ function DashboardBody({ staff: staffProp }) {
         )}
 
         {canSeeContent && (
-          <div className="admin-stats" style={{ marginBottom: canSeeCrm ? 20 : 0 }}>
-            <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
-            <div className="admin-stat"><div className="v">{postsDueSoon}</div><div className="l">ถึงกำหนดโพสต์ใน 7 วัน</div></div>
-            <div className="admin-stat"><div className="v">{postsWaiting}</div><div className="l">รออนุมัติ</div></div>
-            <a className="admin-stat" href="/admin/calendar" style={{ textDecoration: 'none', display: 'block' }}>
-              <div className="v">→</div><div className="l">เปิดปฏิทินคอนเทนต์</div>
-            </a>
-          </div>
+          <>
+            {/* ตัวเลข 3 ตัวอยู่แถวเดียว 3 คอลัมน์เสมอ (cols-3 ย่อฟอนต์/ระยะให้พอดีจอมือถือ)
+                ปุ่มเปิดปฏิทินแยกออกมาเป็นแถวของตัวเอง ไม่งั้น auto-fit จะจับ 4 กล่องแล้วตกเป็น 2x2 บนมือถือ */}
+            <div className="admin-stats cols-3" style={{ marginBottom: 14 }}>
+              <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
+              <div className="admin-stat"><div className="v">{postsDueSoon}</div><div className="l">ถึงกำหนดโพสต์ใน 7 วัน</div></div>
+              <div className="admin-stat"><div className="v">{postsWaiting}</div><div className="l">รออนุมัติ</div></div>
+            </div>
+            <div className="admin-stats" style={{ gridTemplateColumns: '1fr', marginBottom: canSeeCrm ? 20 : 0 }}>
+              <a className="admin-stat" href="/admin/calendar" style={{ textDecoration: 'none', display: 'block' }}>
+                <div className="v">→</div><div className="l">เปิดปฏิทินคอนเทนต์</div>
+              </a>
+            </div>
+          </>
         )}
 
         {!canSeeCrm ? (

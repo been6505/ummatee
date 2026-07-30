@@ -350,6 +350,15 @@
 
 /* ฟอร์มเพิ่มโพสต์ */
 .admin-cal-form{display:flex;flex-direction:column;gap:12px}
+/* จอกว้าง: ฟอร์มเป็น 2 คอลัมน์ — ช่องข้อมูลทั้งหมดอยู่คอลัมน์ซ้าย, กล่องแคปชันอยู่ขวาและสูงเต็มคอลัมน์
+   ห่อฝั่งซ้ายไว้ใน .admin-cal-form-main เพื่อให้กริดมีลูกแค่ 2 ตัว วางคอลัมน์ได้ตรงๆ
+   ไม่ต้องพึ่ง grid-row:1/-1 ที่กินแถวไม่ครบเมื่อแถวเป็น implicit */
+@media (min-width:901px){
+  .admin-cal-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 16px;align-items:stretch}
+  .admin-cal-form-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .admin-cal-caption{min-width:0}
+  .admin-cal-caption textarea{height:100%;min-height:240px}
+}
 .admin-cal-form label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .admin-cal-form input,.admin-cal-form select,.admin-cal-form textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.92rem;font-family:inherit;background:#fff;resize:vertical}
 .admin-cal-form input:focus,.admin-cal-form select:focus,.admin-cal-form textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}

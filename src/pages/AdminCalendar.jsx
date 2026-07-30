@@ -707,11 +707,9 @@ export default function AdminCalendar() {
             <div className="admin-card">
               <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
               <div className="admin-cal-form">
+                <div className="admin-cal-form-main">
                 <label>ชื่อกิจกรรม/โพสต์
                   <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
-                </label>
-                <label>ข้อความ/แคปชัน
-                  <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
                 </label>
                 <div className="admin-cal-form-row">
                   <label>เวลาโพสต์
@@ -797,15 +795,14 @@ export default function AdminCalendar() {
                     ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
                     ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
                     กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                {/* ไม่เลื่อนสถานะอัตโนมัติตอนพิมพ์แล้ว — ใช้ปุ่ม "ส่งงาน" ด้านล่างเป็นตัวสั่ง
+                    ถ้าเลื่อนให้เอง ปุ่มจะหายทันทีที่ลิงก์ครบ (เงื่อนไขโชว์ปุ่มคือยังไม่ได้ส่งงาน)
+                    และกลายเป็นส่งงานโดยไม่ได้ตั้งใจแค่เพราะวางลิงก์ไว้ก่อน */}
                 <label>ลิงก์งานจาก Google Drive
                   <input
                     type="url"
                     value={form.driveUrl}
-                    onChange={(e) => {
-                      const driveUrl = e.target.value
-                      // ใส่ลิงก์ครบเป็น http(s) แล้วเลื่อนสถานะเป็น "ส่งตรวจ" ให้เลย (ดู statusAfterDriveLink)
-                      setForm((f) => ({ ...f, driveUrl, status: isSafeHttpUrl(driveUrl.trim()) ? statusAfterDriveLink(f.status) : f.status }))
-                    }}
+                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
                     placeholder="https://drive.google.com/..."
                   />
                 </label>
@@ -833,9 +830,20 @@ export default function AdminCalendar() {
                 </>}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
                   <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
+                  {isSafeHttpUrl((form.driveUrl || '').trim()) && form.status !== 'posted' && form.status !== 'review' && (
+                    // ส่งงาน = แนบไฟล์ใน Drive เรียบร้อยแล้วและขอให้ตรวจ ⇒ เลื่อนสถานะเป็น "ส่งงาน" (คีย์ review)
+                    <button className="admin-btn" onClick={() => setForm((f) => ({ ...f, status: statusAfterDriveLink(f.status) }))}>
+                      ส่งงาน
+                    </button>
+                  )}
                   {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
                   {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
                 </div>
+                </div>
+                {/* คอลัมน์ 2: กล่องแคปชัน — ยืดสูงเต็มคอลัมน์เพื่อใช้พื้นที่ที่เหลือ */}
+                <label className="admin-cal-caption">ข้อความ/แคปชัน
+                  <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
+                </label>
               </div>
             </div>
           </div>

@@ -329,6 +329,14 @@ export default function AdminCalendar() {
     return m
   }, [posts])
 
+  // อยู่เหนือ early return ด้านล่างเสมอ — hook ต้องถูกเรียกครบทุก render
+  // (เคยพลาดวางไว้ใต้ if (loading) แล้วหน้าพังเป็น React error #310 ที่ ErrorBoundary โชว์ว่า "กำลังอัปเดตเวอร์ชันใหม่")
+  useEffect(() => {
+    const onPop = () => setDetailId(new URLSearchParams(window.location.search).get('post'))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   if (loading) return null
   if (!user) return <AdminLogin />
   // แท็บกล่องข้อความ/คอมเมนต์/ภาพรวมเพจ อ่าน chats + socialInsightsCache ซึ่ง firestore.rules
@@ -376,12 +384,6 @@ export default function AdminCalendar() {
       driveUrl: p.driveUrl || '',
     })
   }
-  useEffect(() => {
-    const onPop = () => setDetailId(new URLSearchParams(window.location.search).get('post'))
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
   const save = async () => {

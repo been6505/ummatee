@@ -272,12 +272,23 @@
 /* ปฏิทินคอนเทนต์ */
 /* โพสต์ของวันที่เลือก — หลายคอลัมน์ในแถวเดียว ไม่ใช่เรียงลงมาทีละใบ
    minmax(0,...) กัน track บวมจากเนื้อหายาว (auto = min-content จะดันคอลัมน์จนล้น) */
-.admin-day-posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:14px;align-items:start}
+.admin-day-posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px;align-items:start}
+/* การ์ดวันที่เลือกกินพื้นที่บนสุดของหน้า ย่อหัวข้อ/ระยะ/ตัวหนังสือลงให้เหลือความสูงน้อยที่สุด
+   ที่ยังอ่านครบ — เนื้อหาเดิม (หัวข้อ 1rem, padding 20px, ปุ่มสถานะ 4 ปุ่มตกสองบรรทัด) สูงเกินจำเป็น */
+.admin-cal-today .admin-card{padding:14px 16px}
+.admin-cal-today .admin-card>h4{font-size:.95rem;margin-bottom:2px}
+.admin-cal-today .admin-cal-hijri-header{font-size:.75rem}
+.admin-cal-today .admin-post{padding:10px 12px;margin-bottom:0}
+.admin-cal-today .admin-post-top strong{font-size:.85rem;line-height:1.45}
+.admin-cal-today .admin-post-text{font-size:.8rem;margin:4px 0}
+.admin-cal-today .admin-post-actions{gap:6px;margin-top:6px}
+/* ปุ่มสถานะกะทัดรัดขึ้นเพื่อให้ทั้ง 4 ปุ่มอยู่บรรทัดเดียว (บนจอเล็กยังถูกดันเป็น 44px ตาม media query ท้ายไฟล์) */
+.admin-cal-today .admin-post-actions .admin-btn{font-size:.72rem;padding:4px 9px}
 
 /* การ์ด "โพสต์ของวันที่เลือก" อยู่เต็มความกว้างด้านบน (แทนที่แถบแท็บเดิม)
    ใต้ลงมาเป็น 2 คอลัมน์: ปฏิทิน | ฟอร์มเพิ่มโพสต์
    .admin-cal-side เหลือการ์ดใบเดียวแล้ว แต่ยังเก็บ wrapper ไว้เผื่อเพิ่มการ์ดในคอลัมน์นี้ทีหลัง */
-.admin-cal-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
+.admin-cal-layout{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:24px;align-items:start}
 .admin-cal-side{display:flex;flex-direction:column;gap:24px}
 .admin-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .admin-cal-head h4{margin:0;font-size:1.1rem}

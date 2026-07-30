@@ -248,6 +248,17 @@ export default function AdminNav() {
     return () => document.documentElement.classList.remove('admin-nav-collapsed')
   }, [collapsed])
 
+  // กดเมนูแล้วปิด sidebar ให้เอง — เนื้อหาหน้าแอดมินได้ความกว้างคืนทันทีโดยไม่ต้องกดปุ่ม « ทุกครั้ง
+  // (มือถือปิด drawer อยู่แล้ว ส่วนนี้เพิ่มการยุบ sidebar ของเดสก์ท็อป)
+  //
+  // เขียน localStorage ตรงนี้เองด้วย ไม่รอ useEffect ของ collapsed — ลิงก์เมนูเป็น <a href> ที่โหลดหน้าใหม่
+  // ทันที React อาจยังไม่ flush effect ก่อนเปลี่ยนหน้า แล้วค่าจะไม่ถูกบันทึก sidebar ก็เปิดค้างเหมือนเดิม
+  const handleNavigate = () => {
+    setOpen(false)
+    try { localStorage.setItem('adminNavCollapsed', '1') } catch { /* โหมดส่วนตัว/โควตาเต็ม — ไม่ใช่เรื่องคอขาดบาดตาย */ }
+    setCollapsed(true)
+  }
+
   // ล็อคการเลื่อนพื้นหลังขณะเปิด drawer + ปิดด้วยปุ่ม Esc
   useEffect(() => {
     if (!open) return
@@ -278,11 +289,11 @@ export default function AdminNav() {
 
   const navContent = (
     <>
-      {groups.map((g, i) => <NavGroup key={i} g={g} path={path} onNavigate={close} badges={badges} />)}
+      {groups.map((g, i) => <NavGroup key={i} g={g} path={path} onNavigate={handleNavigate} badges={badges} />)}
       {visibleStaffGroups.length > 0 && (
         <div className="admin-nav-section-divider" />
       )}
-      {visibleStaffGroups.map((g, i) => <NavGroup key={`staff-${i}`} g={g} path={path} onNavigate={close} badges={null} />)}
+      {visibleStaffGroups.map((g, i) => <NavGroup key={`staff-${i}`} g={g} path={path} onNavigate={handleNavigate} badges={null} />)}
       <InstallAdminApp />
       {email && (
         <span className="admin-nav-user">{email}</span>

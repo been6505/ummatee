@@ -18,6 +18,7 @@ import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-bran
 
 import { withSearchTokens } from '../lib/searchIndex.js'
 import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus, statusAfterDriveLink } from '../data/contentStatus.js'
+import { repeatDates, WEEKDAYS, MAX_REPEAT_WEEKS } from '../lib/repeatDates.js'
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
 
@@ -250,6 +251,8 @@ const EMPTY_FORM = {
   title: '', text: '', date: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
   campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
   sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
+  repeatDays: [], // วันในสัปดาห์ที่ทำซ้ำ (0=อา..6=ส) — ว่าง = ไม่ทำซ้ำ
+  repeatWeeks: 4,
   driveUrl: '', // ลิงก์ไฟล์งานใน Google Drive
 }
 
@@ -419,13 +422,21 @@ export default function AdminCalendar() {
         } : {}),
       }
       if (editId) {
+        // แก้ไขทำทีละใบเสมอ — การทำซ้ำสร้างโพสต์จริงแยกใบ (ดู lib/repeatDates.js)
+        // จึงไม่มีการ "แก้ทั้งชุด" ให้เข้าใจผิดว่าแก้ใบนี้แล้วใบอื่นเปลี่ยนตาม
         await updateDoc(doc(db, 'contentPosts', editId), withSearchTokens(payload, SEARCH_FIELDS))
+        setStatus('บันทึกสำเร็จ ✓')
       } else {
-        await addDoc(collection(db, 'contentPosts'), withSearchTokens({ ...payload, createdAt: Date.now() }, SEARCH_FIELDS))
+        const dates = repeatDates(payload.date, form.repeatDays, form.repeatWeeks)
+        if (dates.length === 0) { setStatus('วันเวลาโพสต์ไม่ถูกต้อง'); return }
+        // สร้างพร้อมกันทั้งชุด — addDoc เป็นเอกสารละคำขอ ทำทีละใบจะช้ามากเมื่อซ้ำหลายสัปดาห์
+        await Promise.all(dates.map((date) => addDoc(
+          collection(db, 'contentPosts'),
+          withSearchTokens({ ...payload, date, createdAt: Date.now() }, SEARCH_FIELDS),
+        )))
+        setStatus(dates.length > 1 ? `บันทึกสำเร็จ ✓ สร้าง ${dates.length} โพสต์` : 'บันทึกสำเร็จ ✓')
       }
-      cancelEdit()
-      setStatus('บันทึกสำเร็จ ✓')
-      setTimeout(() => setStatus(''), 2000)
+      setTimeout(() => setStatus(''), 2500)
     } catch (e) {
       setStatus('เกิดข้อผิดพลาด: ' + e.message)
     }
@@ -586,6 +597,46 @@ export default function AdminCalendar() {
                       ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
                       ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
                       กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                  {/* ทำซ้ำทุกสัปดาห์ — มีเฉพาะตอนสร้างโพสต์ใหม่
+                      ตอนแก้ไขไม่ควรมี เพราะแต่ละครั้งเป็นโพสต์แยกใบแล้ว กดแก้แล้วจะสร้างชุดใหม่ซ้อนของเดิม */}
+                  {!editId && (
+                    <div>
+                      <div className="admin-cal-repeat-head">ทำซ้ำทุกสัปดาห์ (ไม่เลือก = โพสต์ครั้งเดียว)</div>
+                      <div className="admin-cal-status-chips admin-cal-repeat-days">
+                        {WEEKDAYS.map((d) => {
+                          const on = form.repeatDays.includes(d.id)
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              className={on ? 'on' : ''}
+                              style={on ? { background: 'var(--green-deep)', borderColor: 'var(--green-deep)', color: '#fff' } : {}}
+                              onClick={() => setForm((f) => ({
+                                ...f,
+                                repeatDays: on ? f.repeatDays.filter((x) => x !== d.id) : [...f.repeatDays, d.id],
+                              }))}
+                            >{d.label}</button>
+                          )
+                        })}
+                      </div>
+                      {form.repeatDays.length > 0 && (
+                        <label className="admin-cal-repeat-weeks">จำนวนสัปดาห์
+                          <select
+                            value={form.repeatWeeks}
+                            onChange={(e) => setForm({ ...form, repeatWeeks: Number(e.target.value) })}
+                          >
+                            {Array.from({ length: MAX_REPEAT_WEEKS }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={n}>{n} สัปดาห์</option>
+                            ))}
+                          </select>
+                          <span className="admin-cal-repeat-count">
+                            จะสร้าง {repeatDates(form.date || selected, form.repeatDays, form.repeatWeeks).length} โพสต์
+                          </span>
+                        </label>
+                      )}
+                    </div>
+                  )}
+
                   {/* ไม่เลื่อนสถานะอัตโนมัติตอนพิมพ์แล้ว — ใช้ปุ่ม "ส่งงาน" ด้านล่างเป็นตัวสั่ง
                       ถ้าเลื่อนให้เอง ปุ่มจะหายทันทีที่ลิงก์ครบ (เงื่อนไขโชว์ปุ่มคือยังไม่ได้ส่งงาน)
                       และกลายเป็นส่งงานโดยไม่ได้ตั้งใจแค่เพราะวางลิงก์ไว้ก่อน */}

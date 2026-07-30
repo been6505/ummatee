@@ -612,3 +612,11 @@ a.attach-name:hover{text-decoration:underline}
 .write-error-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120%);z-index:3000;max-width:min(92vw,420px);background:#c0392b;color:#fff;padding:13px 18px;border-radius:12px;font-size:.9rem;font-weight:600;line-height:1.5;box-shadow:0 12px 34px rgba(0,0,0,.3);opacity:0;transition:transform .25s ease,opacity .25s ease;pointer-events:none;text-align:center}
 .write-error-toast.show{transform:translate(-50%,0);opacity:1}
 @media (prefers-reduced-motion:reduce){.write-error-toast{transition:opacity .25s ease}}
+
+/* ทำซ้ำทุกสัปดาห์ในฟอร์มโพสต์ — ชิปวันจันทร์→อาทิตย์ + จำนวนสัปดาห์ */
+.admin-cal-repeat-head{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+/* ชิปวันสั้น (จ อ พ) ปรับให้กว้างเท่ากันเป็นวงกลม อ่านเป็นแถวเดียวได้ทั้ง 7 วัน */
+.admin-cal-repeat-days button{min-width:42px;padding:8px 10px;text-align:center}
+.admin-cal-repeat-weeks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-repeat-weeks select{width:auto;min-width:120px}
+.admin-cal-repeat-count{font-weight:600;color:var(--green-deep)}

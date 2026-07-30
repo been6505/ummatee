@@ -357,15 +357,61 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
     filter: brightness(1.1);
   }
 
-  /* สถานะปิด — เลื่อน sidebar ออกนอกจอ, คืนพื้นที่ให้เนื้อหา, โชว์ปุ่มลอยเปิดกลับ */
+  /* สถานะย่อ — เหลือรางไอคอน 64px ไม่ซ่อนหายไปทั้งแถบ
+     เข้าเมนูอื่นได้ทันทีจากไอคอน ไม่ต้องกางออกก่อน (เดิม translateX(-100%) ซ่อนหมดแล้วต้องกดปุ่มลอยเปิดก่อนทุกครั้ง)
+     ป้ายชื่อเมนูอยู่ใน .an-label จึงซ่อนเฉพาะข้อความได้ ไอคอนอยู่ครบ */
   html.admin-nav-collapsed .admin-nav {
-    transform: translateX(-100%);
+    width: 64px;
+    transform: none;
+    overflow: visible;
   }
   html.admin-nav-collapsed .admin-dash {
-    padding-left: 16px;
+    padding-left: 64px;
   }
+  /* ไม่ต้องมีปุ่มลอยเปิดกลับแล้ว — ปุ่มกางอยู่ในรางเลย (ดู .admin-nav-collapse-btn ด้านล่าง) */
   html.admin-nav-collapsed .admin-nav-reopen-btn {
-    display: flex;
+    display: none;
+  }
+  html.admin-nav-collapsed .an-label,
+  html.admin-nav-collapsed .an-chevron,
+  html.admin-nav-collapsed .admin-nav-user,
+  html.admin-nav-collapsed .admin-nav-brand > span,
+  html.admin-nav-collapsed .an-group-children,
+  html.admin-nav-collapsed .admin-nav-section-divider {
+    display: none;
+  }
+  /* จัดไอคอนให้อยู่กลางราง และคืนพื้นที่กดให้เต็มความกว้าง */
+  html.admin-nav-collapsed .an-item,
+  html.admin-nav-collapsed .an-group-btn,
+  html.admin-nav-collapsed .admin-nav-logout {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  html.admin-nav-collapsed .admin-nav-brand {
+    justify-content: center;
+    padding: 14px 0;
+    gap: 6px;
+  }
+  /* ปุ่มย่อ/กาง: ตอนย่ออยู่ให้ชี้ขวา (กางออก) — ไอคอนสองอันซ้อนกันแล้วสลับกันโชว์ */
+  html.admin-nav-collapsed .admin-nav-collapse-btn .fa-angles-left {
+    display: none;
+  }
+  .admin-nav-collapse-btn .fa-angles-right {
+    display: none;
+  }
+  html.admin-nav-collapsed .admin-nav-collapse-btn .fa-angles-right {
+    display: inline-block;
+  }
+  /* badge ยังต้องเห็นตอนย่อ — ย้ายไปเกาะมุมไอคอนแทนการวางท้ายแถว */
+  html.admin-nav-collapsed .an-item,
+  html.admin-nav-collapsed .an-group-btn {
+    position: relative;
+  }
+  html.admin-nav-collapsed .an-badge {
+    position: absolute;
+    top: 2px;
+    right: 8px;
   }
 }
 

@@ -5,7 +5,7 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell, faRightFromBracket } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail, isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
@@ -161,7 +161,7 @@ function NavGroup({ g, path, onNavigate, badges }) {
   if (g.href) {
     return (
       <a href={g.href} className={`an-item${path === g.href ? ' active' : ''}`} onClick={onNavigate}>
-        <span><FontAwesomeIcon icon={g.icon} /> {g.label}</span>
+        <span><FontAwesomeIcon icon={g.icon} /> <span className="an-label">{g.label}</span></span>
         {badges?.[g.href] > 0 && <span className="an-badge">{badges[g.href]}</span>}
       </a>
     )
@@ -173,7 +173,7 @@ function NavGroup({ g, path, onNavigate, badges }) {
   return (
     <div className={`an-group${active ? ' an-group-active' : ''}`}>
       <button className="an-group-btn" onClick={() => setExpanded((v) => !v)}>
-        <span><FontAwesomeIcon icon={g.icon} /> {g.label}</span>
+        <span><FontAwesomeIcon icon={g.icon} /> <span className="an-label">{g.label}</span></span>
         {groupBadgeTotal > 0 && <span className="an-badge">{groupBadgeTotal}</span>}
         <FontAwesomeIcon icon={faChevronDown} className={`an-chevron${expanded ? ' open' : ''}`} />
       </button>
@@ -181,7 +181,7 @@ function NavGroup({ g, path, onNavigate, badges }) {
         <div className="an-group-children">
           {g.children.map((c) => (
             <a key={c.href} href={c.href} className={`an-child${path === c.href ? ' active' : ''}`} onClick={onNavigate}>
-              <span>{c.icon && <FontAwesomeIcon icon={c.icon} style={{ marginRight: 5, fontSize: '.8em', opacity: .7 }} />}{c.label}</span>
+              <span>{c.icon && <FontAwesomeIcon icon={c.icon} style={{ marginRight: 5, fontSize: '.8em', opacity: .7 }} />}<span className="an-label">{c.label}</span></span>
               {badges?.[c.href] > 0 && <span className="an-badge">{badges[c.href]}</span>}
             </a>
           ))}
@@ -299,7 +299,9 @@ export default function AdminNav() {
         <span className="admin-nav-user">{email}</span>
       )}
       {email === 'akasitlove@gmail.com' && <DevButton />}
-      <button className="admin-nav-logout" onClick={() => signOut(auth)}>ออกจากระบบ</button>
+      <button className="admin-nav-logout" onClick={() => signOut(auth)} title="ออกจากระบบ">
+        <FontAwesomeIcon icon={faRightFromBracket} /> <span className="an-label">ออกจากระบบ</span>
+      </button>
     </>
   )
 
@@ -309,14 +311,17 @@ export default function AdminNav() {
         <div className="admin-nav-brand">
           <span><FontAwesomeIcon icon={faScrewdriverWrench} /> {isVolunteer ? 'Volunteer' : 'Admin'}</span>
           <NotifBell canSeeOrders={!isVolunteer} />
+          {/* ปุ่มเดียวสลับย่อ/กาง — รางไอคอนยังอยู่ตอนย่อ ปุ่มนี้จึงกดได้ตลอด ไม่ต้องมีปุ่มลอยข้างนอก
+              ใส่ไอคอนทั้งสองทิศไว้ แล้วให้ CSS สลับกันโชว์ตามคลาส admin-nav-collapsed */}
           <button
             type="button"
             className="admin-nav-collapse-btn"
-            onClick={() => setCollapsed(true)}
-            aria-label="ปิด sidebar"
-            title="ปิด sidebar"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
+            title={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
           >
             <FontAwesomeIcon icon={faAnglesLeft} />
+            <FontAwesomeIcon icon={faAnglesRight} />
           </button>
         </div>
         <div className="admin-nav-links">{navContent}</div>

@@ -615,8 +615,22 @@ a.attach-name:hover{text-decoration:underline}
 
 /* ทำซ้ำทุกสัปดาห์ในฟอร์มโพสต์ — ชิปวันจันทร์→อาทิตย์ + จำนวนสัปดาห์ */
 .admin-cal-repeat-head{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
-/* ชิปวันสั้น (จ อ พ) ปรับให้กว้างเท่ากันเป็นวงกลม อ่านเป็นแถวเดียวได้ทั้ง 7 วัน */
-.admin-cal-repeat-days button{min-width:42px;padding:8px 10px;text-align:center}
+/* 7 วันต้องอยู่บรรทัดเดียวเสมอ — flex-wrap + min-width:42px ตกบรรทัดเมื่อรางแคบกว่า ~340px
+   (บนมือถือรางฟอร์มแคบกว่านั้น "อา" จึงหลุดไปบรรทัดสอง)
+   กริด 7 คอลัมน์เท่ากันแก้ที่ต้นเหตุ: ชิปหารความกว้างที่มีเสมอ ไม่ว่ารางจะแคบเท่าไร
+   minmax(0,1fr) กันคอลัมน์บวมจาก min-content ของ "พฤ" ที่กว้างกว่าตัวอื่น */
+.admin-cal-status-chips.admin-cal-repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.admin-cal-repeat-days button{min-width:0;padding:8px 2px;text-align:center;min-height:40px}
+/* จอแคบมาก ย่อตัวอักษรแทนการตกบรรทัด */
+@media (max-width:400px){
+  .admin-cal-repeat-days{gap:4px}
+  .admin-cal-repeat-days button{font-size:.78rem;padding:8px 0}
+}
 .admin-cal-repeat-weeks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .admin-cal-repeat-weeks select{width:auto;min-width:120px}
 .admin-cal-repeat-count{font-weight:600;color:var(--green-deep)}
+
+/* แถวกระดิ่งแจ้งเตือนในเมนูข้าง — ไม่ใช่ลิงก์ จึงไม่ต้องมี hover/cursor ของ .an-item
+   ตัวปุ่มกระดิ่งจัดการคลิกเอง (เปิด dropdown ผ่าน portal) */
+.an-bell-row{cursor:default}
+.an-bell-row > span{display:flex;align-items:center;gap:10px}

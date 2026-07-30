@@ -289,6 +289,11 @@ export default function AdminNav() {
 
   const navContent = (
     <>
+      {/* กระดิ่งแจ้งเตือนอยู่ในเมนูนี้ ไม่ใช่แถบหัว — บนมือถือแถบหัวคือ top bar (ไม่ใช่ side nav)
+          วางที่นี่แล้วขึ้นทั้งใน sidebar ของเดสก์ท็อปและใน drawer ของมือถือด้วย navContent ชุดเดียว */}
+      <div className="an-item an-bell-row">
+        <span><NotifBell canSeeOrders={!isVolunteer} /> <span className="an-label">การแจ้งเตือน</span></span>
+      </div>
       {groups.map((g, i) => <NavGroup key={i} g={g} path={path} onNavigate={handleNavigate} badges={badges} />)}
       {visibleStaffGroups.length > 0 && (
         <div className="admin-nav-section-divider" />
@@ -310,7 +315,6 @@ export default function AdminNav() {
       <nav className="admin-nav">
         <div className="admin-nav-brand">
           <span><FontAwesomeIcon icon={faScrewdriverWrench} /> {isVolunteer ? 'Volunteer' : 'Admin'}</span>
-          <NotifBell canSeeOrders={!isVolunteer} />
           {/* ปุ่มเดียวสลับย่อ/กาง — รางไอคอนยังอยู่ตอนย่อ ปุ่มนี้จึงกดได้ตลอด ไม่ต้องมีปุ่มลอยข้างนอก
               ใส่ไอคอนทั้งสองทิศไว้ แล้วให้ CSS สลับกันโชว์ตามคลาส admin-nav-collapsed */}
           <button

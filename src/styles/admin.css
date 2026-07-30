@@ -594,8 +594,12 @@ a.attach-name:hover{text-decoration:underline}
 .admin-post-corner-btn:hover{background:#f3f4f6;color:var(--ink)}
 .admin-post-corner-btn.danger:hover{background:#fdecea;color:#c0392b;border-color:#f3c4be}
 /* ชิปเลือกสถานะในฟอร์มเพิ่มโพสต์ */
-.admin-cal-status-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
-.admin-cal-status-chips button{padding:8px 16px;border:1px solid #ddd;border-radius:99px;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+/* ชิปสถานะอยู่บรรทัดเดียวเสมอ — flex-wrap ตกบรรทัดเมื่อรางแคบ ("โพสต์แล้ว" หลุดไปอยู่คนเดียว)
+   grid-auto-flow:column + grid-auto-columns:minmax(0,1fr) = ทุกชิปแบ่งความกว้างเท่ากันในแถวเดียว
+   โดยไม่ต้องระบุจำนวนคอลัมน์ ⇒ เพิ่ม/ลดสถานะใน contentStatus.js แล้วยังอยู่บรรทัดเดียวเอง
+   ข้อความยาว ("กำลังดำเนินงาน") ตัดบรรทัดในชิปตัวเอง ชิปทุกอันสูงเท่ากันเพราะ stretch ตามแถว */
+.admin-cal-status-chips{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-top:4px}
+.admin-cal-status-chips button{padding:8px 6px;line-height:1.3;overflow-wrap:anywhere;border:1px solid #ddd;border-radius:99px;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .admin-cal-status-chips button:hover{border-color:var(--green-mid)}
 /* แหล่งข้อมูลอ้างอิง — ในฟอร์ม (แก้ไข) และบนการ์ด (กดไปได้) */
 .admin-cal-source-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
@@ -619,6 +623,10 @@ a.attach-name:hover{text-decoration:underline}
    (บนมือถือรางฟอร์มแคบกว่านั้น "อา" จึงหลุดไปบรรทัดสอง)
    กริด 7 คอลัมน์เท่ากันแก้ที่ต้นเหตุ: ชิปหารความกว้างที่มีเสมอ ไม่ว่ารางจะแคบเท่าไร
    minmax(0,1fr) กันคอลัมน์บวมจาก min-content ของ "พฤ" ที่กว้างกว่าตัวอื่น */
+@media (max-width:520px){
+  .admin-cal-status-chips{gap:6px}
+  .admin-cal-status-chips button{font-size:.74rem;padding:8px 4px}
+}
 .admin-cal-status-chips.admin-cal-repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .admin-cal-repeat-days button{min-width:0;padding:8px 2px;text-align:center;min-height:40px}
 /* จอแคบมาก ย่อตัวอักษรแทนการตกบรรทัด */

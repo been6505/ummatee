@@ -32,8 +32,10 @@ export default function AdminDashboard2() {
   )
 }
 
-// รายการโพสต์ในหนึ่งคอลัมน์ — เรียงตามวันที่ (ใหม่สุดก่อน) และจำกัดจำนวนกันการ์ดยาวเกินจอ
-const LIST_LIMIT = 8
+// รายการโพสต์ในหนึ่งคอลัมน์ — เรียงตามวันที่ (ใหม่สุดก่อน)
+// เดิมตัดที่ 8 รายการเพราะการ์ดจะยาวเกินจอ ตอนนี้กล่องเลื่อนในตัวเองได้ (ดู .staff-post-list ul ใน admin.css)
+// จึงโชว์ได้ยาวกว่ามาก เหลือเพดานไว้กันเรนเดอร์เป็นพันรายการตอนข้อมูลโตขึ้น
+const LIST_LIMIT = 200
 function PostList({ title, posts }) {
   const sorted = [...posts].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
   return (
@@ -87,6 +89,8 @@ function DashboardBody({ staff: staffProp }) {
   // ที่เป็นร่างทั้งหมดทำให้คอลัมน์นี้ขึ้น (0) ทั้งที่ดูเหมือนควรมีของ ตอนนี้ผูกกับสถานะตรงๆ
   // (ปุ่ม "ส่งงาน" โผล่เฉพาะเมื่อแนบลิงก์ Drive แล้ว ⇒ review ก็หมายถึงส่งไฟล์แล้วอยู่ในตัว)
   const inProgress = posts.filter((p) => ['wip', 'review'].includes(normStatus(p.status)))
+  // ร่าง = ยังไม่เริ่มลงมือ (รวมค่าเก่าที่ระบบไม่รู้จัก เพราะ normStatus ตีเป็น draft)
+  const drafts = posts.filter((p) => normStatus(p.status) === 'draft')
 
   return (
     <main className="admin-dash">
@@ -97,17 +101,19 @@ function DashboardBody({ staff: staffProp }) {
         </div>
 
         {/* ตัวเลขคอนเทนต์อยู่บนสุด — เป็นสิ่งที่ทีมต้องเห็นก่อนทางลัดเมนู
-            cols-3 บังคับ 3 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
+            cols-4 บังคับ 4 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
         {canSeeContent && (
           <>
-            <div className="admin-stats cols-3">
+            <div className="admin-stats cols-4">
               <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
+              <div className="admin-stat"><div className="v">{drafts.length}</div><div className="l">ร่าง</div></div>
               <div className="admin-stat"><div className="v">{inProgress.length}</div><div className="l">กำลังดำเนินการ</div></div>
               <div className="admin-stat"><div className="v">{posted.length}</div><div className="l">โพสต์แล้ว</div></div>
             </div>
             {/* รายการจริงใต้ตัวเลขแต่ละคอลัมน์ — เดิมเห็นแค่ตัวเลขแล้วต้องเข้าปฏิทินไปหาเองว่าคืออันไหน */}
             <div className="staff-post-lists">
               <PostList title="แผนคอนเทนต์ทั้งหมด" posts={posts} />
+              <PostList title="ร่าง" posts={drafts} />
               <PostList title="กำลังดำเนินการ" posts={inProgress} />
               <PostList title="โพสต์แล้ว" posts={posted} />
             </div>

@@ -39,11 +39,15 @@
 /* ชุดสถิติที่ต้องการให้อยู่แถวเดียวเสมอ (เช่นหน้าคลังสินค้าที่มี 3 ใบ) — auto-fit ปกติจะตัด
    ขึ้นบรรทัดใหม่บนมือถือเพราะ min 160px ใส่ไม่ครบ กลายเป็น 2+1 ที่ดูไม่สมดุล */
 .admin-stats.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.admin-stats.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:520px){
-  .admin-stats.cols-3{gap:8px}
-  .admin-stats.cols-3 .admin-stat{padding:14px 6px}
-  .admin-stats.cols-3 .admin-stat .v{font-size:1.5rem}
-  .admin-stats.cols-3 .admin-stat .l{font-size:.72rem;line-height:1.35}
+  .admin-stats.cols-3,.admin-stats.cols-4{gap:8px}
+  .admin-stats.cols-3 .admin-stat,.admin-stats.cols-4 .admin-stat{padding:14px 4px}
+  .admin-stats.cols-3 .admin-stat .v,.admin-stats.cols-4 .admin-stat .v{font-size:1.5rem}
+  .admin-stats.cols-3 .admin-stat .l,.admin-stats.cols-4 .admin-stat .l{font-size:.72rem;line-height:1.35}
+  /* 4 ใบบนจอ 375px เหลือใบละ ~85px — ตัวเลขเล็กลงอีกนิดเพื่อไม่ให้ป้ายตัดคำแปลกๆ */
+  .admin-stats.cols-4 .admin-stat .v{font-size:1.3rem}
+  .admin-stats.cols-4 .admin-stat .l{font-size:.67rem}
 }
 .admin-stat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
 .admin-stat .v{font-size:2rem;font-weight:800;color:var(--green-deep)}
@@ -548,9 +552,12 @@ a.attach-name:hover{text-decoration:underline}
 /* การ์ดทางลัดในหน้าแดชบอร์ด Staff — ลิงก์ไปทุกหน้าที่บัญชีนั้นเข้าได้ (ดู data/staffNav.js) */
 /* รายการโพสต์ 3 คอลัมน์ใต้ตัวเลขสรุปในแดชบอร์ด Staff
    มือถือซ้อนเป็นคอลัมน์เดียว — 3 คอลัมน์บนจอ 375px เหลือคอลัมน์ละ ~110px อ่านชื่อโพสต์ไม่ออก */
-.staff-post-lists{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px}
+.staff-post-lists{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:24px}
+@media (max-width:1300px){.staff-post-lists{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:900px){.staff-post-lists{grid-template-columns:1fr}}
-.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+/* เลื่อนดูรายการในกล่องได้เอง — เดิมตัดที่ 8 รายการแล้วต้องไปเปิดปฏิทินเพื่อดูที่เหลือ
+   คุมความสูงด้วย vh เพื่อให้ 4 คอลัมน์สูงเท่ากันและไม่ดันหน้าให้ยาวตามจำนวนโพสต์ */
+.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:min(48vh,420px);overflow-y:auto;overscroll-behavior:contain}
 .staff-post-list li+li{border-top:1px solid #eef1ee}
 .staff-post-list li a{display:block;padding:10px;border-radius:8px;text-decoration:none;color:inherit;transition:background .12s}
 .staff-post-list li a:hover{background:#EAF6EE}

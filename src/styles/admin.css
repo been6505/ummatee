@@ -642,3 +642,36 @@ a.attach-name:hover{text-decoration:underline}
    ตัวปุ่มกระดิ่งจัดการคลิกเอง (เปิด dropdown ผ่าน portal) */
 .an-bell-row{cursor:default}
 .an-bell-row > span{display:flex;align-items:center;gap:10px}
+
+/* ── แท็บไอเดีย (มายด์แมป) ของบอร์ดวางแผน ── */
+.idea-tabs{margin-bottom:16px}
+.idea-tabs button.on{background:var(--green-deep);border-color:var(--green-deep);color:#fff}
+.idea-card{padding:14px}
+.idea-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.idea-hint{font-size:.8rem;color:var(--ink-soft)}
+.idea-status{font-size:.8rem;font-weight:700;color:#c0392b}
+/* ผ้าใบกว้างกว่าจอ — เลื่อนดูได้ทั้งสองแกน ไม่ย่อผังจนอ่านข้อความไม่ออก */
+.idea-scroll{overflow:auto;max-height:min(72vh,680px);border:1px solid #eef1ee;border-radius:12px;background:
+  linear-gradient(#f7faf8 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,#f7faf8 1px,transparent 1px) 0 0/28px 100%,#fff}
+.idea-canvas{position:relative}
+.idea-edges{position:absolute;inset:0;pointer-events:none}
+/* เส้นเชื่อม: เส้นโปร่งหนาซ้อนใต้เส้นจริงเพื่อให้กดโดนง่ายบนจอสัมผัส */
+.idea-edge{pointer-events:auto;cursor:pointer}
+.idea-edge-hit{stroke:transparent;stroke-width:18}
+.idea-edge-line{stroke:var(--green-mid);stroke-width:2.5}
+.idea-edge:hover .idea-edge-line{stroke:#c0392b;stroke-width:3.5}
+/* touch-action:none จำเป็น — ไม่งั้นการลากบนมือถือกลายเป็นเลื่อนหน้าแทนการย้ายการ์ด */
+.idea-node{position:absolute;box-sizing:border-box;background:#fff;border:1.5px solid rgba(46,125,82,.25);border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px -10px rgba(27,94,54,.35);cursor:grab;touch-action:none;user-select:none}
+.idea-node:active{cursor:grabbing}
+.idea-node.linking{border-color:var(--green-deep);box-shadow:0 0 0 3px rgba(46,125,82,.18)}
+.idea-node.target{border-style:dashed;cursor:pointer}
+.idea-node-head{display:flex;align-items:flex-start;gap:6px}
+.idea-node-title{flex:1;min-width:0;border:none;background:transparent;font:inherit;font-size:.85rem;font-weight:700;color:var(--ink);padding:0}
+.idea-node-title:focus{outline:none;border-bottom:1px solid var(--green-mid)}
+.idea-node-btns{display:flex;gap:4px;flex-shrink:0}
+.idea-node-btn{border:1px solid #e5e7eb;background:#fff;border-radius:7px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:.7rem}
+.idea-node-btn.on{background:var(--green-deep);border-color:var(--green-deep);color:#fff}
+.idea-node-btn.danger:hover{background:#fdecea;color:#c0392b;border-color:#f3c4be}
+.idea-node-date{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.72rem;color:var(--ink-soft)}
+.idea-node-date input{flex:1;min-width:0;border:1px solid #e5e7eb;border-radius:6px;padding:3px 5px;font:inherit;font-size:.72rem;background:#fff}

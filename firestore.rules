@@ -574,6 +574,12 @@ service cloud.firestore {
       allow read, write: if isStaffRole(['admin', 'staff', 'field']);
     }
 
+    // โน้ดไอเดีย (แท็บมายด์แมปของบอร์ดวางแผน) — สิทธิ์เท่ากับ boardCards เพราะเป็นข้อมูลวางแผนชุดเดียวกัน
+    // เส้นเชื่อมเก็บเป็น array `links` บนโน้ดต้นทาง ไม่มี collection แยก จึงไม่ต้องมีกฎเพิ่ม
+    match /ideaNodes/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
     // Audit log — เขียนได้ทุก staff role ที่ยังมีสิทธิ์แก้ข้อมูล (เพื่อบันทึกการกระทำของตัวเอง)
     // แต่อ่าน (ดูประวัติทั้งหมด) ได้เฉพาะ admin เท่านั้น และห้ามแก้/ลบใครทั้งนั้น (append-only)
     match /auditLog/{id} {

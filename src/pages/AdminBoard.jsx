@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import IdeaMap from '../components/IdeaMap.jsx'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, where, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
@@ -25,6 +26,7 @@ export default function AdminBoard() {
   const [loading, setLoading] = useState(true)
   const [newCardTitle, setNewCardTitle] = useState({})
   const [dragCardId, setDragCardId] = useState(null)
+  const [tab, setTab] = useState('board')
 
   useEffect(() => {
     // ตัด orderBy('position') ออก — where + orderBy คนละฟิลด์ต้องมี composite index ใน Firestore ซึ่งไม่มี
@@ -108,11 +110,21 @@ export default function AdminBoard() {
           <AdminNav />
           <div className="admin-wrap">
             <div className="admin-head">
-              <div><h1>บอร์ดวางแผน</h1><p>ลากการ์ดข้ามคอลัมน์เพื่อย้ายสถานะ</p></div>
-              <button className="admin-btn-primary" onClick={addList}>+ เพิ่มคอลัมน์</button>
+              <div>
+                <h1>บอร์ดวางแผน</h1>
+                <p>{tab === 'board' ? 'ลากการ์ดข้ามคอลัมน์เพื่อย้ายสถานะ' : 'ลากไอเดียไปวางที่ไหนก็ได้ เชื่อมโยงกัน และกำหนดวันได้'}</p>
+              </div>
+              {tab === 'board' && <button className="admin-btn-primary" onClick={addList}>+ เพิ่มคอลัมน์</button>}
             </div>
 
-            {loading ? <ListSkeleton /> : (
+            {/* สองมุมมองของงานเดียวกัน: คอลัมน์สถานะ (คัมบัง) กับผังไอเดีย (มายด์แมป)
+                แยกข้อมูลกัน — ไอเดียยังไม่ใช่งานที่มีสถานะ ถ้าเอามาปนคอลัมน์จะต้องเลือกสถานะให้ทุกไอเดีย */}
+            <div className="admin-cal-status-chips idea-tabs">
+              <button type="button" className={tab === 'board' ? 'on' : ''} onClick={() => setTab('board')}>คอลัมน์งาน</button>
+              <button type="button" className={tab === 'idea' ? 'on' : ''} onClick={() => setTab('idea')}>ไอเดีย (มายด์แมป)</button>
+            </div>
+
+            {tab === 'idea' ? <IdeaMap boardId={DEFAULT_BOARD_ID} /> : loading ? <ListSkeleton /> : (
               <div className="admin-board-row">
                 {lists.map((l) => (
                   <div

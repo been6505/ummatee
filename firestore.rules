@@ -28,6 +28,14 @@ service cloud.firestore {
         ];
     }
 
+    // ── แอดมินสูงสุด (super admin) — บัญชีเดียวเท่านั้น ──
+    // ใช้กับสิ่งที่ให้สิทธิ์คนอื่นหรือเปิดดูร่องรอยการกระทำของทุกคน คือ จัดการ Staff และ Audit log
+    // แยกจาก isFullAdmin (2 อีเมล) เพราะการตั้ง role ให้คนอื่นได้ = ยกสิทธิ์ CRM/PII ให้ใครก็ได้
+    // จึงควรอยู่ที่คนเดียวที่รับผิดชอบระบบจริงๆ
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email == 'akasitlove@gmail.com';
+    }
+
     // ── helper: ฟิลด์ optional ถ้ามีต้องเป็น string ไม่เกินความยาวที่กำหนด ──
     function optStr(d, k, max) {
       return !(k in d) || (d[k] is string && d[k].size() <= max);
@@ -78,6 +86,29 @@ service cloud.firestore {
       allow write: if isFullAdmin();
     }
 
+    // เอกสาร "เนื้อหาเว็บ" ที่ทีมงานแก้ได้จากหน้า /admin/website (ย้ายมาอยู่ในเมนู staff แล้ว)
+    // แยกออกมาจาก config/{id} ทั่วไปโดยเจตนา — ที่เหลือใน config/ ยังเป็น isFullAdmin() เท่านั้น
+    // เพราะเป็นคนละระดับความเสี่ยง:
+    //   config/site               = ปิดเว็บทั้งเว็บ (maintenance)     -> เจ้าของเท่านั้น
+    //   config/financialDashboard = เลขบัญชีธนาคารที่โชว์หน้า /challenge -> เจ้าของเท่านั้น
+    // ส่วน 5 ตัวนี้เป็นเนื้อหา/เมนู แก้ผิดก็แก้กลับได้ ไม่ทำให้เงินไปผิดบัญชีหรือเว็บล่ม
+    function canEditSiteContent() {
+      return isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+    match /config/homeCards   { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/focusCards  { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/siteContent { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/navVisibility { allow read: if true; allow write: if canEditSiteContent(); }
+    // announcement.linkUrl ไปโผล่ใน href บนหน้าแรกของผู้เข้าชมทุกคน — บังคับ http(s) ตั้งแต่ในกฎ
+    // (ฝั่ง client กรองด้วย isSafeHttpUrl อยู่แล้ว แต่คนที่เขียน Firestore ตรงข้าม UI ได้ต้องโดนกันด้วย)
+    match /config/announcement {
+      allow read: if true;
+      allow write: if canEditSiteContent()
+        && (!('linkUrl' in request.resource.data)
+            || request.resource.data.linkUrl == ''
+            || request.resource.data.linkUrl.matches('^https?://.+'));
+    }
+
     // ตั้งจำนวนที่นั่ง/ปิดรับลงทะเบียนงาน Iftar — อยู่ในขอบเขตงานอาสาสมัคร (หน้า /admin/event/iftar2026)
     // จำกัดเฉพาะ 2 ฟิลด์นี้ ไม่ให้ยัดฟิลด์อื่นเข้ามาผ่าน doc นี้
     match /config/iftarMeta {
@@ -96,8 +127,11 @@ service cloud.firestore {
 
     // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมินตัวจริง (ฟิลด์โพสต์จริง realStatus/publishResults
     // ถูกเขียนจาก Cloud Functions ด้วย Admin SDK เท่านั้น แต่แอดมินยังแก้ไฟล์แผนผ่าน client ได้ตามปกติ)
+    // ทีมโซเชียล/พนักงานวางแผนคอนเทนต์ได้ (หน้า /admin/calendar ย้ายมาอยู่ในเมนู staff แล้ว)
+    // ไม่ใช่ข้อมูล PII — เป็นแผนโพสต์/แคปชัน จึงเปิดให้ role ที่ทำงานนี้จริงเข้าถึงได้
+    // ฟิลด์ผลการโพสต์จริง (realStatus/publishResults) เขียนจาก Cloud Functions ด้วย Admin SDK เท่านั้น
     match /contentPosts/{id} {
-      allow read, write: if isFullAdmin();
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
     }
 
     // บัญชีโซเชียลที่เชื่อมต่อ OAuth ไว้ (access/refresh token) — ห้ามฝั่ง client อ่าน/เขียนตรงเด็ดขาด
@@ -481,7 +515,11 @@ service cloud.firestore {
 
     // อ่าน role ของผู้ใช้ที่ล็อกอินอยู่เองจาก staff/{uid} แล้วเช็คว่าอยู่ใน roles ที่อนุญาต + ต้อง active
     function isStaffRole(roles) {
-      return request.auth != null
+      // เจ้าของระบบผ่านได้เสมอ (break-glass ชุดเดียวกับ StaffRoleGuard/AdminNav ฝั่ง UI)
+      // ถ้าไม่มีบรรทัดนี้ เจ้าของจะ "เข้าหน้าได้แต่ข้อมูลว่างเปล่า" เพราะ UI ปล่อยผ่านแต่ rules ปฏิเสธ
+      // ซึ่งดูเหมือนระบบพังมากกว่าจะรู้ว่าเป็นเรื่องสิทธิ์ (listener ส่วนใหญ่กลืน permission error ไว้เงียบๆ)
+      return isFullAdmin() ||
+        request.auth != null
         && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
@@ -489,7 +527,7 @@ service cloud.firestore {
 
     // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
     match /staff/{staffId} {
-      allow read: if request.auth != null && (request.auth.uid == staffId || isStaffRole(['admin']) || isFullAdmin());
+      allow read: if request.auth != null && (request.auth.uid == staffId || isSuperAdmin());
       // สมัครตัวเองครั้งแรก: สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เป็น 'pending' เท่านั้น
       //
       // สำคัญ: ห้ามให้ default เป็น 'staff' เด็ดขาด — 'staff' มีสิทธิ์ read/write/delete ข้อมูล CRM ทั้งหมด
@@ -500,17 +538,18 @@ service cloud.firestore {
         && request.resource.data.role == 'pending'
         && request.resource.data.active == true;
       // แก้ไขข้อมูลตัวเอง (เช่น lastLoginAt) ได้ แต่ห้ามเปลี่ยน role/active ของตัวเอง (กัน self-elevate)
-      // แอดมินแก้ของใครก็ได้ทุกฟิลด์ (ตั้ง role/active ให้คนอื่น)
-      // isFullAdmin() เป็นทางออกฉุกเฉินที่ขาดไม่ได้ (break-glass):
-      // ถ้าไม่มีใครมี staff doc ที่ role=='admin' อยู่เลย จะไม่มีใครตั้ง role ให้ใครได้ตลอดไป — รวมถึงเจ้าของเว็บเอง
-      // เพราะการสมัครเองบังคับเป็น 'pending' เสมอ ⇒ ล็อกทุกคนออกจากหน้า CRM/บอร์ด/จัดการพนักงานถาวร
-      // แก้ได้ทางเดียวคือเข้าไปแก้ Firestore ผ่าน Console ด้วยมือ ซึ่งไม่ควรเป็นขั้นตอนที่จำเป็น
-      // isFullAdmin คือ 2 อีเมลเจ้าของ (ระดับความเชื่อถือสูงสุดในระบบอยู่แล้ว) จึงไม่ได้ลดความปลอดภัยลง
-      allow update: if isStaffRole(['admin']) || isFullAdmin()
+      //
+      // การตั้ง role ให้คนอื่น = ยกสิทธิ์เข้าถึง CRM ซึ่งมี PII ผู้รับความช่วยเหลือให้ใครก็ได้
+      // จึงจำกัดไว้ที่ super admin บัญชีเดียว ไม่ใช่ทุกคนที่มี role 'admin'
+      // (ไม่งั้นคนที่ถูกตั้งเป็น admin จะตั้ง admin คนต่อไปได้เอง สิทธิ์ขยายออกไปโดยเจ้าของไม่รู้ตัว)
+      //
+      // เป็น break-glass ในตัว: อีเมลนี้ hardcode ไว้ในกฎ จึงเข้าถึงได้เสมอแม้ยังไม่มีใครมี staff doc
+      // role 'admin' เลย (การสมัครเองบังคับเป็น 'pending' ตลอด) ไม่ต้องไปแก้ Firestore ผ่าน Console ด้วยมือ
+      allow update: if isSuperAdmin()
         || (request.auth.uid == staffId
             && request.resource.data.role == resource.data.role
             && request.resource.data.active == resource.data.active);
-      allow delete: if isStaffRole(['admin']) || isFullAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // CRM: องค์กรพันธมิตร / จุดลงพื้นที่ (แผนที่) / วิทยากร — admin, staff, field เข้าถึงได้
@@ -540,7 +579,7 @@ service cloud.firestore {
     match /auditLog/{id} {
       allow create: if isStaffRole(['admin', 'staff', 'field', 'social'])
         && request.resource.data.staffUid == request.auth.uid;
-      allow read: if isStaffRole(['admin']);
+      allow read: if isSuperAdmin();
       allow update, delete: if false;
     }
 

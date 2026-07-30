@@ -421,10 +421,10 @@
 .aid-geo-coord{font-size:.78rem;color:var(--ink-soft);font-family:monospace}
 
 /* การ์ดโพสต์ในวันที่เลือก */
-/* กล่องรายละเอียดโพสต์กลางจอ — เปิดเมื่อกดการ์ดโพสต์ในการ์ดวันที่เลือก
-   z-index สูงกว่า sidebar ของแอดมิน (ดู .admin-nav) ไม่งั้นเมนูซ้ายทับกล่อง */
-.admin-detail-overlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
-.admin-detail{max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+/* หน้ารายละเอียดโพสต์ (?post=<id>) — โชว์การ์ดใบเดียว ไม่ใช่กล่องลอยทับหน้าปฏิทิน */
+.admin-detail-page{max-width:720px}
+.admin-detail-back{margin-bottom:14px}
+.admin-detail{width:100%}
 .admin-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .admin-detail-head h4{margin:0;line-height:1.45}
 .admin-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin:10px 0}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
@@ -270,7 +270,11 @@ export default function AdminCalendar() {
   const [year, setYear] = useState(initial?.y ?? now.getFullYear())
   const [month, setMonth] = useState(initial?.mo ?? now.getMonth()) // 0-11
   const [selected, setSelected] = useState(initial?.key ?? todayKey())
-  const [detailId, setDetailId] = useState(null)
+  // โพสต์ที่เปิดดูรายละเอียด — ผูกกับ ?post=<id> ใน URL ให้เป็นหน้าจริง
+  // (refresh แล้วยังอยู่หน้าเดิม และปุ่ม back ของเบราว์เซอร์กลับไปหน้าปฏิทิน)
+  const [detailId, setDetailId] = useState(() => new URLSearchParams(window.location.search).get('post'))
+  // จำว่าหน้ารายละเอียดถูกเปิดด้วยการกดการ์ด (มี history ให้ย้อน) หรือเข้ามาตรงๆ — ดู closeDetail
+  const pushedDetail = useRef(false)
 
   const [posts, setPosts] = useState([])
   const [campaigns, setCampaigns] = useState([])
@@ -372,6 +376,12 @@ export default function AdminCalendar() {
       driveUrl: p.driveUrl || '',
     })
   }
+  useEffect(() => {
+    const onPop = () => setDetailId(new URLSearchParams(window.location.search).get('post'))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
   const save = async () => {
@@ -436,7 +446,26 @@ export default function AdminCalendar() {
 
   const dayPosts = byDate[selected] || []
   // โพสต์ที่กดดูรายละเอียด — เก็บเป็น id ไม่ใช่ตัว object เพื่อให้ค่าที่โชว์อัปเดตตาม onSnapshot
-  const detailPost = detailId ? dayPosts.find((p) => p.id === detailId) : null
+  const detailPost = detailId ? posts.find((p) => p.id === detailId) : null
+  // เปิด/ปิดหน้ารายละเอียดผ่าน history เพื่อให้ปุ่ม back ทำงานตามที่ผู้ใช้คาด
+  const openDetail = (id) => {
+    setDetailId(id)
+    const u = new URL(window.location.href)
+    u.searchParams.set('post', id)
+    window.history.pushState({}, '', u)
+    pushedDetail.current = true
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  // กด "กลับไปปฏิทิน": ถ้าเรา push เข้ามาเองใช้ back() ให้ประวัติสะอาด
+  // แต่ถ้าเข้ามาตรงๆ (refresh หรือเปิดลิงก์ ?post=) back() จะพาออกนอกเว็บไปเลย จึงล้าง query แทน
+  const closeDetail = () => {
+    if (pushedDetail.current) { window.history.back(); return }
+    const u = new URL(window.location.href)
+    u.searchParams.delete('post')
+    window.history.replaceState({}, '', u)
+    setDetailId(null)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
   const selDate = new Date(selected)
 
   return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
@@ -517,16 +546,17 @@ export default function AdminCalendar() {
           </div>
         )}
 
-        {/* กดการ์ดโพสต์แล้วกางรายละเอียดครบในกล่องกลางจอ — การ์ดในหน้าโชว์แค่หัวข้อเพื่อให้เตี้ย
-            ที่นี่จึงเป็นที่เดียวที่เห็นแคปชัน/ลิงก์/ไฟล์งานครบ และเปลี่ยนสถานะแบบกดเดียวได้ */}
+        {/* หน้ารายละเอียดโพสต์ — กดการ์ดแล้วมาที่นี่ โชว์การ์ดใบเดียว ไม่มีปฏิทิน/ฟอร์มมากวน
+            การ์ดในหน้าปฏิทินโชว์แค่หัวข้อ ที่นี่จึงเป็นที่เดียวที่เห็นแคปชัน/ลิงก์/ไฟล์งานครบ
+            และเปลี่ยนสถานะแบบกดเดียวได้ */}
         {detailPost && (
-          <div className="admin-detail-overlay" role="dialog" aria-modal="true" onClick={() => setDetailId(null)}>
-            <div className="admin-card admin-detail" onClick={(e) => e.stopPropagation()}>
+          <div className="admin-detail-page">
+            <button className="shop-detail-back admin-detail-back" onClick={closeDetail}>
+              <FontAwesomeIcon icon={faArrowLeft} /> กลับไปปฏิทิน
+            </button>
+            <div className="admin-card admin-detail">
               <div className="admin-detail-head">
                 <h4>{detailPost.time} · {detailPost.title}</h4>
-                <button className="admin-post-corner-btn" onClick={() => setDetailId(null)} aria-label="ปิด" title="ปิด">
-                  <FontAwesomeIcon icon={faXmark} />
-                </button>
               </div>
               <div className="admin-detail-meta">
                 <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(detailPost.status)] }}>
@@ -579,7 +609,7 @@ export default function AdminCalendar() {
           </div>
         )}
 
-        {mainTab === 'calendar' && (
+        {mainTab === 'calendar' && !detailPost && (
           <div className="admin-cal-today" style={{ marginBottom: 20 }}>
               <div className="admin-card">
                 <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
@@ -594,8 +624,8 @@ export default function AdminCalendar() {
                     key={p.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setDetailId(p.id)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailId(p.id) } }}
+                    onClick={() => openDetail(p.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(p.id) } }}
                   >
                     <div className="admin-post-top">
                       {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
@@ -717,7 +747,7 @@ export default function AdminCalendar() {
         {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'comments' && <CommentsTab />}
         {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'insights' && <InsightsTab />}
 
-        {mainTab === 'calendar' && <div className="admin-cal-layout">
+        {mainTab === 'calendar' && !detailPost && <div className="admin-cal-layout">
           {/* ปฏิทินรายเดือน */}
           <div className="admin-card admin-cal-card">
             <div className="admin-cal-head">

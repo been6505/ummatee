@@ -288,10 +288,15 @@
 .admin-cal-today .admin-cal-hijri-header{font-size:.75rem}
 .admin-cal-today .admin-post{padding:10px 12px;margin-bottom:0}
 .admin-cal-today .admin-post-top strong{font-size:.85rem;line-height:1.45}
-.admin-cal-today .admin-post-text{font-size:.8rem;margin:4px 0}
-.admin-cal-today .admin-post-actions{gap:6px;margin-top:6px}
-/* ปุ่มสถานะกะทัดรัดขึ้นเพื่อให้ทั้ง 4 ปุ่มอยู่บรรทัดเดียว (บนจอเล็กยังถูกดันเป็น 44px ตาม media query ท้ายไฟล์) */
-.admin-cal-today .admin-post-actions .admin-btn{font-size:.72rem;padding:4px 9px}
+/* การ์ดวันที่เลือกโชว์แค่ เวลา·ชื่อโพสต์ + ป้ายสถานะ + ปุ่มแก้ไข/ลบ
+   รายละเอียดที่เหลือ (แคปชัน ลิงก์แหล่งข้อมูล ลิงก์ไฟล์งาน รูป/วิดีโอ และปุ่มสลับสถานะ)
+   ซ่อนไว้เพื่อให้การ์ดเตี้ยที่สุด — ดู/แก้ค่าเหล่านั้นได้ที่ฟอร์มเมื่อกดปุ่มแก้ไข
+   ⚠️ นี่คือที่เดียวที่โพสต์ถูกเรนเดอร์ ⇒ ปุ่มสลับสถานะแบบกดเดียวจึงใช้ไม่ได้อีก
+   ถ้าอยากได้กลับมา ลบบล็อกนี้ออกหรือทำเป็นกดเพื่อกาง */
+.admin-cal-today .admin-post-text,
+.admin-cal-today .admin-post-sources,
+.admin-cal-today .admin-post-media,
+.admin-cal-today .admin-post-actions{display:none}
 
 /* การ์ด "โพสต์ของวันที่เลือก" อยู่เต็มความกว้างด้านบน (แทนที่แถบแท็บเดิม)
    ใต้ลงมาเป็น 2 คอลัมน์: ปฏิทิน | ฟอร์มเพิ่มโพสต์

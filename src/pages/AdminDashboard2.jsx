@@ -80,12 +80,13 @@ function DashboardBody({ staff: staffProp }) {
     visibleStaffNav(staff, { isOwner: isFullAdminEmail(email), isSuper: isSuperAdminEmail(email) })
   ).filter((s) => s.href !== '/admin/staff-dashboard' && s.group !== 'CRM')
 
-  // สถานะโพสต์มีสองค่าจริงคือ draft กับ posted (ดู normStatus ใน AdminCalendar.jsx)
-  // อะไรที่ยังไม่ใช่ posted ถือว่า "กำลังดำเนินการ" ทั้งหมด รวมโพสต์เก่าที่เคยเป็น 'scheduled'
-  const posted = posts.filter((p) => p.status === 'posted')
-  // "กำลังดำเนินการ" = ยังไม่โพสต์ และ "ส่งไฟล์งานเข้ามาแล้ว" (มีลิงก์ Google Drive)
-  // งานที่ยังไม่แนบไฟล์ถือว่ายังไม่เริ่มส่ง จะเห็นได้ในคอลัมน์ "แผนคอนเทนต์ทั้งหมด" เท่านั้น
-  const inProgress = posts.filter((p) => p.status !== 'posted' && isSafeHttpUrl(p.driveUrl))
+  const posted = posts.filter((p) => normStatus(p.status) === 'posted')
+  // "กำลังดำเนินการ" = งานที่เริ่มลงมือแล้ว คือสถานะ กำลังดำเนินงาน (wip) หรือ ส่งงาน (review)
+  //
+  // เดิมใช้เงื่อนไข "ยังไม่โพสต์ + มีลิงก์ Drive" ซึ่งอ่านจากฟิลด์คนละตัวกับที่ผู้ใช้กด ⇒ งาน 9 ชิ้น
+  // ที่เป็นร่างทั้งหมดทำให้คอลัมน์นี้ขึ้น (0) ทั้งที่ดูเหมือนควรมีของ ตอนนี้ผูกกับสถานะตรงๆ
+  // (ปุ่ม "ส่งงาน" โผล่เฉพาะเมื่อแนบลิงก์ Drive แล้ว ⇒ review ก็หมายถึงส่งไฟล์แล้วอยู่ในตัว)
+  const inProgress = posts.filter((p) => ['wip', 'review'].includes(normStatus(p.status)))
 
   return (
     <main className="admin-dash">

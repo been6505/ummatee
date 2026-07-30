@@ -17,7 +17,7 @@ import {
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
 import { withSearchTokens } from '../lib/searchIndex.js'
-import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
+import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus, statusAfterDriveLink } from '../data/contentStatus.js'
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
 
@@ -546,7 +546,7 @@ export default function AdminCalendar() {
                 // สีประจำวัน: เอาสถานะที่ "ค้างที่สุด" ของวันนั้นมาแสดง (ร่าง > ส่งตรวจ > โพสต์แล้ว)
                 // เพื่อให้กวาดตาดูปฏิทินแล้วเห็นวันที่ยังมีงานค้างก่อน ไม่ใช่เห็นวันที่ทำเสร็จแล้วเด่นสุด
                 const dominant = has.length === 0 ? null
-                  : ['draft', 'review', 'posted'].find((st) => has.some((p) => normStatus(p.status) === st))
+                  : STATUS_ORDER.find((st) => has.some((p) => normStatus(p.status) === st))
                 return (
                   <button
                     key={key}
@@ -792,7 +792,11 @@ export default function AdminCalendar() {
                   <input
                     type="url"
                     value={form.driveUrl}
-                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
+                    onChange={(e) => {
+                      const driveUrl = e.target.value
+                      // ใส่ลิงก์ครบเป็น http(s) แล้วเลื่อนสถานะเป็น "ส่งตรวจ" ให้เลย (ดู statusAfterDriveLink)
+                      setForm((f) => ({ ...f, driveUrl, status: isSafeHttpUrl(driveUrl.trim()) ? statusAfterDriveLink(f.status) : f.status }))
+                    }}
                     placeholder="https://drive.google.com/..."
                   />
                 </label>

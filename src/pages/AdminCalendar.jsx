@@ -270,6 +270,7 @@ export default function AdminCalendar() {
   const [year, setYear] = useState(initial?.y ?? now.getFullYear())
   const [month, setMonth] = useState(initial?.mo ?? now.getMonth()) // 0-11
   const [selected, setSelected] = useState(initial?.key ?? todayKey())
+  const [detailId, setDetailId] = useState(null)
 
   const [posts, setPosts] = useState([])
   const [campaigns, setCampaigns] = useState([])
@@ -434,6 +435,8 @@ export default function AdminCalendar() {
   }
 
   const dayPosts = byDate[selected] || []
+  // โพสต์ที่กดดูรายละเอียด — เก็บเป็น id ไม่ใช่ตัว object เพื่อให้ค่าที่โชว์อัปเดตตาม onSnapshot
+  const detailPost = detailId ? dayPosts.find((p) => p.id === detailId) : null
   const selDate = new Date(selected)
 
   return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
@@ -514,6 +517,68 @@ export default function AdminCalendar() {
           </div>
         )}
 
+        {/* กดการ์ดโพสต์แล้วกางรายละเอียดครบในกล่องกลางจอ — การ์ดในหน้าโชว์แค่หัวข้อเพื่อให้เตี้ย
+            ที่นี่จึงเป็นที่เดียวที่เห็นแคปชัน/ลิงก์/ไฟล์งานครบ และเปลี่ยนสถานะแบบกดเดียวได้ */}
+        {detailPost && (
+          <div className="admin-detail-overlay" role="dialog" aria-modal="true" onClick={() => setDetailId(null)}>
+            <div className="admin-card admin-detail" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-detail-head">
+                <h4>{detailPost.time} · {detailPost.title}</h4>
+                <button className="admin-post-corner-btn" onClick={() => setDetailId(null)} aria-label="ปิด" title="ปิด">
+                  <FontAwesomeIcon icon={faXmark} />
+                </button>
+              </div>
+              <div className="admin-detail-meta">
+                <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(detailPost.status)] }}>
+                  {STATUS[normStatus(detailPost.status)]}
+                </span>
+                <span>{CONTENT_TYPE_LABEL[detailPost.contentType] || 'โพสต์'}</span>
+                {detailPost.campaignId && <span>{campaigns.find((c) => c.id === detailPost.campaignId)?.name || 'แคมเปญที่ถูกลบแล้ว'}</span>}
+              </div>
+              {detailPost.text
+                ? <p className="admin-post-text">{detailPost.text}</p>
+                : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
+              {isSafeHttpUrl(detailPost.driveUrl) && (
+                <div className="admin-post-sources">
+                  <a href={detailPost.driveUrl} target="_blank" rel="noopener noreferrer" title={detailPost.driveUrl}>
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
+                  </a>
+                </div>
+              )}
+              {(detailPost.sources || []).filter((x) => isSafeHttpUrl(x.url)).length > 0 && (
+                <div className="admin-post-sources">
+                  {detailPost.sources.filter((x) => isSafeHttpUrl(x.url)).map((x, xi) => (
+                    <a key={xi} href={x.url} target="_blank" rel="noopener noreferrer" title={x.url}>
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {x.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {(detailPost.mediaUrls || []).length > 0 && (
+                <div className="admin-post-media">
+                  {detailPost.mediaUrls.map((url, mi) => (
+                    url.match(/\.(mp4|mov|webm)/i)
+                      ? <video key={mi} src={url} className="admin-post-media-item" muted controls />
+                      : <img key={mi} src={url} alt="" className="admin-post-media-item" />
+                  ))}
+                </div>
+              )}
+              <div className="admin-post-actions">
+                {Object.entries(STATUS).map(([k, v]) => (
+                  <button
+                    key={k} className="admin-btn"
+                    style={normStatus(detailPost.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
+                    onClick={() => setPostStatus(detailPost, k)}
+                  >{normStatus(detailPost.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
+                ))}
+                <button className="admin-btn" onClick={() => { startEdit(detailPost); setDetailId(null) }}>
+                  <FontAwesomeIcon icon={faPenToSquare} /> แก้ไข
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {mainTab === 'calendar' && (
           <div className="admin-cal-today" style={{ marginBottom: 20 }}>
               <div className="admin-card">
@@ -524,7 +589,14 @@ export default function AdminCalendar() {
                     จึงวางเป็นกริดหลายคอลัมน์ในแถวเดียว (auto-fill ยุบเป็นคอลัมน์เดียวเองเมื่อที่ไม่พอ) */}
                 <div className="admin-day-posts">
                 {dayPosts.map((p) => (
-                  <div className="admin-post" key={p.id}>
+                  <div
+                    className="admin-post admin-post-clickable"
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setDetailId(p.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailId(p.id) } }}
+                  >
                     <div className="admin-post-top">
                       {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
                       <strong>
@@ -539,10 +611,10 @@ export default function AdminCalendar() {
                         <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
                           {STATUS[normStatus(p.status)]}
                         </span>
-                        <button className="admin-post-corner-btn" onClick={() => startEdit(p)} aria-label="แก้ไขโพสต์" title="แก้ไข">
+                        <button className="admin-post-corner-btn" onClick={(e) => { e.stopPropagation(); startEdit(p) }} aria-label="แก้ไขโพสต์" title="แก้ไข">
                           <FontAwesomeIcon icon={faPenToSquare} />
                         </button>
-                        <button className="admin-post-corner-btn danger" onClick={() => remove(p.id)} aria-label="ลบโพสต์" title="ลบ">
+                        <button className="admin-post-corner-btn danger" onClick={(e) => { e.stopPropagation(); remove(p.id) }} aria-label="ลบโพสต์" title="ลบ">
                           <FontAwesomeIcon icon={faTrash} />
                         </button>
                       </span>

@@ -421,10 +421,17 @@
 .aid-geo-coord{font-size:.78rem;color:var(--ink-soft);font-family:monospace}
 
 /* การ์ดโพสต์ในวันที่เลือก */
-/* หน้ารายละเอียดโพสต์ (?post=<id>) — โชว์การ์ดใบเดียว ไม่ใช่กล่องลอยทับหน้าปฏิทิน */
-.admin-detail-page{max-width:720px}
-.admin-detail-back{margin-bottom:14px}
+/* หน้ารายละเอียดโพสต์ (?post=<id>) — โชว์การ์ดใบเดียว ไม่ใช่กล่องลอยทับหน้าปฏิทิน
+   จอกว้างแยกเป็น 2 คอลัมน์: เนื้อหา+ฟอร์มแก้ไข | พรีวิวไฟล์งานใน Drive */
+.admin-detail-page{max-width:1200px}
+/* ปุ่มกลับอยู่บนพื้นไล่สีของหน้า อ่านยาก จึงทำเป็นปุ่มพื้นขาวเหมือนการ์ด */
+.admin-detail-back{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:9px 16px;border:1px solid rgba(46,125,82,.15);border-radius:99px;background:#fff;color:var(--green-deep);font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:0 6px 20px -12px rgba(27,94,54,.25);transition:background .15s,border-color .15s}
+.admin-detail-back:hover{background:#EAF6EE;border-color:rgba(46,125,82,.4)}
+.admin-detail-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+@media (min-width:1000px){.admin-detail-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .admin-detail{width:100%}
+/* พรีวิว Drive — iframe ต้องกำหนดความสูงเอง (ไม่มี intrinsic height) */
+.admin-detail-preview iframe{width:100%;height:min(70vh,560px);border:1px solid #eee;border-radius:10px;background:#fafafa}
 .admin-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .admin-detail-head h4{margin:0;line-height:1.45}
 .admin-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin:10px 0}

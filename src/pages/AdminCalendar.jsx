@@ -21,6 +21,18 @@ import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus, statusAfterDriveLink } 
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
 
+// แปลงลิงก์ Google Drive เป็น URL พรีวิวแบบฝัง iframe ได้
+// รองรับ /file/d/<id>/... และ ?id=<id> — โฟลเดอร์ (/drive/folders/) ฝังไม่ได้ คืน null ให้โชว์แค่ลิงก์
+// ต้องมี https://drive.google.com ใน frame-src ของ CSP (firebase.json) ไม่งั้น iframe ถูกบล็อก
+export function driveEmbedUrl(url) {
+  if (typeof url !== 'string' || !/^https:\/\/(drive|docs)\.google\.com\//.test(url)) return null
+  // Docs/Sheets/Slides ฝังได้ด้วย /preview ของตัวเอง (ใช้ /file/d/ ของ Drive ไม่ได้)
+  const doc = url.match(/^https:\/\/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([\w-]{10,})/)
+  if (doc) return `https://docs.google.com/${doc[1]}/d/${doc[2]}/preview`
+  const m = url.match(/\/file\/d\/([\w-]{10,})/) || url.match(/[?&]id=([\w-]{10,})/)
+  return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
+}
+
 // ป้ายแพลตฟอร์มของกล่องข้อความ — เหมือน AdminChat.jsx (เพิ่ม instagram ที่ยังไม่มีในไฟล์นั้น)
 const CHAT_PLATFORM_BADGE = {
   web: { icon: faGlobe, label: 'เว็บไซต์', color: '#16a34a' },
@@ -470,6 +482,153 @@ export default function AdminCalendar() {
   }
   const selDate = new Date(selected)
 
+  // การ์ดฟอร์มเพิ่ม/แก้ไขโพสต์ — ประกาศเป็นตัวแปรเพราะต้องเรนเดอร์ 2 ที่:
+  // คอลัมน์ขวาของหน้าปฏิทิน และในหน้ารายละเอียดเมื่อกดแก้ไข โดยใช้ state/handler ชุดเดียวกัน
+  const formCard = (
+              <div className="admin-card">
+                <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
+                <div className="admin-cal-form">
+                  <div className="admin-cal-form-main">
+                  <label>ชื่อกิจกรรม/โพสต์
+                    <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
+                  </label>
+                  <div className="admin-cal-form-row">
+                    <label>เวลาโพสต์
+                      <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                    </label>
+                    {/* สถานะเหลือ 2 ค่า ใช้ชิปกดเลือกแทน dropdown — เห็นค่าที่เลือกอยู่ทันทีไม่ต้องกางเมนู */}
+                    <label>สถานะ
+                      <div className="admin-cal-status-chips">
+                        {Object.entries(STATUS).map(([k, v]) => (
+                          <button
+                            key={k}
+                            type="button"
+                            className={form.status === k ? 'on' : ''}
+                            style={form.status === k ? { background: STATUS_COLOR[k], borderColor: STATUS_COLOR[k], color: '#fff' } : {}}
+                            onClick={() => setForm({ ...form, status: k })}
+                          >{v}</button>
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+                  <div className="admin-cal-form-row">
+                    <label>ชนิดคอนเทนต์
+                      <select value={form.contentType} onChange={(e) => setForm({ ...form, contentType: e.target.value })}>
+                        {Object.entries(CONTENT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </label>
+                    <label>แคมเปญที่เกี่ยวข้อง
+                      <select value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })}>
+                        <option value="">-- ไม่ระบุ --</option>
+                        {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  {form.contentType === 'live' && (
+                    <div className="admin-cal-form-row" style={{ flexWrap: 'wrap' }}>
+                      <label>วันเวลาไลฟ์
+                        <input type="datetime-local" value={form.liveScheduledAt} onChange={(e) => setForm({ ...form, liveScheduledAt: e.target.value })} />
+                      </label>
+                      <label>ผู้ดำเนินรายการ
+                        <input value={form.liveHost} onChange={(e) => setForm({ ...form, liveHost: e.target.value })} />
+                      </label>
+                      <div>
+                        <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แพลตฟอร์มไลฟ์</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {LIVE_PLATFORM_OPTIONS.map((pf) => (
+                            <button
+                              key={pf} type="button"
+                              className={form.livePlatforms.includes(pf) ? 'admin-btn-primary' : 'admin-btn'}
+                              style={{ fontSize: '.8rem', padding: '6px 14px' }}
+                              onClick={() => setForm((f) => ({ ...f, livePlatforms: f.livePlatforms.includes(pf) ? f.livePlatforms.filter((x) => x !== pf) : [...f.livePlatforms, pf] }))}
+                            >{pf}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
+                      เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้
+                      กรอง scheme ตอนบันทึก (ดู save) กัน javascript: เพราะค่านี้ไปโผล่ใน href บนการ์ด */}
+                  <div>
+                    <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แหล่งข้อมูล</div>
+                    {form.sources.map((s, i) => (
+                      <div className="admin-cal-source-row" key={i}>
+                        <input
+                          placeholder="ชื่อแหล่ง (เช่น ข่าวต้นทาง)"
+                          value={s.label}
+                          onChange={(e) => setSource(i, { label: e.target.value })}
+                        />
+                        <input
+                          placeholder="https://..."
+                          value={s.url}
+                          onChange={(e) => setSource(i, { url: e.target.value })}
+                        />
+                        <button type="button" className="admin-cal-source-del" onClick={() => removeSource(i)} aria-label="ลบแหล่งข้อมูลนี้">
+                          <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className="admin-btn" onClick={addSource}>+ เพิ่มแหล่งข้อมูล</button>
+                  </div>
+
+                  {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
+                      ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
+                      ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
+                      กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                  {/* ไม่เลื่อนสถานะอัตโนมัติตอนพิมพ์แล้ว — ใช้ปุ่ม "ส่งงาน" ด้านล่างเป็นตัวสั่ง
+                      ถ้าเลื่อนให้เอง ปุ่มจะหายทันทีที่ลิงก์ครบ (เงื่อนไขโชว์ปุ่มคือยังไม่ได้ส่งงาน)
+                      และกลายเป็นส่งงานโดยไม่ได้ตั้งใจแค่เพราะวางลิงก์ไว้ก่อน */}
+                  <label>ลิงก์งานจาก Google Drive
+                    <input
+                      type="url"
+                      value={form.driveUrl}
+                      onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
+                      placeholder="https://drive.google.com/..."
+                    />
+                  </label>
+
+
+                  {SHOW_CONTENT_HUB && <>
+                  <label>แพลตฟอร์ม</label>
+                  <div className="admin-cal-platforms">
+                    {PLATFORMS.map((pl) => (
+                      <button
+                        key={pl.id}
+                        type="button"
+                        className={form.platforms.includes(pl.id) ? 'on' : ''}
+                        style={form.platforms.includes(pl.id) ? { background: pl.color, borderColor: pl.color, color: '#fff' } : {}}
+                        onClick={() => togglePlatform(pl.id)}
+                      >
+                        {pl.label}
+                      </button>
+                    ))}
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row', fontWeight: 400 }}>
+                    <input type="checkbox" checked={form.realPublish} onChange={(e) => setForm({ ...form, realPublish: e.target.checked })} />
+                    ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
+                  </label>
+                  </>}
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
+                    <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
+                    {isSafeHttpUrl((form.driveUrl || '').trim()) && form.status !== 'posted' && form.status !== 'review' && (
+                      // ส่งงาน = แนบไฟล์ใน Drive เรียบร้อยแล้วและขอให้ตรวจ ⇒ เลื่อนสถานะเป็น "ส่งงาน" (คีย์ review)
+                      <button className="admin-btn" onClick={() => setForm((f) => ({ ...f, status: statusAfterDriveLink(f.status) }))}>
+                        ส่งงาน
+                      </button>
+                    )}
+                    {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
+                    {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
+                  </div>
+                  </div>
+                  {/* คอลัมน์ 2: กล่องแคปชัน — ยืดสูงเต็มคอลัมน์เพื่อใช้พื้นที่ที่เหลือ */}
+                  <label className="admin-cal-caption">ข้อความ/แคปชัน
+                    <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
+                  </label>
+                </div>
+              </div>
+  )
+
   return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
     <main className="admin-dash admin-qurban admin-full">
       <AdminNav />
@@ -553,9 +712,10 @@ export default function AdminCalendar() {
             และเปลี่ยนสถานะแบบกดเดียวได้ */}
         {detailPost && (
           <div className="admin-detail-page">
-            <button className="shop-detail-back admin-detail-back" onClick={closeDetail}>
+            <button className="admin-detail-back" onClick={closeDetail}>
               <FontAwesomeIcon icon={faArrowLeft} /> กลับไปปฏิทิน
             </button>
+            <div className="admin-detail-cols">
             <div className="admin-card admin-detail">
               <div className="admin-detail-head">
                 <h4>{detailPost.time} · {detailPost.title}</h4>
@@ -603,10 +763,23 @@ export default function AdminCalendar() {
                     onClick={() => setPostStatus(detailPost, k)}
                   >{normStatus(detailPost.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
                 ))}
-                <button className="admin-btn" onClick={() => { startEdit(detailPost); setDetailId(null) }}>
+                {/* แก้ไขในหน้านี้เลย ไม่เด้งกลับไปปฏิทิน — ฟอร์มโผล่ใต้การ์ดนี้ */}
+                <button className="admin-btn" onClick={() => startEdit(detailPost)}>
                   <FontAwesomeIcon icon={faPenToSquare} /> แก้ไข
                 </button>
               </div>
+              {editId === detailPost.id && formCard}
+            </div>
+            {/* พรีวิวไฟล์งานใน Drive ด้านข้าง — โชว์เมื่อลิงก์เป็นไฟล์ที่ฝังได้
+                โฟลเดอร์ฝังไม่ได้ จึงบอกให้กดลิงก์เปิดใน Drive แทน ไม่ปล่อยกรอบว่างให้เข้าใจผิดว่าโหลดไม่ขึ้น */}
+            {isSafeHttpUrl(detailPost.driveUrl) && (
+              <div className="admin-card admin-detail-preview">
+                <h4>ไฟล์งานที่ส่ง</h4>
+                {driveEmbedUrl(detailPost.driveUrl)
+                  ? <iframe src={driveEmbedUrl(detailPost.driveUrl)} title="พรีวิวไฟล์งานใน Google Drive" allow="autoplay" />
+                  : <p className="admin-detail-empty">ลิงก์นี้เป็นโฟลเดอร์หรือรูปแบบที่พรีวิวในหน้าเว็บไม่ได้ — กดลิงก์ด้านซ้ายเพื่อเปิดใน Google Drive</p>}
+              </div>
+            )}
             </div>
           </div>
         )}
@@ -808,148 +981,7 @@ export default function AdminCalendar() {
           {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}
           <div className="admin-cal-side">
 
-            <div className="admin-card">
-              <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
-              <div className="admin-cal-form">
-                <div className="admin-cal-form-main">
-                <label>ชื่อกิจกรรม/โพสต์
-                  <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
-                </label>
-                <div className="admin-cal-form-row">
-                  <label>เวลาโพสต์
-                    <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-                  </label>
-                  {/* สถานะเหลือ 2 ค่า ใช้ชิปกดเลือกแทน dropdown — เห็นค่าที่เลือกอยู่ทันทีไม่ต้องกางเมนู */}
-                  <label>สถานะ
-                    <div className="admin-cal-status-chips">
-                      {Object.entries(STATUS).map(([k, v]) => (
-                        <button
-                          key={k}
-                          type="button"
-                          className={form.status === k ? 'on' : ''}
-                          style={form.status === k ? { background: STATUS_COLOR[k], borderColor: STATUS_COLOR[k], color: '#fff' } : {}}
-                          onClick={() => setForm({ ...form, status: k })}
-                        >{v}</button>
-                      ))}
-                    </div>
-                  </label>
-                </div>
-                <div className="admin-cal-form-row">
-                  <label>ชนิดคอนเทนต์
-                    <select value={form.contentType} onChange={(e) => setForm({ ...form, contentType: e.target.value })}>
-                      {Object.entries(CONTENT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </label>
-                  <label>แคมเปญที่เกี่ยวข้อง
-                    <select value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })}>
-                      <option value="">-- ไม่ระบุ --</option>
-                      {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </label>
-                </div>
-                {form.contentType === 'live' && (
-                  <div className="admin-cal-form-row" style={{ flexWrap: 'wrap' }}>
-                    <label>วันเวลาไลฟ์
-                      <input type="datetime-local" value={form.liveScheduledAt} onChange={(e) => setForm({ ...form, liveScheduledAt: e.target.value })} />
-                    </label>
-                    <label>ผู้ดำเนินรายการ
-                      <input value={form.liveHost} onChange={(e) => setForm({ ...form, liveHost: e.target.value })} />
-                    </label>
-                    <div>
-                      <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แพลตฟอร์มไลฟ์</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {LIVE_PLATFORM_OPTIONS.map((pf) => (
-                          <button
-                            key={pf} type="button"
-                            className={form.livePlatforms.includes(pf) ? 'admin-btn-primary' : 'admin-btn'}
-                            style={{ fontSize: '.8rem', padding: '6px 14px' }}
-                            onClick={() => setForm((f) => ({ ...f, livePlatforms: f.livePlatforms.includes(pf) ? f.livePlatforms.filter((x) => x !== pf) : [...f.livePlatforms, pf] }))}
-                          >{pf}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
-                    เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้
-                    กรอง scheme ตอนบันทึก (ดู save) กัน javascript: เพราะค่านี้ไปโผล่ใน href บนการ์ด */}
-                <div>
-                  <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แหล่งข้อมูล</div>
-                  {form.sources.map((s, i) => (
-                    <div className="admin-cal-source-row" key={i}>
-                      <input
-                        placeholder="ชื่อแหล่ง (เช่น ข่าวต้นทาง)"
-                        value={s.label}
-                        onChange={(e) => setSource(i, { label: e.target.value })}
-                      />
-                      <input
-                        placeholder="https://..."
-                        value={s.url}
-                        onChange={(e) => setSource(i, { url: e.target.value })}
-                      />
-                      <button type="button" className="admin-cal-source-del" onClick={() => removeSource(i)} aria-label="ลบแหล่งข้อมูลนี้">
-                        <FontAwesomeIcon icon={faXmark} />
-                      </button>
-                    </div>
-                  ))}
-                  <button type="button" className="admin-btn" onClick={addSource}>+ เพิ่มแหล่งข้อมูล</button>
-                </div>
-
-                {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
-                    ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
-                    ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
-                    กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
-                {/* ไม่เลื่อนสถานะอัตโนมัติตอนพิมพ์แล้ว — ใช้ปุ่ม "ส่งงาน" ด้านล่างเป็นตัวสั่ง
-                    ถ้าเลื่อนให้เอง ปุ่มจะหายทันทีที่ลิงก์ครบ (เงื่อนไขโชว์ปุ่มคือยังไม่ได้ส่งงาน)
-                    และกลายเป็นส่งงานโดยไม่ได้ตั้งใจแค่เพราะวางลิงก์ไว้ก่อน */}
-                <label>ลิงก์งานจาก Google Drive
-                  <input
-                    type="url"
-                    value={form.driveUrl}
-                    onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
-                    placeholder="https://drive.google.com/..."
-                  />
-                </label>
-
-
-                {SHOW_CONTENT_HUB && <>
-                <label>แพลตฟอร์ม</label>
-                <div className="admin-cal-platforms">
-                  {PLATFORMS.map((pl) => (
-                    <button
-                      key={pl.id}
-                      type="button"
-                      className={form.platforms.includes(pl.id) ? 'on' : ''}
-                      style={form.platforms.includes(pl.id) ? { background: pl.color, borderColor: pl.color, color: '#fff' } : {}}
-                      onClick={() => togglePlatform(pl.id)}
-                    >
-                      {pl.label}
-                    </button>
-                  ))}
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row', fontWeight: 400 }}>
-                  <input type="checkbox" checked={form.realPublish} onChange={(e) => setForm({ ...form, realPublish: e.target.checked })} />
-                  ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
-                </label>
-                </>}
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
-                  <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
-                  {isSafeHttpUrl((form.driveUrl || '').trim()) && form.status !== 'posted' && form.status !== 'review' && (
-                    // ส่งงาน = แนบไฟล์ใน Drive เรียบร้อยแล้วและขอให้ตรวจ ⇒ เลื่อนสถานะเป็น "ส่งงาน" (คีย์ review)
-                    <button className="admin-btn" onClick={() => setForm((f) => ({ ...f, status: statusAfterDriveLink(f.status) }))}>
-                      ส่งงาน
-                    </button>
-                  )}
-                  {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
-                  {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
-                </div>
-                </div>
-                {/* คอลัมน์ 2: กล่องแคปชัน — ยืดสูงเต็มคอลัมน์เพื่อใช้พื้นที่ที่เหลือ */}
-                <label className="admin-cal-caption">ข้อความ/แคปชัน
-                  <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
-                </label>
-              </div>
-            </div>
+            {formCard}
           </div>
         </div>}
       </div>

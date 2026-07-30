@@ -497,11 +497,14 @@ export default function AdminCalendar() {
           </div>
         )}
 
-        <div className="admin-cal-tabs" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-          <button className="admin-btn" style={mainTab === 'calendar' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('calendar')}>
-            <FontAwesomeIcon icon={faCalendarDays} /> ปฏิทิน
-          </button>
-          {SHOW_CONTENT_HUB && canSeeInbox && <>
+        {/* แถบแท็บมีปุ่มเดียว ("ปฏิทิน") เมื่อปิด Content Hub ⇒ กดก็ไม่ไปไหน จึงซ่อนไปเลย
+            แล้วเอาการ์ด "โพสต์ของวันที่เลือก" ขึ้นมาอยู่ตรงนี้แทน — เป็นสิ่งที่ต้องอ่านก่อนเสมอ
+            (เดิมอยู่คอลัมน์กลาง ต้องกวาดตาไปหาข้างๆ ปฏิทิน) */}
+        {SHOW_CONTENT_HUB && canSeeInbox && (
+          <div className="admin-cal-tabs" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button className="admin-btn" style={mainTab === 'calendar' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('calendar')}>
+              <FontAwesomeIcon icon={faCalendarDays} /> ปฏิทิน
+            </button>
             <button className="admin-btn" style={mainTab === 'chat' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('chat')}>
               <FontAwesomeIcon icon={faComments} /> กล่องข้อความ
             </button>
@@ -511,8 +514,131 @@ export default function AdminCalendar() {
             <button className="admin-btn" style={mainTab === 'insights' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('insights')}>
               <FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ
             </button>
-          </>}
-        </div>
+          </div>
+        )}
+
+        {mainTab === 'calendar' && (
+          <div className="admin-cal-today" style={{ marginBottom: 20 }}>
+              <div className="admin-card">
+                <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
+                {(() => { const h = getHijri(selDate); return h ? <div className="admin-cal-hijri-header" style={{ marginTop: -6, marginBottom: 8 }}>{h.d} {HIJRI_MONTHS[h.m]} {h.y} ฮ.ศ.</div> : null })()}
+                {dayPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ในวันนี้</p>}
+                {dayPosts.map((p) => (
+                  <div className="admin-post" key={p.id}>
+                    <div className="admin-post-top">
+                      {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
+                      <strong>
+                        {p.time} · {p.title}
+                        {p.contentType === 'live' && ' 🔴 ไลฟ์'}
+                        {p.contentType === 'video' && ' 🎬 VDO'}
+                        {p.contentType === 'picture' && ' 🖼 Picture'}
+                      </strong>
+                      {/* แก้ไข/ลบ อยู่มุมขวาบนของการ์ด แยกออกจากปุ่มเปลี่ยนสถานะด้านล่าง
+                          เพราะเป็นคนละงานกัน — อันนี้จัดการตัวการ์ด อันนั้นเปลี่ยนสถานะเนื้อหา */}
+                      <span className="admin-post-corner">
+                        <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                          {STATUS[normStatus(p.status)]}
+                        </span>
+                        <button className="admin-post-corner-btn" onClick={() => startEdit(p)} aria-label="แก้ไขโพสต์" title="แก้ไข">
+                          <FontAwesomeIcon icon={faPenToSquare} />
+                        </button>
+                        <button className="admin-post-corner-btn danger" onClick={() => remove(p.id)} aria-label="ลบโพสต์" title="ลบ">
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                      {p.campaignId && (
+                        <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, background: '#eee' }}>
+                          แคมเปญ: {campaigns.find((c) => c.id === p.campaignId)?.name || p.campaignId}
+                        </span>
+                      )}
+                    </div>
+                    {p.contentType === 'live' && (
+                      <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)', marginBottom: 6 }}>
+                        {p.liveScheduledAt && <>เวลาไลฟ์: {p.liveScheduledAt} · </>}
+                        {(p.livePlatforms || []).length > 0 && <>แพลตฟอร์ม: {p.livePlatforms.join(', ')} · </>}
+                        {p.liveHost && <>ผู้ดำเนินรายการ: {p.liveHost}</>}
+                      </div>
+                    )}
+                    {p.text && <p className="admin-post-text">{p.text}</p>}
+                    {isSafeHttpUrl(p.driveUrl) && (
+                      <div className="admin-post-sources">
+                        <a href={p.driveUrl} target="_blank" rel="noopener noreferrer" title={p.driveUrl}>
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
+                        </a>
+                      </div>
+                    )}
+                    {(p.sources || []).length > 0 && (
+                      <div className="admin-post-sources">
+                        {p.sources.filter((s) => isSafeHttpUrl(s.url)).map((s, si) => (
+                          <a key={si} href={s.url} target="_blank" rel="noopener noreferrer" title={s.url}>
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {s.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {(p.mediaUrls || []).length > 0 && (
+                      <div className="admin-post-media">
+                        {p.mediaUrls.map((url, mi) => (
+                          url.match(/\.(mp4|mov|webm)/i)
+                            ? <video key={mi} src={url} className="admin-post-media-item" muted controls />
+                            : <img key={mi} src={url} alt="" className="admin-post-media-item" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="admin-post-platforms">
+                      {(p.platforms || []).map((id) => {
+                        const pl = PLATFORMS.find((x) => x.id === id)
+                        return pl ? <span key={id} style={{ background: pl.color }}>{pl.label}</span> : null
+                      })}
+                    </div>
+                    {(p.platforms || []).length > 0 && (
+                      <div className="admin-post-share">
+                        {(p.platforms || []).map((id) => {
+                          const pl = PLATFORMS.find((x) => x.id === id)
+                          if (!pl) return null
+                          const key = p.id + id
+                          return (
+                            <button key={id} className="admin-post-share-btn" style={{ background: pl.color }} onClick={() => copyAndOpen(p, id)}>
+                              <FontAwesomeIcon icon={copiedId === key ? faCheck : faCopy} /> {pl.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {p.realStatus && (
+                      <div className="admin-post-platforms" style={{ marginTop: 6 }}>
+                        <span style={{ background: p.realStatus === 'posted' ? '#2e7d52' : p.realStatus === 'failed' ? '#c0392b' : '#c9a84c' }}>
+                          {REAL_STATUS_LABEL[p.realStatus] || p.realStatus}
+                        </span>
+                        {Object.entries(p.publishResults || {}).filter(([, r]) => !r.ok).map(([pf, r]) => (
+                          <span key={pf} title={r.error} style={{ background: '#c0392b' }}>
+                            <FontAwesomeIcon icon={faTriangleExclamation} /> {pf}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="admin-post-actions">
+                      {Object.entries(STATUS).map(([k, v]) => (
+                        <button
+                          key={k} className="admin-btn" style={normStatus(p.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
+                          onClick={() => setPostStatus(p, k)}
+                        >{normStatus(p.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
+                      ))}
+                      {SHOW_CONTENT_HUB && (p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
+                        // คัดลอกเนื้อหาแล้วเปิดหน้าสร้างโพสต์ของ Content Hub ให้วางต่อ (โพสต์จริงทำที่นั่น)
+                        <button className="admin-btn" onClick={() => publishNow(p.id)}>
+                          <FontAwesomeIcon icon={faPaperPlane} /> โพสต์จริง (ไป Content Hub)
+                        </button>
+                      )}
+
+                    </div>
+                  </div>
+                ))}
+              </div>
+          </div>
+        )}
 
         {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'chat' && <ChatInboxTab />}
         {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'comments' && <CommentsTab />}
@@ -574,126 +700,8 @@ export default function AdminCalendar() {
             </div>
           </div>
 
-          {/* รายการโพสต์ของวันที่เลือก + ฟอร์ม */}
+          {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}
           <div className="admin-cal-side">
-            <div className="admin-card">
-              <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
-              {(() => { const h = getHijri(selDate); return h ? <div className="admin-cal-hijri-header" style={{ marginTop: -6, marginBottom: 8 }}>{h.d} {HIJRI_MONTHS[h.m]} {h.y} ฮ.ศ.</div> : null })()}
-              {dayPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ในวันนี้</p>}
-              {dayPosts.map((p) => (
-                <div className="admin-post" key={p.id}>
-                  <div className="admin-post-top">
-                    {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
-                    <strong>
-                      {p.time} · {p.title}
-                      {p.contentType === 'live' && ' 🔴 ไลฟ์'}
-                      {p.contentType === 'video' && ' 🎬 VDO'}
-                      {p.contentType === 'picture' && ' 🖼 Picture'}
-                    </strong>
-                    {/* แก้ไข/ลบ อยู่มุมขวาบนของการ์ด แยกออกจากปุ่มเปลี่ยนสถานะด้านล่าง
-                        เพราะเป็นคนละงานกัน — อันนี้จัดการตัวการ์ด อันนั้นเปลี่ยนสถานะเนื้อหา */}
-                    <span className="admin-post-corner">
-                      <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
-                        {STATUS[normStatus(p.status)]}
-                      </span>
-                      <button className="admin-post-corner-btn" onClick={() => startEdit(p)} aria-label="แก้ไขโพสต์" title="แก้ไข">
-                        <FontAwesomeIcon icon={faPenToSquare} />
-                      </button>
-                      <button className="admin-post-corner-btn danger" onClick={() => remove(p.id)} aria-label="ลบโพสต์" title="ลบ">
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                    {p.campaignId && (
-                      <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, background: '#eee' }}>
-                        แคมเปญ: {campaigns.find((c) => c.id === p.campaignId)?.name || p.campaignId}
-                      </span>
-                    )}
-                  </div>
-                  {p.contentType === 'live' && (
-                    <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)', marginBottom: 6 }}>
-                      {p.liveScheduledAt && <>เวลาไลฟ์: {p.liveScheduledAt} · </>}
-                      {(p.livePlatforms || []).length > 0 && <>แพลตฟอร์ม: {p.livePlatforms.join(', ')} · </>}
-                      {p.liveHost && <>ผู้ดำเนินรายการ: {p.liveHost}</>}
-                    </div>
-                  )}
-                  {p.text && <p className="admin-post-text">{p.text}</p>}
-                  {isSafeHttpUrl(p.driveUrl) && (
-                    <div className="admin-post-sources">
-                      <a href={p.driveUrl} target="_blank" rel="noopener noreferrer" title={p.driveUrl}>
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
-                      </a>
-                    </div>
-                  )}
-                  {(p.sources || []).length > 0 && (
-                    <div className="admin-post-sources">
-                      {p.sources.filter((s) => isSafeHttpUrl(s.url)).map((s, si) => (
-                        <a key={si} href={s.url} target="_blank" rel="noopener noreferrer" title={s.url}>
-                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {s.label}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                  {(p.mediaUrls || []).length > 0 && (
-                    <div className="admin-post-media">
-                      {p.mediaUrls.map((url, mi) => (
-                        url.match(/\.(mp4|mov|webm)/i)
-                          ? <video key={mi} src={url} className="admin-post-media-item" muted controls />
-                          : <img key={mi} src={url} alt="" className="admin-post-media-item" />
-                      ))}
-                    </div>
-                  )}
-                  <div className="admin-post-platforms">
-                    {(p.platforms || []).map((id) => {
-                      const pl = PLATFORMS.find((x) => x.id === id)
-                      return pl ? <span key={id} style={{ background: pl.color }}>{pl.label}</span> : null
-                    })}
-                  </div>
-                  {(p.platforms || []).length > 0 && (
-                    <div className="admin-post-share">
-                      {(p.platforms || []).map((id) => {
-                        const pl = PLATFORMS.find((x) => x.id === id)
-                        if (!pl) return null
-                        const key = p.id + id
-                        return (
-                          <button key={id} className="admin-post-share-btn" style={{ background: pl.color }} onClick={() => copyAndOpen(p, id)}>
-                            <FontAwesomeIcon icon={copiedId === key ? faCheck : faCopy} /> {pl.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {p.realStatus && (
-                    <div className="admin-post-platforms" style={{ marginTop: 6 }}>
-                      <span style={{ background: p.realStatus === 'posted' ? '#2e7d52' : p.realStatus === 'failed' ? '#c0392b' : '#c9a84c' }}>
-                        {REAL_STATUS_LABEL[p.realStatus] || p.realStatus}
-                      </span>
-                      {Object.entries(p.publishResults || {}).filter(([, r]) => !r.ok).map(([pf, r]) => (
-                        <span key={pf} title={r.error} style={{ background: '#c0392b' }}>
-                          <FontAwesomeIcon icon={faTriangleExclamation} /> {pf}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="admin-post-actions">
-                    {Object.entries(STATUS).map(([k, v]) => (
-                      <button
-                        key={k} className="admin-btn" style={normStatus(p.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
-                        onClick={() => setPostStatus(p, k)}
-                      >{normStatus(p.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
-                    ))}
-                    {SHOW_CONTENT_HUB && (p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
-                      // คัดลอกเนื้อหาแล้วเปิดหน้าสร้างโพสต์ของ Content Hub ให้วางต่อ (โพสต์จริงทำที่นั่น)
-                      <button className="admin-btn" onClick={() => publishNow(p.id)}>
-                        <FontAwesomeIcon icon={faPaperPlane} /> โพสต์จริง (ไป Content Hub)
-                      </button>
-                    )}
-
-                  </div>
-                </div>
-              ))}
-            </div>
 
             <div className="admin-card">
               <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>

@@ -270,6 +270,10 @@
 .admin-hbars{width:100%}
 
 /* ปฏิทินคอนเทนต์ */
+/* โพสต์ของวันที่เลือก — หลายคอลัมน์ในแถวเดียว ไม่ใช่เรียงลงมาทีละใบ
+   minmax(0,...) กัน track บวมจากเนื้อหายาว (auto = min-content จะดันคอลัมน์จนล้น) */
+.admin-day-posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:14px;align-items:start}
+
 /* การ์ด "โพสต์ของวันที่เลือก" อยู่เต็มความกว้างด้านบน (แทนที่แถบแท็บเดิม)
    ใต้ลงมาเป็น 2 คอลัมน์: ปฏิทิน | ฟอร์มเพิ่มโพสต์
    .admin-cal-side เหลือการ์ดใบเดียวแล้ว แต่ยังเก็บ wrapper ไว้เผื่อเพิ่มการ์ดในคอลัมน์นี้ทีหลัง */
@@ -279,7 +283,9 @@
 .admin-cal-head h4{margin:0;font-size:1.1rem}
 .admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .admin-cal-dow{text-align:center;font-size:.75rem;font-weight:700;color:var(--ink-soft);padding:6px 0}
-.admin-cal-day{position:relative;aspect-ratio:1;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
+/* ความสูงคุมด้วย min-height ไม่ใช่ aspect-ratio:1 — ช่องจัตุรัสทำให้ปฏิทินสูงเกินจำเป็นบนคอลัมน์กว้าง
+   (คอลัมน์ ~840px ⇒ ช่องสูงเกิน 100px) และ aspect-ratio ยังดันความกว้างตามความสูงจนล้นจอบนมือถือด้วย */
+.admin-cal-day{position:relative;min-height:52px;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
 .admin-cal-day:hover{background:#EAF6EE}
 /* วันที่มีคอนเทนต์ลงไว้แล้ว — ระบายเต็มกรอบด้วยสีของสถานะที่ยังไม่เสร็จที่สุดในวันนั้น (--day-color)
    ใช้ color-mix ผสมกับขาวเพื่อให้ยังอ่านตัวเลขวันที่ออก และมี fallback สีเทาอ่อนไว้ก่อน
@@ -327,14 +333,11 @@
 /* มือถือ: สองช่องต่อแถวเหลือช่องละ ~144px — ชิปสถานะตกลงมาสองบรรทัดและ dropdown แคมเปญ
    แคบจนอ่านชื่อแคมเปญไม่ออก จึงวางเรียงลงมาแถวละช่อง */
 @media (max-width:640px){.admin-cal-form-row{grid-template-columns:1fr}}
-/* มือถือ: ย่อปฏิทินให้พอดีจอ
-   ⚠️ ห้ามใส่ min-height คู่กับ aspect-ratio:1 บนช่องวัน — aspect-ratio จะดันความ "กว้าง" ตามความสูงด้วย
-   ทำให้ 7 ช่อง (44px + gap) รวมกว้างเกินการ์ดแล้วปฏิทินล้นออกนอกจอ
-   จึงปลด aspect-ratio บนจอเล็กแล้วคุมด้วย min-height อย่างเดียว (ช่องสูงกว่ากว้างเล็กน้อย แต่ยังกดง่าย)
-   ลด padding การ์ดลงด้วย เพื่อคืนความกว้างให้ช่องวัน */
+/* มือถือ: ย่อปฏิทินให้พอดีจอ — ลด padding การ์ดเพื่อคืนความกว้างให้ช่องวัน
+   และลดความสูงขั้นต่ำของช่องเหลือ 44px (เท่าเป้าหมายพื้นที่กดพอดี) */
 @media (max-width:640px){
   .admin-cal-card{padding:12px}
-  .admin-cal-day{aspect-ratio:auto;min-height:44px}
+  .admin-cal-day{min-height:44px}
   /* ปุ่มเปลี่ยนสถานะบนการ์ดโพสต์สูงแค่ 31px และชิปสถานะในฟอร์ม 38px — ต่ำกว่าเป้าหมาย 44px
      ของ iOS/Android ทั้งคู่ และปุ่มพวกนี้เรียงติดกันหลายปุ่ม จึงกดพลาดง่าย */
   .admin-post-actions .admin-btn,

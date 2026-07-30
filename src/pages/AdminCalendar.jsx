@@ -440,18 +440,15 @@ export default function AdminCalendar() {
     <main className="admin-dash admin-qurban admin-full">
       <AdminNav />
       <div className="admin-wrap">
-        <div className="admin-head">
-          <div>
-            <h1>ปฏิทินคอนเทนต์</h1>
-            {/* ข้อความหัวเรื่องต้องตรงกับสิ่งที่มีจริงในหน้า — ตัวเลือกแพลตฟอร์มถูกซ่อนไว้ตาม SHOW_CONTENT_HUB */}
-            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา{SHOW_CONTENT_HUB ? ' เลือกแพลตฟอร์ม' : ''}</p>
-          </div>
-          {SHOW_CONTENT_HUB && (
+        {/* การ์ดหัวเรื่องถูกเอาออก — ชื่อหน้าซ้ำกับเมนูซ้ายที่ไฮไลต์ "ปฏิทินคอนเทนต์" อยู่แล้ว
+            เหลือไว้แค่ปุ่มเชื่อมต่อแพลตฟอร์มเมื่อเปิด Content Hub */}
+        {SHOW_CONTENT_HUB && (
+          <div style={{ marginBottom: 16 }}>
             <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
               <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {SHOW_CONTENT_HUB && showHub && (
           <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -523,6 +520,9 @@ export default function AdminCalendar() {
                 <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
                 {(() => { const h = getHijri(selDate); return h ? <div className="admin-cal-hijri-header" style={{ marginTop: -6, marginBottom: 8 }}>{h.d} {HIJRI_MONTHS[h.m]} {h.y} ฮ.ศ.</div> : null })()}
                 {dayPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ในวันนี้</p>}
+                {/* การ์ดนี้กว้างเต็มหน้า ถ้าเรียงโพสต์ลงมาทีละใบจะเหลือที่ว่างด้านขวาเยอะ
+                    จึงวางเป็นกริดหลายคอลัมน์ในแถวเดียว (auto-fill ยุบเป็นคอลัมน์เดียวเองเมื่อที่ไม่พอ) */}
+                <div className="admin-day-posts">
                 {dayPosts.map((p) => (
                   <div className="admin-post" key={p.id}>
                     <div className="admin-post-top">
@@ -636,6 +636,7 @@ export default function AdminCalendar() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
           </div>
         )}

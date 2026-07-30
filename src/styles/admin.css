@@ -339,6 +339,11 @@
 @media (max-width:640px){
   .admin-cal-card{padding:12px}
   .admin-cal-day{aspect-ratio:auto;min-height:44px}
+  /* ปุ่มเปลี่ยนสถานะบนการ์ดโพสต์สูงแค่ 31px และชิปสถานะในฟอร์ม 38px — ต่ำกว่าเป้าหมาย 44px
+     ของ iOS/Android ทั้งคู่ และปุ่มพวกนี้เรียงติดกันหลายปุ่ม จึงกดพลาดง่าย */
+  .admin-post-actions .admin-btn,
+  .admin-post-actions .admin-btn-danger,
+  .admin-cal-status-chips button{min-height:44px}
 }
 .admin-cal-platforms{display:flex;gap:8px;flex-wrap:wrap}
 .admin-cal-platforms button{padding:6px 14px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);transition:all .12s}

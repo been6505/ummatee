@@ -183,13 +183,16 @@ export default function AdminEvents() {
               )}
             </div>
 
-            <div className="admin-card-head" style={{ marginBottom: 12 }}>
-              <h4>รายการงาน ({filtered.length})</h4>
-              <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
+            {/* หัวข้อ + ค้นหา + ตาราง อยู่ในการ์ดขาวใบเดียวกัน — เดิมลอยอยู่บนพื้นเขียวของหน้า
+                แถวในตารางจึงไม่มีพื้นหลัง อ่านยากบนมือถือ */}
+            <div className="admin-card" style={{ marginBottom: 20 }}>
+              <div className="admin-card-head" style={{ marginBottom: 12 }}>
+                <h4>รายการงาน ({filtered.length})</h4>
+                <input type="search" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
 
-            {loading ? <ListSkeleton /> : (
-              <div className="admin-table-wrap" style={{ marginBottom: 20 }}>
+              {loading ? <ListSkeleton /> : (
+              <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead><tr><th>ชื่องาน</th><th>วันเวลา</th><th>สถานที่</th><th>สถานะ</th><th></th></tr></thead>
                   <tbody>
@@ -210,7 +213,8 @@ export default function AdminEvents() {
                   </tbody>
                 </table>
               </div>
-            )}
+              )}
+            </div>
 
             {openEvent && (
               <div className="admin-card">

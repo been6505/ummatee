@@ -202,6 +202,14 @@
 .admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
 .admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .admin-form-grid input,.admin-table-edit input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+/* ช่องกรอกต้องยืดตามคอลัมน์ ไม่ใช่ตามความกว้างธรรมชาติของตัวเอง
+   input[type=datetime-local]/number มีความกว้างในตัวกว้างกว่าคอลัมน์บนมือถือ (มีไอคอนปฏิทิน/ตัวหมุนอยู่ข้างใน)
+   ถ้าไม่คุมด้วย width:100% + box-sizing จะทะลุออกนอกการ์ดตามที่เห็นในหน้า "เพิ่มงานใหม่"
+   min-width:0 ให้ flex item หดได้จริง (ค่าเริ่มต้น auto = ไม่หดต่ำกว่าความกว้างในตัว) */
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea{width:100%;box-sizing:border-box;min-width:0}
+.admin-form-grid label{min-width:0}
 .admin-form-grid input:focus,.admin-table-edit input:focus{outline:2px solid var(--green-mid);border-color:transparent}
 .admin-table-edit input[type="text"]{width:100%}
 

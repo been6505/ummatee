@@ -247,7 +247,7 @@ const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()) }
 
 const EMPTY_FORM = {
-  title: '', text: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
+  title: '', text: '', date: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
   campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
   sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
   driveUrl: '', // ลิงก์ไฟล์งานใน Google Drive
@@ -376,7 +376,7 @@ export default function AdminCalendar() {
     setEditId(p.id)
     setForm({
       // normStatus: โพสต์เก่าที่เป็น 'scheduled' ต้องกลายเป็น 'draft' ไม่งั้นชิปไม่ตรงกับค่าใดเลยแล้วดูเหมือนไม่ได้เลือกอะไร
-      title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: normStatus(p.status),
+      title: p.title, text: p.text || '', date: p.date || selected, time: p.time || '10:00', platforms: p.platforms || [], status: normStatus(p.status),
       mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false,
       campaignId: p.campaignId || '', contentType: p.contentType || 'post', liveScheduledAt: p.liveScheduledAt || '',
       livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
@@ -391,7 +391,9 @@ export default function AdminCalendar() {
     setStatus('กำลังบันทึก...')
     try {
       const payload = {
-        date: selected,
+        // วันที่มาจากช่อง "วันเวลาโพสต์" ในฟอร์ม ไม่ใช่วันที่คลิกในปฏิทินอีกแล้ว
+        // ⇒ ย้ายวันของโพสต์ได้จากในฟอร์มเลย ไม่ต้องลบแล้วสร้างใหม่ในวันที่ถูกต้อง
+        date: form.date || selected,
         time: form.time,
         title: form.title.trim(),
         text: form.text.trim(),
@@ -472,17 +474,37 @@ export default function AdminCalendar() {
 
   // การ์ดฟอร์มเพิ่ม/แก้ไขโพสต์ — ประกาศเป็นตัวแปรเพราะต้องเรนเดอร์ 2 ที่:
   // คอลัมน์ขวาของหน้าปฏิทิน และในหน้ารายละเอียดเมื่อกดแก้ไข โดยใช้ state/handler ชุดเดียวกัน
-  const formCard = (
+  // กล่องแคปชัน — แยกออกจาก formCard เพราะหน้ารายละเอียดเอาไปวางเป็นคอลัมน์ขวาของหน้า
+  // (ในการ์ดฟอร์มที่แคบ กล่องนี้บีบจนพิมพ์ลำบากและดันหน้าให้ต้องเลื่อน)
+  const captionField = (
+    <label className="admin-cal-caption">ข้อความ/แคปชัน
+      <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
+    </label>
+  )
+
+  // withCaption=false ⇒ ฟอร์มเหลือคอลัมน์เดียว (ช่องข้อมูลได้ความกว้างเต็ม ชิปสถานะไม่ตกหลายบรรทัด)
+  // แล้วผู้เรียกเอา captionField ไปวางเองข้างนอก
+  const renderFormCard = (withCaption = true) => (
               <div className="admin-card">
                 <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
-                <div className="admin-cal-form">
+                <div className={`admin-cal-form${withCaption ? '' : ' admin-cal-form-single'}`}>
                   <div className="admin-cal-form-main">
                   <label>ชื่อกิจกรรม/โพสต์
                     <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
                   </label>
                   <div className="admin-cal-form-row">
-                    <label>เวลาโพสต์
-                      <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
+                    {/* datetime-local รับทั้งวันที่และเวลาในช่องเดียว — แยกเก็บเป็น date (YYYY-MM-DD) + time (HH:mm)
+                        ตามรูปแบบที่ Firestore เก็บอยู่เดิม (byDate จัดกลุ่มโพสต์ด้วย date) จึงไม่ต้องแปลงข้อมูลเก่า
+                        ถ้าผู้ใช้ล้างช่องจนว่าง ถอยไปใช้วันที่ที่เลือกในปฏิทิน + เวลาเดิม ไม่บันทึกวันว่าง */}
+                    <label>วันเวลาโพสต์
+                      <input
+                        type="datetime-local"
+                        value={`${form.date || selected}T${form.time || '10:00'}`}
+                        onChange={(e) => {
+                          const [date, time] = (e.target.value || '').split('T')
+                          setForm((f) => ({ ...f, date: date || selected, time: (time || '').slice(0, 5) || f.time }))
+                        }}
+                      />
                     </label>
                     {/* สถานะเหลือ 2 ค่า ใช้ชิปกดเลือกแทน dropdown — เห็นค่าที่เลือกอยู่ทันทีไม่ต้องกางเมนู */}
                     <label>สถานะ
@@ -609,10 +631,7 @@ export default function AdminCalendar() {
                     {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
                   </div>
                   </div>
-                  {/* คอลัมน์ 2: กล่องแคปชัน — ยืดสูงเต็มคอลัมน์เพื่อใช้พื้นที่ที่เหลือ */}
-                  <label className="admin-cal-caption">ข้อความ/แคปชัน
-                    <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
-                  </label>
+                  {withCaption && captionField}
                 </div>
               </div>
   )
@@ -753,18 +772,22 @@ export default function AdminCalendar() {
                   <FontAwesomeIcon icon={faPenToSquare} /> แก้ไข
                 </button>
               </div>
-              {editId === detailPost.id && formCard}
+              {editId === detailPost.id && renderFormCard(false)}
             </div>
             {/* คอลัมน์ขวา: กล่องข้อความ/แคปชันของโพสต์ (แทนพรีวิวไฟล์ Drive ที่เอาออกแล้ว)
                 โชว์เฉพาะตอนไม่ได้แก้ไข — ตอนแก้ไข ฟอร์มมีกล่องแคปชันของตัวเองอยู่แล้ว จะซ้ำกันสองกล่อง */}
-            {editId !== detailPost.id && (
-              <div className="admin-card admin-detail-caption">
-                <h4>ข้อความ/แคปชัน</h4>
-                {detailPost.text
-                  ? <p className="admin-post-text">{detailPost.text}</p>
-                  : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
-              </div>
-            )}
+            {/* ตอนแก้ไข: กล่องแคปชันที่พิมพ์ได้ย้ายออกมาอยู่คอลัมน์ขวา (กว้างกว่าในฟอร์มมาก)
+                ตอนไม่แก้ไข: แสดงแคปชันแบบอ่าน */}
+            <div className="admin-card admin-detail-caption">
+              {editId === detailPost.id ? captionField : (
+                <>
+                  <h4>ข้อความ/แคปชัน</h4>
+                  {detailPost.text
+                    ? <p className="admin-post-text">{detailPost.text}</p>
+                    : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
+                </>
+              )}
+            </div>
             </div>
           </div>
         )}
@@ -966,7 +989,7 @@ export default function AdminCalendar() {
           {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}
           <div className="admin-cal-side">
 
-            {formCard}
+            {renderFormCard(true)}
           </div>
         </div>}
       </div>

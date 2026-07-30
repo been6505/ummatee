@@ -358,6 +358,12 @@
   .admin-cal-form-main{display:flex;flex-direction:column;gap:12px;min-width:0}
   .admin-cal-caption{min-width:0}
   .admin-cal-caption textarea{height:100%;min-height:240px}
+  /* ฟอร์มในหน้ารายละเอียด: คอลัมน์เดียว เพราะกล่องแคปชันย้ายไปอยู่คอลัมน์ขวาของหน้าแล้ว
+     ช่องข้อมูลจึงได้ความกว้างเต็ม ชิปสถานะ 4 ปุ่มอยู่บรรทัดเดียวไม่ตกลงมา 4 บรรทัดเหมือนตอนบีบ */
+  .admin-cal-form.admin-cal-form-single{grid-template-columns:minmax(0,1fr)}
+  /* แถวแรก (วันเวลา + สถานะ) แยกเป็นบรรทัดละช่องในโหมดคอลัมน์เดียว — ชิปสถานะ 4 ปุ่มต้องการ ~420px
+     ถ้าแบ่งครึ่งกับช่องวันเวลาจะเหลือ ~275px แล้วตกลงมาสองบรรทัด ซึ่งสูงกว่าการแยกบรรทัด */
+  .admin-cal-form-single .admin-cal-form-row:first-of-type{grid-template-columns:minmax(0,1fr)}
 }
 .admin-cal-form label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .admin-cal-form input,.admin-cal-form select,.admin-cal-form textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.92rem;font-family:inherit;background:#fff;resize:vertical}
@@ -433,6 +439,9 @@
 /* คอลัมน์ขวาของหน้ารายละเอียด: กล่องข้อความ/แคปชัน — ข้อความยาวขึ้นบรรทัดตามที่พิมพ์มา (pre-wrap)
    จำกัดความสูงแล้วเลื่อนในกล่องเอง กันแคปชันยาวมากดันหน้าให้ยืดจนหาปุ่มด้านซ้ายไม่เจอ */
 .admin-detail-caption .admin-post-text{margin:0;max-height:min(60vh,520px);overflow-y:auto}
+/* ตอนแก้ไข กล่องแคปชันในคอลัมน์ขวาสูงตามจอ ไม่ต้องเลื่อนหน้าเพื่อพิมพ์ให้จบ */
+.admin-detail-caption .admin-cal-caption{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-detail-caption .admin-cal-caption textarea{min-height:min(62vh,560px);resize:vertical}
 .admin-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .admin-detail-head h4{margin:0;line-height:1.45}
 .admin-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin:10px 0}
@@ -443,7 +452,11 @@
 .admin-post-clickable:focus-visible{outline:2px solid var(--green-mid);outline-offset:2px}
 
 .admin-post{border:1px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fafcfa}
-.admin-post-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+/* หัวการ์ดงานเป็น 2 คอลัมน์แถวเดียว: คอลัมน์แรก (กว้างกว่า) = เวลา·ชื่อโพสต์ | คอลัมน์สอง = สถานะ+แก้ไข/ลบ
+   เดิมเป็น flex-wrap ⇒ ชื่อโพสต์ยาวจะดันกลุ่มปุ่มตกลงไปบรรทัดใหม่ ทำให้แต่ละการ์ดสูงไม่เท่ากัน
+   minmax(0,1fr) จำเป็น: 1fr ปกติคือ minmax(auto,1fr) ที่ auto = min-content ชื่อยาวจะดันคอลัมน์จนล้นการ์ด
+   auto ของคอลัมน์สองทำให้กว้างเท่าที่ปุ่มต้องใช้พอดี ที่เหลือเป็นของคอลัมน์แรกทั้งหมด */
+.admin-post-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px}
 .admin-post-top strong{font-size:.92rem}
 .admin-post-status{font-size:.7rem;font-weight:700;color:#fff;padding:3px 10px;border-radius:999px}
 .admin-post-text{font-size:.85rem;color:var(--ink-soft);margin:6px 0;white-space:pre-wrap}

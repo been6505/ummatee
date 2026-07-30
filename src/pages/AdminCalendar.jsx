@@ -21,18 +21,6 @@ import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus, statusAfterDriveLink } 
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['title', 'text']
 
-// แปลงลิงก์ Google Drive เป็น URL พรีวิวแบบฝัง iframe ได้
-// รองรับ /file/d/<id>/... และ ?id=<id> — โฟลเดอร์ (/drive/folders/) ฝังไม่ได้ คืน null ให้โชว์แค่ลิงก์
-// ต้องมี https://drive.google.com ใน frame-src ของ CSP (firebase.json) ไม่งั้น iframe ถูกบล็อก
-export function driveEmbedUrl(url) {
-  if (typeof url !== 'string' || !/^https:\/\/(drive|docs)\.google\.com\//.test(url)) return null
-  // Docs/Sheets/Slides ฝังได้ด้วย /preview ของตัวเอง (ใช้ /file/d/ ของ Drive ไม่ได้)
-  const doc = url.match(/^https:\/\/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([\w-]{10,})/)
-  if (doc) return `https://docs.google.com/${doc[1]}/d/${doc[2]}/preview`
-  const m = url.match(/\/file\/d\/([\w-]{10,})/) || url.match(/[?&]id=([\w-]{10,})/)
-  return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
-}
-
 // ป้ายแพลตฟอร์มของกล่องข้อความ — เหมือน AdminChat.jsx (เพิ่ม instagram ที่ยังไม่มีในไฟล์นั้น)
 const CHAT_PLATFORM_BADGE = {
   web: { icon: faGlobe, label: 'เว็บไซต์', color: '#16a34a' },
@@ -727,9 +715,6 @@ export default function AdminCalendar() {
                 <span>{CONTENT_TYPE_LABEL[detailPost.contentType] || 'โพสต์'}</span>
                 {detailPost.campaignId && <span>{campaigns.find((c) => c.id === detailPost.campaignId)?.name || 'แคมเปญที่ถูกลบแล้ว'}</span>}
               </div>
-              {detailPost.text
-                ? <p className="admin-post-text">{detailPost.text}</p>
-                : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
               {isSafeHttpUrl(detailPost.driveUrl) && (
                 <div className="admin-post-sources">
                   <a href={detailPost.driveUrl} target="_blank" rel="noopener noreferrer" title={detailPost.driveUrl}>
@@ -770,14 +755,14 @@ export default function AdminCalendar() {
               </div>
               {editId === detailPost.id && formCard}
             </div>
-            {/* พรีวิวไฟล์งานใน Drive ด้านข้าง — โชว์เมื่อลิงก์เป็นไฟล์ที่ฝังได้
-                โฟลเดอร์ฝังไม่ได้ จึงบอกให้กดลิงก์เปิดใน Drive แทน ไม่ปล่อยกรอบว่างให้เข้าใจผิดว่าโหลดไม่ขึ้น */}
-            {isSafeHttpUrl(detailPost.driveUrl) && (
-              <div className="admin-card admin-detail-preview">
-                <h4>ไฟล์งานที่ส่ง</h4>
-                {driveEmbedUrl(detailPost.driveUrl)
-                  ? <iframe src={driveEmbedUrl(detailPost.driveUrl)} title="พรีวิวไฟล์งานใน Google Drive" allow="autoplay" />
-                  : <p className="admin-detail-empty">ลิงก์นี้เป็นโฟลเดอร์หรือรูปแบบที่พรีวิวในหน้าเว็บไม่ได้ — กดลิงก์ด้านซ้ายเพื่อเปิดใน Google Drive</p>}
+            {/* คอลัมน์ขวา: กล่องข้อความ/แคปชันของโพสต์ (แทนพรีวิวไฟล์ Drive ที่เอาออกแล้ว)
+                โชว์เฉพาะตอนไม่ได้แก้ไข — ตอนแก้ไข ฟอร์มมีกล่องแคปชันของตัวเองอยู่แล้ว จะซ้ำกันสองกล่อง */}
+            {editId !== detailPost.id && (
+              <div className="admin-card admin-detail-caption">
+                <h4>ข้อความ/แคปชัน</h4>
+                {detailPost.text
+                  ? <p className="admin-post-text">{detailPost.text}</p>
+                  : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
               </div>
             )}
             </div>

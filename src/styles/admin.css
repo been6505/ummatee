@@ -430,8 +430,9 @@
 .admin-detail-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
 @media (min-width:1000px){.admin-detail-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .admin-detail{width:100%}
-/* พรีวิว Drive — iframe ต้องกำหนดความสูงเอง (ไม่มี intrinsic height) */
-.admin-detail-preview iframe{width:100%;height:min(70vh,560px);border:1px solid #eee;border-radius:10px;background:#fafafa}
+/* คอลัมน์ขวาของหน้ารายละเอียด: กล่องข้อความ/แคปชัน — ข้อความยาวขึ้นบรรทัดตามที่พิมพ์มา (pre-wrap)
+   จำกัดความสูงแล้วเลื่อนในกล่องเอง กันแคปชันยาวมากดันหน้าให้ยืดจนหาปุ่มด้านซ้ายไม่เจอ */
+.admin-detail-caption .admin-post-text{margin:0;max-height:min(60vh,520px);overflow-y:auto}
 .admin-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .admin-detail-head h4{margin:0;line-height:1.45}
 .admin-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin:10px 0}

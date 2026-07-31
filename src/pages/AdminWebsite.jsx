@@ -10,7 +10,7 @@ import { useFocusCards, saveFocusCards, EMPTY_FOCUS_CARD, FOCUS_VARIANTS, DEFAUL
 import { useSiteContent, saveSiteContent, isSiteImageValue } from '../data/siteContent.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash, faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faGlobe, faBullhorn, faCheck, faBars, faImage, faSpinner, faXmark, faArrowUp, faArrowDown, faPlus, faNewspaper, faEye, faEyeSlash, faPenToSquare, faTrash, faChevronDown } from '@fortawesome/free-solid-svg-icons'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // รายการ key เนื้อหาท้ายเว็บ (footer) ที่มีอยู่แล้วในโค้ด — โชว์เป็นแถวสำเร็จรูปให้แก้ง่าย
@@ -241,6 +241,30 @@ function ImageFieldRow({ row, onKeyChange, onUrlChange, onRemove }) {
   )
 }
 
+// การ์ดพับได้ — หน้านี้มี 5 การ์ดที่แต่ละใบยาวมาก เปิดพร้อมกันหมดแล้วต้องไถหาของที่จะแก้
+// เริ่มต้นพับทุกใบ แล้วจำสถานะไว้ใน localStorage ต่อใบ ไม่งั้นทุกครั้งที่บันทึก (หน้าโหลดใหม่)
+// การ์ดที่กำลังแก้อยู่จะพับกลับเอง
+function Section({ icon, title, id, children }) {
+  const key = 'awSection:' + id
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem(key) === '1' } catch { return false }
+  })
+  const toggle = () => {
+    const next = !open
+    setOpen(next)
+    try { localStorage.setItem(key, next ? '1' : '0') } catch { /* โหมดส่วนตัว — แค่ไม่จำสถานะ */ }
+  }
+  return (
+    <div className={`admin-card aw-sec${open ? ' aw-sec-open' : ''}`}>
+      <button type="button" className="aw-sec-head" onClick={toggle} aria-expanded={open}>
+        <span className="aw-sec-title"><FontAwesomeIcon icon={icon} /> {title}</span>
+        <FontAwesomeIcon icon={faChevronDown} className="aw-sec-caret" />
+      </button>
+      {open && <div className="aw-sec-body">{children}</div>}
+    </div>
+  )
+}
+
 export default function AdminWebsite() {
   const { user, loading } = useAdminAuth()
   const { announcement, loading: annLoading } = useAnnouncement()
@@ -448,10 +472,7 @@ export default function AdminWebsite() {
             ขวาคือ CMS การ์ดหน้าแรก ซึ่งฟอร์มต่อการ์ดกว้างกว่ามาก จึงให้คอลัมน์นี้กว้างกว่า */}
         <div className="aw-cols">
           <div className="aw-col">
-            <div className="admin-card" style={{ marginBottom: 28 }}>
-              <div className="admin-card-head" style={{ marginBottom: 18 }}>
-                <h4><FontAwesomeIcon icon={faBars} /> เมนู (Nav) หน้าเว็บ public</h4>
-              </div>
+            <Section id="nav" icon={faBars} title="เมนู (Nav) หน้าเว็บ public">
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 ปิดรายการที่ไม่ต้องการให้แสดงในเมนูหลักของเว็บ (ไม่กระทบ URL เดิม เข้าตรงได้เหมือนเดิม แค่ซ่อนจากเมนู) — มีผลทันทีเมื่อกดปิด/เปิด
               </p>
@@ -501,12 +522,9 @@ export default function AdminWebsite() {
                 </div>
               )}
               {navSaved && <p style={{ color: '#2e7d32', fontSize: '.85rem', marginTop: 12 }}>บันทึกแล้ว ✓</p>}
-            </div>
+            </Section>
 
-            <div className="admin-card" style={{ marginBottom: 28 }}>
-              <div className="admin-card-head" style={{ marginBottom: 18 }}>
-                <h4><FontAwesomeIcon icon={faGlobe} /> จัดการเว็บ — แบนเนอร์/ประกาศหน้าแรก</h4>
-              </div>
+            <Section id="announce" icon={faGlobe} title="จัดการเว็บ — แบนเนอร์/ประกาศหน้าแรก">
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, fontWeight: 600 }}>
                 <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} style={{ width: 18, height: 18 }} />
@@ -550,13 +568,10 @@ export default function AdminWebsite() {
               <button className="admin-btn-primary" onClick={save} disabled={saving || annLoading}>
                 <FontAwesomeIcon icon={saved ? faCheck : faBullhorn} /> {saved ? 'บันทึกแล้ว ✓' : saving ? 'กำลังบันทึก…' : 'บันทึกประกาศ'}
               </button>
-            </div>
+            </Section>
 
             {/* ── เนื้อหาเว็บทั่วไป (CMS แบบ key-value) ── */}
-            <div className="admin-card" style={{ marginBottom: 28 }}>
-              <div className="admin-card-head" style={{ marginBottom: 12 }}>
-                <h4><FontAwesomeIcon icon={faPenToSquare} /> เนื้อหาเว็บ (ท้ายเว็บ + ข้อความอื่นๆ)</h4>
-              </div>
+            <Section id="content" icon={faPenToSquare} title="เนื้อหาเว็บ (ท้ายเว็บ + ข้อความอื่นๆ)">
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 แก้ข้อความติดต่อ/คำโปรยท้ายเว็บได้เอง โดยไม่ต้องให้ dev แก้โค้ด — ช่องไหนเว้นว่างจะใช้ข้อความเดิมของเว็บแทน
                 ด้านล่างสุดยังเพิ่มฟิลด์เนื้อหาอิสระของตัวเองได้ (key ใหม่) เผื่อใช้ในหน้าอื่นภายหลัง
@@ -622,15 +637,12 @@ export default function AdminWebsite() {
                   </div>
                 </>
               )}
-            </div>
+            </Section>
           </div>
 
           <div className="aw-col aw-col-wide">
             {/* ── การ์ด Hero Feed หน้าแรก (CMS) ── */}
-            <div className="admin-card" style={{ marginBottom: 28 }}>
-              <div className="admin-card-head" style={{ marginBottom: 12 }}>
-                <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดหน้าแรก (Hero Feed)</h4>
-              </div>
+            <Section id="hero" icon={faNewspaper} title="การ์ดหน้าแรก (Hero Feed)">
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 จัดการการ์ดกิจกรรม/ประชาสัมพันธ์บนหน้าแรกได้เอง — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดหน้าแรก"
                 {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
@@ -664,13 +676,10 @@ export default function AdminWebsite() {
                   </div>
                 </>
               )}
-            </div>
+            </Section>
 
             {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" (CMS) ── */}
-            <div className="admin-card" style={{ marginBottom: 28 }}>
-              <div className="admin-card-head" style={{ marginBottom: 12 }}>
-                <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)</h4>
-              </div>
+            <Section id="focus" icon={faNewspaper} title="การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)">
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 การ์ดสี 3 ใบใต้หัวข้อ "เริ่มต้นทำความดีได้ตั้งแต่วันนี้" — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดทางลัด"
                 {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
@@ -704,7 +713,7 @@ export default function AdminWebsite() {
                   </div>
                 </>
               )}
-            </div>
+            </Section>
           </div>
         </div>
       </div>

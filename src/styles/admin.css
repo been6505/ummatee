@@ -30,6 +30,18 @@
    ซ้าย = ตั้งค่าโครงเว็บ (เมนู / ประกาศ / ข้อความท้ายเว็บ) ฟอร์มแคบ อ่านเป็นรายการ
    ขวา = CMS การ์ดหน้าแรก ที่แต่ละใบมีฟอร์ม 2–3 คอลัมน์ในตัว จึงกินความกว้างมากกว่า
    ใช้ minmax(0,…) ทั้งคู่ ไม่ใช่ 1fr เปล่าๆ — ตารางเมนูและ preview รูปในนั้นดันคอลัมน์ให้กว้างเกินสัดส่วนได้ */
+/* การ์ดพับได้ — ตอนพับเหลือแค่แถบหัวข้อ padding จึงต้องมาจาก .aw-sec-head ไม่ใช่ .admin-card
+   (ถ้าปล่อย padding:20px ของการ์ดไว้ แถบที่พับแล้วจะสูงเกินจำเป็น และมีขอบตายรอบปุ่มที่กดไม่ติด)
+   ตัวเลือกต้องเจาะจงกว่า .admin-card ซึ่งตั้ง padding:20px ไว้ทีหลังในไฟล์นี้ ไม่งั้น padding:0 แพ้ */
+.admin-card.aw-sec{padding:0;overflow:hidden;margin-bottom:14px}
+.aw-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:16px 18px;background:none;border:none;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.aw-sec-head:hover{background:#f7faf8}
+.aw-sec-title{font-size:1rem;font-weight:700;color:var(--green-deep,#166534);min-width:0}
+.aw-sec-caret{flex-shrink:0;font-size:.8rem;color:var(--ink-soft);transition:transform .18s}
+.aw-sec-open .aw-sec-caret{transform:rotate(180deg)}
+.aw-sec-open .aw-sec-head{border-bottom:1px solid rgba(46,125,82,.12)}
+.aw-sec-body{padding:18px}
+
 .aw-cols{display:grid;grid-template-columns:1fr;gap:0 24px;align-items:start}
 @media (min-width:1024px){
   .aw-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)}

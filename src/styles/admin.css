@@ -41,6 +41,10 @@
 .aw-sec-open .aw-sec-caret{transform:rotate(180deg)}
 .aw-sec-open .aw-sec-head{border-bottom:1px solid rgba(46,125,82,.12)}
 .aw-sec-body{padding:18px}
+/* หัวข้อย่อยในแถบที่รวมสองชุดไว้ด้วยกัน — ต้องแยกสายตาให้ออกว่าปุ่ม "บันทึก" ตัวไหนคุมชุดไหน
+   ชุดที่สองมีเส้นคั่นด้านบน เพราะเนื้อหาชุดแรกจบด้วยแถวปุ่ม ถ้าไม่คั่นจะดูเหมือนปุ่มของชุดถัดไป */
+.aw-sub-title{font-size:.9rem;font-weight:700;color:var(--green-deep,#166534);margin-bottom:10px}
+.aw-sub-title-next{margin-top:28px;padding-top:22px;border-top:2px solid rgba(46,125,82,.14)}
 
 .aw-cols{display:grid;grid-template-columns:1fr;gap:0 24px;align-items:start}
 @media (min-width:1024px){

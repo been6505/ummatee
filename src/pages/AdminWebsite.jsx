@@ -641,8 +641,11 @@ export default function AdminWebsite() {
           </div>
 
           <div className="aw-col aw-col-wide">
-            {/* ── การ์ด Hero Feed หน้าแรก (CMS) ── */}
-            <Section id="hero" icon={faNewspaper} title="การ์ดหน้าแรก (Hero Feed)">
+            {/* ── การ์ดหน้าแรกทั้งสองชุด (CMS) ──
+                รวมเป็นแถบเดียวเพราะเป็น "การ์ดบนหน้าแรก" เหมือนกัน แค่คนละตำแหน่งบนหน้า
+                แต่ยังเก็บคนละเอกสารใน Firestore ปุ่มบันทึกจึงต้องแยกกันอยู่ กดชุดไหนเซฟชุดนั้น */}
+            <Section id="hero" icon={faNewspaper} title="การ์ดหน้าแรก">
+              <div className="aw-sub-title">การ์ดกิจกรรม (Hero Feed)</div>
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 จัดการการ์ดกิจกรรม/ประชาสัมพันธ์บนหน้าแรกได้เอง — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดหน้าแรก"
                 {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
@@ -676,10 +679,9 @@ export default function AdminWebsite() {
                   </div>
                 </>
               )}
-            </Section>
 
-            {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" (CMS) ── */}
-            <Section id="focus" icon={faNewspaper} title="การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)">
+              {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" ── */}
+              <div className="aw-sub-title aw-sub-title-next">การ์ดทางลัด (Iftar / บริจาค / อาสาสมัคร)</div>
               <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
                 การ์ดสี 3 ใบใต้หัวข้อ "เริ่มต้นทำความดีได้ตั้งแต่วันนี้" — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดทางลัด"
                 {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}

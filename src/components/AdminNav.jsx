@@ -30,6 +30,7 @@ const NAV_GROUPS = [
       { href: '/admin/event/iftar2026', label: 'Iftar For Gaza' },
       { href: '/admin/give', label: 'ส่งต่อของ' },
       { href: '/admin/give/receiver', label: 'ข้อมูลผู้รับ' },
+      { href: '/admin/b2um', label: 'ร้านค้า B2UM' },
       { href: '/admin/qrcode', label: 'เช็คอินหน้างาน' },
     ]
   },

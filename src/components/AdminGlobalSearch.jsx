@@ -30,7 +30,7 @@ const PREFIX_SOURCES = [
   { col: 'iftarRegs', field: 'fname', label: 'ลงทะเบียน Iftar', icon: '🌙', href: '/admin/event/iftar2026' },
   { col: 'give2Regs', field: 'fname', label: 'ผู้บริจาค (คอม)', icon: '💻', href: '/admin/give' },
   { col: 'give2CookRegs', field: 'fname', label: 'ผู้บริจาค (อุปกรณ์)', icon: '🍳', href: '/admin/give' },
-  { col: 'b2umRegs', field: 'shopName', label: 'ร้านค้า B2UM', icon: '🏪', href: '/admin/give' },
+  { col: 'b2umRegs', field: 'shopName', label: 'ร้านค้า B2UM', icon: '🏪', href: '/admin/b2um' },
 ]
 
 export default function AdminGlobalSearch() {

@@ -656,6 +656,38 @@ a.attach-name:hover{text-decoration:underline}
    grid-auto-flow:column + grid-auto-columns:minmax(0,1fr) = ทุกชิปแบ่งความกว้างเท่ากันในแถวเดียว
    โดยไม่ต้องระบุจำนวนคอลัมน์ ⇒ เพิ่ม/ลดสถานะใน contentStatus.js แล้วยังอยู่บรรทัดเดียวเอง
    ข้อความยาว ("กำลังดำเนินงาน") ตัดบรรทัดในชิปตัวเอง ชิปทุกอันสูงเท่ากันเพราะ stretch ตามแถว */
+/* ── หน้าร้านค้า B2UM ── */
+.b2um-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.b2um-toolbar input[type=search]{flex:1 1 240px;min-width:0;padding:9px 12px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.95rem}
+.b2um-filters{display:flex;flex-wrap:wrap;gap:8px}
+.b2um-filters button{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:99px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.b2um-filters button.on{background:var(--green-deep,#166534);border-color:var(--green-deep,#166534);color:#fff}
+.b2um-filters button span{background:rgba(0,0,0,.08);border-radius:99px;padding:0 7px;font-size:.75rem}
+.b2um-filters button.on span{background:rgba(255,255,255,.25)}
+
+.b2um-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+.b2um-card{display:flex;flex-direction:column;gap:10px}
+.b2um-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+/* ชื่อร้านยาวได้ไม่จำกัด ต้องตัดคำได้ ไม่งั้นดันชิปสถานะตกออกนอกการ์ด */
+.b2um-shop{font-weight:700;font-size:1rem;overflow-wrap:anywhere}
+.b2um-meta{font-size:.78rem;color:var(--ink-soft);margin-top:2px}
+.b2um-chip{flex-shrink:0;color:#fff;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.b2um-contact{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88rem;color:var(--ink-soft)}
+.b2um-contact a{color:var(--green-deep,#166534);text-decoration:none;font-weight:700}
+.b2um-images{display:flex;flex-wrap:wrap;gap:6px}
+.b2um-images img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+/* ปุ่มสถานะ 4 ปุ่มบรรทัดเดียว — minmax(0,1fr) ให้ข้อความยาว ("ใบสมัครใหม่") ตัดบรรทัดในปุ่มตัวเอง
+   แทนที่จะดันแถวให้ล้นการ์ด */
+.b2um-status-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.b2um-status-row button{padding:7px 4px;border-radius:8px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.75rem;font-weight:700;color:var(--ink-soft);cursor:pointer;line-height:1.25;overflow-wrap:anywhere}
+.b2um-status-row button:disabled{cursor:default}
+.b2um-note{display:flex;flex-direction:column;gap:5px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+.b2um-note textarea{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;resize:vertical}
+.b2um-note-save{align-self:flex-start}
+@media (max-width:520px){
+  .b2um-status-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 /* ── หน้า "งานของฉัน" ── */
 .mywork-count{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
 /* กลุ่มความเร่งด่วนเรียงเป็นคอลัมน์บนจอกว้าง — จำนวนกลุ่มไม่แน่นอน (โชว์เฉพาะกลุ่มที่มีงาน)

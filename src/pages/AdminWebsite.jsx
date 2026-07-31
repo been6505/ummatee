@@ -523,7 +523,9 @@ export default function AdminWebsite() {
               )}
               {navSaved && <p style={{ color: '#2e7d32', fontSize: '.85rem', marginTop: 12 }}>บันทึกแล้ว ✓</p>}
             </Section>
+          </div>
 
+          <div className="aw-col">
             <Section id="announce" icon={faGlobe} title="จัดการเว็บ — แบนเนอร์/ประกาศหน้าแรก">
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, fontWeight: 600 }}>

@@ -686,3 +686,32 @@ a.attach-name:hover{text-decoration:underline}
 .admin-order-col>.admin-card{margin-bottom:0}
 @media (max-width:1200px){.admin-order-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:820px){.admin-order-cols{grid-template-columns:1fr}}
+
+/* ══ โครงหน้าแอดมินแบบ "หน้าไม่เลื่อน มีแต่เนื้อหาที่เลื่อน" ══
+   ก่อนหน้านี้ทั้งหน้าเลื่อนไปพร้อมกัน หัวข้อ/ปุ่มค้นหา/หัวตารางหายไปหมดเวลาไล่ดูข้อมูลยาวๆ
+
+   .admin-dash เป็นตัวเลื่อนแทน <body> ⇒ ไม่มี scrollbar ของทั้งหน้า
+   แถบเมนูซ้ายเป็น position:fixed อยู่แล้ว จึงไม่ขยับตามอยู่แล้ว (และ .admin-dash ไม่มี transform
+   จึงไม่กลายเป็น containing block ใหม่ที่จะทำให้ fixed ข้างในเพี้ยน)
+
+   เนื้อหาที่ยาวกว่าจอยังต้องเลื่อนอยู่ — ลบทิ้งไม่ได้ แต่เลื่อนอยู่ในกรอบของตัวเอง
+   โดยหัวข้อหน้ากับหัวตารางยังติดอยู่กับที่
+
+   ทำเฉพาะจอ >=769px: บนมือถือแถบเมนูเป็น top bar และเบราว์เซอร์มือถือย่อ/ขยาย URL bar
+   ตามการเลื่อนหน้า ถ้าล็อกความสูงไว้ 100dvh จะเสียพฤติกรรมนั้นและเลื่อนสะดุด */
+@media (min-width:769px){
+  .admin-dash{
+    height:100dvh;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* หัวข้อหน้า + ปุ่ม (ค้นหา/เพิ่มใหม่/ส่งออก) ติดอยู่ด้านบนขณะเลื่อนดูข้อมูล
+     ต้องทึบแสงและ z-index สูงกว่าหัวตาราง ไม่งั้นแถวตารางจะวิ่งทะลุให้เห็น */
+  .admin-head{position:sticky;top:0;z-index:6}
+  /* ตารางเลื่อนในกรอบของตัวเอง — หัวตาราง (th) เป็น position:sticky อยู่แล้ว แต่ sticky ยึดกับ
+     "กรอบที่เลื่อนได้ตัวใกล้สุด" ซึ่งคือ .admin-table-wrap (มี overflow-x:auto อยู่เดิม)
+     กรอบนั้นไม่เคยเลื่อนแนวตั้ง หัวตารางจึงไถลหายไปกับแถวข้อมูล — ให้มันเลื่อนแนวตั้งด้วยถึงจะติด
+     ค่า 300px ที่หักออกคือพื้นที่หัวข้อหน้า+ระยะการ์ด (ประมาณจากหน้าที่มีสถิติด้านบน) */
+  .admin-table-wrap{max-height:calc(100dvh - 300px);min-height:240px;overflow:auto}
+  .admin-table th{z-index:4}
+}

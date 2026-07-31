@@ -675,3 +675,14 @@ a.attach-name:hover{text-decoration:underline}
 .idea-node-btn.danger:hover{background:#fdecea;color:#c0392b;border-color:#f3c4be}
 .idea-node-date{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.72rem;color:var(--ink-soft)}
 .idea-node-date input{flex:1;min-width:0;border:1px solid #e5e7eb;border-radius:6px;padding:3px 5px;font:inherit;font-size:.72rem;background:#fff}
+
+/* ── หน้ารายละเอียดคำสั่งซื้อ (แอดมิน): 3 คอลัมน์บนจอกว้าง ──
+   สินค้า | ลูกค้า | งานตามสถานะ (ชำระเงิน / เตรียมจัดส่ง / จัดส่งแล้ว)
+   เดิมเป็นคอลัมน์เดียวกว้าง 760px ต้องเลื่อนหาข้อมูลทั้งที่ครึ่งจอขวาว่างเปล่า
+   align-items:start ให้การ์ดสูงตามเนื้อหาตัวเอง ไม่ยืดเท่ากันจนเหลือที่ว่างในใบสั้น */
+.admin-order-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+/* การ์ดในคอลัมน์ไม่ต้องเว้นล่างซ้ำ กริดจัดระยะให้แล้ว — แต่การ์ดหลายใบในคอลัมน์เดียวยังต้องห่างกัน */
+.admin-order-col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.admin-order-col>.admin-card{margin-bottom:0}
+@media (max-width:1200px){.admin-order-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){.admin-order-cols{grid-template-columns:1fr}}

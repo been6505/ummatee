@@ -188,7 +188,7 @@ export default function AdminShopOrderDetail({ orderId }) {
         {!loading && (error || !order) && <p style={{ color: '#dc2626' }}>ไม่พบคำสั่งซื้อนี้</p>}
 
         {!loading && order && (
-          <div style={{ maxWidth: 760 }}>
+          <>
             <Stepper status={order.status} />
 
             {actionStatus && (
@@ -208,8 +208,17 @@ export default function AdminShopOrderDetail({ orderId }) {
               </div>
             )}
 
-            <OrderItemsCard order={order} />
-            <CustomerInfoCard order={order} />
+            {/* 3 คอลัมน์บนจอกว้าง: สินค้า | ลูกค้า | งานที่ต้องทำตามสถานะ
+                เดิมกล่องเนื้อหากว้าง 760px ทำให้การ์ดเรียงลงมาเป็นแถวเดียวและต้องเลื่อนหา
+                ทั้งที่พื้นที่ขวามือว่างเปล่าเกินครึ่งจอ */}
+            <div className="admin-order-cols">
+              <div className="admin-order-col">
+                <OrderItemsCard order={order} />
+              </div>
+              <div className="admin-order-col">
+                <CustomerInfoCard order={order} />
+              </div>
+              <div className="admin-order-col">
 
             {/* ── สถานะที่ 1: รอการชำระเงิน ── */}
             {order.status === 'pending_payment' && (
@@ -356,7 +365,9 @@ export default function AdminShopOrderDetail({ orderId }) {
               </div>
             )}
 
-          </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </main>

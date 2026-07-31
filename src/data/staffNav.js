@@ -1,6 +1,6 @@
 import {
   faTableColumns, faCalendar, faGlobe, faUsers, faMapLocationDot, faMicrophone,
-  faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck,
+  faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck, faTowerBroadcast,
 } from '@fortawesome/free-solid-svg-icons'
 import { hasStaffRole } from '../useStaffRole.js'
 
@@ -13,6 +13,7 @@ export const STAFF_NAV_GROUPS = [
   { label: 'แดชบอร์ด Staff', icon: faTableColumns, href: '/admin/staff-dashboard', requireRoles: ['admin', 'staff', 'social', 'field'] },
   { label: 'งานของฉัน', icon: faListCheck, href: '/admin/my-work', requireRoles: ['admin', 'staff', 'social', 'field'] },
   { label: 'ปฏิทินคอนเทนต์', icon: faCalendar, href: '/admin/calendar', requireRoles: ['admin', 'staff', 'social'] },
+  { label: 'ตารางไลฟ์สด', icon: faTowerBroadcast, href: '/admin/live', requireRoles: ['admin', 'staff', 'social'] },
   { label: 'จัดการเว็บ', icon: faGlobe, href: '/admin/website', requireRoles: ['admin', 'staff', 'social'] },
   {
     label: 'CRM', icon: faUsers, requireRoles: ['admin', 'staff', 'field'], children: [

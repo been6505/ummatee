@@ -903,3 +903,26 @@ a.attach-name:hover{text-decoration:underline}
 .cd-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cd-date{flex-shrink:0;color:var(--ink-soft);font-size:.78rem;font-variant-numeric:tabular-nums}
 .cd-tag{flex-shrink:0;background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:2px 9px;font-size:.72rem;font-weight:700;white-space:nowrap}
+
+/* ── ตารางไลฟ์สด (/admin/live) ── */
+.live-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.live-next{margin-bottom:16px;border-left:4px solid var(--green-mid,#2e7d52)}
+.live-next-label{font-size:.75rem;font-weight:700;color:var(--green-mid,#2e7d52);letter-spacing:.04em}
+.live-next-title{font-size:1.15rem;font-weight:700;margin:4px 0 6px;overflow-wrap:anywhere}
+.live-next-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--ink-soft)}
+.live-section{margin-bottom:14px}
+.live-section-head{margin:0 0 10px;font-size:.95rem;display:flex;align-items:center;gap:8px}
+.live-section-head span{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.75rem}
+.live-section-warn{color:#b45309}
+.live-empty{font-size:.85rem;color:var(--ink-soft);opacity:.8;margin:0}
+.live-list{list-style:none;margin:0;padding:0}
+/* แถวเดียวมีหลายชิ้น ความยาวไม่แน่นอน — ใช้ flex+wrap ไม่ใช่ตาราง เพื่อให้ยุบลงบรรทัดถัดไปได้เองบนจอแคบ */
+.live-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 0;border-bottom:1px solid #f3f6f4;font-size:.88rem}
+.live-row-dim{opacity:.55}
+.live-time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--green-deep,#166534);white-space:nowrap}
+/* ชื่อไลฟ์กินที่เหลือทั้งหมด แต่ต้องหดได้ ไม่งั้นดันลิงก์ท้ายแถวตกออกนอกการ์ด */
+.live-title{flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-host{color:var(--ink-soft);font-size:.8rem;white-space:nowrap}
+.live-platforms{color:var(--ink-soft);font-size:.78rem;white-space:nowrap}
+.live-status{color:#fff;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.live-open{color:var(--green-deep,#166534);text-decoration:none;font-size:.8rem;font-weight:700;white-space:nowrap}

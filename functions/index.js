@@ -1195,14 +1195,12 @@ exports.verifyOrderTotal = onDocumentCreated('orders/{orderId}', async (event) =
   const order = event.data?.data()
   if (!order || !Array.isArray(order.items) || order.items.length === 0) return
 
-  const ids = [...new Set(order.items.map((it) => it.id).filter(Boolean))]
-  if (ids.length !== order.items.length) {
-    // รายการเดียวกันซ้ำหลายบรรทัดก็คิดรวมได้ปกติ — ที่กันคือกรณีไม่มี id ให้ไปหาสินค้าเลย
-    if (order.items.some((it) => !it.id)) {
-      await flagOrder(event.data.ref, 'มีรายการที่ไม่มีรหัสสินค้า')
-      return
-    }
+  // ต้องเป็น productDocId — it.id คือ lineId (docId|สี|ไซซ์) ที่ตะกร้าสร้างขึ้น ไม่ใช่ doc id ของสินค้า
+  if (order.items.some((it) => !it.productDocId)) {
+    await flagOrder(event.data.ref, 'มีรายการที่ไม่มีรหัสสินค้า (productDocId)')
+    return
   }
+  const ids = [...new Set(order.items.map((it) => it.productDocId))]
 
   const snaps = await db.getAll(...ids.map((id) => db.collection('products').doc(id)))
   const priceById = {}
@@ -1213,7 +1211,7 @@ exports.verifyOrderTotal = onDocumentCreated('orders/{orderId}', async (event) =
     priceById[snap.id] = (p.discountPrice != null && p.discountPrice < p.price) ? p.discountPrice : (p.price || 0)
   }
 
-  const expected = order.items.reduce((sum, it) => sum + priceById[it.id] * (Number(it.qty) || 0), 0)
+  const expected = order.items.reduce((sum, it) => sum + priceById[it.productDocId] * (Number(it.qty) || 0), 0)
   const expectedTotal = Math.round(expected * 100) / 100
   const claimed = Math.round(Number(order.itemsTotal) * 100) / 100
 

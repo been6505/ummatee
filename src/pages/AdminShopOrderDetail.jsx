@@ -9,6 +9,7 @@ import {
   addDeliveredImages,
 } from '../data/orders.js'
 import { useProducts, effectivePrice } from '../data/shop.js'
+import { auditOrderTotals } from '../data/orderAudit.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { notifyLineOrderStatus, notifyCustomerShipped } from '../utils/lineNotify.js'
 import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, COURIERS } from '../components/OrderShared.jsx'
@@ -33,6 +34,14 @@ export default function AdminShopOrderDetail({ orderId }) {
 
   // ราคาต่อชิ้นในออเดอร์มาจากฝั่งลูกค้า (client) — เทียบกับราคาสินค้าปัจจุบัน ถ้าไม่ตรงให้เตือนแอดมินก่อนยืนยันรับเงิน
   // (ราคาอาจต่างเพราะแอดมินเพิ่งแก้ราคา/โปรฯ หลังลูกค้าสั่ง — ไม่ใช่การโกงเสมอไป แต่ควรเช็คยอดโอนกับราคาที่ถูกต้อง)
+  // ตรวจตัวเลขเงินในตัวออเดอร์เอง — ไม่ต้องรอ products โหลด และไม่พึ่งเซิร์ฟเวอร์
+  // ถ้าวันหนึ่งได้ deploy Cloud Function verifyOrderTotal ธง priceMismatch จากฝั่งนั้นจะมาสมทบในกล่องเดียวกัน
+  const localAudit = auditOrderTotals(order)
+  const totalsAudit = {
+    ok: localAudit.ok && !order?.priceMismatch,
+    issues: order?.priceMismatch ? [...localAudit.issues, order.priceMismatchReason].filter(Boolean) : localAudit.issues,
+  }
+
   const priceMismatches = (order?.items || []).flatMap((it) => {
     const p = products.find((x) => x.id === (it.productDocId || it.id))
     if (!p) return []
@@ -125,6 +134,10 @@ export default function AdminShopOrderDetail({ orderId }) {
       window.alert('กำลังโหลดข้อมูลสินค้าเพื่อตรวจสอบราคา กรุณารอสักครู่แล้วกดใหม่')
       return
     }
+    // ตัวเลขไม่สอดคล้องกันเองเป็นสัญญาณที่หนักกว่าราคาเปลี่ยน — ออเดอร์จากหน้าเว็บจริงไม่มีทางเป็นแบบนี้
+    if (!totalsAudit.ok) {
+      if (!window.confirm(`🚨 ตัวเลขเงินในออเดอร์นี้ไม่สอดคล้องกัน\n\n${totalsAudit.issues.map((m) => '• ' + m).join('\n')}\n\nออเดอร์ที่สั่งผ่านหน้าเว็บตามปกติจะไม่เป็นแบบนี้ ยืนยันรับเงินต่อหรือไม่?`)) return
+    }
     if (priceMismatches.length > 0) {
       const detail = priceMismatches
         .map((m) => `• ${m.name}: ในออเดอร์ ฿${m.orderPrice.toLocaleString('th-TH')} / ราคาปัจจุบัน ฿${m.currentPrice.toLocaleString('th-TH')}`)
@@ -197,13 +210,15 @@ export default function AdminShopOrderDetail({ orderId }) {
               </div>
             )}
 
-            {/* ธงจากฝั่งเซิร์ฟเวอร์ (Cloud Function verifyOrderTotal) — คนละเรื่องกับกล่องเหลืองด้านล่าง
-                กล่องเหลือง = ราคาสินค้าถูกแก้ "หลัง" ลูกค้าสั่งไปแล้ว ซึ่งเป็นเรื่องปกติที่เกิดขึ้นได้
-                กล่องแดงนี้ = ยอดไม่ตรงกับราคาจริง "ตั้งแต่ตอนสร้างออเดอร์" แปลว่าไม่ได้มาจากหน้าเว็บปกติ */}
-            {order.priceMismatch && (
+            {/* คนละเรื่องกับกล่องเหลืองด้านล่าง:
+                เหลือง = ราคาสินค้าถูกแก้ "หลัง" ลูกค้าสั่งไปแล้ว เกิดขึ้นได้เป็นปกติ
+                แดง = ตัวเลขในออเดอร์ไม่ตรงกันเอง แปลว่าไม่ได้ถูกสร้างผ่านหน้าเว็บ (ดู orderAudit.js) */}
+            {!totalsAudit.ok && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: '.88rem' }}>
-                <strong>🚨 ออเดอร์นี้ยอดเงินไม่ผ่านการตรวจฝั่งเซิร์ฟเวอร์</strong>
-                <div style={{ marginTop: 4 }}>{order.priceMismatchReason}</div>
+                <strong>🚨 ตัวเลขเงินในออเดอร์นี้ไม่สอดคล้องกัน</strong>
+                <ul style={{ margin: '6px 0 0 18px' }}>
+                  {totalsAudit.issues.map((m, i) => <li key={i}>{m}</li>)}
+                </ul>
                 <div style={{ marginTop: 6 }}>ออเดอร์ที่สั่งผ่านหน้าเว็บตามปกติจะไม่ขึ้นข้อความนี้ — ตรวจสอบให้แน่ใจก่อนยืนยันรับเงินหรือจัดส่ง</div>
               </div>
             )}

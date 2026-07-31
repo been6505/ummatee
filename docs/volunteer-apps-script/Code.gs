@@ -36,7 +36,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.6'
+var SCRIPT_VERSION = '2026-07-31.7'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -202,6 +202,78 @@ function fsVal(v) {
   return ''
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// ตรวจยอดเงินของออเดอร์ — ทำที่นี่เพราะ firestore.rules ทำแทนไม่ได้
+//
+// rules ตรวจได้แค่ total == itemsTotal + shippingFee "สอดคล้องกันเอง" เทียบราคาสินค้าจริงไม่ได้
+// (ภาษา rules ไม่มีลูปให้บวกผลรวมทั้งตะกร้า และ get() ได้ 10 ครั้งต่อ request ขณะที่ออเดอร์มีได้ 50 รายการ)
+// src/data/orders.js คิดราคาใหม่ใน transaction อยู่แล้ว แต่เป็นโค้ดฝั่งเบราว์เซอร์ — คนที่ยิง Firestore
+// SDK ตรงข้ามด่านนั้นได้ ที่นี่จึงคิดใหม่อีกรอบฝั่งเซิร์ฟเวอร์ แล้วเตือนแอดมินในอีเมล + ทำเครื่องหมายในชีต
+//
+// อ่าน products ผ่าน REST แบบไม่ต้องยืนยันตัวตนได้ เพราะ rules เปิด read: if true (หน้าร้านเป็นหน้า public)
+// ══════════════════════════════════════════════════════════════════════
+// จำราคาไว้ต่อการเรียก doPost หนึ่งครั้ง — ออเดอร์ที่มีสินค้าเดียวกันหลายไซซ์/หลายสีจะยิง REST ซ้ำ
+// โดยไม่จำเป็น (ออเดอร์หนึ่งมีได้ถึง 50 รายการ) ตัวแปรระดับ global รีเซ็ตทุก execution ของ Apps Script อยู่แล้ว
+var PRODUCT_PRICE_CACHE = {}
+
+function productPrice(productId) {
+  if (PRODUCT_PRICE_CACHE.hasOwnProperty(productId)) return PRODUCT_PRICE_CACHE[productId]
+  var url = 'https://firestore.googleapis.com/v1/projects/ummatee-app/databases/(default)/documents/products/'
+    + encodeURIComponent(String(productId))
+  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
+  if (res.getResponseCode() !== 200) { PRODUCT_PRICE_CACHE[productId] = null; return null }
+  var pf = (JSON.parse(res.getContentText()) || {}).fields || {}
+  var price = Number(fsVal(pf.price)) || 0
+  var discount = pf.discountPrice ? Number(fsVal(pf.discountPrice)) : null
+  // ต้องตรงกับ effectivePrice() ใน src/data/pricing.js — ใช้ราคาส่วนลดเมื่อถูกกว่าราคาเต็มเท่านั้น
+  var eff = (discount !== null && discount < price) ? discount : price
+  PRODUCT_PRICE_CACHE[productId] = eff
+  return eff
+}
+
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100 }
+
+function auditOrderTotals(itemVals, itemsTotal, shippingFee, total) {
+  var issues = []
+  if (!itemVals.length) { issues.push('ออเดอร์ไม่มีรายการสินค้า'); return issues }
+
+  var sum = 0
+  var realSum = 0
+  var pricesUnknown = false
+
+  itemVals.forEach(function (it) {
+    var m = (it.mapValue || {}).fields || {}
+    var qty = Number(fsVal(m.qty)) || 0
+    var price = Number(fsVal(m.price)) || 0
+    var name = fsVal(m.name) || 'สินค้า'
+    if (qty <= 0) issues.push('"' + name + '" จำนวนไม่ถูกต้อง (' + qty + ')')
+    if (price < 0) issues.push('"' + name + '" ราคาติดลบ')
+    sum += price * qty
+
+    // ต้องเป็น productDocId เท่านั้น — m.id คือ lineId (docId|สี|ไซซ์) ไม่ใช่ doc id ของสินค้า
+    var pid = fsVal(m.productDocId)
+    var real = pid ? productPrice(pid) : null
+    if (real === null) { pricesUnknown = true; realSum += price * qty }
+    else {
+      realSum += real * qty
+      if (round2(real) !== round2(price)) {
+        issues.push('"' + name + '" ราคาในออเดอร์ ฿' + round2(price) + ' แต่ราคาจริง ฿' + round2(real))
+      }
+    }
+  })
+
+  if (round2(sum) !== round2(itemsTotal)) {
+    issues.push('ผลรวมรายการได้ ฿' + round2(sum) + ' แต่ในออเดอร์บันทึก ฿' + round2(itemsTotal))
+  }
+  if (round2(round2(itemsTotal) + round2(shippingFee)) !== round2(total)) {
+    issues.push('ยอดรวมควรเป็น ฿' + round2(round2(itemsTotal) + round2(shippingFee)) + ' แต่บันทึก ฿' + round2(total))
+  }
+  if (!pricesUnknown && round2(realSum) !== round2(itemsTotal)) {
+    issues.push('ยอดที่คิดจากราคาจริงคือ ฿' + round2(realSum) + ' แต่ในออเดอร์บันทึก ฿' + round2(itemsTotal))
+  }
+  return issues
+}
+
 function handleOrderCreated(data) {
   if (!data.orderId) return jsonOut({ error: 'missing orderId' })
 
@@ -226,6 +298,12 @@ function handleOrderCreated(data) {
     return '- ' + fsVal(m.name) + (variant ? ' (' + variant + ')' : '') + ' x' + fsVal(m.qty)
   })
 
+  // ตรวจยอดเงินก่อนบันทึก/ส่งอีเมล เพื่อให้ทั้งสองที่ติดคำเตือนไปด้วยกัน
+  var issues = []
+  try { issues = auditOrderTotals(itemVals, itemsTotal, shippingFee, total) }
+  catch (auditErr) { Logger.log('orderCreated audit error: ' + auditErr.message) }
+  var warn = issues.length ? '*** ยอดเงินไม่ผ่านการตรวจ ***\n' + issues.map(function (i) { return '- ' + i }).join('\n') + '\n\n' : ''
+
   var sheetLogged = false
   try {
     var ss = SpreadsheetApp.openById(ORDERS_SHEET_ID)
@@ -247,7 +325,7 @@ function handleOrderCreated(data) {
       itemsTotal,
       shippingFee,
       total,
-      fsVal(f.status),
+      fsVal(f.status) + (issues.length ? ' / ตรวจสอบยอดเงิน' : ''),
       'https://ummatee-app.web.app/admin/shop/orders/' + data.orderId,
     ])
     sheetLogged = true
@@ -255,8 +333,9 @@ function handleOrderCreated(data) {
 
   var mailed = false
   try {
-    GmailApp.sendEmail(ADMIN_EMAIL, 'ออเดอร์ใหม่ ' + orderCode,
-      'มีคำสั่งซื้อใหม่ ' + orderCode + '\n'
+    GmailApp.sendEmail(ADMIN_EMAIL, (issues.length ? '[ตรวจสอบยอดเงิน] ' : '') + 'ออเดอร์ใหม่ ' + orderCode,
+      warn
+      + 'มีคำสั่งซื้อใหม่ ' + orderCode + '\n'
       + 'ลูกค้า: ' + fsVal(cust.fullName) + ' (' + fsVal(cust.phone) + ')\n'
       + (fsVal(cust.email) ? 'อีเมล: ' + fsVal(cust.email) + '\n' : '')
       + 'ที่อยู่: ' + fsVal(cust.address) + '\n\n'
@@ -292,6 +371,7 @@ function handleOrderCreated(data) {
   return jsonOut({
     ok: true, orderCode: orderCode,
     mailed: mailed, mailedCustomer: mailedCustomer, sheetLogged: sheetLogged,
+    totalsOk: issues.length === 0, issues: issues,
   })
 }
 

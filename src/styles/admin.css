@@ -656,6 +656,35 @@ a.attach-name:hover{text-decoration:underline}
    grid-auto-flow:column + grid-auto-columns:minmax(0,1fr) = ทุกชิปแบ่งความกว้างเท่ากันในแถวเดียว
    โดยไม่ต้องระบุจำนวนคอลัมน์ ⇒ เพิ่ม/ลดสถานะใน contentStatus.js แล้วยังอยู่บรรทัดเดียวเอง
    ข้อความยาว ("กำลังดำเนินงาน") ตัดบรรทัดในชิปตัวเอง ชิปทุกอันสูงเท่ากันเพราะ stretch ตามแถว */
+/* ── หน้า "งานของฉัน" ── */
+.mywork-count{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+/* กลุ่มความเร่งด่วนเรียงเป็นคอลัมน์บนจอกว้าง — จำนวนกลุ่มไม่แน่นอน (โชว์เฉพาะกลุ่มที่มีงาน)
+   จึงใช้ auto-fit ให้มันจัดเองแทนการกำหนดจำนวนคอลัมน์ตายตัว */
+.mywork-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.mywork-group-head{font-weight:700;font-size:.95rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.mywork-group-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.78rem}
+.mywork-list{list-style:none;margin:0;padding:0}
+.mywork-list li + li{border-top:1px solid #eef2ef}
+.mywork-list a{display:flex;align-items:center;gap:10px;padding:10px 4px;color:inherit;text-decoration:none;border-radius:8px}
+.mywork-list a:hover{background:#f7faf8}
+.mywork-kind{color:var(--ink-soft);flex-shrink:0;font-size:.85rem}
+/* ชื่องานยาวได้ไม่จำกัด — ให้มันหดได้และตัดด้วย ellipsis ไม่งั้นมันดันวันที่ตกออกนอกการ์ด */
+.mywork-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.mywork-status{flex-shrink:0;color:#fff;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px}
+.mywork-date{flex-shrink:0;color:var(--ink-soft);font-size:.78rem;font-variant-numeric:tabular-nums}
+.mywork-empty{text-align:center;padding:40px 20px;color:var(--ink-soft)}
+.mywork-empty svg{font-size:2rem;opacity:.4;margin-bottom:12px}
+.mywork-empty-hint{font-size:.85rem;opacity:.8;max-width:420px;margin:6px auto 0}
+
+/* ── ช่องเลือกผู้รับผิดชอบ (AssigneePicker) — ใช้ร่วมกันทุกที่ที่มอบหมายงานได้ ── */
+.assignee-picker{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft);min-width:0}
+.assignee-picker select{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.assignee-picker select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.assignee-hint{font-weight:400;font-size:.78rem;color:#b45309}
+/* ป้ายชื่อในลิสต์/การ์ด — ต้องอ่านออกในที่แคบ จึงตัดด้วย ellipsis ไม่ดันการ์ดให้กว้างขึ้น */
+.assignee-tag{display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;padding:2px 8px;border-radius:99px;background:#e8f5e9;color:#2e7d32;font-size:.75rem;font-weight:700}
+.assignee-tag-missing{background:#fbe9e7;color:#c62828}
+
 .admin-cal-status-chips{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-top:4px}
 .admin-cal-status-chips button{padding:8px 6px;line-height:1.3;overflow-wrap:anywhere;border:1px solid #ddd;border-radius:99px;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .admin-cal-status-chips button:hover{border-color:var(--green-mid)}

@@ -3,6 +3,7 @@ import IdeaMap from '../components/IdeaMap.jsx'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, where, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
+import { useStaffDirectory, memberLabel, findMember } from '../data/staffDirectory.js'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
 import ListSkeleton from '../components/ListSkeleton.jsx'
@@ -27,6 +28,7 @@ export default function AdminBoard() {
   const [newCardTitle, setNewCardTitle] = useState({})
   const [dragCardId, setDragCardId] = useState(null)
   const [tab, setTab] = useState('board')
+  const { members: directory } = useStaffDirectory()
 
   useEffect(() => {
     // ตัด orderBy('position') ออก — where + orderBy คนละฟิลด์ต้องมี composite index ใน Firestore ซึ่งไม่มี
@@ -94,6 +96,14 @@ export default function AdminBoard() {
     await updateDoc(doc(db, 'boardCards', c.id), { dueDate: v || null, updatedAt: serverTimestamp() })
   }
 
+  // ฟิลด์ assignedToStaffId มีอยู่ในการ์ดตั้งแต่แรกแล้ว แต่ไม่เคยมีที่ให้กรอก — เขียน null ตอนสร้างแล้วจบ
+  // ใส่ audit log ด้วย เพราะ "ใครมอบงานให้ใคร" เป็นข้อมูลที่ย้อนดูแล้วมีประโยชน์เวลางานตกหล่น
+  const setAssignee = async (c, uid) => {
+    await updateDoc(doc(db, 'boardCards', c.id), { assignedToStaffId: uid || null, updatedAt: serverTimestamp() })
+    const who = uid ? memberLabel(findMember(directory, uid)) : 'ไม่มีผู้รับผิดชอบ'
+    writeAuditLog({ action: 'update', entityType: 'boardCard', entityId: c.id, summary: `มอบหมาย "${c.title}" ให้ ${who}` })
+  }
+
   const onDrop = async (listId) => {
     if (!dragCardId) return
     const c = cards.find((x) => x.id === dragCardId)
@@ -153,6 +163,26 @@ export default function AdminBoard() {
                               onChange={(e) => setDueDate(c, e.target.value)}
                               className="admin-board-card-date"
                             />
+                          </label>
+                          <label className="admin-board-field">
+                            <span>ผู้รับผิดชอบ</span>
+                            <select
+                              className="admin-board-card-campaign"
+                              value={c.assignedToStaffId || ''}
+                              onChange={(e) => setAssignee(c, e.target.value)}
+                            >
+                              <option value="">— ยังไม่มอบหมาย —</option>
+                              {/* คนที่ถูกมอบหมายไว้แต่ออกจากทีมไปแล้ว ต้องยังอยู่ในลิสต์ ไม่งั้น select
+                                  หาค่าไม่เจอแล้วเด้งกลับเป็น "ยังไม่มอบหมาย" เงียบๆ ทั้งที่ข้อมูลยังอยู่ */}
+                              {(c.assignedToStaffId && !directory.some((m) => m.uid === c.assignedToStaffId)
+                                ? [...directory, findMember(directory, c.assignedToStaffId)]
+                                : directory
+                              ).map((m) => (
+                                <option key={m.uid} value={m.uid}>
+                                  {memberLabel(m)}{m.missing ? ' (ไม่อยู่ในทีมแล้ว)' : ''}
+                                </option>
+                              ))}
+                            </select>
                           </label>
                           <label className="admin-board-field">
                             <span>แคมเปญ</span>

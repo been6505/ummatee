@@ -525,6 +525,22 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // staffDirectory/{uid} — สมุดรายชื่อทีมแบบย่อ ไว้ให้ช่อง "ผู้รับผิดชอบ" เลือกคนได้
+    //
+    // ทำไมต้องมีอีก collection ทั้งที่มี staff/ อยู่แล้ว: staff/ อ่านได้เฉพาะ doc ของตัวเองกับ super admin
+    // (ตั้งใจไว้แบบนั้น เพราะการอ่าน role ของทุกคนได้ = รู้ว่าใครมีสิทธิ์อะไร) ทีมงานทั่วไปจึง
+    // "list รายชื่อเพื่อนร่วมทีม" ไม่ได้เลย ซึ่งทำให้มอบหมายงานให้กันไม่ได้
+    //
+    // ที่นี่จึงเก็บเฉพาะที่ช่องเลือกคนต้องใช้ (ชื่อ/อีเมล/role) ไม่มี field อื่นของ staff ติดมา
+    // และยังเขียนได้เฉพาะ super admin เหมือนเดิม — การเพิ่มชื่อเข้าสมุดนี้ไม่ได้ให้สิทธิ์อะไรเพิ่ม
+    // สิทธิ์จริงยังตัดสินจาก staff/{uid} เท่านั้น ที่นี่เป็นแค่ป้ายชื่อสำหรับ UI
+    //
+    // อ่านได้เฉพาะคนที่เป็นทีมงานจริง — ไม่ใช่ public เหมือน config/{id} เพราะมีอีเมลของทีมอยู่
+    match /staffDirectory/{uid} {
+      allow read: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+      allow write: if isSuperAdmin();
+    }
+
     // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
     match /staff/{staffId} {
       allow read: if request.auth != null && (request.auth.uid == staffId || isSuperAdmin());

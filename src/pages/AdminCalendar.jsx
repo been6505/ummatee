@@ -3,6 +3,7 @@ import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
+import AssigneePicker from '../components/AssigneePicker.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -254,6 +255,7 @@ const EMPTY_FORM = {
   repeatDays: [], // วันในสัปดาห์ที่ทำซ้ำ (0=อา..6=ส) — ว่าง = ไม่ทำซ้ำ
   repeatWeeks: 4,
   driveUrl: '', // ลิงก์ไฟล์งานใน Google Drive
+  assignedToStaffId: null, // uid ของทีมงานที่รับผิดชอบโพสต์นี้ (ดู staffDirectory.js)
 }
 
 export default function AdminCalendar() {
@@ -385,6 +387,7 @@ export default function AdminCalendar() {
       livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
       sources: p.sources || [],
       driveUrl: p.driveUrl || '',
+      assignedToStaffId: p.assignedToStaffId || null,
     })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
@@ -405,6 +408,7 @@ export default function AdminCalendar() {
         mediaUrls: form.mediaUrls,
         mediaPublicIds: form.mediaPublicIds,
         driveUrl: isSafeHttpUrl((form.driveUrl || '').trim()) ? form.driveUrl.trim() : '',
+        assignedToStaffId: form.assignedToStaffId || null,
         realPublish: form.realPublish,
         // เก็บเฉพาะแหล่งที่มี url จริงและเป็น http(s) — ค่านี้ไปโผล่ใน href บนการ์ด ต้องกัน javascript: ไว้
         // ชื่อว่างให้ใช้ url เป็นชื่อแทน จะได้ไม่มีลิงก์ที่กดได้แต่ไม่รู้ว่าไปไหน
@@ -533,6 +537,11 @@ export default function AdminCalendar() {
                     </label>
                   </div>
                   <div className="admin-cal-form-row">
+                    {/* ผู้รับผิดชอบ — เก็บเป็น uid ไม่ใช่ชื่อที่พิมพ์เอง เพื่อให้หน้า "งานของฉัน" กรองได้จริง */}
+                    <AssigneePicker
+                      value={form.assignedToStaffId}
+                      onChange={(uid) => setForm((f) => ({ ...f, assignedToStaffId: uid }))}
+                    />
                     <label>ชนิดคอนเทนต์
                       <select value={form.contentType} onChange={(e) => setForm({ ...form, contentType: e.target.value })}>
                         {Object.entries(CONTENT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

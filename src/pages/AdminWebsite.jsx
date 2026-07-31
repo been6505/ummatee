@@ -444,257 +444,265 @@ export default function AdminWebsite() {
     <main className="admin-dash">
       <AdminNav />
       <div className="admin-wrap">
-        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 640 }}>
-          <div className="admin-card-head" style={{ marginBottom: 18 }}>
-            <h4><FontAwesomeIcon icon={faBars} /> เมนู (Nav) หน้าเว็บ public</h4>
-          </div>
-          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
-            ปิดรายการที่ไม่ต้องการให้แสดงในเมนูหลักของเว็บ (ไม่กระทบ URL เดิม เข้าตรงได้เหมือนเดิม แค่ซ่อนจากเมนู) — มีผลทันทีเมื่อกดปิด/เปิด
-          </p>
-          {navLoading ? <ListSkeleton rows={2} /> : (
-            <div className="admin-table-wrap">
-              <table className="admin-table admin-nav-vis-table">
-                <thead>
-                  <tr>
-                    <th>รายการ</th>
-                    <th style={{ textAlign: 'center' }}>ไม่แสดง</th>
-                    <th style={{ textAlign: 'center' }}>แสดง</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {NAV_MENU_ITEMS.map((item) => {
-                    const shown = visibility?.[item.key] !== false
-                    return (
-                      <tr key={item.key}>
-                        <td>{item.label}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button" disabled={navSaving}
-                            onClick={() => setNavItem(item.key, false)}
-                            className="admin-btn admin-nav-vis-btn"
-                            aria-label="ซ่อน" title="ซ่อนจากเมนู"
-                            style={!shown
-                              ? { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }
-                              : { opacity: .4 }}
-                          ><FontAwesomeIcon icon={faEyeSlash} /></button>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            type="button" disabled={navSaving}
-                            onClick={() => setNavItem(item.key, true)}
-                            className="admin-btn admin-nav-vis-btn"
-                            aria-label="แสดง" title="แสดงในเมนู"
-                            style={shown
-                              ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
-                              : { opacity: .4 }}
-                          ><FontAwesomeIcon icon={faEye} /></button>
-                        </td>
+        {/* สองคอลัมน์: ซ้ายคือการตั้งค่าโครงเว็บ (เมนู/ประกาศ/ข้อความท้ายเว็บ)
+            ขวาคือ CMS การ์ดหน้าแรก ซึ่งฟอร์มต่อการ์ดกว้างกว่ามาก จึงให้คอลัมน์นี้กว้างกว่า */}
+        <div className="aw-cols">
+          <div className="aw-col">
+            <div className="admin-card" style={{ marginBottom: 28 }}>
+              <div className="admin-card-head" style={{ marginBottom: 18 }}>
+                <h4><FontAwesomeIcon icon={faBars} /> เมนู (Nav) หน้าเว็บ public</h4>
+              </div>
+              <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+                ปิดรายการที่ไม่ต้องการให้แสดงในเมนูหลักของเว็บ (ไม่กระทบ URL เดิม เข้าตรงได้เหมือนเดิม แค่ซ่อนจากเมนู) — มีผลทันทีเมื่อกดปิด/เปิด
+              </p>
+              {navLoading ? <ListSkeleton rows={2} /> : (
+                <div className="admin-table-wrap">
+                  <table className="admin-table admin-nav-vis-table">
+                    <thead>
+                      <tr>
+                        <th>รายการ</th>
+                        <th style={{ textAlign: 'center' }}>ไม่แสดง</th>
+                        <th style={{ textAlign: 'center' }}>แสดง</th>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {navSaved && <p style={{ color: '#2e7d32', fontSize: '.85rem', marginTop: 12 }}>บันทึกแล้ว ✓</p>}
-        </div>
-
-        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 640 }}>
-          <div className="admin-card-head" style={{ marginBottom: 18 }}>
-            <h4><FontAwesomeIcon icon={faGlobe} /> จัดการเว็บ — แบนเนอร์/ประกาศหน้าแรก</h4>
-          </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, fontWeight: 600 }}>
-            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} style={{ width: 18, height: 18 }} />
-            เปิดแสดงแบนเนอร์บนหน้าแรก
-          </label>
-
-          <div className="admin-form-group" style={{ marginBottom: 14 }}>
-            <label>ข้อความประกาศ</label>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              placeholder="เช่น 📢 เปิดจองงาน Iftar For Gaza 2026 แล้ววันนี้!"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(27,94,54,.2)', fontFamily: 'inherit', fontSize: '.95rem' }}
-            />
-          </div>
-
-          <div className="admin-form-grid-3col" style={{ marginBottom: 18 }}>
-            <div className="admin-form-group">
-              <label>ลิงก์ (ไม่บังคับ)</label>
-              <input type="text" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/event/iftar-for-gaza" />
-            </div>
-            <div className="admin-form-group">
-              <label>ข้อความลิงก์</label>
-              <input type="text" value={linkText} onChange={(e) => setLinkText(e.target.value)} placeholder="ดูเพิ่มเติม" />
-            </div>
-          </div>
-
-          {text && (
-            <div className="site-announcement" style={{ borderRadius: 10, marginBottom: 18, position: 'relative' }}>
-              <span className="site-announcement-text">
-                {text}
-                {linkUrl && <span className="site-announcement-link">{linkText || 'ดูเพิ่มเติม'}</span>}
-              </span>
-            </div>
-          )}
-
-          <button className="admin-btn-primary" onClick={save} disabled={saving || annLoading}>
-            <FontAwesomeIcon icon={saved ? faCheck : faBullhorn} /> {saved ? 'บันทึกแล้ว ✓' : saving ? 'กำลังบันทึก…' : 'บันทึกประกาศ'}
-          </button>
-        </div>
-
-        {/* ── การ์ด Hero Feed หน้าแรก (CMS) ── */}
-        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 760 }}>
-          <div className="admin-card-head" style={{ marginBottom: 12 }}>
-            <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดหน้าแรก (Hero Feed)</h4>
-          </div>
-          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
-            จัดการการ์ดกิจกรรม/ประชาสัมพันธ์บนหน้าแรกได้เอง — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดหน้าแรก"
-            {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
-          </p>
-
-          {cardsLoading || cards === null ? <ListSkeleton /> : (
-            <>
-              {cards.map((card, i) => (
-                <CardEditor
-                  key={i} card={card} index={i} total={cards.length}
-                  onChange={(next) => updateCard(i, next)}
-                  onMove={moveCard}
-                  onRemove={removeCard}
-                />
-              ))}
-              {cards.length === 0 && (
-                <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
-                  ⚠️ ไม่มีการ์ดเลย — หน้าแรกจะไม่แสดงส่วนการ์ดกิจกรรม
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-                <button type="button" className="admin-btn" onClick={addCard}>
-                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ด
-                </button>
-                <button type="button" className="admin-btn" onClick={addDefaults}>
-                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดมาตรฐาน (3 ใบ)
-                </button>
-                <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || (!cardsDirty && savedCards !== null)}>
-                  <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" (CMS) ── */}
-        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 760 }}>
-          <div className="admin-card-head" style={{ marginBottom: 12 }}>
-            <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)</h4>
-          </div>
-          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
-            การ์ดสี 3 ใบใต้หัวข้อ "เริ่มต้นทำความดีได้ตั้งแต่วันนี้" — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดทางลัด"
-            {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
-          </p>
-
-          {focusLoading || focusCards === null ? <ListSkeleton /> : (
-            <>
-              {focusCards.map((card, i) => (
-                <FocusCardEditor
-                  key={i} card={card} index={i} total={focusCards.length}
-                  onChange={(next) => updateFocusCard(i, next)}
-                  onMove={moveFocusCard}
-                  onRemove={removeFocusCard}
-                />
-              ))}
-              {focusCards.length === 0 && (
-                <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
-                  ⚠️ ไม่มีการ์ดทางลัดเลย — หน้าแรกจะไม่แสดงส่วนนี้
-                </p>
-              )}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-                <button type="button" className="admin-btn" onClick={addFocusCard}>
-                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดทางลัด
-                </button>
-                <button type="button" className="admin-btn" onClick={addFocusDefaults}>
-                  <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดตั้งต้น (3 ใบ)
-                </button>
-                <button className="admin-btn-primary" onClick={saveFocus} disabled={focusSaving || (!focusDirty && savedFocusCards !== null)}>
-                  <FontAwesomeIcon icon={focusSaved ? faCheck : faNewspaper} /> {focusSaved ? 'บันทึกแล้ว ✓' : focusSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดทางลัด'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* ── เนื้อหาเว็บทั่วไป (CMS แบบ key-value) ── */}
-        <div className="admin-card" style={{ marginBottom: 28, maxWidth: 760 }}>
-          <div className="admin-card-head" style={{ marginBottom: 12 }}>
-            <h4><FontAwesomeIcon icon={faPenToSquare} /> เนื้อหาเว็บ (ท้ายเว็บ + ข้อความอื่นๆ)</h4>
-          </div>
-          <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
-            แก้ข้อความติดต่อ/คำโปรยท้ายเว็บได้เอง โดยไม่ต้องให้ dev แก้โค้ด — ช่องไหนเว้นว่างจะใช้ข้อความเดิมของเว็บแทน
-            ด้านล่างสุดยังเพิ่มฟิลด์เนื้อหาอิสระของตัวเองได้ (key ใหม่) เผื่อใช้ในหน้าอื่นภายหลัง
-          </p>
-          {siteContentLoading || siteContent === null ? <ListSkeleton /> : (
-            <>
-              <div className="admin-form-grid admin-form-grid-2col">
-                {FOOTER_CONTENT_KEYS.map((f) => (
-                  <label key={f.key}>{f.label}
-                    <input
-                      type="text"
-                      value={siteContent[f.key] || ''}
-                      placeholder={f.placeholder}
-                      onChange={(e) => setKnownField(f.key, e.target.value)}
-                    />
-                  </label>
-                ))}
-              </div>
-
-              <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
-                ฟิลด์เนื้อหาอิสระ (key ที่ตั้งเอง)
-              </div>
-              {customRows.map((row, i) => (
-                <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                  <input
-                    type="text" placeholder="key เช่น aboutPageTitle" value={row.key}
-                    onChange={(e) => updateCustomRow(i, 'key', e.target.value)}
-                    style={{ flex: '0 0 220px' }}
-                  />
-                  <input
-                    type="text" placeholder="ข้อความ" value={row.value}
-                    onChange={(e) => updateCustomRow(i, 'value', e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <button type="button" className="admin-btn-danger" onClick={() => removeCustomRow(i)} aria-label="ลบฟิลด์นี้" title="ลบ">
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
+                    </thead>
+                    <tbody>
+                      {NAV_MENU_ITEMS.map((item) => {
+                        const shown = visibility?.[item.key] !== false
+                        return (
+                          <tr key={item.key}>
+                            <td>{item.label}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button" disabled={navSaving}
+                                onClick={() => setNavItem(item.key, false)}
+                                className="admin-btn admin-nav-vis-btn"
+                                aria-label="ซ่อน" title="ซ่อนจากเมนู"
+                                style={!shown
+                                  ? { background: '#fbe9e7', color: '#c62828', borderColor: '#ffab91' }
+                                  : { opacity: .4 }}
+                              ><FontAwesomeIcon icon={faEyeSlash} /></button>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button" disabled={navSaving}
+                                onClick={() => setNavItem(item.key, true)}
+                                className="admin-btn admin-nav-vis-btn"
+                                aria-label="แสดง" title="แสดงในเมนู"
+                                style={shown
+                                  ? { background: '#e8f5e9', color: '#2e7d32', borderColor: '#a5d6a7' }
+                                  : { opacity: .4 }}
+                              ><FontAwesomeIcon icon={faEye} /></button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
+              )}
+              {navSaved && <p style={{ color: '#2e7d32', fontSize: '.85rem', marginTop: 12 }}>บันทึกแล้ว ✓</p>}
+            </div>
 
-              <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
-                ฟิลด์รูปภาพ (key ที่ตั้งเอง)
+            <div className="admin-card" style={{ marginBottom: 28 }}>
+              <div className="admin-card-head" style={{ marginBottom: 18 }}>
+                <h4><FontAwesomeIcon icon={faGlobe} /> จัดการเว็บ — แบนเนอร์/ประกาศหน้าแรก</h4>
               </div>
-              {customImageRows.map((row, i) => (
-                <ImageFieldRow
-                  key={i} row={row}
-                  onKeyChange={(k) => updateCustomImageKey(i, k)}
-                  onUrlChange={(url) => setCustomImageUrl(i, url)}
-                  onRemove={() => removeCustomImageRow(i)}
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, fontWeight: 600 }}>
+                <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} style={{ width: 18, height: 18 }} />
+                เปิดแสดงแบนเนอร์บนหน้าแรก
+              </label>
+
+              <div className="admin-form-group" style={{ marginBottom: 14 }}>
+                <label>ข้อความประกาศ</label>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  rows={3}
+                  placeholder="เช่น 📢 เปิดจองงาน Iftar For Gaza 2026 แล้ววันนี้!"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(27,94,54,.2)', fontFamily: 'inherit', fontSize: '.95rem' }}
                 />
-              ))}
-
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-                <button type="button" className="admin-btn" onClick={addCustomRow}>
-                  <FontAwesomeIcon icon={faPlus} /> เพิ่มฟิลด์เนื้อหา
-                </button>
-                <button type="button" className="admin-btn" onClick={addCustomImageRow}>
-                  <FontAwesomeIcon icon={faImage} /> เพิ่มฟิลด์รูปภาพ
-                </button>
-                <button className="admin-btn-primary" onClick={saveSiteContentAll} disabled={contentSaving || !contentDirty}>
-                  <FontAwesomeIcon icon={contentSaved ? faCheck : faPenToSquare} /> {contentSaved ? 'บันทึกแล้ว ✓' : contentSaving ? 'กำลังบันทึก…' : 'บันทึกเนื้อหาเว็บ'}
-                </button>
               </div>
-            </>
-          )}
+
+              <div className="admin-form-grid-3col" style={{ marginBottom: 18 }}>
+                <div className="admin-form-group">
+                  <label>ลิงก์ (ไม่บังคับ)</label>
+                  <input type="text" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/event/iftar-for-gaza" />
+                </div>
+                <div className="admin-form-group">
+                  <label>ข้อความลิงก์</label>
+                  <input type="text" value={linkText} onChange={(e) => setLinkText(e.target.value)} placeholder="ดูเพิ่มเติม" />
+                </div>
+              </div>
+
+              {text && (
+                <div className="site-announcement" style={{ borderRadius: 10, marginBottom: 18, position: 'relative' }}>
+                  <span className="site-announcement-text">
+                    {text}
+                    {linkUrl && <span className="site-announcement-link">{linkText || 'ดูเพิ่มเติม'}</span>}
+                  </span>
+                </div>
+              )}
+
+              <button className="admin-btn-primary" onClick={save} disabled={saving || annLoading}>
+                <FontAwesomeIcon icon={saved ? faCheck : faBullhorn} /> {saved ? 'บันทึกแล้ว ✓' : saving ? 'กำลังบันทึก…' : 'บันทึกประกาศ'}
+              </button>
+            </div>
+
+            {/* ── เนื้อหาเว็บทั่วไป (CMS แบบ key-value) ── */}
+            <div className="admin-card" style={{ marginBottom: 28 }}>
+              <div className="admin-card-head" style={{ marginBottom: 12 }}>
+                <h4><FontAwesomeIcon icon={faPenToSquare} /> เนื้อหาเว็บ (ท้ายเว็บ + ข้อความอื่นๆ)</h4>
+              </div>
+              <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+                แก้ข้อความติดต่อ/คำโปรยท้ายเว็บได้เอง โดยไม่ต้องให้ dev แก้โค้ด — ช่องไหนเว้นว่างจะใช้ข้อความเดิมของเว็บแทน
+                ด้านล่างสุดยังเพิ่มฟิลด์เนื้อหาอิสระของตัวเองได้ (key ใหม่) เผื่อใช้ในหน้าอื่นภายหลัง
+              </p>
+              {siteContentLoading || siteContent === null ? <ListSkeleton /> : (
+                <>
+                  <div className="admin-form-grid admin-form-grid-2col">
+                    {FOOTER_CONTENT_KEYS.map((f) => (
+                      <label key={f.key}>{f.label}
+                        <input
+                          type="text"
+                          value={siteContent[f.key] || ''}
+                          placeholder={f.placeholder}
+                          onChange={(e) => setKnownField(f.key, e.target.value)}
+                        />
+                      </label>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
+                    ฟิลด์เนื้อหาอิสระ (key ที่ตั้งเอง)
+                  </div>
+                  {customRows.map((row, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                      <input
+                        type="text" placeholder="key เช่น aboutPageTitle" value={row.key}
+                        onChange={(e) => updateCustomRow(i, 'key', e.target.value)}
+                        style={{ flex: '0 0 220px' }}
+                      />
+                      <input
+                        type="text" placeholder="ข้อความ" value={row.value}
+                        onChange={(e) => updateCustomRow(i, 'value', e.target.value)}
+                        style={{ flex: 1 }}
+                      />
+                      <button type="button" className="admin-btn-danger" onClick={() => removeCustomRow(i)} aria-label="ลบฟิลด์นี้" title="ลบ">
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <div style={{ marginTop: 20, fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>
+                    ฟิลด์รูปภาพ (key ที่ตั้งเอง)
+                  </div>
+                  {customImageRows.map((row, i) => (
+                    <ImageFieldRow
+                      key={i} row={row}
+                      onKeyChange={(k) => updateCustomImageKey(i, k)}
+                      onUrlChange={(url) => setCustomImageUrl(i, url)}
+                      onRemove={() => removeCustomImageRow(i)}
+                    />
+                  ))}
+
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                    <button type="button" className="admin-btn" onClick={addCustomRow}>
+                      <FontAwesomeIcon icon={faPlus} /> เพิ่มฟิลด์เนื้อหา
+                    </button>
+                    <button type="button" className="admin-btn" onClick={addCustomImageRow}>
+                      <FontAwesomeIcon icon={faImage} /> เพิ่มฟิลด์รูปภาพ
+                    </button>
+                    <button className="admin-btn-primary" onClick={saveSiteContentAll} disabled={contentSaving || !contentDirty}>
+                      <FontAwesomeIcon icon={contentSaved ? faCheck : faPenToSquare} /> {contentSaved ? 'บันทึกแล้ว ✓' : contentSaving ? 'กำลังบันทึก…' : 'บันทึกเนื้อหาเว็บ'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="aw-col aw-col-wide">
+            {/* ── การ์ด Hero Feed หน้าแรก (CMS) ── */}
+            <div className="admin-card" style={{ marginBottom: 28 }}>
+              <div className="admin-card-head" style={{ marginBottom: 12 }}>
+                <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดหน้าแรก (Hero Feed)</h4>
+              </div>
+              <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+                จัดการการ์ดกิจกรรม/ประชาสัมพันธ์บนหน้าแรกได้เอง — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดหน้าแรก"
+                {savedCards === null && !cardsLoading && ' (ตอนนี้แสดงการ์ดมาตรฐาน 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
+              </p>
+
+              {cardsLoading || cards === null ? <ListSkeleton /> : (
+                <>
+                  {cards.map((card, i) => (
+                    <CardEditor
+                      key={i} card={card} index={i} total={cards.length}
+                      onChange={(next) => updateCard(i, next)}
+                      onMove={moveCard}
+                      onRemove={removeCard}
+                    />
+                  ))}
+                  {cards.length === 0 && (
+                    <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
+                      ⚠️ ไม่มีการ์ดเลย — หน้าแรกจะไม่แสดงส่วนการ์ดกิจกรรม
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                    <button type="button" className="admin-btn" onClick={addCard}>
+                      <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ด
+                    </button>
+                    <button type="button" className="admin-btn" onClick={addDefaults}>
+                      <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดมาตรฐาน (3 ใบ)
+                    </button>
+                    <button className="admin-btn-primary" onClick={saveCards} disabled={cardsSaving || (!cardsDirty && savedCards !== null)}>
+                      <FontAwesomeIcon icon={cardsSaved ? faCheck : faNewspaper} /> {cardsSaved ? 'บันทึกแล้ว ✓' : cardsSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดหน้าแรก'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ── การ์ดทางลัด 3 ใบใต้หัวข้อ "สองหนทางแห่งการให้" (CMS) ── */}
+            <div className="admin-card" style={{ marginBottom: 28 }}>
+              <div className="admin-card-head" style={{ marginBottom: 12 }}>
+                <h4><FontAwesomeIcon icon={faNewspaper} /> การ์ดทางลัดหน้าแรก (Iftar / บริจาค / อาสาสมัคร)</h4>
+              </div>
+              <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 16 }}>
+                การ์ดสี 3 ใบใต้หัวข้อ "เริ่มต้นทำความดีได้ตั้งแต่วันนี้" — เพิ่ม/แก้/สลับลำดับ/ซ่อน แล้วกด "บันทึกการ์ดทางลัด"
+                {savedFocusCards === null && !focusLoading && ' (ตอนนี้แสดงการ์ดตั้งต้น 3 ใบเดิม — แก้แล้วกดบันทึกเพื่อเริ่มจัดการเอง)'}
+              </p>
+
+              {focusLoading || focusCards === null ? <ListSkeleton /> : (
+                <>
+                  {focusCards.map((card, i) => (
+                    <FocusCardEditor
+                      key={i} card={card} index={i} total={focusCards.length}
+                      onChange={(next) => updateFocusCard(i, next)}
+                      onMove={moveFocusCard}
+                      onRemove={removeFocusCard}
+                    />
+                  ))}
+                  {focusCards.length === 0 && (
+                    <p style={{ color: '#c62828', fontSize: '.88rem', marginBottom: 12 }}>
+                      ⚠️ ไม่มีการ์ดทางลัดเลย — หน้าแรกจะไม่แสดงส่วนนี้
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+                    <button type="button" className="admin-btn" onClick={addFocusCard}>
+                      <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดทางลัด
+                    </button>
+                    <button type="button" className="admin-btn" onClick={addFocusDefaults}>
+                      <FontAwesomeIcon icon={faPlus} /> เพิ่มการ์ดตั้งต้น (3 ใบ)
+                    </button>
+                    <button className="admin-btn-primary" onClick={saveFocus} disabled={focusSaving || (!focusDirty && savedFocusCards !== null)}>
+                      <FontAwesomeIcon icon={focusSaved ? faCheck : faNewspaper} /> {focusSaved ? 'บันทึกแล้ว ✓' : focusSaving ? 'กำลังบันทึก…' : 'บันทึกการ์ดทางลัด'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </main>

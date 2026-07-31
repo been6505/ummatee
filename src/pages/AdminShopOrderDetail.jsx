@@ -197,6 +197,17 @@ export default function AdminShopOrderDetail({ orderId }) {
               </div>
             )}
 
+            {/* ธงจากฝั่งเซิร์ฟเวอร์ (Cloud Function verifyOrderTotal) — คนละเรื่องกับกล่องเหลืองด้านล่าง
+                กล่องเหลือง = ราคาสินค้าถูกแก้ "หลัง" ลูกค้าสั่งไปแล้ว ซึ่งเป็นเรื่องปกติที่เกิดขึ้นได้
+                กล่องแดงนี้ = ยอดไม่ตรงกับราคาจริง "ตั้งแต่ตอนสร้างออเดอร์" แปลว่าไม่ได้มาจากหน้าเว็บปกติ */}
+            {order.priceMismatch && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: '.88rem' }}>
+                <strong>🚨 ออเดอร์นี้ยอดเงินไม่ผ่านการตรวจฝั่งเซิร์ฟเวอร์</strong>
+                <div style={{ marginTop: 4 }}>{order.priceMismatchReason}</div>
+                <div style={{ marginTop: 6 }}>ออเดอร์ที่สั่งผ่านหน้าเว็บตามปกติจะไม่ขึ้นข้อความนี้ — ตรวจสอบให้แน่ใจก่อนยืนยันรับเงินหรือจัดส่ง</div>
+              </div>
+            )}
+
             {priceMismatches.length > 0 && (
               <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: '.88rem' }}>
                 <strong>⚠️ ราคาในออเดอร์ไม่ตรงกับราคาสินค้าปัจจุบัน</strong> — ตรวจยอดโอนให้ดีก่อนยืนยันรับเงิน

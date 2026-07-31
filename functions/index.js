@@ -229,6 +229,11 @@ const CLOUDINARY_API_KEY = defineSecret('CLOUDINARY_API_KEY')
 const CLOUDINARY_API_SECRET = defineSecret('CLOUDINARY_API_SECRET')
 
 const SITE_URL = 'https://ummatee-app.web.app'
+// โดเมนของ Cloud Functions เอง — socialOAuthUrl ต้องประกอบ redirect_uri ให้ตรงเป๊ะกับที่
+// socialOAuthCallback อ่านจาก req.get('host') ตอนแลก code (แพลตฟอร์มเทียบ redirect_uri แบบตรงตัว
+// ทั้งขาไปและขากลับ ต่างกันตัวเดียวก็ถูกปฏิเสธ) — เดิม onRequest อ่าน host จาก request ได้เอง
+// แต่ onCall ไม่มี host ให้อ่าน จึงต้องระบุไว้ตรงนี้ และต้องแก้ถ้าย้าย region
+const FUNCTIONS_BASE_URL = 'https://us-central1-ummatee-app.cloudfunctions.net'
 const PLATFORMS = ['facebook', 'instagram', 'threads', 'youtube', 'tiktok']
 
 // ── OAuth "state" แบบเซ็นเอง (ไม่พึ่งคุกกี้ เพราะ Cloud Functions อยู่คนละ origin กับ ummatee-app.web.app
@@ -253,16 +258,8 @@ function verifyOAuthState(state, expectedPlatform) {
   return { uid }
 }
 
-// ตรวจว่าเป็นแอดมินจริง จาก Firebase ID token (ใช้ทั้งใน onRequest ที่รับ idToken แบบ query param
-// และใน onCall ที่ context.auth มาให้อยู่แล้ว)
-async function verifyAdminIdToken(idToken) {
-  const decoded = await admin.auth().verifyIdToken(idToken)
-  if (!decoded.email || !ADMIN_EMAILS.includes(decoded.email)) {
-    throw new Error('ไม่ใช่บัญชีแอดมิน')
-  }
-  return decoded
-}
-
+// ตรวจว่าเป็นแอดมินจริง — ทุกทางเข้าใช้ตัวนี้ตัวเดียว เพราะ onCall ให้ token ที่ verify แล้วมาใน
+// request.auth อยู่แล้ว (ไม่มีที่ไหนรับ ID token ดิบทาง query string อีกต่อไป)
 function requireAdminCallable(request) {
   const email = request.auth?.token?.email
   if (!request.auth || !email || !ADMIN_EMAILS.includes(email)) {
@@ -707,29 +704,27 @@ const OAUTH_PROVIDERS = { facebook: facebookProvider, instagram: instagramProvid
 
 // ══════════════════════════ HTTPS: เริ่ม/รับกลับ OAuth ══════════════════════════
 
-// GET /socialOAuthStart?platform=facebook&idToken=...
-// ต้องเป็น full-page navigation จากเบราว์เซอร์ (ไม่ใช่ fetch) เพราะปลายทางคือหน้าล็อกอินของแพลตฟอร์มนั้นจริงๆ
-exports.socialOAuthStart = onRequest(
+// คืน URL หน้าล็อกอินของแพลตฟอร์ม ให้ฝั่งเว็บพาไปเอง (window.location.href = authUrl)
+//
+// เดิมเป็น onRequest ที่รับ ?idToken=... แล้ว redirect ต่อ — ปัญหาคือ Firebase ID token ไปโผล่ใน
+// query string ซึ่งถูกเก็บไว้หลายที่ที่เราคุมไม่ได้: ประวัติเบราว์เซอร์, access log ของ Google,
+// และ Referer header ที่ถูกส่งต่อไปยังแพลตฟอร์มปลายทางตอน redirect
+// เปลี่ยนมาเป็น onCall — token เดินทางใน body ของ POST ตามโปรโตคอล callable ไม่โผล่ใน URL เลย
+//
+// URL ที่คืนไปมีแค่ client_id + redirect_uri + state ที่เซ็น HMAC ไว้ ไม่มีความลับอยู่ในนั้น
+exports.socialOAuthUrl = onCall(
   { secrets: [META_APP_ID, META_APP_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, SOCIAL_OAUTH_STATE_SECRET] },
-  async (req, res) => {
-    const platform = String(req.query.platform || '')
-    const idToken = String(req.query.idToken || '')
+  async (request) => {
+    requireAdminCallable(request)
+    const platform = String(request.data?.platform || '')
     const provider = OAUTH_PROVIDERS[platform]
-    if (!provider) { res.redirect(`${SITE_URL}/admin/calendar?social_error=unknown-platform`); return }
+    if (!provider) throw new HttpsError('invalid-argument', 'platform ไม่ถูกต้อง')
 
-    let uid
-    try {
-      const decoded = await verifyAdminIdToken(idToken)
-      uid = decoded.uid
-    } catch (e) {
-      logger.warn('socialOAuthStart: unauthorized', e)
-      res.redirect(`${SITE_URL}/admin/calendar?social_error=unauthorized`)
-      return
-    }
-
-    const redirectUri = `https://${req.get('host')}/socialOAuthCallback?platform=${platform}`
-    const state = signOAuthState(platform, uid)
-    res.redirect(provider.getAuthUrl(redirectUri, state))
+    // ต้องเป็นโดเมนเดียวกับที่ socialOAuthCallback ถูก deploy ไว้ เพราะ redirect_uri ต้องตรงเป๊ะ
+    // กับที่ลงทะเบียนไว้ในแอปของแต่ละแพลตฟอร์ม ไม่งั้นแพลตฟอร์มจะปฏิเสธตั้งแต่ขั้นแรก
+    const redirectUri = `${FUNCTIONS_BASE_URL}/socialOAuthCallback?platform=${platform}`
+    const state = signOAuthState(platform, request.auth.uid)
+    return { authUrl: provider.getAuthUrl(redirectUri, state) }
   }
 )
 
@@ -1183,3 +1178,56 @@ exports.cleanupPublishedMedia = onSchedule(
     }
   }
 )
+
+// ══════════════════════════ ตรวจยอดเงินของออเดอร์ฝั่งเซิร์ฟเวอร์ ══════════════════════════
+
+// firestore.rules ตรวจได้แค่ว่า total == itemsTotal + shippingFee "สอดคล้องกันเอง" เทียบกับราคาสินค้าจริง
+// ไม่ได้ เพราะภาษา rules ไม่มีลูป (บวกผลรวมทั้งตะกร้าไม่ได้) และ get() ได้สูงสุด 10 ครั้งต่อ 1 request
+// ขณะที่ออเดอร์หนึ่งมีได้ถึง 50 รายการ
+//
+// src/data/orders.js คิดราคาใหม่จาก Firestore ใน transaction อยู่แล้ว แต่นั่นคือโค้ดฝั่งเบราว์เซอร์ —
+// คนที่ยิง Firestore SDK ตรงๆ ไม่ผ่านหน้าเว็บ ก็ข้ามด่านนั้นแล้วสร้างออเดอร์ยอด ฿0 ได้
+//
+// ตัวนี้จึงคิดยอดใหม่อีกรอบด้วย Admin SDK หลังออเดอร์ถูกสร้าง แล้ว "ติดธง" ไว้ถ้าไม่ตรง
+// เจตนาไม่ยกเลิกอัตโนมัติ: ออเดอร์ที่มาจากหน้าเว็บจริงจะตรงเสมอ (คิดราคาใน transaction เดียวกัน)
+// ยอดไม่ตรงจึงแปลว่าผิดปกติ ให้คนตัดสินใจดีกว่า — และการยกเลิกอัตโนมัติจะกลายเป็นช่องให้ยิงเล่นจนออเดอร์จริงหาย
+exports.verifyOrderTotal = onDocumentCreated('orders/{orderId}', async (event) => {
+  const order = event.data?.data()
+  if (!order || !Array.isArray(order.items) || order.items.length === 0) return
+
+  const ids = [...new Set(order.items.map((it) => it.id).filter(Boolean))]
+  if (ids.length !== order.items.length) {
+    // รายการเดียวกันซ้ำหลายบรรทัดก็คิดรวมได้ปกติ — ที่กันคือกรณีไม่มี id ให้ไปหาสินค้าเลย
+    if (order.items.some((it) => !it.id)) {
+      await flagOrder(event.data.ref, 'มีรายการที่ไม่มีรหัสสินค้า')
+      return
+    }
+  }
+
+  const snaps = await db.getAll(...ids.map((id) => db.collection('products').doc(id)))
+  const priceById = {}
+  for (const snap of snaps) {
+    if (!snap.exists) { await flagOrder(event.data.ref, `ไม่พบสินค้า ${snap.id}`); return }
+    const p = snap.data()
+    // ต้องตรงกับ effectivePrice() ใน src/data/pricing.js — ราคาส่วนลดถ้าถูกกว่าราคาเต็ม ไม่งั้นราคาเต็ม
+    priceById[snap.id] = (p.discountPrice != null && p.discountPrice < p.price) ? p.discountPrice : (p.price || 0)
+  }
+
+  const expected = order.items.reduce((sum, it) => sum + priceById[it.id] * (Number(it.qty) || 0), 0)
+  const expectedTotal = Math.round(expected * 100) / 100
+  const claimed = Math.round(Number(order.itemsTotal) * 100) / 100
+
+  if (expectedTotal !== claimed) {
+    logger.warn(`verifyOrderTotal: ${order.orderCode} ยอดไม่ตรง — แจ้งมา ${claimed} ควรเป็น ${expectedTotal}`)
+    await flagOrder(event.data.ref, `ยอดสินค้าไม่ตรงกับราคาจริง (แจ้งมา ฿${claimed} ควรเป็น ฿${expectedTotal})`)
+  }
+})
+
+// ติดธงไว้บนออเดอร์ให้หน้าแอดมินขึ้นคำเตือนก่อนกดยืนยันการชำระเงิน
+async function flagOrder(ref, reason) {
+  await ref.update({
+    priceMismatch: true,
+    priceMismatchReason: reason,
+    priceMismatchAt: admin.firestore.FieldValue.serverTimestamp(),
+  })
+}

@@ -28,12 +28,23 @@ export function notifyLineOrderStatus(order, event, extra) {
 }
 
 // แจ้งเตือนแอดมิน (อีเมลเสมอ + LINE ถ้าตั้งค่าแล้ว) — best-effort ไม่กระทบ flow ลูกค้า
+//
+// ยังกลืน error ไม่ให้กระทบการสั่งซื้อ แต่ "บอกใน console" ด้วย — เดิมเงียบสนิท (.catch(() => {}))
+// จึงไม่มีใครรู้เลยว่าอีเมลแจ้งออเดอร์ไม่เคยถูกส่ง ถ้า Apps Script ยังไม่ได้ deploy หรือ deploy ผิดเวอร์ชัน
+// (Apps Script ตอบ 200 พร้อมหน้า HTML ได้ทั้งที่ทำงานไม่สำเร็จ จึงเช็ค JSON ที่ควรได้กลับมาด้วย)
 export function notifyAdmin(subject, message) {
   fetchWithTimeout(VOLUNTEER_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'adminNotify', subject, message }),
-  }).catch(() => {})
+  })
+    .then(async (res) => {
+      const body = await res.text().catch(() => '')
+      if (!res.ok || !body.trim().startsWith('{')) {
+        console.warn(`[notifyAdmin] ส่งแจ้งเตือนไม่สำเร็จ (HTTP ${res.status}) — ตรวจการ deploy ของ Apps Script`, { subject })
+      }
+    })
+    .catch((e) => console.warn('[notifyAdmin] ส่งแจ้งเตือนไม่สำเร็จ:', e?.message || e, { subject }))
 }
 
 export function notifyAdminNewOrder(orderCode, total, customer, items) {

@@ -4,6 +4,7 @@ import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'fireb
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AssigneePicker from '../components/AssigneePicker.jsx'
+import CommentThread from '../components/CommentThread.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -690,6 +691,10 @@ export default function AdminCalendar() {
                     {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
                     {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
                   </div>
+
+                  {/* มีเฉพาะตอนแก้โพสต์ที่บันทึกแล้ว — โพสต์ใหม่ยังไม่มี id ให้ผูกคอมเมนต์
+                      (ถ้าให้พิมพ์ก่อนบันทึก คอมเมนต์จะไม่รู้ว่าจะไปเกาะกับอะไร) */}
+                  {editId && <CommentThread entityType="contentPost" entityId={editId} title="คุยเรื่องโพสต์นี้" />}
                   </div>
                   {withCaption && captionField}
                 </div>

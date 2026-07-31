@@ -525,6 +525,26 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // comments/{id} — คอมเมนต์คุยงาน ผูกกับชิ้นงานด้วย (entityType, entityId)
+    //
+    // ต่างจาก auditLog ที่ระบบเขียนเองและลบไม่ได้ — อันนี้คนพิมพ์เอง ลบของตัวเองได้
+    //
+    // บังคับ authorUid == uid ผู้เขียนตอนสร้าง ไม่ให้ปลอมเป็นคนอื่น (ถ้าไม่บังคับ ใครก็เขียน
+    // คอมเมนต์ในนามหัวหน้าทีมได้ ซึ่งเป็นข้อความที่คนอื่นเอาไปใช้ตัดสินใจทำงานจริง)
+    // แก้ไขไม่ได้เลย ลบได้อย่างเดียว — คอมเมนต์ที่แก้ย้อนหลังได้ทำให้บันทึกการตกลงงานเชื่อถือไม่ได้
+    match /comments/{id} {
+      allow read: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']);
+      allow create: if (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']))
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.entityType is string
+        && request.resource.data.entityId is string;
+      allow update: if false;
+      allow delete: if isFullAdmin() || resource.data.authorUid == request.auth.uid;
+    }
+
     // staffDirectory/{uid} — สมุดรายชื่อทีมแบบย่อ ไว้ให้ช่อง "ผู้รับผิดชอบ" เลือกคนได้
     //
     // ทำไมต้องมีอีก collection ทั้งที่มี staff/ อยู่แล้ว: staff/ อ่านได้เฉพาะ doc ของตัวเองกับ super admin

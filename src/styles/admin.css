@@ -656,6 +656,24 @@ a.attach-name:hover{text-decoration:underline}
    grid-auto-flow:column + grid-auto-columns:minmax(0,1fr) = ทุกชิปแบ่งความกว้างเท่ากันในแถวเดียว
    โดยไม่ต้องระบุจำนวนคอลัมน์ ⇒ เพิ่ม/ลดสถานะใน contentStatus.js แล้วยังอยู่บรรทัดเดียวเอง
    ข้อความยาว ("กำลังดำเนินงาน") ตัดบรรทัดในชิปตัวเอง ชิปทุกอันสูงเท่ากันเพราะ stretch ตามแถว */
+/* ── กล่องคุยงาน (CommentThread) — ใช้ซ้ำได้ทุกที่ที่มีชิ้นงาน ── */
+.cmt{border-top:1px solid #eef2ef;margin-top:14px;padding-top:12px}
+.cmt-head{font-size:.85rem;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cmt-count{background:#eef2ef;border-radius:99px;padding:1px 8px;font-size:.72rem}
+.cmt-empty{font-size:.82rem;color:var(--ink-soft);opacity:.8;padding:4px 0 10px}
+/* จำกัดความสูงแล้วเลื่อนในตัวเอง — งานที่คุยกันยาวไม่ควรดันฟอร์มด้านล่างหายไปจากจอ */
+.cmt-list{list-style:none;margin:0 0 10px;padding:0;max-height:280px;overflow-y:auto;overscroll-behavior:contain}
+.cmt-list li{padding:8px 0;border-bottom:1px solid #f3f6f4}
+.cmt-meta{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--ink-soft);margin-bottom:3px}
+.cmt-meta strong{color:var(--green-deep,#166534);font-size:.8rem}
+.cmt-meta button{margin-left:auto;background:none;border:none;color:#c62828;cursor:pointer;padding:2px 6px;font-size:.75rem;opacity:.6}
+.cmt-meta button:hover{opacity:1}
+/* คงการขึ้นบรรทัดที่ผู้ใช้พิมพ์ และตัดคำยาว (เช่นลิงก์) ไม่ให้ดันกล่องกว้างเกิน */
+.cmt-text{font-size:.88rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmt-input{display:flex;gap:8px;align-items:flex-end}
+.cmt-input textarea{flex:1;min-width:0;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;resize:vertical}
+.cmt-input button{flex-shrink:0;white-space:nowrap}
+
 /* ── หน้าร้านค้า B2UM ── */
 .b2um-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
 .b2um-toolbar input[type=search]{flex:1 1 240px;min-width:0;padding:9px 12px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.95rem}
@@ -858,3 +876,7 @@ a.attach-name:hover{text-decoration:underline}
 .idea-link-dot:hover,.idea-link-dot.dragging{background:var(--green-mid);transform:translateY(-50%) scale(1.25)}
 /* เส้นระหว่างลาก — เส้นประให้รู้ว่ายังไม่ถูกบันทึก ต่างจากเส้นจริงที่เป็นเส้นทึบ */
 .idea-edge-dragging{stroke:var(--green-deep);stroke-width:2.5;stroke-dasharray:6 5;pointer-events:none}
+
+/* ปุ่มเปิด/ปิดกล่องคุยในการ์ดบอร์ด — เปิดทีละใบ (ดูคอมเมนต์ openChatCardId ใน AdminBoard.jsx) */
+.admin-board-chat-toggle{width:100%;padding:7px 10px;border-radius:8px;border:1px dashed rgba(46,125,82,.35);background:#f7faf8;color:var(--green-deep,#166534);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.admin-board-chat-toggle:hover{background:#eef7f1}

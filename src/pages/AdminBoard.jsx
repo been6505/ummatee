@@ -3,6 +3,7 @@ import IdeaMap from '../components/IdeaMap.jsx'
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, where, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
+import CommentThread from '../components/CommentThread.jsx'
 import { useStaffDirectory, memberLabel, findMember } from '../data/staffDirectory.js'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
@@ -29,6 +30,9 @@ export default function AdminBoard() {
   const [dragCardId, setDragCardId] = useState(null)
   const [tab, setTab] = useState('board')
   const { members: directory } = useStaffDirectory()
+  // เปิดกล่องคุยได้ทีละใบ — ถ้า mount CommentThread ไว้ทุกการ์ด แต่ละใบจะเปิด listener ของตัวเอง
+  // บอร์ดที่มีการ์ดหลายสิบใบก็เท่ากับ query ค้างไว้หลายสิบชุดพร้อมกันตั้งแต่เปิดหน้า
+  const [openChatCardId, setOpenChatCardId] = useState(null)
 
   useEffect(() => {
     // ตัด orderBy('position') ออก — where + orderBy คนละฟิลด์ต้องมี composite index ใน Firestore ซึ่งไม่มี
@@ -195,6 +199,17 @@ export default function AdminBoard() {
                               {campaigns.map((camp) => <option key={camp.id} value={camp.id}>{camp.name}</option>)}
                             </select>
                           </label>
+
+                          <button
+                            type="button"
+                            className="admin-board-chat-toggle"
+                            onClick={() => setOpenChatCardId((id) => (id === c.id ? null : c.id))}
+                          >
+                            {openChatCardId === c.id ? 'ปิดการสนทนา' : 'คุยเรื่องงานนี้'}
+                          </button>
+                          {openChatCardId === c.id && (
+                            <CommentThread entityType="boardCard" entityId={c.id} title="การสนทนา" />
+                          )}
                         </div>
                       ))}
                     </div>

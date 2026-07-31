@@ -8,6 +8,7 @@ import { isFullAdminEmail } from '../useAdminRole.js'
 import { writeAuditLog } from '../lib/auditLog.js'
 import ExportButtons from '../components/ExportButtons.jsx'
 import ListSkeleton from '../components/ListSkeleton.jsx'
+import CommentThread from '../components/CommentThread.jsx'
 import { B2UM_STATUS, B2UM_STATUS_COLOR, B2UM_STATUS_ORDER, normB2umStatus } from '../data/b2umStatus.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faStore, faPhone } from '@fortawesome/free-solid-svg-icons'
@@ -206,6 +207,10 @@ export default function AdminB2um() {
                     {savingId === r.id ? 'กำลังบันทึก…' : 'บันทึก'}
                   </button>
                 )}
+
+                {/* "บันทึกภายใน" ด้านบนคือสรุปสถานะล่าสุดของร้าน (เขียนทับได้)
+                    ส่วนนี่คือบทสนทนาที่ต่อกันเป็นลำดับ ใครพูดอะไรเมื่อไหร่ — คนละหน้าที่กัน */}
+                <CommentThread entityType="b2umReg" entityId={r.id} title="คุยเรื่องร้านนี้" />
               </div>
             ))}
           </div>

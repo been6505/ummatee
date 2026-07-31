@@ -10,7 +10,7 @@ import InAppBrowserWarning from '../components/InAppBrowserWarning.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCartShopping, faCheck, faUserPen, faComments } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faLine } from '@fortawesome/free-brands-svg-icons'
-import { THAILAND_PROVINCES, getAmphoes, getDistricts, getZipcode, isBangkok } from '../data/thailandAddress.js'
+import { useThaiAddress, isBangkok } from '../data/thailandAddress.js'
 
 // เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — เหมือนหน้าอื่นๆ ในร้าน
 const openChat = () => window.dispatchEvent(new Event('ummatee-open-chat'))
@@ -67,6 +67,8 @@ export default function ShopCheckout() {
   })
   const [registered, setRegistered] = useState(() => !SOCIAL_LOGIN_ENABLED || !!savedCustomer())
   const [infoConfirmed, setInfoConfirmed] = useState(false)
+  // ฐานข้อมูลที่อยู่โหลดแยกทีหลัง (ดู thailandAddress.js) — หน้าเช็คเอาท์จึงขึ้นทันทีไม่ต้องรอ
+  const { ready: addressReady, provinces, getAmphoes, getDistricts, getZipcode } = useThaiAddress()
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [signingIn, setSigningIn] = useState('')
@@ -259,9 +261,9 @@ export default function ShopCheckout() {
                 <textarea rows="3" value={form.address} onChange={set('address')} disabled={infoConfirmed} placeholder="บ้านเลขที่ ถนน ซอย" />
               </label>
               <label style={{ gridColumn: '1 / -1' }}>จังหวัด
-                <select value={form.province} onChange={setProvince} disabled={infoConfirmed}>
-                  <option value="">เลือกจังหวัด</option>
-                  {THAILAND_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                <select value={form.province} onChange={setProvince} disabled={infoConfirmed || !addressReady}>
+                  <option value="">{addressReady ? 'เลือกจังหวัด' : 'กำลังโหลดรายชื่อจังหวัด…'}</option>
+                  {provinces.map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </label>
               <label>{isBangkok(form.province) ? 'เขต' : 'อำเภอ'}

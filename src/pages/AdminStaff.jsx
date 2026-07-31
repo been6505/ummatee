@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
-import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
-import { isSuperAdminEmail } from '../useAdminRole.js'
 import { writeAuditLog } from '../lib/auditLog.js'
 import ListSkeleton from '../components/ListSkeleton.jsx'
+import SuperAdminOnly from '../components/SuperAdminOnly.jsx'
 
 // จัดการบัญชี staff (/admin/staff) — เฉพาะ admin เท่านั้น เปลี่ยน role/active ได้
 // ไม่มีปุ่ม "เพิ่ม staff" ตรงนี้ เพราะบัญชีสมัครตัวเองอัตโนมัติตอนล็อกอินครั้งแรก แต่ได้ role 'pending'
@@ -16,25 +14,6 @@ const ROLE_LABEL = { pending: 'รออนุมัติ (ยังเข้�
 
 // เข้าได้เฉพาะแอดมินสูงสุดบัญชีเดียว (ตรงกับ isSuperAdmin() ใน firestore.rules)
 // ซ่อนเมนูอย่างเดียวไม่พอ — คนอื่นพิมพ์ URL เข้ามาตรงๆ ได้ ต้องกันที่หน้าด้วย
-function SuperAdminOnly({ children }) {
-  const { user, loading } = useAdminAuth()
-  if (loading) return null
-  if (!user) return <AdminLogin />
-  if (!isSuperAdminEmail(user.email || '')) {
-    return (
-      <main className="admin-dash">
-        <AdminNav />
-        <div className="admin-wrap">
-          <div className="admin-card" style={{ marginTop: 40, textAlign: 'center' }}>
-            <h3>เฉพาะแอดมินสูงสุดเท่านั้น</h3>
-            <p>บัญชี {user.email} ไม่มีสิทธิ์เข้าหน้านี้</p>
-          </div>
-        </div>
-      </main>
-    )
-  }
-  return children
-}
 
 export default function AdminStaff() {
   const [list, setList] = useState([])

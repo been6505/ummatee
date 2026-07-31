@@ -8,43 +8,43 @@ import { VOLUNTEER_ENDPOINT, GIVE_SHEET_TOKEN, fetchWithTimeout } from './endpoi
 // เพราะ GIVE_SHEET_TOKEN เป็น token ที่อ่านได้จาก bundle — ถ้าฝั่งนี้ยังส่งผู้รับ+ข้อความไปเอง
 // ใครก็สั่ง LINE OA ของมูลนิธิให้ส่งข้อความอะไรก็ได้ไปหาผู้ติดตามคนไหนก็ได้ ที่นี่จึงส่งแค่
 // orderId + ชื่อ event ให้ Apps Script ไปอ่านผู้รับจากตัวออเดอร์และประกอบข้อความเองทั้งหมด
+// ยิงคำสั่งไปที่ Apps Script — ใช้ร่วมกันทุกชนิดการแจ้งเตือน
+//
+// กลืน error ไม่ให้กระทบ flow ของลูกค้า (แจ้งเตือนล้มไม่ควรทำให้สั่งซื้อไม่ได้) แต่ "บอกใน console" ด้วย
+// เดิมเงียบสนิท (.catch(() => {})) จึงไม่มีใครรู้เลยว่าอีเมลไม่เคยถูกส่ง ถ้า Apps Script ยังไม่ได้ deploy
+// หรือ deploy ผิดเวอร์ชัน — Apps Script ตอบ 200 พร้อมหน้า HTML ได้ทั้งที่ทำงานไม่สำเร็จ
+// จึงเช็คด้วยว่าที่ได้กลับมาเป็น JSON จริง ไม่ใช่แค่ res.ok
+function postToScript(label, payload, ctx) {
+  return fetchWithTimeout(VOLUNTEER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, ...payload }),
+  })
+    .then(async (res) => {
+      const body = await res.text().catch(() => '')
+      if (!res.ok || !body.trim().startsWith('{')) {
+        console.warn(`[${label}] ไม่สำเร็จ (HTTP ${res.status}) — ตรวจการ deploy ของ Apps Script`, ctx)
+      }
+    })
+    .catch((e) => console.warn(`[${label}] ล้มเหลว:`, e?.message || e, ctx))
+}
+
 const LINE_EVENTS = ['payment_confirmed', 'shipping', 'shipping_update', 'delivered']
 
 export function notifyLineOrderStatus(order, event, extra) {
   // ยังเช็ค lineUserId ฝั่งนี้ไว้เพื่อไม่ยิง request ที่ยังไงก็ไม่ได้ส่ง (ฝั่ง server เช็คซ้ำอยู่แล้ว)
   if (!order?.id || !order?.customer?.lineUserId || !LINE_EVENTS.includes(event)) return
-  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({
-      token: GIVE_SHEET_TOKEN,
-      type: 'lineNotify',
-      orderId: order.id,
-      event,
-      trackingNumber: extra?.trackingNumber || '',
-      text: extra?.text || '',
-    }),
-  }).catch(() => {})
+  postToScript('notifyLineOrderStatus', {
+    type: 'lineNotify',
+    orderId: order.id,
+    event,
+    trackingNumber: extra?.trackingNumber || '',
+    text: extra?.text || '',
+  }, { orderId: order.id, event })
 }
 
-// แจ้งเตือนแอดมิน (อีเมลเสมอ + LINE ถ้าตั้งค่าแล้ว) — best-effort ไม่กระทบ flow ลูกค้า
-//
-// ยังกลืน error ไม่ให้กระทบการสั่งซื้อ แต่ "บอกใน console" ด้วย — เดิมเงียบสนิท (.catch(() => {}))
-// จึงไม่มีใครรู้เลยว่าอีเมลแจ้งออเดอร์ไม่เคยถูกส่ง ถ้า Apps Script ยังไม่ได้ deploy หรือ deploy ผิดเวอร์ชัน
-// (Apps Script ตอบ 200 พร้อมหน้า HTML ได้ทั้งที่ทำงานไม่สำเร็จ จึงเช็ค JSON ที่ควรได้กลับมาด้วย)
 export function notifyAdmin(subject, message) {
-  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'adminNotify', subject, message }),
-  })
-    .then(async (res) => {
-      const body = await res.text().catch(() => '')
-      if (!res.ok || !body.trim().startsWith('{')) {
-        console.warn(`[notifyAdmin] ส่งแจ้งเตือนไม่สำเร็จ (HTTP ${res.status}) — ตรวจการ deploy ของ Apps Script`, { subject })
-      }
-    })
-    .catch((e) => console.warn('[notifyAdmin] ส่งแจ้งเตือนไม่สำเร็จ:', e?.message || e, { subject }))
+  postToScript('notifyAdmin', { type: 'adminNotify', subject, message }, { subject })
 }
 
 /**
@@ -57,18 +57,7 @@ export function notifyAdmin(subject, message) {
  */
 export function notifyAdminOrderCreated(orderId) {
   if (!orderId) return
-  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'orderCreated', orderId }),
-  })
-    .then(async (res) => {
-      const body = await res.text().catch(() => '')
-      if (!res.ok || !body.trim().startsWith('{')) {
-        console.warn(`[notifyAdminOrderCreated] บันทึก/ส่งอีเมลออเดอร์ไม่สำเร็จ (HTTP ${res.status})`, { orderId })
-      }
-    })
-    .catch((e) => console.warn('[notifyAdminOrderCreated] ล้มเหลว:', e?.message || e, { orderId }))
+  postToScript('notifyAdminOrderCreated', { type: 'orderCreated', orderId }, { orderId })
 }
 
 /**
@@ -78,18 +67,7 @@ export function notifyAdminOrderCreated(orderId) {
  */
 export function notifyCustomerShipped(orderId) {
   if (!orderId) return
-  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'orderShipped', orderId }),
-  })
-    .then(async (res) => {
-      const body = await res.text().catch(() => '')
-      if (!res.ok || !body.trim().startsWith('{')) {
-        console.warn(`[notifyCustomerShipped] ส่งอีเมลเลขพัสดุไม่สำเร็จ (HTTP ${res.status})`, { orderId })
-      }
-    })
-    .catch((e) => console.warn('[notifyCustomerShipped] ล้มเหลว:', e?.message || e, { orderId }))
+  postToScript('notifyCustomerShipped', { type: 'orderShipped', orderId }, { orderId })
 }
 
 // เวอร์ชันเดิม (ส่งข้อความสำเร็จรูป) — เก็บไว้เผื่อ Apps Script ยังไม่รองรับ orderCreated

@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
-import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
-import { isSuperAdminEmail } from '../useAdminRole.js'
 import ListSkeleton from '../components/ListSkeleton.jsx'
+import SuperAdminOnly from '../components/SuperAdminOnly.jsx'
 
 // ประวัติการเปลี่ยนแปลง (/admin/audit-log) — เฉพาะ admin เท่านั้น อ่านอย่างเดียว ไล่จากใหม่ไปเก่า
 // ⚠️ ข้อจำกัด: เขียนจาก client SDK คู่กับการแก้ข้อมูลจริง (ไม่ใช่ transaction ฝั่งเซิร์ฟเวอร์) — client ที่ตั้งใจ
@@ -14,25 +12,6 @@ const ENTITY_LABEL = { partnerOrganization: 'องค์กรพันธม�
 
 // เข้าได้เฉพาะแอดมินสูงสุดบัญชีเดียว (ตรงกับ isSuperAdmin() ใน firestore.rules)
 // ซ่อนเมนูอย่างเดียวไม่พอ — คนอื่นพิมพ์ URL เข้ามาตรงๆ ได้ ต้องกันที่หน้าด้วย
-function SuperAdminOnly({ children }) {
-  const { user, loading } = useAdminAuth()
-  if (loading) return null
-  if (!user) return <AdminLogin />
-  if (!isSuperAdminEmail(user.email || '')) {
-    return (
-      <main className="admin-dash">
-        <AdminNav />
-        <div className="admin-wrap">
-          <div className="admin-card" style={{ marginTop: 40, textAlign: 'center' }}>
-            <h3>เฉพาะแอดมินสูงสุดเท่านั้น</h3>
-            <p>บัญชี {user.email} ไม่มีสิทธิ์เข้าหน้านี้</p>
-          </div>
-        </div>
-      </main>
-    )
-  }
-  return children
-}
 
 export default function AdminAuditLog() {
   const [logs, setLogs] = useState([])

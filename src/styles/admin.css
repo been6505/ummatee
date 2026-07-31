@@ -249,6 +249,27 @@
   .admin-form-grid-3col{grid-template-columns:1fr}
 }
 
+/* .admin-form-group ถูกใช้ใน JSX หลายที่แต่ไม่เคยมีสไตล์เลย — input ในนั้นจึงเป็น input ดิบของเบราว์เซอร์
+   (กว้างตายตัวราว 177px ไม่มีขอบมน ไม่เต็มความกว้างการ์ด) เห็นชัดสุดในการ์ด "จัดการเว็บ" บนมือถือ */
+.admin-form-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.admin-form-group > label{font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-form-group input,
+.admin-form-group select,
+.admin-form-group textarea{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.admin-form-group input:focus,
+.admin-form-group select:focus,
+.admin-form-group textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}
+
+/* แถว key/value ของ "ฟิลด์เนื้อหาอิสระ" และ "ฟิลด์รูปภาพ" ใน /admin/website
+   เดิมเป็น inline style: ช่อง key เป็น flex:0 0 220px (ไม่ยอมหด) + ช่องค่า flex:1 ที่ min-width:auto
+   คิดจากความกว้างในตัวของ input (~177px) รวมกับปุ่มลบแล้วต้องใช้ราว 450px แต่ในการ์ดบนจอ 360px
+   มีพื้นที่แค่ ~296px แถวจึงล้นออกนอกการ์ดในแนวนอน ตรงนี้ให้ยุบเป็นสองบรรทัดแทน */
+.aw-kv-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.aw-kv-key{flex:1 1 180px;min-width:0}
+.aw-kv-val{flex:3 1 200px;min-width:0}
+.aw-kv-row input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;box-sizing:border-box}
+.aw-kv-row input:focus{outline:2px solid var(--green-mid);border-color:transparent}
+
 /* ชิปเลือกขนาดด่วน (เสื้อ) — กดเพื่อเพิ่ม/เอาออกจากช่องขนาดแบบ comma list */
 .size-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .size-chip{padding:5px 12px;border-radius:8px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-soft);font-family:inherit;transition:all .15s}

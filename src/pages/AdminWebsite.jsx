@@ -222,11 +222,11 @@ function ImageFieldRow({ row, onKeyChange, onUrlChange, onRemove }) {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div className="aw-kv-row">
       <input
+        className="aw-kv-key"
         type="text" placeholder="key เช่น heroBannerImage" value={row.key}
         onChange={(e) => onKeyChange(e.target.value)}
-        style={{ flex: '0 0 220px' }}
       />
       {row.url && <img src={row.url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, border: '1px solid #ddd' }} />}
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
@@ -524,7 +524,10 @@ export default function AdminWebsite() {
                 />
               </div>
 
-              <div className="admin-form-grid-3col" style={{ marginBottom: 18 }}>
+              {/* ต้องมี .admin-form-grid ด้วย — display:grid อยู่ในคลาสนั้น ส่วน -3col ให้แค่จำนวนคอลัมน์
+                  เดิมใส่แต่ -3col สองช่องนี้จึงเรียงลงล่างเฉยๆ ไม่ได้เป็นกริดอย่างที่ตั้งใจ
+                  และในนี้มีสองช่อง จึงใช้ -2col ให้ตรงจำนวนจริง (มือถือยุบเหลือคอลัมน์เดียวเองอยู่แล้ว) */}
+              <div className="admin-form-grid admin-form-grid-2col" style={{ marginBottom: 18 }}>
                 <div className="admin-form-group">
                   <label>ลิงก์ (ไม่บังคับ)</label>
                   <input type="text" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="/event/iftar-for-gaza" />
@@ -577,16 +580,16 @@ export default function AdminWebsite() {
                     ฟิลด์เนื้อหาอิสระ (key ที่ตั้งเอง)
                   </div>
                   {customRows.map((row, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                    <div key={i} className="aw-kv-row">
                       <input
+                        className="aw-kv-key"
                         type="text" placeholder="key เช่น aboutPageTitle" value={row.key}
                         onChange={(e) => updateCustomRow(i, 'key', e.target.value)}
-                        style={{ flex: '0 0 220px' }}
                       />
                       <input
+                        className="aw-kv-val"
                         type="text" placeholder="ข้อความ" value={row.value}
                         onChange={(e) => updateCustomRow(i, 'value', e.target.value)}
-                        style={{ flex: 1 }}
                       />
                       <button type="button" className="admin-btn-danger" onClick={() => removeCustomRow(i)} aria-label="ลบฟิลด์นี้" title="ลบ">
                         <FontAwesomeIcon icon={faTrash} />

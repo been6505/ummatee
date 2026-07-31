@@ -12,7 +12,6 @@ import InstallAdminApp from './InstallAdminApp.jsx'
 import AdminChatFab from './AdminChatFab.jsx'
 import { useAdminChatList } from '../data/chat.js'
 import { useNewOrdersCount, useNewOrders } from '../data/orders.js'
-import useSunGradient from '../hooks/useSunGradient.js'
 import useStaffRole from '../useStaffRole.js'
 import { visibleStaffNav } from '../data/staffNav.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -235,7 +234,6 @@ function DevButton() {
 }
 
 export default function AdminNav() {
-  useSunGradient() // ไล่สีพื้นหลัง .admin-dash ตามเวลา/ตำแหน่งดวงอาทิตย์ (กรุงเทพฯ)
   const path = window.location.pathname
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)

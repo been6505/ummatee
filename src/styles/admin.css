@@ -12,13 +12,12 @@
 
 .admin-dash{
   min-height:100vh;
-  /* พื้นหลังไล่สีตามตำแหน่งดวงอาทิตย์ (--sun-* เซ็ตจาก useSunGradient) มี fallback ให้เหมือนของเดิมถ้า JS ยังไม่รัน */
-  background:linear-gradient(var(--sun-angle,180deg), var(--sun-color-light,#EAF6EE) 0%, var(--sun-color-dark,#F4F9F5) 100%);
-  transition:background 60s ease;
+  /* พื้นเรียบเทาอมเขียวอ่อน — เดิมเป็น gradient ไล่สีตามตำแหน่งดวงอาทิตย์ (useSunGradient)
+     ซึ่งทำให้การ์ดใบเดียวกันอยู่บนพื้นคนละสีระหว่างซ้าย-ขวาของจอ และเปลี่ยนไปเรื่อยๆ ตามเวลา
+     ⇒ ความคมชัดของตัวหนังสือไม่คงที่ และพื้นสีอิ่มตัวแย่งสายตาจากข้อมูลในหน้าเครื่องมือทำงาน
+     สีแบรนด์ยังอยู่ที่แถบเมนูซ้ายและปุ่ม พื้นหลังไม่ต้องช่วยอีก */
+  background:#f4f6f4;
   font-family:inherit;
-}
-@media (prefers-reduced-motion:reduce){
-  .admin-dash{transition:none}
 }
 /* padding แยกตามจอ — เดิมประกาศ padding-left รวมกันไว้ที่นี่ (ไม่มี media query) แล้วมาอยู่หลังกฎเดสก์ท็อป
    ใน cascade ทำให้ทับ padding-left:256px ของ sidebar เสมอไม่ว่าจอกว้างแค่ไหน (เนื้อหาไปซ้อนใต้ sidebar) */
@@ -26,9 +25,10 @@
   .admin-dash { padding: 72px 16px 32px; }
 }
 .admin-wrap{max-width:1200px;margin:0 auto}
-/* พื้นหลังทึบแสงหลังหัวข้อ กันตัวอักษรอ่านไม่ออกตอน --sun-color-dark เข้มมาก (กลางคืน) เพราะหัวข้อ
-   วางอยู่บน .admin-dash gradient ตรงๆ ไม่ได้อยู่ในการ์ดขาวเหมือนเนื้อหาส่วนอื่น */
-.admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap;background:rgba(255,255,255,.82);border-radius:14px;padding:14px 18px}
+/* หัวข้อหน้าเป็นการ์ดขาวเหมือนเนื้อหาส่วนอื่น — เดิมเป็นขาวโปร่ง 82% เพราะต้องกันตัวอักษร
+   อ่านไม่ออกตอนพื้นหลัง gradient เข้มช่วงกลางคืน พอพื้นเป็นสีเรียบอ่อนแล้วไม่ต้องโปร่งอีก
+   (ขาวโปร่งบนพื้นอ่อนจะออกมาเป็นแถบซีดๆ ดูเหมือนพาเนลที่ยังโหลดไม่เสร็จ) */
+.admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap;background:#fff;border:1px solid rgba(46,125,82,.08);border-radius:14px;padding:14px 18px}
 /* clamp ให้หัวข้อยาวๆ (เช่น "คลังสินค้า Um Shop") อยู่บรรทัดเดียวบนมือถือ แทนที่จะตัดคำขึ้น 2 บรรทัด */
 .admin-head h1{font-size:clamp(1.15rem,4.4vw,1.6rem);margin-bottom:4px;color:var(--green-deep)}
 .admin-head p{color:var(--ink-soft)}

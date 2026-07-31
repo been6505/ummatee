@@ -10,7 +10,7 @@ import { effectivePrice, groupOrderItemsByProduct, planStockRestore } from './pr
 // คำสั่งซื้อ Um Shop — เก็บใน Firestore collection "orders"
 // สถานะคำสั่งซื้ออยู่ใน orderStatus.js (ฟังก์ชันล้วน เทสต์ได้โดยไม่ต้องมี DOM/Firebase)
 // re-export ไว้ที่นี่ด้วยเพื่อไม่ต้องแก้ import ทุกไฟล์ที่เคยดึงจาก orders.js
-export { STATUS_STEPS, STATUS_LABEL, normOrderStatus, stepIndex } from './orderStatus.js'
+export { STATUS_STEPS, STATUS_LABEL, STATUS_LABEL_SHORT, STATUS_HINT, normOrderStatus, stepIndex } from './orderStatus.js'
 import { STATUS_LABEL, normOrderStatus } from './orderStatus.js'
 
 // ค่าจัดส่งมาตรฐาน (บาท) — ถ้าต้องคำนวณตามน้ำหนัก/พื้นที่ในอนาคตค่อยแยกฟังก์ชัน

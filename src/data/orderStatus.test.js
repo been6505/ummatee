@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { STATUS_STEPS, STATUS_LABEL, stepIndex, normOrderStatus } from './orderStatus.js'
+import { STATUS_STEPS, STATUS_LABEL, STATUS_LABEL_SHORT, STATUS_HINT, stepIndex, normOrderStatus } from './orderStatus.js'
 
 // สถานะคำสั่งซื้อลดจาก 4 ขั้นเหลือ 3 — ออเดอร์เก่าใน Firestore ยังมีค่าเดิมอยู่
 // เทสต์ชุดนี้กันไม่ให้ออเดอร์เก่าแสดงผลเพี้ยนหรือหลุดออกนอกแถบสถานะ
 describe('สถานะคำสั่งซื้อ 3 ขั้น', () => {
   it('มี 3 ขั้นตามลำดับที่ถูกต้อง', () => {
     expect(STATUS_STEPS).toEqual(['pending_payment', 'preparing', 'shipped'])
-    expect(STATUS_STEPS.map((s) => STATUS_LABEL[s])).toEqual(['รอชำระเงิน', 'เตรียมจัดส่ง', 'จัดส่งแล้ว'])
+    expect(STATUS_STEPS.map((s) => STATUS_LABEL[s])).toEqual(['รอชำระเงิน', 'เตรียมจัดส่ง', 'ส่งมอบให้บริษัทขนส่งแล้ว'])
   })
 
   it('ออเดอร์เก่า shipping/delivered ถูก map มาเป็น shipped', () => {
@@ -36,5 +36,20 @@ describe('สถานะคำสั่งซื้อ 3 ขั้น', () => {
 
   it('ทุกขั้นมีป้ายภาษาไทย ไม่มีขั้นไหนแสดงเป็น undefined', () => {
     for (const s of STATUS_STEPS) expect(typeof STATUS_LABEL[s]).toBe('string')
+  })
+
+  it('ทุกขั้นมีป้ายสั้นสำหรับแถบขั้นตอน และสั้นพอไม่ให้แถบเบี้ยว', () => {
+    for (const s of STATUS_STEPS) {
+      expect(typeof STATUS_LABEL_SHORT[s]).toBe('string')
+      // ช่องละ ~110px บนมือถือ — เกิน 16 ตัวอักษรเริ่มตัดหลายบรรทัดจนแถบสูงไม่เท่ากัน
+      expect(STATUS_LABEL_SHORT[s].length).toBeLessThanOrEqual(16)
+    }
+  })
+
+  it('ทุกขั้นมีคำอธิบายให้ลูกค้า ไม่ปล่อยว่าง', () => {
+    for (const s of STATUS_STEPS) {
+      expect(typeof STATUS_HINT[s]).toBe('string')
+      expect(STATUS_HINT[s].length).toBeGreaterThan(20)
+    }
   })
 })

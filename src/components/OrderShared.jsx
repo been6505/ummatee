@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faSpinner, faImage, faCartShopping, faCamera } from '@fortawesome/free-solid-svg-icons'
-import { STATUS_STEPS, STATUS_LABEL, stepIndex } from '../data/orders.js'
+import { STATUS_STEPS, STATUS_LABEL_SHORT, stepIndex } from '../data/orders.js'
 
 // ชิ้นส่วน UI ที่ใช้ร่วมกันระหว่างหน้าติดตามคำสั่งซื้อของลูกค้า (ShopOrderStatus)
 // และหน้าจัดการคำสั่งซื้อของแอดมิน (AdminShopOrderDetail)
@@ -39,7 +39,7 @@ export function Stepper({ status }) {
       {STATUS_STEPS.map((s, i) => (
         <div key={s} className={`order-step ${i <= idx ? 'done' : ''} ${i === idx ? 'active' : ''}`}>
           <div className="order-step-dot">{i < idx ? <FontAwesomeIcon icon={faCheck} /> : STEP_ICONS[i]}</div>
-          <div className="order-step-label">{STATUS_LABEL[s]}</div>
+          <div className="order-step-label">{STATUS_LABEL_SHORT[s]}</div>
         </div>
       ))}
     </div>

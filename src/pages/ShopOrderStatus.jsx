@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { useOrder, uploadPaymentProof, declarePayment, normOrderStatus } from '../data/orders.js'
+import { useOrder, uploadPaymentProof, declarePayment, normOrderStatus, STATUS_LABEL, STATUS_HINT } from '../data/orders.js'
 import { notifyAdminPaymentDeclared } from '../utils/lineNotify.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { ACCOUNTS } from '../data/accounts.js'
@@ -160,6 +160,13 @@ export default function ShopOrderStatus({ orderId }) {
 
           <Stepper status={order.status} />
 
+          {/* บอกด้วยคำพูดว่าสถานะตอนนี้แปลว่าอะไรและต้องทำอะไรต่อ — แถบขั้นตอนบอกได้แค่ว่าอยู่ขั้นไหน
+              ลูกค้าที่ไม่คุ้นกับขั้นตอนสั่งของออนไลน์มักไม่รู้ว่า "เตรียมจัดส่ง" ต่างจาก "ส่งมอบขนส่งแล้ว" อย่างไร */}
+          <div className="order-status-hint">
+            <div className="order-status-hint-title">{STATUS_LABEL[normOrderStatus(order.status)] || order.status}</div>
+            <p>{STATUS_HINT[normOrderStatus(order.status)]}</p>
+          </div>
+
 
           {/* QR โค้ด + คำเตือนให้แคปหน้าจอเก็บไว้ — ลิงก์นี้เป็นทางเดียวที่ลูกค้ากลับมาติดตามสถานะภายหลังได้ */}
           <div className="admin-card" style={{ marginBottom: 20, textAlign: 'center' }}>
@@ -211,7 +218,7 @@ export default function ShopOrderStatus({ orderId }) {
               สถานะละเอียด (ถึงไหนแล้ว/ส่งสำเร็จหรือยัง) ดูที่เว็บขนส่ง ร้านไม่รู้ข้อมูลนั้นเอง */}
           {normOrderStatus(order.status) === 'shipped' && (
             <div className="admin-card" style={{ marginBottom: 20 }}>
-              <h4>จัดส่งแล้ว</h4>
+              <h4>{STATUS_LABEL.shipped}</h4>
               {order.trackingNumber ? (
                 <div className="order-track-box">
                   <div className="order-track-courier">{courierLabel(order.courier)}</div>

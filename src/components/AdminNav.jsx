@@ -89,7 +89,10 @@ function NotifBell({ canSeeOrders }) {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
       const mobile = window.innerWidth < 769
-      setPos(mobile ? { top: r.bottom + 8, center: true } : { top: r.bottom + 8, left: r.left })
+      // โหมดรางไอคอน: ราง 64px แคบกว่ากล่องแจ้งเตือน ถ้าเปิดลงล่างตรงๆ กล่องจะทับรางจนกดเมนูอื่นไม่ได้
+      // จึงเด้งออกไปด้านขวาของรางแทน (แนวเดียวกับเมนูลอยของหัวกลุ่ม)
+      if (!mobile && isRailMode()) setPos({ top: r.top, left: r.right + 8 })
+      else setPos(mobile ? { top: r.bottom + 8, center: true } : { top: r.bottom + 8, left: r.left })
     }
     setOpen((v) => !v)
   }
@@ -153,9 +156,34 @@ function isGroupActive(group, path) {
   return group.children?.some((c) => path === c.href)
 }
 
+// ตอน sidebar ย่อเหลือรางไอคอน (เดสก์ท็อป) เมนูลูกถูก CSS ซ่อนไว้ (.an-group-children display:none)
+// การกดหัวกลุ่มจึงเป็นการกดที่ "ไม่เกิดอะไรขึ้น" — เช็คตรงนี้เพื่อสลับไปเด้งเมนูลอยข้างรางแทน
+// เช็คจากคลาสบน <html> + ความกว้างจอ ให้ตรงกับเงื่อนไขจริงของ CSS (media min-width:769px) ไม่ใช่ state แยกที่หลุดกันได้
+const isRailMode = () =>
+  window.innerWidth >= 769 && document.documentElement.classList.contains('admin-nav-collapsed')
+
 function NavGroup({ g, path, onNavigate, badges }) {
   const active = isGroupActive(g, path)
   const [expanded, setExpanded] = useState(active)
+  // เมนูลอยของโหมดราง: เก็บพิกัดที่วัดจากปุ่มจริง แล้ว render ผ่าน portal ไป body
+  // (เหตุผลเดียวกับ NotifBell — .admin-nav มี overflow/transform ของตัวเอง เมนูลอยในนั้นจะโดนตัดขอบ)
+  const [flyout, setFlyout] = useState(null)
+  const btnRef = useRef(null)
+
+  useEffect(() => {
+    if (!flyout) return
+    const close = () => setFlyout(null)
+    // ปิดเมื่อ scroll/resize แทนการไล่คำนวณตำแหน่งใหม่ — เมนูสั้น ผู้ใช้กดต่อได้ทันที
+    window.addEventListener('resize', close)
+    window.addEventListener('scroll', close, true)
+    const onKey = (e) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('resize', close)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [flyout])
 
   if (g.href) {
     return (
@@ -169,13 +197,44 @@ function NavGroup({ g, path, onNavigate, badges }) {
   // ยอดรวม badge ของลูกทั้งหมด — โชว์ที่หัวกลุ่มด้วย เผื่อกลุ่มยังปิดอยู่ (เช่น "คำสั่งซื้อ" มีออเดอร์ใหม่แต่ "Um Shop" ยังไม่ได้กางเมนู)
   const groupBadgeTotal = g.children?.reduce((s, c) => s + (badges?.[c.href] || 0), 0) || 0
 
+  const onGroupClick = () => {
+    if (!isRailMode()) { setExpanded((v) => !v); return }
+    if (flyout) { setFlyout(null); return }
+    const r = btnRef.current.getBoundingClientRect()
+    // เมนูสูงตามจำนวนลูก (44px/แถว + หัว) — ถ้าเปิดตรงๆ แล้วล้นขอบล่าง ให้ดันขึ้นมาให้พออยู่ในจอ
+    const h = 44 + g.children.length * 40 + 12
+    setFlyout({ left: r.right + 8, top: Math.max(8, Math.min(r.top, window.innerHeight - h - 8)) })
+  }
+
   return (
     <div className={`an-group${active ? ' an-group-active' : ''}`}>
-      <button className="an-group-btn" onClick={() => setExpanded((v) => !v)}>
+      <button ref={btnRef} className="an-group-btn" onClick={onGroupClick}>
         <span><FontAwesomeIcon icon={g.icon} /> <span className="an-label">{g.label}</span></span>
         {groupBadgeTotal > 0 && <span className="an-badge">{groupBadgeTotal}</span>}
         <FontAwesomeIcon icon={faChevronDown} className={`an-chevron${expanded ? ' open' : ''}`} />
       </button>
+
+      {flyout && createPortal(
+        <>
+          <div className="fab-hub-overlay" onClick={() => setFlyout(null)} />
+          <div className="an-flyout" style={{ top: flyout.top, left: flyout.left }}>
+            <div className="an-flyout-head">{g.label}</div>
+            {g.children.map((c) => (
+              <a
+                key={c.href}
+                href={c.href}
+                className={`an-flyout-item${path === c.href ? ' active' : ''}`}
+                onClick={() => { setFlyout(null); onNavigate?.() }}
+              >
+                <span>{c.icon && <FontAwesomeIcon icon={c.icon} style={{ marginRight: 7, fontSize: '.85em', opacity: .7 }} />}{c.label}</span>
+                {badges?.[c.href] > 0 && <span className="an-badge">{badges[c.href]}</span>}
+              </a>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+
       {expanded && (
         <div className="an-group-children">
           {g.children.map((c) => (

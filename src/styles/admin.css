@@ -642,6 +642,21 @@ a.attach-name:hover{text-decoration:underline}
    ตัวปุ่มกระดิ่งจัดการคลิกเอง (เปิด dropdown ผ่าน portal) */
 .an-bell-row{cursor:default}
 .an-bell-row > span{display:flex;align-items:center;gap:10px}
+/* ตอนย่อเหลือราง ป้าย "การแจ้งเตือน" ถูกซ่อน เหลือแต่ปุ่มกระดิ่ง — ขยายพื้นที่กดให้เต็มแถว
+   ไม่งั้นเป้ากดเหลือแค่ 30px กลางราง 64px กดพลาดง่ายมาก */
+@media (min-width:769px){
+  html.admin-nav-collapsed .an-bell-row > span{width:100%;justify-content:center}
+  html.admin-nav-collapsed .admin-nav-bell{width:40px;height:40px;font-size:1rem}
+}
+
+/* เมนูลอยของหัวกลุ่ม ตอน sidebar ย่อเหลือรางไอคอน — เมนูลูกถูกซ่อนในราง จึงเด้งออกมาข้างๆ แทน
+   render ผ่าน portal ไป body เพราะ .admin-nav มี overflow/transform ของตัวเอง จะตัดขอบกล่องนี้ */
+.an-flyout{position:fixed;z-index:1200;min-width:210px;max-width:280px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px}
+.an-flyout-head{font-size:.78rem;font-weight:700;color:#6b7280;padding:8px 10px 6px}
+.an-flyout-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:8px;color:#1f2937;text-decoration:none;font-size:.9rem;line-height:1.2}
+.an-flyout-item:hover{background:#f1f5f2}
+.an-flyout-item.active{background:var(--green-deep,#166534);color:#fff}
+.an-flyout-item.active .an-badge{background:#fff;color:var(--green-deep,#166534)}
 
 /* ── แท็บไอเดีย (มายด์แมป) ของบอร์ดวางแผน ── */
 .idea-tabs{margin-bottom:16px}

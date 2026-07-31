@@ -35,6 +35,7 @@ const EMPTY = {
   aidType: '', budgetUsed: '', peopleHelped: '',
   itemsDonatedDescription: '', itemsDonatedCount: '',
   visitDate: '', notes: '', photoUrls: [],
+  campaignId: '', // ผูกจุดลงพื้นที่กับแคมเปญ เพื่อให้หน้ารวมแคมเปญเห็นว่าไปช่วยที่ไหนมาบ้าง
 }
 const THAILAND_CENTER = [13.7563, 100.5018]
 
@@ -67,14 +68,20 @@ export default function AdminAidMap() {
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState(null)
+  const [campaigns, setCampaigns] = useState([])
 
   useEffect(() => {
+    // รายชื่อแคมเปญไว้ให้เลือกผูกกับจุดลงพื้นที่ — หน้ารวมแคมเปญอ่านจากฟิลด์นี้
+    const unsubCampaigns = onSnapshot(collection(db, 'campaigns'),
+      (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setCampaigns([]))
+
     const qy = query(collection(db, 'aidLocations'), orderBy('createdAt', 'desc'))
     const unsub = onSnapshot(qy, (snap) => {
       setList(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setLoading(false)
     }, () => setLoading(false))
-    return unsub
+    // ต้องคืนทั้งสองตัว — คืนแค่ unsub จะทิ้ง listener ของ campaigns ค้างไว้ทุกครั้งที่ออกจากหน้า
+    return () => { unsub(); unsubCampaigns() }
   }, [])
 
   const withCoords = useMemo(() => list.filter((l) => Number.isFinite(l.latitude) && Number.isFinite(l.longitude)), [list])
@@ -227,6 +234,7 @@ export default function AdminAidMap() {
       visitDate: form.visitDate || null,
       notes: form.notes,
       photoUrls: form.photoUrls || [],
+      campaignId: form.campaignId || null,
     }
     if (editId) {
       await updateDoc(doc(db, 'aidLocations', editId), withSearchTokens({ ...payload, updatedAt: serverTimestamp() }, SEARCH_FIELDS))
@@ -430,6 +438,12 @@ export default function AdminAidMap() {
                     <datalist id="aid-type-options">
                       {AID_TYPES.map((t) => <option key={t} value={t} />)}
                     </datalist>
+                  </label>
+                  <label>แคมเปญที่เกี่ยวข้อง
+                    <select value={form.campaignId || ''} onChange={set('campaignId')}>
+                      <option value="">— ไม่ผูกแคมเปญ —</option>
+                      {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                   </label>
                   <label>งบประมาณที่ใช้ (บาท)<input type="number" min="0" step="any" value={form.budgetUsed} onChange={set('budgetUsed')} /></label>
                   <label>จำนวนคนที่ช่วย<input type="number" value={form.peopleHelped} onChange={set('peopleHelped')} /></label>

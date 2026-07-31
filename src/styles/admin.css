@@ -880,3 +880,26 @@ a.attach-name:hover{text-decoration:underline}
 /* ปุ่มเปิด/ปิดกล่องคุยในการ์ดบอร์ด — เปิดทีละใบ (ดูคอมเมนต์ openChatCardId ใน AdminBoard.jsx) */
 .admin-board-chat-toggle{width:100%;padding:7px 10px;border-radius:8px;border:1px dashed rgba(46,125,82,.35);background:#f7faf8;color:var(--green-deep,#166534);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
 .admin-board-chat-toggle:hover{background:#eef7f1}
+
+/* ── หน้ารวมของแคมเปญเดียว (/admin/campaigns/:id) ── */
+.cd-back{display:inline-block;margin-bottom:14px;color:var(--green-deep,#166534);text-decoration:none;font-size:.88rem;font-weight:700}
+.cd-hero{margin-bottom:18px}
+.cd-hero h1{margin:0 0 6px;font-size:1.35rem}
+.cd-desc{color:var(--ink-soft);font-size:.9rem;margin:0 0 10px}
+.cd-facts{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.82rem;color:var(--ink-soft);margin-bottom:12px}
+.cd-progress-bar{height:12px;border-radius:99px;background:#eef2ef;overflow:hidden}
+.cd-progress-bar span{display:block;height:100%;background:var(--green-mid,#2e7d52);border-radius:99px}
+.cd-progress-text{display:flex;justify-content:space-between;font-size:.85rem;margin-top:6px}
+/* auto-fit: จำนวนกล่องคงที่ 6 กล่องก็จริง แต่ความกว้างที่มีเปลี่ยนตาม sidebar ย่อ/กาง */
+.cd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.cd-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.cd-section-head h4{margin:0;font-size:.95rem;display:flex;align-items:center;gap:8px}
+.cd-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.75rem;font-weight:700}
+.cd-more{font-size:.8rem;color:var(--green-deep,#166534);text-decoration:none;font-weight:700;white-space:nowrap}
+.cd-empty{font-size:.85rem;color:var(--ink-soft);opacity:.8;margin:0}
+.cd-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;overscroll-behavior:contain}
+.cd-list li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f6f4;font-size:.86rem}
+/* ชื่อรายการยาวได้ไม่จำกัด ต้องหดและตัด ไม่งั้นดันวันที่/ป้ายสถานะตกออกนอกกล่อง */
+.cd-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-date{flex-shrink:0;color:var(--ink-soft);font-size:.78rem;font-variant-numeric:tabular-nums}
+.cd-tag{flex-shrink:0;background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:2px 9px;font-size:.72rem;font-weight:700;white-space:nowrap}

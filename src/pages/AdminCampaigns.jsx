@@ -237,6 +237,8 @@ export default function AdminCampaigns() {
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
+                          {/* หน้ารวมของแคมเปญนี้ — ดูอีเวนต์/คอนเทนต์/งาน/พันธมิตร/จุดลงพื้นที่ ครบในที่เดียว */}
+                          <a className="admin-btn" href={`/admin/campaigns/${c.id}`}>ดูภาพรวม</a>
                           <button className="admin-btn" onClick={() => setLinkPanelId(linkPanelId === c.id ? null : c.id)}>ร้านค้าร่วม ({campaignLinks.length})</button>
                           <button className="admin-btn" onClick={() => edit(c)}>แก้ไข</button>
                           <button className="admin-btn-danger" onClick={() => remove(c)}>ลบ</button>

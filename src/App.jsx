@@ -42,6 +42,7 @@ const AdminDonations = lazyWithReload(() => import('./pages/AdminDonations.jsx')
 const AdminCalendar = lazyWithReload(() => import('./pages/AdminCalendar.jsx'))
 const AdminMyWork = lazyWithReload(() => import('./pages/AdminMyWork.jsx'))
 const AdminB2um = lazyWithReload(() => import('./pages/AdminB2um.jsx'))
+const AdminCampaignDetail = lazyWithReload(() => import('./pages/AdminCampaignDetail.jsx'))
 const AdminHome = lazyWithReload(() => import('./pages/AdminHome.jsx'))
 const AdminWebsite = lazyWithReload(() => import('./pages/AdminWebsite.jsx'))
 const AdminChat = lazyWithReload(() => import('./pages/AdminChat.jsx'))
@@ -100,6 +101,12 @@ const shopOrderIdFromPath = () => {
 }
 
 // path จัดการคำสั่งซื้อของแอดมิน /admin/shop/orders/<orderId> — เช็คก่อน /admin/shop/orders (path ตายตัว) เสมอ
+// /admin/campaigns/<id> — ต้องเช็คก่อน '/admin/campaigns' ที่เป็น path ตายตัวเสมอ
+const adminCampaignIdFromPath = () => {
+  const m = window.location.pathname.match(/^\/admin\/campaigns\/([^/]+)\/?$/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
 const adminShopOrderIdFromPath = () => {
   const m = window.location.pathname.match(/^\/admin\/shop\/orders\/([^/]+)\/?$/)
   return m ? decodeURIComponent(m[1]) : null
@@ -135,6 +142,7 @@ const shopDetailIdFromPath = () => {
 const pageFromPath = () => {
   if (PATH_TO_PAGE[window.location.pathname]) return PATH_TO_PAGE[window.location.pathname]
   if (adminChatIdFromPath()) return 'admin-chat-thread'
+  if (adminCampaignIdFromPath()) return 'admin-campaign-detail'
   if (adminShopOrderIdFromPath()) return 'admin-shop-order-detail'
   if (adminShopNewSeedFromPath()) return 'admin-shop-new'
   if (shopOrderIdFromPath()) return 'shop-order'
@@ -252,6 +260,7 @@ export default function App() {
     'admin-shop-inventory': AdminInventory,
     'admin-shop-sales': AdminShopSales,
     'admin-shop-order-detail': AdminShopOrderDetail,
+    'admin-campaign-detail': AdminCampaignDetail,
     'challenge': FinancialDashboard,
     'admin-financial': AdminFinancialDashboard,
     'admin-register-event': AdminQRcode,
@@ -291,6 +300,7 @@ export default function App() {
         <Suspense fallback={null}>
           <Standalone
             orderId={page === 'admin-shop-order-detail' ? adminShopOrderId : undefined}
+            campaignId={page === 'admin-campaign-detail' ? adminCampaignIdFromPath() : undefined}
             mode={page === 'admin-shop-new' ? adminShopNewSeed?.mode : undefined}
             seedId={page === 'admin-shop-new' ? adminShopNewSeed?.id : undefined}
             chatId={page === 'admin-chat-thread' ? adminChatId : undefined}

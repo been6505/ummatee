@@ -33,9 +33,10 @@
 .aw-cols{display:grid;grid-template-columns:1fr;gap:0 24px;align-items:start}
 @media (min-width:1024px){
   .aw-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.45fr)}
-  /* แต่ละคอลัมน์เลื่อนแยกกัน — คอลัมน์ขวายาวกว่าซ้ายมาก ถ้าเลื่อนทั้งหน้าจะต้องผ่านที่ว่างข้างซ้ายยาวๆ
+  /* เลื่อนเฉพาะคอลัมน์ขวา — ฝั่งซ้ายเป็นการ์ดตั้งค่าที่ยาวไม่มาก ปล่อยให้สูงตามเนื้อหาไปเลย
+     อ่านครบในสายตาเดียวดีกว่าถูกตัดด้วยกรอบเลื่อนของตัวเอง
      หน้านี้ไม่มีการ์ดหัวเรื่อง (.admin-head) ความสูงจึงหักแค่ padding บน/ล่างของ .admin-dash (32+32) */
-  .aw-col{max-height:calc(100dvh - 72px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
+  .aw-col-wide{max-height:calc(100dvh - 72px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
 }
 /* หัวข้อหน้าเป็นการ์ดขาวเหมือนเนื้อหาส่วนอื่น — เดิมเป็นขาวโปร่ง 82% เพราะต้องกันตัวอักษร
    อ่านไม่ออกตอนพื้นหลัง gradient เข้มช่วงกลางคืน พอพื้นเป็นสีเรียบอ่อนแล้วไม่ต้องโปร่งอีก

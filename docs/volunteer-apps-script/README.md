@@ -19,7 +19,7 @@
 เปิด URL ของ Web App ตรงๆ ในเบราว์เซอร์ (ไม่ส่งอีเมลใดๆ) ต้องได้ JSON:
 
 ```json
-{"ok":true,"version":"2026-07-31.1","handlers":["adminNotify","lineNotify","volunteer","b2um","(default) iftar"]}
+{"ok":true,"version":"2026-07-31.3","handlers":["adminNotify","orderCreated","lineNotify","volunteer","b2um","(default) iftar"]}
 ```
 
 - ได้ **HTML หน้า login ของ Google** → ข้อ 4 ยังไม่ได้ตั้ง "Anyone"
@@ -27,6 +27,17 @@
 - `version` ไม่ตรงกับ `SCRIPT_VERSION` ใน `Code.gs` → ยังไม่ได้กด Deploy ทับ
 
 > ขยับ `SCRIPT_VERSION` ทุกครั้งที่แก้แล้ว deploy ใหม่ จะได้รู้ทันทีว่าโค้ดที่รันอยู่เป็นชุดล่าสุดหรือยัง
+
+## ไฟล์ Google Sheet ที่สคริปต์เขียนลง
+
+| ตัวแปรใน `Code.gs` | ใช้กับ | ชีตที่เขียน |
+|---|---|---|
+| `ORDERS_SHEET_ID` | คำสั่งซื้อ um-shop | `Orders` |
+| `VOLUNTEER_SHEET_ID` | อาสาสมัคร / B2UM | `Volunteer`, `B2UM` |
+| (ไฟล์ที่ผูกกับสคริปต์) | Iftar For Gaza | `Registrations` |
+
+บัญชีที่ตั้งไว้ใน **Execute as** ต้องมีสิทธิ์ **แก้ไข** ไฟล์เหล่านี้ ไม่งั้น `openById` จะ error
+(ระบบจับ error ไว้ — อีเมลยังส่งตามปกติ แต่จะได้ `sheetLogged:false` กลับมา)
 
 ## Script Properties ที่ต้องตั้ง (ถ้าจะใช้ LINE)
 

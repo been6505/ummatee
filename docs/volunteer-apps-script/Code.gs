@@ -29,9 +29,14 @@
 var SHEET_TOKEN = 'umt-7Kp2xQ9mZr4Wv8Td'
 var VOLUNTEER_SHEET_ID = '1HANcunEVvMQFSEY84WSS41jqmUPCm1QkfatX_xXiZj0'
 
+// ไฟล์ชีตสำหรับ "คำสั่งซื้อ um-shop" โดยเฉพาะ (คนละไฟล์กับอาสาสมัคร/B2UM)
+// บัญชีที่ตั้งเป็น "Execute as: Me" ต้องมีสิทธิ์แก้ไขไฟล์นี้ ไม่งั้น openById จะ error
+// (ระบบจับ error ไว้แล้ว — อีเมลยังส่งได้ แต่จะได้ sheetLogged:false กลับมา)
+var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
+
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.2'
+var SCRIPT_VERSION = '2026-07-31.3'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -209,7 +214,7 @@ function handleOrderCreated(data) {
 
   var sheetLogged = false
   try {
-    var ss = SpreadsheetApp.openById(VOLUNTEER_SHEET_ID)
+    var ss = SpreadsheetApp.openById(ORDERS_SHEET_ID)
     var sh = ss.getSheetByName('Orders') || ss.insertSheet('Orders')
     if (sh.getLastRow() === 0) {
       sh.appendRow([

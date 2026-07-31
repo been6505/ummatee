@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChartLine } from '@fortawesome/free-solid-svg-icons'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 
-// รายงานยอดขาย Um Shop (/admin/shop/sales) — สรุปจากคำสั่งซื้อทั้งหมดใน Firestore
+// รายงานยอดขาย um-shop (/admin/shop/sales) — สรุปจากคำสั่งซื้อทั้งหมดใน Firestore
 // "ยอดขาย" นับเฉพาะออเดอร์ที่ยืนยันการชำระเงินแล้ว (สถานะพ้น pending_payment ไปแล้ว)
 
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
@@ -66,7 +66,7 @@ export default function AdminShopSales() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1><FontAwesomeIcon icon={faChartLine} /> รายงานยอดขาย Um Shop</h1>
+            <h1><FontAwesomeIcon icon={faChartLine} /> รายงานยอดขาย um-shop</h1>
             <p>นับเฉพาะออเดอร์ที่ยืนยันการชำระเงินแล้ว · ยอดสินค้าไม่รวมค่าจัดส่ง</p>
           </div>
         </div>

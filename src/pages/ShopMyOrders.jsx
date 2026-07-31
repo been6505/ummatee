@@ -44,7 +44,7 @@ export default function ShopMyOrders() {
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
-          <span className="badge"><FontAwesomeIcon icon={faBoxOpen} /> Um Shop</span>
+          <span className="badge"><FontAwesomeIcon icon={faBoxOpen} /> um-shop</span>
           <h1>คำสั่งซื้อของฉัน</h1>
         </div>
       </section>

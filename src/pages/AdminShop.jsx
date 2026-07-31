@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCaretUp, faCaretDown, faPencil, faCheck, faCopy, faTrash, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 
-// จัดการสินค้า Um Shop (/admin/shop) — รายการสินค้า ค้นหา/กรอง/เรียง/ลบ/แสดง-ซ่อน
+// จัดการสินค้า um-shop (/admin/shop) — รายการสินค้า ค้นหา/กรอง/เรียง/ลบ/แสดง-ซ่อน
 // เพิ่มสินค้าใหม่/แก้ไข/โปรโมชั่น อยู่ที่หน้าแยก /admin/shop/new (AdminShopNew.jsx)
 
 const SHOP_CATEGORIES = ['หมวก', 'เสื้อ', 'กระบอกน้ำ', 'กระเป๋า', 'สติกเกอร์']
@@ -156,7 +156,7 @@ export default function AdminShop() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1>จัดการสินค้า Um Shop</h1>
+            <h1>จัดการสินค้า um-shop</h1>
             <p>แสดงผลที่หน้า <a href="/um-shop">/um-shop</a> ทันที — เพิ่มสินค้าใหม่/แก้ไข/โปรโมชั่นที่หน้าแยก</p>
           </div>
           <a className="admin-btn-primary" href="/admin/shop/new">+ เพิ่มสินค้าใหม่ / โปรโมชั่น</a>

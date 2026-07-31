@@ -155,7 +155,7 @@ export default function AdminInventory() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1><FontAwesomeIcon icon={faBoxesStacked} /> คลังสินค้า Um Shop</h1>
+            <h1><FontAwesomeIcon icon={faBoxesStacked} /> คลังสินค้า um-shop</h1>
             <p>สต็อกตัดอัตโนมัติเมื่อมีคำสั่งซื้อ — หน้านี้ใช้รับสินค้าเข้าคลังและดูประวัติการเคลื่อนไหว</p>
           </div>
         </div>

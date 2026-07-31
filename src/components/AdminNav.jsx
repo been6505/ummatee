@@ -35,7 +35,7 @@ const NAV_GROUPS = [
     ]
   },
   {
-    label: 'Um Shop', icon: faBagShopping, children: [
+    label: 'um-shop', icon: faBagShopping, children: [
       { href: '/admin/shop', label: 'จัดการสินค้า' },
       { href: '/admin/shop/new', label: 'เพิ่มสินค้า/โปรโมชั่น' },
       { href: '/admin/shop/orders', label: 'คำสั่งซื้อ' },

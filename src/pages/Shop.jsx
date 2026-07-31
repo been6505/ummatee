@@ -16,7 +16,7 @@ const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH') // ฟัง�
 
 const T = { // อ็อบเจกต์เก็บข้อความแปลภาษา แยกตามภาษา (th/en/ar)
   th: { // ข้อความภาษาไทย
-    badge: 'Um Shop', // ป้าย badge บนหัวหน้า
+    badge: 'um-shop', // ป้าย badge บนหัวหน้า
     h1: 'สินค้าจากมูลนิธิอุมมะตี', // หัวข้อใหญ่
     p: 'เลือกซื้อสินค้าเพื่อสนับสนุนภารกิจของมูลนิธิ — รายได้นำไปช่วยเหลือผู้ยากไร้', // คำบรรยายใต้หัวข้อ
     searchPh: 'ค้นหา', // placeholder ของช่องค้นหา
@@ -26,7 +26,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     empty: 'ยังไม่มีสินค้าในขณะนี้', // ข้อความตอนไม่มีสินค้า
   },
   en: { // ข้อความภาษาอังกฤษ
-    badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
+    badge: '🛍️ um-shop', // ป้าย badge บนหัวหน้า
     h1: 'Ummatee Foundation Products', // หัวข้อใหญ่
     p: 'Shop to support the foundation\'s mission — proceeds help those in need', // คำบรรยายใต้หัวข้อ
     searchPh: 'Search products...', // placeholder ของช่องค้นหา
@@ -36,7 +36,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     empty: 'No products available yet', // ข้อความตอนไม่มีสินค้า
   },
   ar: { // ข้อความภาษาอาหรับ
-    badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
+    badge: '🛍️ um-shop', // ป้าย badge บนหัวหน้า
     h1: 'منتجات مؤسسة أمّتي', // หัวข้อใหญ่
     p: 'تسوّق لدعم مهمة المؤسسة — تذهب العائدات لمساعدة المحتاجين', // คำบรรยายใต้หัวข้อ
     searchPh: 'البحث عن المنتجات...', // placeholder ของช่องค้นหา

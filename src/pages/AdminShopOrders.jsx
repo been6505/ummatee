@@ -55,7 +55,7 @@ export default function AdminShopOrders() {
       <div className="admin-wrap">
         <div className="admin-head">
           <div>
-            <h1>คำสั่งซื้อ Um Shop</h1>
+            <h1>คำสั่งซื้อ um-shop</h1>
             <p>ตรวจสอบและจัดการคำสั่งซื้อทั้งหมด</p>
           </div>
         </div>

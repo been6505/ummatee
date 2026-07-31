@@ -18,7 +18,7 @@ const ALL_LINKS = [
   { href: '/admin/missions/qurban2026', icon: faCow, title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
   { href: '/admin/donations', icon: faMoneyBill, title: 'เงินบริจาค', desc: 'บันทึกและสรุปยอดบริจาคแยกตาม 7 บัญชี ibank' },
   { href: '/admin/calendar', icon: faCalendar, title: 'ปฏิทินคอนเทนต์', desc: 'วางแผนกิจกรรม ตั้งเวลาโพสต์ แนบรูป/วิดีโอ หลายแพลตฟอร์ม' },
-  { href: '/admin/shop', icon: faBagShopping, title: 'Um Shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
+  { href: '/admin/shop', icon: faBagShopping, title: 'um-shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
   { href: '/admin/volunteer', icon: faHandshake, title: 'อาสาสมัคร', desc: 'รายชื่อผู้สมัครอาสาสมัคร ค้นหา กรอง และ Export CSV' },
 ]
 

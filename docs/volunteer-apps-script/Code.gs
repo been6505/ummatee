@@ -36,7 +36,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.3'
+var SCRIPT_VERSION = '2026-07-31.4'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -44,6 +44,19 @@ var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON)
+}
+
+/**
+ * ตัดอักขระนอก BMP (อีโมจิ 4 ไบต์ เช่น 🛒 💰 ⚠️ 📦) ออกก่อนส่งอีเมล
+ * Gmail แสดงตัวพวกนี้เป็น ?????? ในอีเมลข้อความล้วน ทั้งหัวเรื่องและเนื้อความ
+ * (ภาษาไทยอยู่ใน BMP จึงไม่กระทบ) — ใช้เฉพาะทางอีเมล ส่วน LINE แสดงอีโมจิได้ปกติจึงไม่ตัด
+ */
+function emailSafe(s) {
+  return String(s == null ? '' : s)
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/^[ \t]+/gm, '')
+    .trim()
 }
 
 /** ป้องกัน HTML/markup injection ในอีเมลจากฟิลด์ที่ผู้ใช้กรอกเอง */
@@ -140,8 +153,8 @@ function handleAdminNotify(data) {
 
   var mailed = false
   try {
-    GmailApp.sendEmail(ADMIN_EMAIL, subj,
-      msg + '\n\nเปิดหน้าจัดการ: https://ummatee-app.web.app/admin/shop/orders')
+    GmailApp.sendEmail(ADMIN_EMAIL, emailSafe(subj),
+      emailSafe(msg) + '\n\nเปิดหน้าจัดการ: https://ummatee-app.web.app/admin/shop/orders')
     mailed = true
   } catch (mailErr) { Logger.log('adminNotify mail error: ' + mailErr.message) }
 
@@ -241,8 +254,8 @@ function handleOrderCreated(data) {
 
   var mailed = false
   try {
-    GmailApp.sendEmail(ADMIN_EMAIL, '🛒 ออเดอร์ใหม่ ' + orderCode,
-      '🛒 มีคำสั่งซื้อใหม่ ' + orderCode + '\n'
+    GmailApp.sendEmail(ADMIN_EMAIL, 'ออเดอร์ใหม่ ' + orderCode,
+      'มีคำสั่งซื้อใหม่ ' + orderCode + '\n'
       + 'ลูกค้า: ' + fsVal(cust.fullName) + ' (' + fsVal(cust.phone) + ')\n'
       + (fsVal(cust.email) ? 'อีเมล: ' + fsVal(cust.email) + '\n' : '')
       + 'ที่อยู่: ' + fsVal(cust.address) + '\n\n'

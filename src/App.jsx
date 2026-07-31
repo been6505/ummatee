@@ -3,8 +3,9 @@ import { NavCtx } from './navContext'
 import { PAGE_TO_PATH } from './data/routes.js'
 import { LangProvider } from './i18n.jsx'
 import Nav from './components/Nav.jsx'
-import ChatWidget from './components/ChatWidget.jsx'
 import FloatingActionHub from './components/FloatingActionHub.jsx'
+// ดักปุ่ม "เปิดแชท" ที่กดก่อน ChatWidget (lazy ด้านล่าง) จะโหลดเสร็จ — ไฟล์เล็ก ไม่แตะ firebase
+import './utils/chatOpenBuffer.js'
 import Home from './pages/Home.jsx'
 import ErrorBoundary, { isChunkLoadError } from './components/ErrorBoundary.jsx'
 
@@ -23,6 +24,11 @@ const lazyWithReload = (factory) =>
         throw err
       })
   )
+
+// ChatWidget ต้อง lazy — มันดึง data/chat.js → firebase.js แบบ static ซึ่งเป็นสายเดียวที่ลาก
+// Firebase SDK ทั้งก้อน (firestore + auth + storage + functions) เข้า entry chunk
+// ทำให้คนเปิดหน้าแรกต้องโหลด JS ~876kB ก่อนเห็นอะไรเลย ทั้งที่หน้าแรกไม่ได้ใช้ firebase ตอนเรนเดอร์
+const ChatWidget = lazyWithReload(() => import('./components/ChatWidget.jsx'))
 
 // โหลดเฉพาะหน้าที่ผู้ใช้เปิดจริง (code-splitting) — ลดขนาด JS ตอนโหลดครั้งแรก
 const Donation = lazyWithReload(() => import('./pages/Donation.jsx'))
@@ -304,7 +310,7 @@ export default function App() {
           )}
           <FloatingDonate hidden={['shop', 'shop-detail', 'shop-cart', 'shop-checkout', 'shop-order', 'shop-my-orders'].includes(page)} />
           {/* แผงแชทเอง (ChatWidget) mount ไว้เสมอเพื่อรับ custom event เปิดจากปุ่มอื่นๆ — ปุ่มลอยของตัวเองปิดตลอด ใช้ FloatingActionHub/แถบล่างแต่ละหน้าแทน */}
-          <ChatWidget fabHidden />
+          <Suspense fallback={null}><ChatWidget fabHidden /></Suspense>
           <Suspense fallback={null}>
             {page === 'home' && <Home />}
             {page === 'donation' && <Donation />}

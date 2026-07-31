@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getVisitorId, useChatMessages, sendVisitorMessage, sendVisitorProductCard, isSafeHttpUrl } from '../data/chat.js'
+import { takePendingChatOpen } from '../utils/chatOpenBuffer.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faComments, faXmark, faPaperPlane } from '@fortawesome/free-solid-svg-icons'
 
@@ -28,6 +29,10 @@ export default function ChatWidget({ hidden, fabHidden }) {
       }
     }
     window.addEventListener('ummatee-open-chat', openChatHandler)
+    // widget นี้โหลดแบบ lazy — ถ้าผู้ใช้กดปุ่มแชทระหว่างที่ chunk ยังโหลดไม่เสร็จ
+    // คำสั่งนั้นถูกพักไว้ที่ chatOpenBuffer.js มารับช่วงต่อตรงนี้
+    const pendingOpen = takePendingChatOpen()
+    if (pendingOpen) openChatHandler({ detail: { product: pendingOpen.product } })
     return () => window.removeEventListener('ummatee-open-chat', openChatHandler)
   }, [])
 

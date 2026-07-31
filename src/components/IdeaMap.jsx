@@ -21,6 +21,8 @@ export default function IdeaMap({ boardId }) {
   const [linkFrom, setLinkFrom] = useState(null) // โน้ดต้นทางระหว่างรอเลือกปลายทาง
   const [status, setStatus] = useState('')
   const dragRef = useRef(null) // { id, dx, dy } ระยะจากมุมโน้ดถึงจุดที่กด กันโน้ดกระโดดไปใต้นิ้ว
+  // กำลังลากเส้นจากจุดเชื่อม — { fromId, x, y } พิกัดปลายเส้นตามนิ้ว/เมาส์ (พิกัดผ้าใบ)
+  const [linkDrag, setLinkDrag] = useState(null)
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -71,6 +73,40 @@ export default function IdeaMap({ boardId }) {
     } catch (err) { note('ลบเส้นไม่สำเร็จ: ' + err.message) }
   }
 
+  // ── ลากจากจุดเชื่อมไปปล่อยบนการ์ดอีกใบ ──
+  // ใช้ pointer capture ที่ "ตัวจุด" เพื่อให้ได้ move/up ต่อเนื่องแม้นิ้วเลื่อนออกนอกจุดไปแล้ว
+  // แล้วหาปลายทางด้วย elementFromPoint ตอนปล่อย (pointer capture ไม่กระทบการ hit-test ของฟังก์ชันนี้)
+  const canvasPoint = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect()
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top }
+  }
+
+  const onLinkDown = (e, n) => {
+    e.stopPropagation() // กันไม่ให้กลายเป็นการลากย้ายการ์ด
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setLinkDrag({ fromId: n.id, ...canvasPoint(e) })
+  }
+
+  const onLinkMove = (e) => {
+    if (!linkDrag) return
+    e.stopPropagation()
+    const p = canvasPoint(e)
+    setLinkDrag((d) => (d ? { ...d, ...p } : d))
+  }
+
+  const onLinkUp = async (e) => {
+    if (!linkDrag) return
+    e.stopPropagation()
+    const fromId = linkDrag.fromId
+    setLinkDrag(null)
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    const toId = el?.closest?.('.idea-node')?.dataset?.id
+    if (!toId) return // ปล่อยกลางที่ว่าง = ยกเลิก ไม่ต้องเตือนอะไร
+    const links = addLink(nodes, fromId, toId)
+    if (!links) { note(fromId === toId ? 'เชื่อมกับตัวเองไม่ได้' : 'เส้นนี้มีอยู่แล้ว'); return }
+    try { await patch(fromId, { links }) } catch (err) { note('เชื่อมไม่สำเร็จ: ' + err.message) }
+  }
+
   const onPointerDown = (e, n) => {
     if (linkFrom) return // โหมดเชื่อม: การกดคือเลือกปลายทาง ไม่ใช่ลาก
     const rect = canvasRef.current.getBoundingClientRect()
@@ -111,7 +147,7 @@ export default function IdeaMap({ boardId }) {
         <span className="idea-hint">
           {linkFrom
             ? 'เลือกไอเดียปลายทางเพื่อเชื่อม (กดใบเดิมซ้ำเพื่อยกเลิก)'
-            : 'ลากการ์ดเพื่อย้าย · กดปุ่มโซ่เพื่อเชื่อม · กดเส้นเพื่อลบเส้น'}
+            : 'ลากการ์ดเพื่อย้าย · ลากจากจุดเขียวขอบขวาไปปล่อยบนอีกใบเพื่อเชื่อม · กดเส้นเพื่อลบ'}
         </span>
         {status && <span className="idea-status">{status}</span>}
       </div>
@@ -135,6 +171,13 @@ export default function IdeaMap({ boardId }) {
                 </g>
               )
             })}
+            {/* เส้นชั่วคราวระหว่างลาก — ให้เห็นว่ากำลังลากจากใบไหนไปไหน */}
+            {linkDrag && (() => {
+              const from = nodes.find((n) => n.id === linkDrag.fromId)
+              if (!from) return null
+              const a = centerOf(from)
+              return <line x1={a.x} y1={a.y} x2={linkDrag.x} y2={linkDrag.y} className="idea-edge-dragging" />
+            })()}
           </svg>
 
           {nodes.map((n) => {
@@ -145,6 +188,7 @@ export default function IdeaMap({ boardId }) {
                 key={n.id}
                 className={`idea-node${isFrom ? ' linking' : ''}${linkFrom && !isFrom ? ' target' : ''}`}
                 style={{ left: pos.x, top: pos.y, width: NODE_W, minHeight: NODE_H }}
+                data-id={n.id}
                 onPointerDown={(e) => onPointerDown(e, n)}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -181,6 +225,16 @@ export default function IdeaMap({ boardId }) {
                     </button>
                   </span>
                 </div>
+                {/* จุดเชื่อม — กดค้างแล้วลากไปปล่อยบนการ์ดอีกใบเพื่อสร้างเส้น
+                    วางไว้ขอบขวากึ่งกลาง และเป็น 14px (พื้นที่กดจริง 28px ผ่าน ::after) ให้กดโดนบนมือถือ */}
+                <span
+                  className={`idea-link-dot${linkDrag?.fromId === n.id ? ' dragging' : ''}`}
+                  title="ลากจากจุดนี้ไปยังไอเดียอื่นเพื่อเชื่อม"
+                  onPointerDown={(e) => onLinkDown(e, n)}
+                  onPointerMove={onLinkMove}
+                  onPointerUp={onLinkUp}
+                  onPointerCancel={() => setLinkDrag(null)}
+                />
                 <label className="idea-node-date" onPointerDown={(e) => e.stopPropagation()}>
                   <FontAwesomeIcon icon={faCalendarDays} />
                   <input

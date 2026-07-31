@@ -715,3 +715,12 @@ a.attach-name:hover{text-decoration:underline}
   .admin-table-wrap{max-height:calc(100dvh - 300px);min-height:240px;overflow:auto}
   .admin-table th{z-index:4}
 }
+
+/* จุดลากเชื่อมบนการ์ดไอเดีย — กดค้างที่จุดแล้วลากไปปล่อยบนการ์ดอีกใบ
+   แสดงตลอดเวลา (ไม่ซ่อนรอ hover) เพราะจอสัมผัสไม่มี hover จะไม่มีทางรู้ว่ามีจุดนี้อยู่ */
+.idea-link-dot{position:absolute;right:-7px;top:50%;transform:translateY(-50%);width:14px;height:14px;border-radius:50%;background:var(--green-deep);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:crosshair;touch-action:none;z-index:2}
+/* ขยายพื้นที่กดเป็น 30px โดยไม่ทำให้จุดใหญ่ขึ้น — นิ้วกดโดนง่ายบนมือถือ */
+.idea-link-dot::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%}
+.idea-link-dot:hover,.idea-link-dot.dragging{background:var(--green-mid);transform:translateY(-50%) scale(1.25)}
+/* เส้นระหว่างลาก — เส้นประให้รู้ว่ายังไม่ถูกบันทึก ต่างจากเส้นจริงที่เป็นเส้นทึบ */
+.idea-edge-dragging{stroke:var(--green-deep);stroke-width:2.5;stroke-dasharray:6 5;pointer-events:none}

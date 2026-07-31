@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCart, clearCart, updateCartPrices } from '../data/cart.js'
 import { createOrder, getShippingFee } from '../data/orders.js'
-import { notifyAdminNewOrder } from '../utils/lineNotify.js'
+import { notifyAdminOrderCreated } from '../utils/lineNotify.js'
 import { formatPhone } from '../utils/formatPhone.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
@@ -136,7 +136,8 @@ export default function ShopCheckout() {
       }
       const { id, orderCode } = await createOrder({ items, itemsTotal, customer })
       clearCart()
-      notifyAdminNewOrder(orderCode, itemsTotal + shippingFee, customer, items)
+      // ส่งแค่ id — Apps Script อ่านออเดอร์จริงจาก Firestore แล้วบันทึกลงชีต + อีเมลให้แอดมิน
+      notifyAdminOrderCreated(id)
       // จำออเดอร์ไว้ในเครื่อง — ใช้แสดงหน้า "คำสั่งซื้อของฉัน" (ลิงก์ออเดอร์ไม่หายแม้ลืมแคปหน้าจอ)
       try {
         const mine = JSON.parse(localStorage.getItem('umShopMyOrders') || '[]')

@@ -47,6 +47,31 @@ export function notifyAdmin(subject, message) {
     .catch((e) => console.warn('[notifyAdmin] ส่งแจ้งเตือนไม่สำเร็จ:', e?.message || e, { subject }))
 }
 
+/**
+ * แจ้งออเดอร์ใหม่ — ส่งแค่ orderId ให้ Apps Script ไปอ่านออเดอร์จริงจาก Firestore เอง
+ * แล้วบันทึกลงชีต "Orders" + ส่งอีเมลสรุปให้แอดมิน
+ *
+ * ไม่ส่งยอดเงิน/รายการสินค้ามาจากฝั่งนี้ ด้วยเหตุผลเดียวกับ notifyLineOrderStatus:
+ * GIVE_SHEET_TOKEN อ่านได้จาก bundle ⇒ ถ้ารับตัวเลขจากผู้เรียก ใครก็ปลอมออเดอร์ลงชีต
+ * และส่งอีเมลหลอกแอดมินได้
+ */
+export function notifyAdminOrderCreated(orderId) {
+  if (!orderId) return
+  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'orderCreated', orderId }),
+  })
+    .then(async (res) => {
+      const body = await res.text().catch(() => '')
+      if (!res.ok || !body.trim().startsWith('{')) {
+        console.warn(`[notifyAdminOrderCreated] บันทึก/ส่งอีเมลออเดอร์ไม่สำเร็จ (HTTP ${res.status})`, { orderId })
+      }
+    })
+    .catch((e) => console.warn('[notifyAdminOrderCreated] ล้มเหลว:', e?.message || e, { orderId }))
+}
+
+// เวอร์ชันเดิม (ส่งข้อความสำเร็จรูป) — เก็บไว้เผื่อ Apps Script ยังไม่รองรับ orderCreated
 export function notifyAdminNewOrder(orderCode, total, customer, items) {
   const itemLines = (items || []).map((i) => `- ${i.name}${i.colors ? ` (${i.colors}${i.sizes ? '/' + i.sizes : ''})` : i.sizes ? ` (${i.sizes})` : ''} x${i.qty}`).join('\n')
   notifyAdmin(

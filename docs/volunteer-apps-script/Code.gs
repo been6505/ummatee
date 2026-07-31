@@ -10,6 +10,7 @@
 //   1. ตั้งค่า + ตัวช่วย        (SHEET_TOKEN, SCRIPT_VERSION, jsonOut, escapeHtml)
 //   2. ตัวรับ request           (doGet / doPost / getHandler)
 //   3. แจ้งเตือนแอดมิน          (handleAdminNotify)
+//   3b. บันทึกออเดอร์ลงชีต+อีเมล (handleOrderCreated)
 //   4. LINE หาลูกค้า            (handleLineNotify)
 //   5. สมัครอาสาสมัคร           (handleVolunteer + อีเมลยืนยัน)
 //   6. B2UM                     (handleB2um)
@@ -30,7 +31,7 @@ var VOLUNTEER_SHEET_ID = '1HANcunEVvMQFSEY84WSS41jqmUPCm1QkfatX_xXiZj0'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.1'
+var SCRIPT_VERSION = '2026-07-31.2'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -60,13 +61,14 @@ function escapeHtml(s) {
 // ⇒ อ้างถึงตอนเรียกใช้จริงแทน (ดู doPost)
 function getHandler(type) {
   if (type === 'adminNotify') return handleAdminNotify
+  if (type === 'orderCreated') return handleOrderCreated
   if (type === 'lineNotify') return handleLineNotify
   if (type === 'volunteer') return handleVolunteer
   if (type === 'b2um') return handleB2um
   return null
 }
 
-var HANDLER_TYPES = ['adminNotify', 'lineNotify', 'volunteer', 'b2um', '(default) iftar']
+var HANDLER_TYPES = ['adminNotify', 'orderCreated', 'lineNotify', 'volunteer', 'b2um', '(default) iftar']
 
 // ⚠️ ความปลอดภัย: doGet เดิม (token === SHEET_TOKEN) เปิดให้ใครก็ได้ที่รู้ token ดึง PII
 // (ชื่อ/เบอร์/อีเมล/ที่อยู่) ของอาสาสมัครและผู้ลงทะเบียน Iftar ทั้งหมดออกไปได้ โดยไม่ต้องล็อกอิน
@@ -157,6 +159,97 @@ function handleAdminNotify(data) {
 
   // บอกกลับว่าช่องไหนสำเร็จบ้าง — เดิมตอบ ok:true เสมอแม้อีเมลจะส่งไม่ออก
   return jsonOut({ ok: true, mailed: mailed, lined: lined })
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 3b. บันทึกคำสั่งซื้อลง Google Sheet + ส่งอีเมลสรุปให้แอดมิน
+//
+// รับมาแค่ orderId แล้ว "อ่านออเดอร์จริงจาก Firestore เอง" — เหตุผลเดียวกับ handleLineNotify:
+// SHEET_TOKEN เป็น token ฝั่ง client ที่ใครเปิด bundle ก็อ่านได้ ถ้ารับยอดเงิน/รายการสินค้า
+// มาจากผู้เรียกตรงๆ ใครก็ปลอมออเดอร์ลงชีตและส่งอีเมลหลอกแอดมินได้
+// (orders มี allow get: if true ⇒ อ่านทีละ doc ได้โดยไม่ต้องใช้ credential)
+//
+// ชีตเป็นสำเนาไว้ดู/ทำรายงาน — ตัวจริงอยู่ใน Firestore เสมอ
+// ══════════════════════════════════════════════════════════════════════
+
+/** อ่านค่าจาก Firestore REST value object ({stringValue|integerValue|doubleValue|...}) */
+function fsVal(v) {
+  if (!v) return ''
+  if (v.stringValue !== undefined) return v.stringValue
+  if (v.integerValue !== undefined) return Number(v.integerValue)
+  if (v.doubleValue !== undefined) return Number(v.doubleValue)
+  if (v.booleanValue !== undefined) return v.booleanValue
+  if (v.timestampValue !== undefined) return v.timestampValue
+  return ''
+}
+
+function handleOrderCreated(data) {
+  if (!data.orderId) return jsonOut({ error: 'missing orderId' })
+
+  var fsUrl = 'https://firestore.googleapis.com/v1/projects/ummatee-app/databases/(default)/documents/orders/'
+    + encodeURIComponent(String(data.orderId))
+  var fsRes = UrlFetchApp.fetch(fsUrl, { muteHttpExceptions: true })
+  if (fsRes.getResponseCode() !== 200) return jsonOut({ error: 'order not found' })
+
+  var f = (JSON.parse(fsRes.getContentText()) || {}).fields || {}
+  var cust = ((f.customer || {}).mapValue || {}).fields || {}
+
+  var orderCode = fsVal(f.orderCode)
+  var total = fsVal(f.total)
+  var itemsTotal = fsVal(f.itemsTotal)
+  var shippingFee = fsVal(f.shippingFee)
+
+  // items เป็น array ของ map — แปลงเป็นข้อความบรรทัดละรายการ
+  var itemVals = ((f.items || {}).arrayValue || {}).values || []
+  var itemLines = itemVals.map(function (it) {
+    var m = (it.mapValue || {}).fields || {}
+    var variant = [fsVal(m.colors), fsVal(m.sizes)].filter(function (x) { return x }).join('/')
+    return '- ' + fsVal(m.name) + (variant ? ' (' + variant + ')' : '') + ' x' + fsVal(m.qty)
+  })
+
+  var sheetLogged = false
+  try {
+    var ss = SpreadsheetApp.openById(VOLUNTEER_SHEET_ID)
+    var sh = ss.getSheetByName('Orders') || ss.insertSheet('Orders')
+    if (sh.getLastRow() === 0) {
+      sh.appendRow([
+        'เลขที่ออเดอร์', 'วันที่บันทึก', 'ชื่อลูกค้า', 'เบอร์โทร', 'อีเมล', 'ที่อยู่',
+        'รายการสินค้า', 'ค่าสินค้า', 'ค่าจัดส่ง', 'ยอดรวม', 'สถานะ', 'ลิงก์ออเดอร์',
+      ])
+    }
+    sh.appendRow([
+      orderCode,
+      new Date(),
+      fsVal(cust.fullName),
+      fsVal(cust.phone),
+      fsVal(cust.email),
+      fsVal(cust.address),
+      itemLines.join('\n'),
+      itemsTotal,
+      shippingFee,
+      total,
+      fsVal(f.status),
+      'https://ummatee-app.web.app/admin/shop/orders/' + data.orderId,
+    ])
+    sheetLogged = true
+  } catch (sheetErr) { Logger.log('orderCreated sheet error: ' + sheetErr.message) }
+
+  var mailed = false
+  try {
+    GmailApp.sendEmail(ADMIN_EMAIL, '🛒 ออเดอร์ใหม่ ' + orderCode,
+      '🛒 มีคำสั่งซื้อใหม่ ' + orderCode + '\n'
+      + 'ลูกค้า: ' + fsVal(cust.fullName) + ' (' + fsVal(cust.phone) + ')\n'
+      + (fsVal(cust.email) ? 'อีเมล: ' + fsVal(cust.email) + '\n' : '')
+      + 'ที่อยู่: ' + fsVal(cust.address) + '\n\n'
+      + itemLines.join('\n') + '\n\n'
+      + 'ค่าสินค้า: ฿' + itemsTotal + '\n'
+      + 'ค่าจัดส่ง: ฿' + shippingFee + '\n'
+      + 'ยอดรวม: ฿' + total + '\n\n'
+      + 'เปิดออเดอร์: https://ummatee-app.web.app/admin/shop/orders/' + data.orderId)
+    mailed = true
+  } catch (mailErr) { Logger.log('orderCreated mail error: ' + mailErr.message) }
+
+  return jsonOut({ ok: true, orderCode: orderCode, mailed: mailed, sheetLogged: sheetLogged })
 }
 
 // ══════════════════════════════════════════════════════════════════════

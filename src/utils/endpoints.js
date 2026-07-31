@@ -19,7 +19,7 @@ export const SHEETS_EXPORT_ENDPOINT = ''
 export const SHEETS_EXPORT_TOKEN = ''
 
 // อาสาสมัคร
-export const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyz1XLqpQ6bkA7aPX4K3nbag02JIv27Lkquf6jSub8dzVMK3UIAiNETrS1uTlv_UGVh/exec'
+export const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzJyyA9lqjuiJOVry-Mcl-8tXyAtbaIKggO704EqEL9y_A4rIodYL_LqysvbXrltBZKTA/exec'
 
 // fetch แบบมี timeout — Google Apps Script บางทีค้าง (ไม่ตอบ ไม่ error) ถ้าไม่มี timeout ปุ่ม "กำลังส่ง..." จะค้างตลอด
 // ค่า default 15 วินาที เผื่อ Apps Script cold start ที่ช้าบ้างในบางครั้ง แต่ไม่ปล่อยให้ค้างไม่มีที่สิ้นสุด

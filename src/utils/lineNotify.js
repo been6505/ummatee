@@ -71,6 +71,27 @@ export function notifyAdminOrderCreated(orderId) {
     .catch((e) => console.warn('[notifyAdminOrderCreated] ล้มเหลว:', e?.message || e, { orderId }))
 }
 
+/**
+ * แจ้งเลขพัสดุถึงลูกค้าทางอีเมล เมื่อร้านกดจัดส่งแล้ว
+ * ส่งแค่ orderId — Apps Script อ่านเลขพัสดุ/ขนส่ง/อีเมลจากออเดอร์จริงใน Firestore เอง
+ * (ถ้ายังไม่มีเลขพัสดุ หรือลูกค้าไม่ได้กรอกอีเมล ฝั่งนั้นจะข้ามให้เอง)
+ */
+export function notifyCustomerShipped(orderId) {
+  if (!orderId) return
+  fetchWithTimeout(VOLUNTEER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, type: 'orderShipped', orderId }),
+  })
+    .then(async (res) => {
+      const body = await res.text().catch(() => '')
+      if (!res.ok || !body.trim().startsWith('{')) {
+        console.warn(`[notifyCustomerShipped] ส่งอีเมลเลขพัสดุไม่สำเร็จ (HTTP ${res.status})`, { orderId })
+      }
+    })
+    .catch((e) => console.warn('[notifyCustomerShipped] ล้มเหลว:', e?.message || e, { orderId }))
+}
+
 // เวอร์ชันเดิม (ส่งข้อความสำเร็จรูป) — เก็บไว้เผื่อ Apps Script ยังไม่รองรับ orderCreated
 export function notifyAdminNewOrder(orderCode, total, customer, items) {
   const itemLines = (items || []).map((i) => `- ${i.name}${i.colors ? ` (${i.colors}${i.sizes ? '/' + i.sizes : ''})` : i.sizes ? ` (${i.sizes})` : ''} x${i.qty}`).join('\n')

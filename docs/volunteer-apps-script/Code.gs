@@ -36,7 +36,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.5'
+var SCRIPT_VERSION = '2026-07-31.6'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -80,13 +80,14 @@ function escapeHtml(s) {
 function getHandler(type) {
   if (type === 'adminNotify') return handleAdminNotify
   if (type === 'orderCreated') return handleOrderCreated
+  if (type === 'orderShipped') return handleOrderShipped
   if (type === 'lineNotify') return handleLineNotify
   if (type === 'volunteer') return handleVolunteer
   if (type === 'b2um') return handleB2um
   return null
 }
 
-var HANDLER_TYPES = ['adminNotify', 'orderCreated', 'lineNotify', 'volunteer', 'b2um', '(default) iftar']
+var HANDLER_TYPES = ['adminNotify', 'orderCreated', 'orderShipped', 'lineNotify', 'volunteer', 'b2um', '(default) iftar']
 
 // ⚠️ ความปลอดภัย: doGet เดิม (token === SHEET_TOKEN) เปิดให้ใครก็ได้ที่รู้ token ดึง PII
 // (ชื่อ/เบอร์/อีเมล/ที่อยู่) ของอาสาสมัครและผู้ลงทะเบียน Iftar ทั้งหมดออกไปได้ โดยไม่ต้องล็อกอิน
@@ -359,6 +360,87 @@ function sendCustomerOrderConfirmation(o) {
   GmailApp.sendEmail(o.email, 'ยืนยันคำสั่งซื้อ ' + o.orderCode + ' · um-shop',
     'กรุณาเปิดอีเมลในโปรแกรมที่รองรับ HTML — ติดตามคำสั่งซื้อ: ' + track,
     { htmlBody: body })
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 3c. แจ้งเลขพัสดุถึงลูกค้าทางอีเมล เมื่อร้านกดจัดส่งแล้ว
+//
+// เดิมแจ้งทาง LINE อย่างเดียว ซึ่งได้เฉพาะลูกค้าที่ล็อกอินด้วย LINE — ลูกค้าที่กรอกอีเมล
+// (ส่วนใหญ่) ไม่เคยได้รับเลขพัสดุเลย ต้องเข้ามาเช็คหน้าเว็บเอง
+//
+// อ่านออเดอร์จาก Firestore เองเหมือน handleOrderCreated จึงส่งเลขพัสดุปลอมไม่ได้
+// ══════════════════════════════════════════════════════════════════════
+
+// ลิงก์ติดตามของแต่ละขนส่ง — ต้องตรงกับ COURIERS ใน src/components/OrderShared.jsx
+function courierInfo(key, code) {
+  var c = encodeURIComponent(code)
+  var map = {
+    thailandpost: { label: 'ไปรษณีย์ไทย (EMS/ลงทะเบียน)', url: 'https://track.thailandpost.co.th/?trackNumber=' + c },
+    kerry: { label: 'Kerry Express', url: 'https://th.kerryexpress.com/th/track/?track=' + c },
+    flash: { label: 'Flash Express', url: 'https://www.flashexpress.com/tracking/?se=' + c },
+    jt: { label: 'J&T Express', url: 'https://www.jtexpress.co.th/index/query/gzquery.html?bills=' + c },
+    ninjavan: { label: 'Ninja Van', url: 'https://www.ninjavan.co/th-th/tracking?id=' + c },
+    spx: { label: 'SPX Express (Shopee)', url: 'https://spx.co.th/th/track?sls_tracking_number=' + c },
+  }
+  // ไม่รู้ขนส่ง (ออเดอร์เก่าก่อนมีช่องเลือก) → 17TRACK เดาขนส่งจากรูปแบบเลขพัสดุให้
+  return map[key] || { label: 'พัสดุของคุณ', url: 'https://t.17track.net/en#nums=' + c }
+}
+
+function handleOrderShipped(data) {
+  if (!data.orderId) return jsonOut({ error: 'missing orderId' })
+
+  var fsUrl = 'https://firestore.googleapis.com/v1/projects/ummatee-app/databases/(default)/documents/orders/'
+    + encodeURIComponent(String(data.orderId))
+  var fsRes = UrlFetchApp.fetch(fsUrl, { muteHttpExceptions: true })
+  if (fsRes.getResponseCode() !== 200) return jsonOut({ error: 'order not found' })
+
+  var f = (JSON.parse(fsRes.getContentText()) || {}).fields || {}
+  var cust = ((f.customer || {}).mapValue || {}).fields || {}
+  var email = String(fsVal(cust.email) || '').trim()
+  var tracking = String(fsVal(f.trackingNumber) || '').trim()
+
+  if (!tracking) return jsonOut({ ok: false, reason: 'no tracking number yet' })
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return jsonOut({ ok: false, reason: 'no customer email' })
+  }
+
+  var ci = courierInfo(fsVal(f.courier), tracking)
+  var orderCode = fsVal(f.orderCode)
+  var track = 'https://ummatee-app.web.app/um-shop/order/' + data.orderId
+
+  var body =
+    '<div style="font-family:Tahoma,Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">' +
+    '<div style="background:#1b5e36;color:#fff;padding:24px;text-align:center">' +
+    '<h1 style="margin:0;font-size:22px">&#128230; จัดส่งพัสดุแล้ว</h1>' +
+    '<p style="margin:6px 0 0;opacity:.9">um-shop · Ummatee Thailand</p>' +
+    '</div>' +
+    '<div style="padding:24px;color:#333;line-height:1.7">' +
+    '<p>เรียน คุณ' + escapeHtml(fsVal(cust.fullName)) + '</p>' +
+    '<p>คำสั่งซื้อ <b>' + escapeHtml(orderCode) + '</b> ถูกจัดส่งเรียบร้อยแล้ว</p>' +
+
+    '<div style="background:#f5fbf7;border:1.5px solid #2e7d52;border-radius:12px;padding:18px;margin:18px 0;text-align:center">' +
+    '<div style="font-size:13px;color:#666;font-weight:700">' + escapeHtml(ci.label) + '</div>' +
+    '<div style="font-family:monospace;font-size:22px;font-weight:800;letter-spacing:1px;color:#1b5e36;margin:6px 0 14px">' + escapeHtml(tracking) + '</div>' +
+    '<a href="' + ci.url + '" style="display:inline-block;padding:13px 26px;background:#1b5e36;color:#fff;text-decoration:none;border-radius:10px;font-weight:800">ติดตามพัสดุที่เว็บขนส่ง</a>' +
+    '</div>' +
+
+    '<p style="font-size:13px;color:#666">สถานะล่าสุดของพัสดุดูได้จากเว็บขนส่งโดยตรง · หน้าคำสั่งซื้อของคุณ: <a href="' + track + '">' + track + '</a></p>' +
+    '<p style="margin:16px 0 0">ขอบคุณที่อุดหนุน um-shop — รายได้นำไปช่วยเหลือผู้ยากไร้<br>Jazakallahu khairan</p>' +
+    '</div>' +
+    '<div style="background:#faf3e0;color:#8a6d1a;padding:14px 24px;font-size:13px;text-align:center">' +
+    '&#9888;&#65039; อีเมลฉบับนี้เป็นข้อความอัตโนมัติ <b>ห้ามตอบกลับ</b> · This is an automated message, please do not reply.' +
+    '</div>' +
+    '</div>'
+
+  try {
+    GmailApp.sendEmail(email, 'จัดส่งแล้ว ' + orderCode + ' · เลขพัสดุ ' + tracking,
+      'เลขพัสดุ: ' + tracking + ' (' + ci.label + ')\nติดตาม: ' + ci.url,
+      { htmlBody: body })
+  } catch (e) {
+    Logger.log('orderShipped mail error: ' + e.message)
+    return jsonOut({ ok: false, reason: e.message })
+  }
+  return jsonOut({ ok: true, orderCode: orderCode, tracking: tracking, courier: ci.label })
 }
 
 // ══════════════════════════════════════════════════════════════════════

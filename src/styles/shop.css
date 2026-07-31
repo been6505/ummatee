@@ -349,3 +349,15 @@
 .shop-alert-btn{width:100%;padding:13px;border:none;border-radius:99px;background:var(--green-deep);color:#fff;font-weight:800;font-size:.95rem;font-family:inherit;cursor:pointer;transition:background .15s}
 .shop-alert-btn:hover{background:var(--green-mid)}
 @media (prefers-reduced-motion:reduce){.shop-alert-overlay,.shop-alert{animation:none}}
+
+/* ── กล่องเลขพัสดุในหน้าติดตามคำสั่งซื้อ (สถานะ "จัดส่งแล้ว") ──
+   เป็นสิ่งเดียวที่ลูกค้าเปิดหน้านี้มาหา จึงทำให้เด่นที่สุดในการ์ด และกดคัดลอก/เปิดเว็บขนส่งได้ในปุ่มเดียว */
+.order-track-box{background:#f5fbf7;border:1.5px solid var(--green-mid);border-radius:12px;padding:16px;text-align:center}
+.order-track-courier{font-size:.85rem;color:var(--ink-soft);font-weight:700}
+.order-track-code{font-family:monospace;font-size:1.35rem;font-weight:800;letter-spacing:1px;color:var(--green-deep);margin:4px 0 12px;overflow-wrap:anywhere}
+.order-track-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.order-track-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:99px;background:var(--green-deep);color:#fff;text-decoration:none;font-weight:800;font-size:.9rem;min-height:44px;box-sizing:border-box}
+.order-track-btn:hover{background:var(--green-mid)}
+.order-track-copy{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:99px;border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);font-family:inherit;font-weight:700;font-size:.9rem;cursor:pointer;min-height:44px}
+.order-track-copy:hover{background:#EAF6EE}
+.order-track-note{font-size:.8rem;color:var(--ink-soft);margin:10px 0 0}

@@ -8,21 +8,10 @@ import { notifyAdminLowStock } from '../utils/lineNotify.js'
 import { effectivePrice, groupOrderItemsByProduct, planStockRestore } from './pricing.js'
 
 // คำสั่งซื้อ Um Shop — เก็บใน Firestore collection "orders"
-// ลำดับสถานะ: pending_payment → preparing → shipping → delivered
-export const STATUS_STEPS = ['pending_payment', 'preparing', 'shipping', 'delivered']
-
-export const STATUS_LABEL = {
-  pending_payment: 'รอการชำระเงิน',
-  preparing: 'เตรียมการจัดส่ง',
-  shipping: 'กำลังจัดส่ง',
-  delivered: 'จัดส่งเรียบร้อย',
-}
-
-// สถานะที่ไม่รู้จัก (เช่น 'reviewed' จาก order เก่าก่อนตัดระบบรีวิว) ให้นับเป็นขั้นสุดท้าย
-export const stepIndex = (status) => {
-  const i = STATUS_STEPS.indexOf(status)
-  return i >= 0 ? i : STATUS_STEPS.length - 1
-}
+// สถานะคำสั่งซื้ออยู่ใน orderStatus.js (ฟังก์ชันล้วน เทสต์ได้โดยไม่ต้องมี DOM/Firebase)
+// re-export ไว้ที่นี่ด้วยเพื่อไม่ต้องแก้ import ทุกไฟล์ที่เคยดึงจาก orders.js
+export { STATUS_STEPS, STATUS_LABEL, normOrderStatus, stepIndex } from './orderStatus.js'
+import { STATUS_LABEL, normOrderStatus } from './orderStatus.js'
 
 // ค่าจัดส่งมาตรฐาน (บาท) — ถ้าต้องคำนวณตามน้ำหนัก/พื้นที่ในอนาคตค่อยแยกฟังก์ชัน
 // ออเดอร์เก่าเก็บ shippingFee ของตัวเองไว้ในเอกสาร การแก้ค่านี้จึงมีผลกับออเดอร์ใหม่เท่านั้น
@@ -257,7 +246,7 @@ export const declarePayment = (orderId) =>
 // "รอยืนยันการชำระเงิน" (ลูกค้ากดปุ่มชำระเงินแล้ว รอแอดมินตรวจสลิป+ยืนยัน)
 export const adminStatusLabel = (order) => {
   if (order.status === 'pending_payment' && order.paymentDeclaredAt) return 'รอยืนยันการชำระเงิน'
-  return STATUS_LABEL[order.status] || order.status
+  return STATUS_LABEL[normOrderStatus(order.status)] || order.status
 }
 
 // ── ฝั่งแอดมิน ───────────────────────────────────────────────────────
@@ -267,12 +256,12 @@ export const confirmPayment = (orderId) =>
 // ยืนยันแพ็คของ + อัปโหลดรูปสินค้าที่แพ็ค + เลขพัสดุ+ขนส่ง (ไม่บังคับ) → เปลี่ยนสถานะเป็นกำลังจัดส่ง
 export const confirmPackedAndShip = (orderId, packedImages, trackingNumber, courier) =>
   updateDoc(doc(db, 'orders', orderId), {
-    packedImages, packedAt: new Date().toLocaleString('th-TH'), status: 'shipping',
+    packedImages, packedAt: new Date().toLocaleString('th-TH'), status: 'shipped',
     trackingNumber: trackingNumber?.trim() || null,
     courier: trackingNumber?.trim() ? (courier || null) : null,
   })
 
-// แก้/เพิ่มเลขพัสดุ+ขนส่งภายหลัง (เช่น ตอนแรกไม่มีเลข พึ่งได้จากขนส่งทีหลัง) — ใช้ได้ทั้งตอน shipping/delivered
+// แก้/เพิ่มเลขพัสดุ+ขนส่งภายหลัง (เช่น ตอนแรกไม่มีเลข พึ่งได้จากขนส่งทีหลัง)
 export const setTrackingNumber = (orderId, trackingNumber, courier) =>
   updateDoc(doc(db, 'orders', orderId), {
     trackingNumber: trackingNumber?.trim() || null,

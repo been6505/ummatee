@@ -15,9 +15,14 @@ export const COURIERS = [
   { key: 'flash', label: 'Flash Express', url: (code) => `https://www.flashexpress.com/tracking/?se=${encodeURIComponent(code)}` },
   { key: 'jt', label: 'J&T Express', url: (code) => `https://www.jtexpress.co.th/index/query/gzquery.html?bills=${encodeURIComponent(code)}` },
   { key: 'ninjavan', label: 'Ninja Van', url: (code) => `https://www.ninjavan.co/th-th/tracking?id=${encodeURIComponent(code)}` },
+  { key: 'spx', label: 'SPX Express (Shopee)', url: (code) => `https://spx.co.th/th/track?${new URLSearchParams({ sls_tracking_number: code })}` },
 ]
 
 // ลิงก์ติดตามพัสดุ — ถ้ารู้ขนส่งให้ไปหน้าติดตามของเจ้านั้นตรงๆ ถ้าไม่รู้ (ออเดอร์เก่าก่อนมีช่องเลือกขนส่ง) fallback ไป 17TRACK ที่เดาขนส่งจากรูปแบบเลขพัสดุ
+/** ชื่อขนส่งสำหรับแสดงผล — ไม่รู้ว่าเจ้าไหนก็บอกกลางๆ ดีกว่าโชว์คีย์ดิบหรือช่องว่าง */
+export const courierLabel = (courierKey) =>
+  (COURIERS.find((c) => c.key === courierKey) || {}).label || 'พัสดุของคุณ'
+
 export const trackingUrl = (code, courierKey) => {
   const trimmed = code.trim()
   const courier = COURIERS.find((c) => c.key === courierKey)
@@ -25,7 +30,7 @@ export const trackingUrl = (code, courierKey) => {
   return `https://t.17track.net/en#nums=${encodeURIComponent(trimmed)}`
 }
 
-const STEP_ICONS = ['1', '2', '3', '4']
+const STEP_ICONS = ['1', '2', '3']
 
 export function Stepper({ status }) {
   const idx = stepIndex(status)

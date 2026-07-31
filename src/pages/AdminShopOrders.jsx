@@ -16,7 +16,9 @@ const orderTimeLabel = (ts) => {
   return d.toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 const STATUS_COLOR = {
-  pending_payment: '#d97706', preparing: '#2563eb', shipping: '#7c3aed', delivered: '#15803d',
+  pending_payment: '#d97706', preparing: '#2563eb', shipped: '#15803d',
+  // ออเดอร์เก่ายังมี status เดิม — ใส่ไว้ให้สีไม่หลุดเป็น undefined
+  shipping: '#15803d', delivered: '#15803d',
 }
 
 export default function AdminShopOrders() {

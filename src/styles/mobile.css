@@ -90,7 +90,9 @@
 .my-order-status{font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:99px;background:#f4f6f4;color:var(--ink-soft)}
 .my-order-status.st-pending_payment{background:#fffbeb;color:#b45309}
 .my-order-status.st-preparing{background:#eff6ff;color:#1d4ed8}
-.my-order-status.st-shipping{background:#f0fdf4;color:#15803d}
+.my-order-status.st-shipped{background:var(--green-mid);color:#fff}
+/* ออเดอร์เก่าที่ยังเป็น shipping/delivered — ให้หน้าตาเหมือน shipped */
+.my-order-status.st-shipping{background:var(--green-mid);color:#fff}
 .my-order-status.st-delivered{background:var(--green-mid);color:#fff}
 .shop-myorders-btn{padding:10px 16px;border-radius:10px;border:1px solid #ddd;background:#fff;font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;color:var(--green-deep);transition:all .15s}
 .shop-myorders-btn:hover{border-color:var(--green-mid);background:#f5fbf7}

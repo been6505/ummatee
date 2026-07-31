@@ -5,12 +5,12 @@ import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { useAllowlistedAdmin } from '../useAdminRole.js'
 import {
   useOrder, STATUS_LABEL, adminStatusLabel,
-  uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, confirmDelivered, setTrackingNumber,
+  uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, setTrackingNumber, normOrderStatus,
   addDeliveredImages,
 } from '../data/orders.js'
 import { useProducts, effectivePrice } from '../data/shop.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
-import { notifyLineOrderStatus } from '../utils/lineNotify.js'
+import { notifyLineOrderStatus, notifyCustomerShipped } from '../utils/lineNotify.js'
 import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, COURIERS } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons'
@@ -93,6 +93,8 @@ export default function AdminShopOrderDetail({ orderId }) {
     try {
       await confirmPackedAndShip(order.id, packedPreview, trackingInput, courierInput)
       notifyLineOrderStatus(order, 'shipping', { trackingNumber: trackingInput })
+      // อีเมลเลขพัสดุถึงลูกค้า — LINE ได้เฉพาะคนที่ล็อกอินด้วย LINE ส่วนใหญ่กรอกแค่อีเมล
+      notifyCustomerShipped(order.id)
     }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
     finally { setConfirming(false) }
@@ -101,7 +103,13 @@ export default function AdminShopOrderDetail({ orderId }) {
   // แก้/เพิ่มเลขพัสดุภายหลัง (ตอน shipping) — เผื่อไม่มีเลขตอนแพ็ค พึ่งได้จากขนส่งทีหลัง
   const handleSaveTracking = async () => {
     setConfirming(true)
-    try { await setTrackingNumber(order.id, trackingInput, courierInput); setEditingTracking(false) }
+    try {
+      await setTrackingNumber(order.id, trackingInput, courierInput)
+      setEditingTracking(false)
+      // เพิ่ม/แก้เลขพัสดุทีหลัง (ตอนกดจัดส่งยังไม่มีเลข) — ลูกค้าต้องได้อีเมลตอนนี้เหมือนกัน
+      // ส่งเฉพาะออเดอร์ที่จัดส่งแล้ว ไม่งั้นยิงตั้งแต่ยังเตรียมของ ลูกค้าได้อีเมลก่อนของออกจากร้าน
+      if (normOrderStatus(order.status) === 'shipped' && trackingInput.trim()) notifyCustomerShipped(order.id)
+    }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
     finally { setConfirming(false) }
   }
@@ -145,16 +153,6 @@ export default function AdminShopOrderDetail({ orderId }) {
     finally { setConfirming(false) }
   }
   const handleAddShipUpdate = () => submitShipUpdate(shipText)
-
-  const handleConfirmDelivered = async () => {
-    setConfirming(true)
-    try {
-      await confirmDelivered(order.id)
-      notifyLineOrderStatus(order, 'delivered')
-    }
-    catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
-    finally { setConfirming(false) }
-  }
 
   // แนบรูปหลังส่งพัสดุแล้ว (เช่น รูปหน้าบ้านลูกค้า/ใบเซ็นรับ) — อัพโหลดแล้วบันทึกทันที ไม่ต้องกดยืนยันซ้ำ
   const handleDeliveredUpload = async (e) => {
@@ -281,9 +279,9 @@ export default function AdminShopOrderDetail({ orderId }) {
             )}
 
             {/* ── สถานะที่ 3: กำลังจัดส่ง ── */}
-            {order.status === 'shipping' && (
+            {normOrderStatus(order.status) === 'shipped' && (
               <div className="admin-card" style={{ marginBottom: 20 }}>
-                <h4>กำลังจัดส่ง</h4>
+                <h4>จัดส่งแล้ว</h4>
                 <div style={{ marginBottom: 14 }}>
                   {editingTracking ? (
                     <div className="admin-inline-row">
@@ -342,28 +340,10 @@ export default function AdminShopOrderDetail({ orderId }) {
                   <input type="text" value={shipText} onChange={(e) => setShipText(e.target.value)} placeholder="หรือพิมพ์สถานะเอง" />
                   <button className="admin-btn" onClick={handleAddShipUpdate} disabled={confirming}>อัปเดต</button>
                 </div>
-                <button className="admin-btn-primary" onClick={handleConfirmDelivered} disabled={confirming}>
-                  {confirming ? 'กำลังยืนยัน...' : 'ยืนยันจัดส่งเรียบร้อย'}
-                </button>
-              </div>
-            )}
-
-            {/* ── สถานะที่ 4: จัดส่งเรียบร้อย ── */}
-            {order.status === 'delivered' && (
-              <div className="admin-card" style={{ marginBottom: 20 }}>
-                <h4>{STATUS_LABEL.delivered}</h4>
-                <p style={{ color: '#15803d' }}><FontAwesomeIcon icon={faCheck} /> ได้รับสินค้าเมื่อ {order.deliveredAt}</p>
-                {order.trackingNumber && (
-                  <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                    <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
-                      <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
-                    </a>
-                  </p>
-                )}
-
+                {/* ไม่มีปุ่ม "ยืนยันจัดส่งเรียบร้อย" แล้ว — ร้านไม่รู้ว่าของถึงมือลูกค้าเมื่อไร
+                    สถานะปลายทางดูที่เว็บขนส่งผ่านเลขพัสดุแทน (ดู STATUS_STEPS ใน data/orders.js) */}
                 <div style={{ marginTop: 16 }}>
-                  <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุแล้ว (เช่น รูปหน้าบ้านลูกค้า/ใบเซ็นรับ)</p>
+                  <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุ (เช่น ใบเสร็จขนส่ง/ใบเซ็นรับ)</p>
                   {order.deliveredImages?.length > 0 && (
                     <div className="admin-media-preview" style={{ marginBottom: 10 }}>
                       {order.deliveredImages.map((url, i) => (
@@ -375,6 +355,7 @@ export default function AdminShopOrderDetail({ orderId }) {
                 </div>
               </div>
             )}
+
           </div>
         )}
       </div>

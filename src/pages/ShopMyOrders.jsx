@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../firebase.js'
 import { doc, getDoc } from 'firebase/firestore'
-import { STATUS_LABEL } from '../data/orders.js'
+import { STATUS_LABEL, normOrderStatus } from '../data/orders.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -79,7 +79,7 @@ export default function ShopMyOrders() {
                     <div className="my-order-total">{THB(o.total)}</div>
                   </div>
                   <div className="my-order-right">
-                    <span className={`my-order-status st-${o.status}`}>{STATUS_LABEL[o.status] || o.status}</span>
+                    <span className={`my-order-status st-${normOrderStatus(o.status)}`}>{STATUS_LABEL[normOrderStatus(o.status)] || o.status}</span>
                     <FontAwesomeIcon icon={faChevronRight} style={{ color: '#ccc' }} />
                   </div>
                 </a>

@@ -10,7 +10,7 @@
 //   1. ตั้งค่า + ตัวช่วย        (SHEET_TOKEN, SCRIPT_VERSION, jsonOut, escapeHtml)
 //   2. ตัวรับ request           (doGet / doPost / getHandler)
 //   3. แจ้งเตือนแอดมิน          (handleAdminNotify)
-//   3b. บันทึกออเดอร์ลงชีต+อีเมล (handleOrderCreated)
+//   3b. บันทึกออเดอร์ลงชีต + อีเมลหาแอดมิน + อีเมลยืนยันหาลูกค้า (handleOrderCreated)
 //   4. LINE หาลูกค้า            (handleLineNotify)
 //   5. สมัครอาสาสมัคร           (handleVolunteer + อีเมลยืนยัน)
 //   6. B2UM                     (handleB2um)
@@ -36,7 +36,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.4'
+var SCRIPT_VERSION = '2026-07-31.5'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -267,7 +267,98 @@ function handleOrderCreated(data) {
     mailed = true
   } catch (mailErr) { Logger.log('orderCreated mail error: ' + mailErr.message) }
 
-  return jsonOut({ ok: true, orderCode: orderCode, mailed: mailed, sheetLogged: sheetLogged })
+  // อีเมลถึงลูกค้า — ส่งเมื่อลูกค้ากรอกอีเมลไว้ตอนสั่งซื้อเท่านั้น (ช่องนี้ไม่บังคับกรอก)
+  // อีเมลมาจากตัวออเดอร์ใน Firestore ไม่ใช่จากผู้เรียก จึงเป็นค่าที่ลูกค้ากรอกเองจริง
+  var customerEmail = String(fsVal(cust.email) || '').trim()
+  var mailedCustomer = false
+  if (customerEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    try {
+      sendCustomerOrderConfirmation({
+        email: customerEmail,
+        name: fsVal(cust.fullName),
+        address: fsVal(cust.address),
+        orderCode: orderCode,
+        orderId: data.orderId,
+        itemLines: itemLines,
+        itemsTotal: itemsTotal,
+        shippingFee: shippingFee,
+        total: total,
+      })
+      mailedCustomer = true
+    } catch (custErr) { Logger.log('customer mail error: ' + custErr.message) }
+  }
+
+  return jsonOut({
+    ok: true, orderCode: orderCode,
+    mailed: mailed, mailedCustomer: mailedCustomer, sheetLogged: sheetLogged,
+  })
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// อีเมลยืนยันคำสั่งซื้อถึงลูกค้า — โครงเดียวกับอีเมลยืนยันอาสาสมัคร/Iftar
+// ส่งเป็น HTML (อีโมจิแสดงผลได้ ต่างจากอีเมลข้อความล้วนที่ส่งหาแอดมิน)
+// ทุกฟิลด์ที่ลูกค้ากรอกเองต้องผ่าน escapeHtml — ชื่อ/ที่อยู่ไปอยู่ใน HTML โดยตรง
+// ══════════════════════════════════════════════════════════════════════
+function sendCustomerOrderConfirmation(o) {
+  var track = 'https://ummatee-app.web.app/um-shop/order/' + o.orderId
+  var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(track)
+  var itemsHtml = o.itemLines.map(function (l) {
+    return '<div style="padding:4px 0;border-bottom:1px solid #f0f0f0">' + escapeHtml(l) + '</div>'
+  }).join('')
+
+  var body =
+    '<div style="font-family:Tahoma,Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">' +
+    '<div style="background:#1b5e36;color:#fff;padding:24px;text-align:center">' +
+    '<h1 style="margin:0;font-size:22px">&#10003; ได้รับคำสั่งซื้อแล้ว</h1>' +
+    '<p style="margin:6px 0 0;opacity:.9">um-shop · Ummatee Thailand</p>' +
+    '</div>' +
+    '<div style="padding:24px;color:#333;line-height:1.7">' +
+    '<p>เรียน คุณ' + escapeHtml(o.name) + '</p>' +
+    '<p>ขอบคุณที่สั่งซื้อกับ um-shop — รายได้นำไปช่วยเหลือผู้ยากไร้</p>' +
+
+    '<div style="background:#f6f6f4;border-radius:10px;padding:16px;margin:16px 0;text-align:center">' +
+    '<div style="font-size:13px;color:#888">เลขที่คำสั่งซื้อ</div>' +
+    '<div style="font-size:24px;font-weight:800;color:#1b5e36;letter-spacing:1px">' + escapeHtml(o.orderCode) + '</div>' +
+    '</div>' +
+
+    '<h3 style="font-size:15px;margin:18px 0 6px;color:#1b5e36">รายการสินค้า</h3>' +
+    itemsHtml +
+    '<div style="margin-top:12px">' +
+    '<div>ค่าสินค้า: &#3647;' + o.itemsTotal + '</div>' +
+    '<div>ค่าจัดส่ง: &#3647;' + o.shippingFee + '</div>' +
+    '<div style="font-size:18px;font-weight:800;color:#1b5e36;margin-top:6px">ยอดชำระทั้งหมด: &#3647;' + o.total + '</div>' +
+    '</div>' +
+
+    '<div style="background:#f5fbf7;border:1.5px solid #2e7d52;border-radius:10px;padding:16px;margin:18px 0">' +
+    '<div style="font-weight:700;color:#1b5e36;margin-bottom:6px">ขั้นตอนถัดไป: โอนเงินและแจ้งชำระ</div>' +
+    '<div style="font-size:14px">ธนาคารอิสลามแห่งประเทศไทย (ibank)</div>' +
+    '<div style="font-size:14px">ชื่อบัญชี: สนับสนุนมูลนิธิ</div>' +
+    '<div style="font-family:monospace;font-size:18px;font-weight:800;letter-spacing:1px">0011 1863 13</div>' +
+    '<div style="font-size:13px;color:#666;margin-top:6px">โอนแล้วกรุณาอัพสลิปและกดแจ้งชำระเงินในหน้าติดตามคำสั่งซื้อ</div>' +
+    '</div>' +
+
+    '<div style="text-align:center;margin:22px 0">' +
+    '<a href="' + track + '" style="display:inline-block;padding:13px 26px;background:#1b5e36;color:#fff;text-decoration:none;border-radius:10px;font-weight:700">ติดตาม / แจ้งชำระเงิน</a>' +
+    '</div>' +
+
+    '<div style="text-align:center;margin:18px 0">' +
+    '<div style="display:inline-block;background:#fff;border:2px solid #e5e7eb;border-radius:14px;padding:12px">' +
+    '<img src="' + qrUrl + '" alt="QR" width="160" height="160" style="display:block;border-radius:8px">' +
+    '</div>' +
+    '<div style="font-size:12px;color:#888;margin-top:6px">สแกนเพื่อเปิดหน้าติดตามคำสั่งซื้อ</div>' +
+    '</div>' +
+
+    '<p style="margin:0 0 4px"><b>จัดส่งไปที่:</b> ' + escapeHtml(o.address) + '</p>' +
+    '<p style="margin:16px 0 0">Jazakallahu khairan</p>' +
+    '</div>' +
+    '<div style="background:#faf3e0;color:#8a6d1a;padding:14px 24px;font-size:13px;text-align:center">' +
+    '&#9888;&#65039; อีเมลฉบับนี้เป็นข้อความอัตโนมัติ <b>ห้ามตอบกลับ</b> · This is an automated message, please do not reply.' +
+    '</div>' +
+    '</div>'
+
+  GmailApp.sendEmail(o.email, 'ยืนยันคำสั่งซื้อ ' + o.orderCode + ' · um-shop',
+    'กรุณาเปิดอีเมลในโปรแกรมที่รองรับ HTML — ติดตามคำสั่งซื้อ: ' + track,
+    { htmlBody: body })
 }
 
 // ══════════════════════════════════════════════════════════════════════

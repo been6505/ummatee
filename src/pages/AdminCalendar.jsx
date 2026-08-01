@@ -5,6 +5,7 @@ import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AssigneePicker from '../components/AssigneePicker.jsx'
 import CommentThread from '../components/CommentThread.jsx'
+import { HIJRI_MONTHS, getHijri } from '../data/hijri.js'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -227,23 +228,6 @@ const LIVE_PLATFORM_OPTIONS = ['facebook', 'tiktok', 'youtube']
 
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
 const TH_DAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
-
-const HIJRI_MONTHS = [
-  'มุฮัรรอม', 'ศอฟัร', 'รอบีอุลเอาวัล', 'รอบีอุษษานี',
-  'ญุมาดัลอูลา', 'ญุมาดัลอาคิเราะห์', 'รอญับ', 'ชะอฺบาน',
-  'รอมฎอน', 'เชาวาล', 'ซุลกิอฺดะฮฺ', 'ซุลหิจญะฮฺ',
-]
-
-function getHijri(date) {
-  try {
-    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
-      day: 'numeric', month: 'numeric', year: 'numeric',
-    }).formatToParts(date)
-    const v = {}
-    for (const p of parts) v[p.type] = p.value
-    return { d: +v.day, m: +v.month - 1, y: +v.year }
-  } catch { return null }
-}
 
 const pad = (n) => String(n).padStart(2, '0')
 const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`

@@ -926,3 +926,46 @@ a.attach-name:hover{text-decoration:underline}
 .live-platforms{color:var(--ink-soft);font-size:.78rem;white-space:nowrap}
 .live-status{color:#fff;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
 .live-open{color:var(--green-deep,#166534);text-decoration:none;font-size:.8rem;font-weight:700;white-space:nowrap}
+
+/* ── ปฏิทินรายสัปดาห์ (/admin/week) ── */
+.wk-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.wk-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.wk-range{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.wk-range strong{font-size:1rem;color:var(--green-deep,#166534)}
+.wk-range span{font-size:.78rem;color:var(--ink-soft)}
+.wk-today{flex-shrink:0}
+
+/* 7 คอลัมน์เท่ากัน — minmax(0,1fr) ไม่ใช่ 1fr เปล่าๆ เพราะชื่อโพสต์ยาวจะดันคอลัมน์ให้กว้างเกินส่วน
+   แล้วตารางล้นออกนอกจอ */
+.wk-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:start}
+.wk-col{background:#fff;border-radius:12px;border:1px solid rgba(46,125,82,.1);padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.wk-col-today{border-color:var(--green-mid,#2e7d52);box-shadow:0 0 0 2px rgba(46,125,82,.14)}
+.wk-col-head{display:flex;flex-direction:column;gap:1px;padding-bottom:6px;border-bottom:1px solid #eef2ef}
+.wk-dow{font-size:.78rem;font-weight:700;color:var(--green-deep,#166534)}
+.wk-date{font-size:.85rem;font-weight:700}
+.wk-hijri{font-size:.7rem;color:var(--ink-soft)}
+/* คอลัมน์เลื่อนแยกกัน — วันที่มีโพสต์เยอะไม่ควรดันทั้งแถวให้สูงตามจนวันอื่นเป็นช่องว่างยาว */
+.wk-col-body{display:flex;flex-direction:column;gap:6px;min-height:70px;max-height:min(58vh,520px);overflow-y:auto;overscroll-behavior:contain}
+.wk-none{margin:0;color:var(--ink-soft);opacity:.5;font-size:.85rem;text-align:center;padding:8px 0}
+.wk-item{display:flex;flex-direction:column;gap:3px;padding:7px 8px;border-radius:8px;border:1px solid #eef2ef;border-left:3px solid #ccc;background:#fbfdfc;text-decoration:none;color:inherit}
+.wk-item:hover{background:#f2f8f4}
+.wk-item-top{display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--ink-soft)}
+.wk-time{font-variant-numeric:tabular-nums;font-weight:700}
+.wk-type{background:#eef2ef;border-radius:99px;padding:0 6px}
+/* ชื่อโพสต์ตัดได้ 2 บรรทัด — บรรทัดเดียวสั้นเกินจนอ่านไม่รู้เรื่องในคอลัมน์แคบ
+   แต่ปล่อยยาวไม่จำกัดก็ทำให้การ์ดสูงไม่เท่ากันจนอ่านข้ามวันลำบาก */
+.wk-item-title{font-size:.82rem;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.wk-item-foot{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.wk-status{color:#fff;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:99px;white-space:nowrap}
+.wk-add{text-align:center;font-size:.78rem;font-weight:700;color:var(--green-deep,#166534);text-decoration:none;padding:5px;border-radius:8px;border:1px dashed rgba(46,125,82,.3)}
+.wk-add:hover{background:#f2f8f4}
+
+/* จอแคบ: 7 คอลัมน์ข้างกันอ่านไม่ได้ ยุบเป็น 2 คอลัมน์ แล้วเหลือ 1 บนมือถือ
+   (แต่ละคอลัมน์ยังคงเป็น "วัน" ที่มีโพสต์เรียงลงมาเหมือนเดิม) */
+@media (max-width:1200px){
+  .wk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wk-col-body{max-height:none}
+}
+@media (max-width:560px){
+  .wk-grid{grid-template-columns:1fr}
+}

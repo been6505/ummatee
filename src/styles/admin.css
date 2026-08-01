@@ -938,9 +938,17 @@ a.attach-name:hover{text-decoration:underline}
 
 /* 7 คอลัมน์เท่ากัน — minmax(0,1fr) ไม่ใช่ 1fr เปล่าๆ เพราะชื่อโพสต์ยาวจะดันคอลัมน์ให้กว้างเกินส่วน
    แล้วตารางล้นออกนอกจอ */
+/* แถวปฏิทินด้านบนของหน้ารายสัปดาห์ — ใช้คลาสของตารางเดือนซ้ำ จึงต้องคุมแค่ระยะห่างรอบนอก */
+.wk-strip{margin-bottom:14px}
+/* ตารางเดือนมี 6 แถวจึงต้องการช่องสูง แต่แถวเดียวไม่ต้อง — ลดลงให้ไม่กินที่ก่อนถึงเนื้อหาจริง */
+.wk-strip .admin-cal-day{min-height:48px}
+
 .wk-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:start}
 .wk-col{background:#fff;border-radius:12px;border:1px solid rgba(46,125,82,.1);padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
 .wk-col-today{border-color:var(--green-mid,#2e7d52);box-shadow:0 0 0 2px rgba(46,125,82,.14)}
+/* วันที่กดเลือกจากแถวปฏิทิน — ต้องเด่นกว่ากรอบ "วันนี้" เพราะเป็นสิ่งที่ผู้ใช้เพิ่งสั่ง
+   ประกาศทีหลังจึงชนะเมื่อเป็นวันเดียวกัน (specificity เท่ากัน) */
+.wk-col-sel{border-color:var(--green-deep,#166534);box-shadow:0 0 0 3px rgba(22,101,52,.22)}
 .wk-col-head{display:flex;flex-direction:column;gap:1px;padding-bottom:6px;border-bottom:1px solid #eef2ef}
 .wk-dow{font-size:.78rem;font-weight:700;color:var(--green-deep,#166534)}
 .wk-date{font-size:.85rem;font-weight:700}

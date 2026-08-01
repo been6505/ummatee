@@ -9,7 +9,7 @@ import {
   toKey, fromKey, weekStart, weekDays, shiftWeek, dayLabel, weekRangeLabel, groupByDay, WEEK_COLUMNS,
 } from '../data/weekView.js'
 import { hijriLabel, getHijri } from '../data/hijri.js'
-import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
+import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus } from '../data/contentStatus.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronLeft, faChevronRight, faCalendarWeek } from '@fortawesome/free-solid-svg-icons'
 
@@ -31,6 +31,8 @@ export default function AdminWeek() {
     return weekStart(param && fromKey(param) ? param : toKey(new Date()))
   })
   const todayKey = useMemo(() => toKey(new Date()), [])
+  // วันที่ถูกเลือกจากแถวปฏิทินด้านบน — ใช้ไฮไลต์คอลัมน์ให้ตรงกัน
+  const [selKey, setSelKey] = useState(todayKey)
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -75,6 +77,52 @@ export default function AdminWeek() {
               </button>
             </div>
 
+            {/* แถวปฏิทินแบบเดียวกับตารางเดือน — ใช้คลาสชุดเดิม (.admin-cal-grid/.admin-cal-day) ทั้งหมด
+                เพื่อให้หน้าตาตรงกับหน้าปฏิทินคอนเทนต์เป๊ะ ไม่ใช่ของที่ดูคล้ายแต่ไม่เหมือน
+                หน้าที่ของมันคือให้กวาดตาเห็นทั้งสัปดาห์ก่อน แล้วค่อยกดลงไปดูรายละเอียดในคอลัมน์ข้างล่าง */}
+            <div className="admin-card wk-strip">
+              <div className="admin-cal-grid">
+                {WEEK_COLUMNS.map((c) => <div className="admin-cal-dow" key={c.dow}>{c.short}</div>)}
+                {days.map((key) => {
+                  const has = byDay[key] || []
+                  const d = fromKey(key)
+                  const h = getHijri(d)
+                  // สีประจำวัน: สถานะที่ "ค้างที่สุด" ของวันนั้น (ร่าง > กำลังทำ > ส่งงาน > โพสต์แล้ว)
+                  // ตรรกะเดียวกับตารางเดือน — กวาดตาแล้วต้องเห็นวันที่ยังมีงานค้างก่อน
+                  const dominant = has.length === 0 ? null
+                    : STATUS_ORDER.find((st) => has.some((p) => normStatus(p.status) === st))
+                  return (
+                    <button
+                      key={key}
+                      className={`admin-cal-day ${has.length > 0 ? 'has-posts' : ''} ${key === selKey ? 'sel' : ''} ${key === todayKey ? 'today' : ''}`}
+                      style={dominant ? { '--day-color': STATUS_COLOR[dominant] } : undefined}
+                      title={has.length > 0 ? `${has.length} โพสต์` : undefined}
+                      onClick={() => {
+                        setSelKey(key)
+                        // เลื่อนไปที่คอลัมน์ของวันนั้น — บนมือถือคอลัมน์เรียงลงมา การกดแล้วไม่ขยับ
+                        // จะดูเหมือนกดไม่ติด
+                        document.getElementById(`wk-col-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }}
+                    >
+                      <span>{d ? d.getDate() : ''}</span>
+                      {h && <span className="admin-cal-hijri">{h.d}</span>}
+                      {has.length > 0 && (
+                        <span className="admin-cal-dots">
+                          {has.slice(0, 3).map((p, j) => <i key={j} style={{ background: STATUS_COLOR[normStatus(p.status)] }} />)}
+                          {has.length > 3 && <em>+{has.length - 3}</em>}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="admin-cal-legend">
+                {Object.entries(STATUS).map(([k, v]) => (
+                  <span key={k}><i style={{ background: STATUS_COLOR[k] }} /> {v}</span>
+                ))}
+              </div>
+            </div>
+
             {loading ? <ListSkeleton rows={4} /> : (
               <div className="wk-grid">
                 {days.map((key, i) => {
@@ -82,7 +130,11 @@ export default function AdminWeek() {
                   const h = getHijri(fromKey(key))
                   const isToday = key === todayKey
                   return (
-                    <div key={key} className={`wk-col${isToday ? ' wk-col-today' : ''}`}>
+                    <div
+                      key={key}
+                      id={`wk-col-${key}`}
+                      className={`wk-col${isToday ? ' wk-col-today' : ''}${key === selKey ? ' wk-col-sel' : ''}`}
+                    >
                       <div className="wk-col-head">
                         <span className="wk-dow">{WEEK_COLUMNS[i].label}</span>
                         <span className="wk-date">{dayLabel(key)}</span>

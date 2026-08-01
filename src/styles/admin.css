@@ -340,9 +340,27 @@
 .admin-hbars{width:100%}
 
 /* ปฏิทินคอนเทนต์ */
-/* โพสต์ของวันที่เลือก — หลายคอลัมน์ในแถวเดียว ไม่ใช่เรียงลงมาทีละใบ
-   minmax(0,...) กัน track บวมจากเนื้อหายาว (auto = min-content จะดันคอลัมน์จนล้น) */
-.admin-day-posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:12px;align-items:start}
+/* โพสต์ของวันที่เลือก — แถวเดียว 6 คอลัมน์ เกินจากนั้นเลื่อนไปทางขวาต่อ
+   เดิมเป็น auto-fill ที่ตกลงมาเป็นแถวใหม่เรื่อยๆ ทำให้การ์ดบนสุดสูงขึ้นตามจำนวนโพสต์
+   จนดันปฏิทินหลุดจอไปเลยในวันที่มีงานเยอะ ซึ่งเป็นวันที่ยิ่งต้องเห็นปฏิทิน
+   grid-auto-flow:column + grid-auto-columns ⇒ ทุกใบอยู่แถวเดียวเสมอไม่ว่าจะกี่ใบ
+   ความกว้างคอลัมน์คิดจาก 6 ช่องพอดีในกรอบ (เผื่อ gap 5 ช่อง) ใบที่ 7 เป็นต้นไปจึงโผล่พ้นขอบให้รู้ว่าเลื่อนได้ */
+.admin-day-posts{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(clamp(180px,calc((100% - 5 * 12px) / 6),300px),1fr);
+  gap:12px;
+  align-items:start;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  padding-bottom:6px;
+}
+.admin-day-posts > *{scroll-snap-align:start}
+/* มือถือ: 6 ช่องในจอ 380px = ช่องละ 53px อ่านอะไรไม่ได้ — ให้ช่องกว้างพออ่านแล้วเลื่อนแทน */
+@media (max-width:900px){
+  .admin-day-posts{grid-auto-columns:minmax(240px,1fr)}
+}
 /* การ์ดวันที่เลือกกินพื้นที่บนสุดของหน้า ย่อหัวข้อ/ระยะ/ตัวหนังสือลงให้เหลือความสูงน้อยที่สุด
    ที่ยังอ่านครบ — เนื้อหาเดิม (หัวข้อ 1rem, padding 20px, ปุ่มสถานะ 4 ปุ่มตกสองบรรทัด) สูงเกินจำเป็น */
 .admin-cal-today .admin-card{padding:14px 16px}

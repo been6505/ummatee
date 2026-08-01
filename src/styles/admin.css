@@ -992,3 +992,27 @@ a.attach-name:hover{text-decoration:underline}
 .admin-cal-viewtabs button.on{background:#fff;color:var(--green-deep,#166534);box-shadow:0 1px 3px rgba(0,0,0,.1)}
 /* แถวเดียวไม่ต้องสูงเท่าตารางเดือนที่มี 6 แถว */
 .admin-cal-grid-week .admin-cal-day{min-height:48px}
+
+/* ── ปรับ UI หน้าปฏิทินบนมือถือ ── */
+
+/* ชิปสถานะ 4 อันบรรทัดเดียวเหลือช่องละ 80px — "กำลังดำเนินงาน" ตัดเป็น 2 บรรทัด
+   ทำให้ชิปสูง 49px และอ่านยาก จัดเป็น 2x2 แทน กว้างพอให้ทุกคำอยู่บรรทัดเดียว
+   (ไม่แตะ .admin-cal-repeat-days ที่ต้องเป็น 7 ช่องวันในสัปดาห์เสมอ) */
+@media (max-width:640px){
+  .admin-cal-status-chips:not(.admin-cal-repeat-days){
+    grid-auto-flow:row;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+/* ปุ่มแชทลอยอยู่มุมล่างซ้ายแบบ fixed (.admin-chat-fab) และไม่มีอะไรกันที่ให้ —
+   มันจึงทับเนื้อหาบรรทัดล่างสุดของทุกหน้า (ในภาพคือทับป้าย "ผู้รับผิดชอบ" กับชิป "ร่าง")
+   กันที่ไว้ท้ายหน้าเท่าความสูงปุ่ม + ระยะห่าง */
+@media (max-width:768px){
+  .admin-dash{padding-bottom:86px}
+}
+
+/* แถบสลับมุมมองเตี้ยลงและไม่กว้างเกินจำเป็น — เดิมเป็นแถบสูง 45px เต็มความกว้างการ์ด
+   ทั้งที่มีแค่สองคำ ดูเป็นพื้นที่ว่างก้อนใหญ่ก่อนถึงตัวปฏิทิน */
+.admin-cal-viewtabs{max-width:280px;margin-left:auto;margin-right:auto;padding:3px}
+.admin-cal-viewtabs button{padding:6px 12px;font-size:.85rem}

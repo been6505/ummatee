@@ -1,8 +1,8 @@
 // ตัวช่วยของปฏิทินรายสัปดาห์ — คิดบนสตริง "YYYY-MM-DD" ล้วน ไม่แตะ firebase และไม่อ่านนาฬิกาเอง
 // (เทสต์ได้โดยไม่ต้องมี DOM — เหตุผลเดียวกับ orderStatus.js / campaignProgress.js / liveSchedule.js)
 //
-// สัปดาห์เริ่มวันจันทร์ ต่างจากตารางเดือนเดิมที่เริ่มวันอาทิตย์ — ตั้งใจให้ต่าง เพราะรอบการทำงาน
-// ของทีมคือจันทร์ถึงอาทิตย์ ไม่ใช่รูปแบบปฏิทินทั่วไป
+// สัปดาห์เริ่มวันอาทิตย์ ให้ตรงกับตารางเดือนในหน้าปฏิทินคอนเทนต์ — สองหน้านี้ต้องเรียงวันเหมือนกัน
+// ไม่งั้นสลับหน้าไปมาแล้วอ่านผิดคอลัมน์
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -16,12 +16,11 @@ export function fromKey(key) {
   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
 }
 
-// วันจันทร์ของสัปดาห์ที่ key นั้นอยู่ — getDay() คืน 0=อาทิตย์ ซึ่งต้องถอยกลับ 6 วันไม่ใช่ 1
+// วันอาทิตย์ของสัปดาห์ที่ key นั้นอยู่ — getDay() คืน 0=อาทิตย์อยู่แล้ว จึงถอยกลับเท่ากับค่าที่ได้ตรงๆ
 export function weekStart(key) {
   const d = fromKey(key)
   if (!d) return ''
-  const back = (d.getDay() + 6) % 7
-  d.setDate(d.getDate() - back)
+  d.setDate(d.getDate() - d.getDay())
   return toKey(d)
 }
 
@@ -45,13 +44,13 @@ export function shiftWeek(startKey, weeks) {
 }
 
 export const WEEK_COLUMNS = [
+  { dow: 0, label: 'อาทิตย์', short: 'อา' },
   { dow: 1, label: 'จันทร์', short: 'จ' },
   { dow: 2, label: 'อังคาร', short: 'อ' },
   { dow: 3, label: 'พุธ', short: 'พ' },
   { dow: 4, label: 'พฤหัสบดี', short: 'พฤ' },
   { dow: 5, label: 'ศุกร์', short: 'ศ' },
   { dow: 6, label: 'เสาร์', short: 'ส' },
-  { dow: 0, label: 'อาทิตย์', short: 'อา' },
 ]
 
 const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.']

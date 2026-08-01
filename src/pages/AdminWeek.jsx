@@ -13,7 +13,7 @@ import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChevronLeft, faChevronRight, faCalendarWeek } from '@fortawesome/free-solid-svg-icons'
 
-// ปฏิทินรายสัปดาห์ (/admin/week) — 7 คอลัมน์ จันทร์→อาทิตย์ โพสต์ของแต่ละวันเรียงลงมาในคอลัมน์
+// ปฏิทินรายสัปดาห์ (/admin/week) — 7 คอลัมน์ อาทิตย์→เสาร์ โพสต์ของแต่ละวันเรียงลงมาในคอลัมน์
 //
 // ต่างจากตารางเดือนเดิมตรงที่เห็น "เนื้อหาของโพสต์" ไม่ใช่แค่จุดสีบอกว่ามีของ — ตารางเดือนตอบได้แค่
 // วันไหนมีงาน ส่วนการวางแผนสัปดาห์ต้องเห็นว่างานคืออะไร ใครทำ สถานะไหน พร้อมกันทั้งเจ็ดวัน
@@ -54,7 +54,7 @@ export default function AdminWeek() {
             <div className="admin-head">
               <div>
                 <h1><FontAwesomeIcon icon={faCalendarWeek} /> ปฏิทินรายสัปดาห์</h1>
-                <p>จันทร์ถึงอาทิตย์ — โพสต์ของแต่ละวันเรียงลงมาในคอลัมน์ของวันนั้น</p>
+                <p>อาทิตย์ถึงเสาร์ — โพสต์ของแต่ละวันเรียงลงมาในคอลัมน์ของวันนั้น</p>
               </div>
               <span className="wk-total">{weekCount} โพสต์ในสัปดาห์นี้</span>
             </div>

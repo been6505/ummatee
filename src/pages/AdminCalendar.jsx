@@ -419,11 +419,24 @@ export default function AdminCalendar() {
         const dates = repeatDates(payload.date, form.repeatDays, form.repeatWeeks)
         if (dates.length === 0) { setStatus('วันเวลาโพสต์ไม่ถูกต้อง'); return }
         // สร้างพร้อมกันทั้งชุด — addDoc เป็นเอกสารละคำขอ ทำทีละใบจะช้ามากเมื่อซ้ำหลายสัปดาห์
-        await Promise.all(dates.map((date) => addDoc(
+        const refs = await Promise.all(dates.map((date) => addDoc(
           collection(db, 'contentPosts'),
           withSearchTokens({ ...payload, date, createdAt: Date.now() }, SEARCH_FIELDS),
         )))
-        setStatus(dates.length > 1 ? `บันทึกสำเร็จ ✓ สร้าง ${dates.length} โพสต์` : 'บันทึกสำเร็จ ✓')
+
+        // หลังสร้างเสร็จต้องไม่ค้างอยู่ในโหมด "เพิ่มใหม่" ทั้งที่ฟอร์มยังมีข้อมูลเดิมครบทุกช่อง —
+        // กดปุ่มบันทึกอีกครั้งจะได้โพสต์ซ้ำอีกใบทันทีโดยไม่มีอะไรเตือน
+        if (dates.length === 1) {
+          // สร้างใบเดียว: สลับเข้าโหมดแก้ไขของใบที่เพิ่งสร้าง ⇒ กดบันทึกซ้ำคือแก้ใบเดิม ไม่ใช่สร้างใหม่
+          // และมอบหมายงาน/คุยงาน/แก้ต่อในใบนั้นได้ทันที ไม่ต้องไปกดหาในปฏิทินก่อน
+          setEditId(refs[0].id)
+          setStatus('บันทึกสำเร็จ ✓ แก้ไขต่อได้เลย')
+        } else {
+          // ทำซ้ำหลายใบ: ไม่มีใบไหนเป็น "ใบที่กำลังแก้" ล้างฟอร์มให้พร้อมสร้างอันถัดไปแทน
+          // (คงวันเวลาไว้ เพราะส่วนใหญ่วางแผนต่อในวันเดิม)
+          setForm({ ...EMPTY_FORM, date: payload.date, time: payload.time })
+          setStatus(`บันทึกสำเร็จ ✓ สร้าง ${dates.length} โพสต์`)
+        }
       }
       setTimeout(() => setStatus(''), 2500)
     } catch (e) {

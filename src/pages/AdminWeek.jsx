@@ -93,10 +93,12 @@ export default function AdminWeek() {
                         {items.length === 0 ? (
                           <p className="wk-none">—</p>
                         ) : items.map((p) => (
+                          /* ?post=<id> เปิดโพสต์ใบนั้นตรงๆ (ปฏิทินรองรับพารามิเตอร์นี้อยู่แล้ว)
+                             ไม่ใช่แค่เด้งไปที่วันแล้วให้ไปไล่หาเองว่าใบไหน */
                           <a
                             key={p.id}
                             className="wk-item"
-                            href={`/admin/calendar?date=${key}`}
+                            href={`/admin/calendar?date=${key}&post=${p.id}`}
                             style={{ borderLeftColor: STATUS_COLOR[normStatus(p.status)] }}
                           >
                             <span className="wk-item-top">

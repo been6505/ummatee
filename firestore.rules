@@ -525,6 +525,13 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // contentTemplates/{id} — แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js)
+    // สิทธิ์ชุดเดียวกับ contentPosts — ใครแก้ปฏิทินได้ก็ควรเก็บ/ใช้แม่แบบได้
+    // ไม่มีข้อมูลอ่อนไหวเพิ่ม เป็นสำเนาของเนื้อหาโพสต์ที่คนกลุ่มเดียวกันเห็นอยู่แล้ว
+    match /contentTemplates/{id} {
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
     // comments/{id} — คอมเมนต์คุยงาน ผูกกับชิ้นงานด้วย (entityType, entityId)
     //
     // ต่างจาก auditLog ที่ระบบเขียนเองและลบไม่ได้ — อันนี้คนพิมพ์เอง ลบของตัวเองได้

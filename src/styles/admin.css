@@ -1016,3 +1016,15 @@ a.attach-name:hover{text-decoration:underline}
    ทั้งที่มีแค่สองคำ ดูเป็นพื้นที่ว่างก้อนใหญ่ก่อนถึงตัวปฏิทิน */
 .admin-cal-viewtabs{max-width:280px;margin-left:auto;margin-right:auto;padding:3px}
 .admin-cal-viewtabs button{padding:6px 12px;font-size:.85rem}
+
+/* ── แม่แบบโพสต์ในฟอร์มปฏิทิน ── */
+.admin-cal-tpl{border-top:1px solid #eef2ef;margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.admin-cal-tpl-head{font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+/* select ยืดได้ ปุ่มไม่หด — ชื่อแม่แบบยาวได้ ปุ่มต้องอ่านออกเสมอ */
+.admin-cal-tpl-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.admin-cal-tpl-row select{flex:1 1 180px;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;background:#fff}
+.admin-cal-tpl-row .admin-btn{flex-shrink:0;white-space:nowrap}
+.admin-cal-tpl-list{display:flex;flex-wrap:wrap;gap:6px}
+.admin-cal-tpl-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:#eef2ef;border-radius:99px;padding:3px 6px 3px 11px;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-tpl-chip button{border:none;background:none;color:#c62828;cursor:pointer;padding:2px 4px;font-size:.72rem;opacity:.65;flex-shrink:0}
+.admin-cal-tpl-chip button:hover{opacity:1}

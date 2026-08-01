@@ -7,6 +7,8 @@ import AssigneePicker from '../components/AssigneePicker.jsx'
 import CommentThread from '../components/CommentThread.jsx'
 import { HIJRI_MONTHS, getHijri } from '../data/hijri.js'
 import { weekStart, weekDays, shiftWeek, weekRangeLabel, dayLabel, fromKey, WEEK_COLUMNS } from '../data/weekView.js'
+import { useContentTemplates, saveTemplate, removeTemplate } from '../data/contentTemplates.js'
+import { applyTemplate, suggestTemplateName } from '../data/contentTemplate.js'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -289,6 +291,8 @@ export default function AdminCalendar() {
     try { localStorage.setItem('adminCalView', viewMode) } catch { /* โหมดส่วนตัว — แค่ไม่จำมุมมอง */ }
   }, [viewMode])
   const [socialNotice, setSocialNotice] = useState('')
+  // แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js ว่าฟิลด์ไหนใช้ซ้ำได้บ้าง)
+  const { templates } = useContentTemplates()
 
   useEffect(() => {
     if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
@@ -705,8 +709,70 @@ export default function AdminCalendar() {
                     ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
                   </label>
                   </>}
+                  {/* แม่แบบ — บันทึกโพสต์ที่ทำไว้แล้วเก็บไว้ใช้ซ้ำ ไม่ต้องพิมพ์ใหม่ทั้งหมด
+                      วัน/เวลา/สถานะ/ลิงก์ไฟล์งาน ไม่ติดมาด้วย (ดู contentTemplate.js) */}
+                  <div className="admin-cal-tpl">
+                    <div className="admin-cal-tpl-head">แม่แบบโพสต์</div>
+                    <div className="admin-cal-tpl-row">
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const t = templates.find((x) => x.id === e.target.value)
+                          if (!t) return
+                          // ใช้แม่แบบ = เริ่มโพสต์ใบใหม่เสมอ ไม่ใช่แก้ใบที่เปิดอยู่
+                          setEditId(null)
+                          setForm(applyTemplate(EMPTY_FORM, t, { date: selected }))
+                          setStatus(`ใช้แม่แบบ "${t.name}" แล้ว — เลือกวันเวลาแล้วกดเพิ่มโพสต์`)
+                          setTimeout(() => setStatus(''), 3000)
+                        }}
+                      >
+                        <option value="">{templates.length ? 'เลือกแม่แบบมาใช้…' : 'ยังไม่มีแม่แบบที่บันทึกไว้'}</option>
+                        {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <button
+                        type="button" className="admin-btn"
+                        disabled={!form.title.trim() && !form.text.trim()}
+                        onClick={async () => {
+                          const name = window.prompt('ตั้งชื่อแม่แบบ', suggestTemplateName(form))
+                          if (name === null) return
+                          try {
+                            await saveTemplate(name, form)
+                            setStatus('บันทึกแม่แบบแล้ว ✓')
+                          } catch (e) { setStatus('บันทึกแม่แบบไม่สำเร็จ: ' + e.message) }
+                          setTimeout(() => setStatus(''), 2500)
+                        }}
+                      >บันทึกเป็นแม่แบบ</button>
+                    </div>
+                    {templates.length > 0 && (
+                      <div className="admin-cal-tpl-list">
+                        {templates.map((t) => (
+                          <span key={t.id} className="admin-cal-tpl-chip">
+                            {t.name}
+                            <button
+                              type="button"
+                              aria-label={`ลบแม่แบบ ${t.name}`}
+                              onClick={() => { if (window.confirm(`ลบแม่แบบ "${t.name}"?`)) removeTemplate(t.id) }}
+                            ><FontAwesomeIcon icon={faTrash} /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
                     <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
+                    {/* ทำสำเนา — ใช้โพสต์ที่เปิดอยู่เป็นต้นแบบของใบใหม่ทันที ไม่ต้องบันทึกเป็นแม่แบบก่อน */}
+                    {editId && (
+                      <button
+                        className="admin-btn"
+                        onClick={() => {
+                          setEditId(null)
+                          setForm(applyTemplate(EMPTY_FORM, form, { date: selected }))
+                          setStatus('ทำสำเนาแล้ว — เลือกวันเวลาแล้วกดเพิ่มโพสต์')
+                          setTimeout(() => setStatus(''), 3000)
+                        }}
+                      >ทำสำเนา</button>
+                    )}
                     {isSafeHttpUrl((form.driveUrl || '').trim()) && form.status !== 'posted' && form.status !== 'review' && (
                       // ส่งงาน = แนบไฟล์ใน Drive เรียบร้อยแล้วและขอให้ตรวจ ⇒ เลื่อนสถานะเป็น "ส่งงาน" (คีย์ review)
                       <button className="admin-btn" onClick={() => setForm((f) => ({ ...f, status: statusAfterDriveLink(f.status) }))}>

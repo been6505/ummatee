@@ -6,6 +6,7 @@ import AdminNav from '../components/AdminNav.jsx'
 import AssigneePicker from '../components/AssigneePicker.jsx'
 import CommentThread from '../components/CommentThread.jsx'
 import { HIJRI_MONTHS, getHijri } from '../data/hijri.js'
+import { weekStart, weekDays, shiftWeek, weekRangeLabel, dayLabel, fromKey, WEEK_COLUMNS } from '../data/weekView.js'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
@@ -274,6 +275,19 @@ export default function AdminCalendar() {
   const [copiedId, setCopiedId] = useState(null)
   const [showHub, setShowHub] = useState(false)
   const [mainTab, setMainTab] = useState('calendar') // 'calendar' | 'chat' | 'comments' | 'insights'
+  // มุมมองปฏิทิน: เดือน (ตารางทั้งเดือน) หรือ สัปดาห์ (7 คอลัมน์ เห็นเนื้อหาของแต่ละโพสต์)
+  // เดิมแยกเป็นคนละหน้า ทำให้ฟอร์ม/การ์ดวันที่เลือกมีสองชุดที่หลุดไม่ตรงกันได้ — รวมมาไว้หน้าเดียว
+  // สลับเฉพาะตัวตาราง ส่วนอื่นใช้ร่วมกันหมด
+  const [viewMode, setViewMode] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('view')
+    if (v === 'week' || v === 'month') return v
+    // /admin/week เคยเป็นหน้าแยก ตอนนี้พามาที่นี่ — ลิงก์/บุ๊กมาร์กเก่าต้องได้มุมมองสัปดาห์ตามที่ตั้งใจ
+    if (window.location.pathname.replace(/\/$/, '') === '/admin/week') return 'week'
+    try { return localStorage.getItem('adminCalView') === 'week' ? 'week' : 'month' } catch { return 'month' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('adminCalView', viewMode) } catch { /* โหมดส่วนตัว — แค่ไม่จำมุมมอง */ }
+  }, [viewMode])
   const [socialNotice, setSocialNotice] = useState('')
 
   useEffect(() => {
@@ -340,6 +354,20 @@ export default function AdminCalendar() {
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(year - 1) } else setMonth(month - 1) }
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(year + 1) } else setMonth(month + 1) }
+
+  // ── มุมมองสัปดาห์ ──
+  // สัปดาห์อ้างอิงจากวันที่เลือกอยู่ ⇒ กดวันในตารางเดือนแล้วสลับมาสัปดาห์ ได้สัปดาห์ของวันนั้นเลย
+  const weekStartKey = weekStart(selected)
+  const weekKeys = weekDays(weekStartKey)
+  // เลื่อนสัปดาห์ = ย้ายวันที่เลือกไปสัปดาห์นั้น (คงวันในสัปดาห์เดิมไว้) แล้วให้เดือน/ปีตามไปด้วย
+  // ไม่งั้นเลื่อนข้ามเดือนแล้วหัวเรื่องยังค้างเดือนเก่า
+  const goWeek = (delta) => {
+    const d = fromKey(shiftWeek(selected, delta))
+    if (!d) return
+    setSelected(dateKey(d.getFullYear(), d.getMonth(), d.getDate()))
+    setYear(d.getFullYear())
+    setMonth(d.getMonth())
+  }
 
   const togglePlatform = (id) => {
     setForm((f) => ({
@@ -993,12 +1021,21 @@ export default function AdminCalendar() {
         {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'insights' && <InsightsTab />}
 
         {mainTab === 'calendar' && !detailPost && <div className="admin-cal-layout">
-          {/* ปฏิทินรายเดือน */}
+          {/* ปฏิทิน — สลับระหว่างมุมมองเดือนกับสัปดาห์ในการ์ดเดียวกัน */}
           <div className="admin-card admin-cal-card">
+            <div className="admin-cal-viewtabs">
+              <button type="button" className={viewMode === 'month' ? 'on' : ''} onClick={() => setViewMode('month')}>เดือน</button>
+              <button type="button" className={viewMode === 'week' ? 'on' : ''} onClick={() => setViewMode('week')}>สัปดาห์</button>
+            </div>
             <div className="admin-cal-head">
-              <button type="button" className="admin-btn" onClick={prevMonth} aria-label="เดือนก่อนหน้า" title="เดือนก่อนหน้า"><FontAwesomeIcon icon={faChevronLeft} /></button>
+              <button
+                type="button" className="admin-btn"
+                onClick={() => (viewMode === 'week' ? goWeek(-1) : prevMonth())}
+                aria-label={viewMode === 'week' ? 'สัปดาห์ก่อนหน้า' : 'เดือนก่อนหน้า'}
+                title={viewMode === 'week' ? 'สัปดาห์ก่อนหน้า' : 'เดือนก่อนหน้า'}
+              ><FontAwesomeIcon icon={faChevronLeft} /></button>
               <div style={{ textAlign: 'center' }}>
-                <h4 style={{ margin: 0 }}>{TH_MONTHS[month]} {year + 543}</h4>
+                <h4 style={{ margin: 0 }}>{viewMode === 'week' ? weekRangeLabel(weekStartKey) : `${TH_MONTHS[month]} ${year + 543}`}</h4>
                 {(() => {
                   const hFirst = getHijri(new Date(year, month, 1))
                   const hLast = getHijri(new Date(year, month, daysInMonth))
@@ -1009,13 +1046,25 @@ export default function AdminCalendar() {
                   return <div className="admin-cal-hijri-header">{label}</div>
                 })()}
               </div>
-              <button type="button" className="admin-btn" onClick={nextMonth} aria-label="เดือนถัดไป" title="เดือนถัดไป"><FontAwesomeIcon icon={faChevronRight} /></button>
+              <button
+                type="button" className="admin-btn"
+                onClick={() => (viewMode === 'week' ? goWeek(1) : nextMonth())}
+                aria-label={viewMode === 'week' ? 'สัปดาห์ถัดไป' : 'เดือนถัดไป'}
+                title={viewMode === 'week' ? 'สัปดาห์ถัดไป' : 'เดือนถัดไป'}
+              ><FontAwesomeIcon icon={faChevronRight} /></button>
             </div>
-            <div className="admin-cal-grid">
+            <div className={`admin-cal-grid${viewMode === 'week' ? ' admin-cal-grid-week' : ''}`}>
               {TH_DAYS.map((d) => <div className="admin-cal-dow" key={d}>{d}</div>)}
-              {cells.map((d, i) => {
-                if (d === null) return <div key={`e${i}`} />
-                const key = dateKey(year, month, d)
+              {/* มุมมองสัปดาห์วาดด้วยตารางและคลาสชุดเดียวกับเดือนเป๊ะ ต่างแค่ชุดวันที่เอามาวาด
+                  (7 วันของสัปดาห์ แทนที่จะเป็นทั้งเดือน) จึงไม่มีสไตล์คู่ขนานให้หลุดไม่ตรงกัน */}
+              {(viewMode === 'week'
+                ? weekKeys.map((k) => { const dt = fromKey(k); return { key: k, d: dt.getDate(), dt } })
+                : cells.map((d, i) => (d === null
+                    ? null
+                    : { key: dateKey(year, month, d), d, dt: new Date(year, month, d) }))
+              ).map((cell, i) => {
+                if (!cell) return <div key={`e${i}`} />
+                const { key, d, dt } = cell
                 const has = byDate[key] || []
                 // สีประจำวัน: เอาสถานะที่ "ค้างที่สุด" ของวันนั้นมาแสดง (ร่าง > ส่งตรวจ > โพสต์แล้ว)
                 // เพื่อให้กวาดตาดูปฏิทินแล้วเห็นวันที่ยังมีงานค้างก่อน ไม่ใช่เห็นวันที่ทำเสร็จแล้วเด่นสุด
@@ -1030,7 +1079,7 @@ export default function AdminCalendar() {
                     onClick={() => { setSelected(key); cancelEdit() }}
                   >
                     <span>{d}</span>
-                    {(() => { const h = getHijri(new Date(year, month, d)); return h ? <span className="admin-cal-hijri">{h.d}</span> : null })()}
+                    {(() => { const h = getHijri(dt); return h ? <span className="admin-cal-hijri">{h.d}</span> : null })()}
                     {has.length > 0 && (
                       <span className="admin-cal-dots">
                         {has.slice(0, 3).map((p, j) => <i key={j} style={{ background: STATUS_COLOR[p.status] || '#999' }} />)}
@@ -1046,6 +1095,49 @@ export default function AdminCalendar() {
                 <span key={k}><i style={{ background: STATUS_COLOR[k] }} /> {v}</span>
               ))}
             </div>
+
+            {/* มุมมองสัปดาห์: ใต้แถวปฏิทินเป็น 7 คอลัมน์ที่เห็นเนื้อหาของโพสต์จริง ไม่ใช่แค่จุดสี
+                กดโพสต์ = เปิดขึ้นมาแก้ในฟอร์มด้านล่างทันที ไม่ต้องไปหน้าอื่น */}
+            {viewMode === 'week' && (
+              <div className="wk-grid" style={{ marginTop: 12 }}>
+                {weekKeys.map((key, i) => {
+                  const items = (byDate[key] || []).slice().sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))
+                  const dt = fromKey(key)
+                  return (
+                    <div key={key} className={`wk-col${key === todayKey() ? ' wk-col-today' : ''}${key === selected ? ' wk-col-sel' : ''}`}>
+                      <div className="wk-col-head">
+                        <span className="wk-dow">{WEEK_COLUMNS[i].label}</span>
+                        <span className="wk-date">{dayLabel(key)}</span>
+                      </div>
+                      <div className="wk-col-body">
+                        {items.length === 0 ? <p className="wk-none">—</p> : items.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="wk-item"
+                            style={{ borderLeftColor: STATUS_COLOR[normStatus(p.status)] }}
+                            onClick={() => { setSelected(key); startEdit(p) }}
+                          >
+                            <span className="wk-item-top">
+                              {p.time && <span className="wk-time">{p.time}</span>}
+                              <span className="wk-type">{CONTENT_TYPE_LABEL[p.contentType] || 'โพสต์'}</span>
+                            </span>
+                            <span className="wk-item-title">{p.title || '(ไม่มีชื่อ)'}</span>
+                            <span className="wk-item-foot">
+                              <span className="wk-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                                {STATUS[normStatus(p.status)]}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {/* เลือกวันนั้นแล้วล้างฟอร์มให้พร้อมกรอกใหม่ — ฟอร์มอยู่ในหน้าเดียวกันแล้ว ไม่ต้องข้ามหน้า */}
+                      <button type="button" className="wk-add" onClick={() => { setSelected(key); cancelEdit() }}>+ เพิ่ม</button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}

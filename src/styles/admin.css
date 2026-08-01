@@ -985,3 +985,10 @@ a.attach-name:hover{text-decoration:underline}
   .wk-bar > .admin-btn:nth-of-type(2){grid-column:3;grid-row:2}
   .wk-today{grid-column:2;grid-row:2}
 }
+
+/* ── ปุ่มสลับมุมมองปฏิทิน เดือน/สัปดาห์ (รวมสองหน้าเดิมเข้าด้วยกัน) ── */
+.admin-cal-viewtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;background:#eef2ef;padding:4px;border-radius:99px}
+.admin-cal-viewtabs button{padding:8px 12px;border:none;border-radius:99px;background:none;font-family:inherit;font-size:.88rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,color .15s}
+.admin-cal-viewtabs button.on{background:#fff;color:var(--green-deep,#166534);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+/* แถวเดียวไม่ต้องสูงเท่าตารางเดือนที่มี 6 แถว */
+.admin-cal-grid-week .admin-cal-day{min-height:48px}

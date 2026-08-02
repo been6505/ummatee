@@ -1068,3 +1068,74 @@ a.attach-name:hover{text-decoration:underline}
 @media (max-width:900px){
   .wk-grid-single .wk-col-body{grid-auto-columns:minmax(220px,1fr)}
 }
+
+/* ── โพสต์เป็น "ชิป" แทนการ์ด ──
+   ทั้งการ์ดวันที่เลือกด้านบนและคอลัมน์วันในมุมมองสัปดาห์ เดิมเป็นการ์ดสูง 60–90px ต่อโพสต์
+   ทั้งที่เนื้อในเหลือแค่ เวลา · ชื่อ · สถานะ (รายละเอียดอื่นซ่อนไว้อยู่แล้ว)
+   ย่อเป็นชิปบรรทัดเดียว ⇒ เห็นโพสต์ของวันนั้นได้หลายใบพร้อมกันโดยไม่กินความสูง
+   ยังกดได้เหมือนเดิม (การ์ดบน = เปิดรายละเอียด, ในสัปดาห์ = เปิดแก้ในฟอร์ม) */
+
+/* ชิปเรียงต่อกันเป็นแถวและตกบรรทัดได้ ไม่ต้องเลื่อนแนวนอนอีก เพราะชิปเตี้ยพอจะขึ้นหลายบรรทัดได้ */
+.admin-day-posts,
+.wk-grid-single .wk-col-body{
+  display:flex;
+  /* ต้องระบุ row ให้ชัด — .wk-col-body ตัวฐานเป็น column อยู่ ถ้าไม่ทับ ชิปจะถูก stretch
+     เต็มความกว้างคอนเทนเนอร์ (align-items:stretch ของแกนขวางในโหมด column) แล้วเรียงลงมาทีละใบ
+     ซึ่งคือสิ่งที่กำลังจะเลิกทำพอดี */
+  flex-direction:row;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  gap:8px;
+  overflow:visible;
+  grid-auto-flow:initial;
+}
+
+.admin-cal-today .admin-post,
+.wk-grid-single .wk-item{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  max-width:100%;
+  min-width:0;
+  padding:6px 10px;
+  margin:0;
+  border:1px solid #e6ebe8;
+  /* แถบสีสถานะด้านซ้าย — บอกสถานะโดยไม่ต้องมีป้ายข้อความยาวๆ ในชิป */
+  border-left-width:4px;
+  border-radius:99px;
+  background:#fbfdfc;
+  box-shadow:none;
+  cursor:pointer;
+  font-size:.82rem;
+  line-height:1.3;
+  text-align:left;
+}
+.admin-cal-today .admin-post:hover,
+.wk-grid-single .wk-item:hover{background:#f2f8f4}
+
+/* หัวชิป: เวลา·ชื่อ อยู่บรรทัดเดียว ตัดด้วย ellipsis ไม่ให้ชิปยาวจนดันบรรทัด */
+.admin-cal-today .admin-post-top{display:flex;align-items:center;gap:8px;min-width:0;margin:0}
+.admin-cal-today .admin-post-top strong{
+  font-size:.82rem;font-weight:700;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34ch;
+}
+.admin-cal-today .admin-post-platforms{display:none}
+/* ป้ายสถานะข้อความซ้ำกับแถบสีซ้ายแล้ว — เอาออกให้ชิปสั้น เหลือปุ่มแก้ไข/ลบที่ยังต้องใช้ */
+.admin-cal-today .admin-post-status{display:none}
+.admin-cal-today .admin-post-corner{display:inline-flex;align-items:center;gap:2px;flex-shrink:0}
+.admin-cal-today .admin-post-corner-btn{width:26px;height:26px;font-size:.72rem}
+
+/* ชิปในมุมมองสัปดาห์ — โครงต่างจากการ์ดบน (มี .wk-item-top/-title/-foot) จึงจัดแยก */
+.wk-grid-single .wk-item{flex-direction:row}
+.wk-grid-single .wk-item .wk-item-top{gap:6px;font-size:.72rem}
+.wk-grid-single .wk-item .wk-item-type{display:none}
+.wk-grid-single .wk-item .wk-item-title{
+  font-size:.82rem;-webkit-line-clamp:initial;display:inline;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:30ch;
+}
+/* ป้ายสถานะข้อความซ้ำกับแถบสีซ้าย — ซ่อนเหมือนการ์ดบน */
+.wk-grid-single .wk-item .wk-item-foot{display:none}
+
+/* ปุ่ม "+ เพิ่ม" กลายเป็นชิปเส้นประในแถวเดียวกับโพสต์ ไม่ใช่แถบเต็มความกว้างด้านล่าง */
+.wk-grid-single .wk-add{width:auto;align-self:flex-start;padding:6px 14px;border-radius:99px}

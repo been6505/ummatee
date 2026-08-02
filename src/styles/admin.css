@@ -378,10 +378,11 @@
 .admin-cal-today .admin-post-media,
 .admin-cal-today .admin-post-actions{display:none}
 
-/* การ์ด "โพสต์ของวันที่เลือก" อยู่เต็มความกว้างด้านบน (แทนที่แถบแท็บเดิม)
-   ใต้ลงมาเป็น 2 คอลัมน์: ปฏิทิน | ฟอร์มเพิ่มโพสต์
-   .admin-cal-side เหลือการ์ดใบเดียวแล้ว แต่ยังเก็บ wrapper ไว้เผื่อเพิ่มการ์ดในคอลัมน์นี้ทีหลัง */
-.admin-cal-layout{display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr);gap:24px;align-items:start}
+/* เรียงลงมาเป็นแถวเดียวทุกความกว้าง: โพสต์ของวันที่เลือก → ปฏิทิน → ฟอร์มเพิ่มโพสต์
+   เดิมปฏิทินกับฟอร์มอยู่คนละคอลัมน์ ทำให้ปฏิทินถูกบีบเหลือ 480px — มุมมองสัปดาห์มี 7 คอลัมน์
+   จึงเหลือคอลัมน์ละ ~60px แคบจนอ่านโพสต์ในนั้นไม่ได้ ปฏิทินได้ความกว้างเต็มแล้วฟอร์มลงไปอยู่ข้างล่างแทน
+   .admin-cal-side เหลือการ์ดใบเดียว แต่ยังเก็บ wrapper ไว้เผื่อเพิ่มการ์ดในส่วนนี้ทีหลัง */
+.admin-cal-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
 .admin-cal-side{display:flex;flex-direction:column;gap:24px}
 .admin-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .admin-cal-head h4{margin:0;font-size:1.1rem}
@@ -545,9 +546,6 @@
 .admin-post-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .admin-post-actions .admin-btn,.admin-post-actions .admin-btn-danger{font-size:.78rem;padding:5px 12px}
 
-@media (max-width:900px){
-  .admin-cal-layout{grid-template-columns:1fr}
-}
 .admin-qurban .admin-legend{font-size:.98rem;font-weight:600}
 .admin-qurban .admin-table{font-size:1rem}
 .admin-qurban .admin-table td{font-weight:600}

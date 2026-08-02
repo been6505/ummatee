@@ -18,6 +18,11 @@ export const IFTAR_SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzI
 export const SHEETS_EXPORT_ENDPOINT = ''
 export const SHEETS_EXPORT_TOKEN = ''
 
+// ห้องสตูดิโอไลฟ์ (LiveStudio) — บริการภายนอก ฝังเป็น iframe ในหน้า /admin/video-call
+// เก็บไว้ที่นี่ที่เดียวเหมือน endpoint อื่นๆ เพราะลิงก์มี room id ติดมาด้วย เปลี่ยนห้องเมื่อไหร่แก้จุดเดียว
+// ⚠️ เปลี่ยนโดเมนเมื่อไหร่ต้องแก้ frame-src ใน firebase.json ด้วย ไม่งั้น iframe จะถูก CSP บล็อกเป็นกรอบเปล่า
+export const LIVE_STUDIO_URL = 'https://livestudio-web.onrender.com/studio?room=room-SQNih5-s'
+
 // อาสาสมัคร
 export const VOLUNTEER_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzJyyA9lqjuiJOVry-Mcl-8tXyAtbaIKggO704EqEL9y_A4rIodYL_LqysvbXrltBZKTA/exec'
 

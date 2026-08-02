@@ -10,6 +10,7 @@ import { writeAuditLog } from '../lib/auditLog.js'
 import {
   useMeetings, createMeeting, closeMeeting, reopenMeeting, deleteMeeting, meetingUrl, isMeetingOpen,
 } from '../data/meetings.js'
+import { LIVE_STUDIO_URL } from '../utils/endpoints.js'
 
 // ประชุมวิดีโอ (/admin/video-call) — ฝัง Jitsi Meet (meet.jit.si) ฟรี ไม่ต้องมีเซิร์ฟเวอร์/สมัครบัญชี
 //
@@ -31,6 +32,10 @@ export default function AdminVideoCall() {
   const [busy, setBusy] = useState(false)
   const [activeRoom, setActiveRoom] = useState(null) // ห้องที่ staff กำลังเปิดดูอยู่ในหน้านี้
   const [copied, setCopied] = useState('')
+  // สตูดิโอไลฟ์เป็นห้องภายนอกห้องเดียวที่ตั้งไว้ตายตัว (ดู LIVE_STUDIO_URL) ไม่ใช่ห้องที่สร้างในระบบนี้
+  // ไม่โหลด iframe ไว้ตั้งแต่แรก — มันเปิดกล้อง/ไมค์และเป็นเซิร์ฟเวอร์ที่ต้องปลุกก่อนใช้ (onrender)
+  // การโหลดค้างไว้ทุกครั้งที่เปิดหน้านี้จึงเปลืองโดยเปล่าประโยชน์เมื่อแค่มาสร้างห้องประชุมธรรมดา
+  const [studioOpen, setStudioOpen] = useState(false)
 
   const copy = async (id) => {
     try {
@@ -100,6 +105,33 @@ export default function AdminVideoCall() {
                 <h1>ประชุมวิดีโอ</h1>
                 <p>สร้างห้องแล้วส่งลิงก์เชิญให้คนนอกเข้าร่วมได้ โดยไม่ต้องให้เขาล็อกอินหรือสมัครบัญชี</p>
               </div>
+            </div>
+
+            {/* สตูดิโอไลฟ์ (บริการภายนอก) — ห้องประจำที่ทีมใช้ถ่ายทอดสด แยกจากห้องประชุมที่สร้างเองด้านล่าง */}
+            <div className="admin-card" style={{ marginBottom: 20, padding: studioOpen ? 0 : undefined, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: studioOpen ? '12px 16px' : 0 }}>
+                <div style={{ minWidth: 0 }}>
+                  <h4 style={{ margin: 0 }}>🎥 สตูดิโอไลฟ์</h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '.85rem', color: 'var(--ink-soft)' }}>
+                    ห้องสตูดิโอประจำสำหรับถ่ายทอดสด — เปิดในหน้านี้ได้เลย หรือเปิดแท็บใหม่ถ้าต้องแชร์หน้าจอ
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button className={studioOpen ? 'admin-btn-danger' : 'admin-btn-primary'} onClick={() => setStudioOpen((v) => !v)}>
+                    {studioOpen ? 'ปิดสตูดิโอ' : 'เปิดสตูดิโอ'}
+                  </button>
+                  {/* noopener/noreferrer — แท็บที่เปิดออกไปต้องแตะ window.opener ของหน้าแอดมินไม่ได้ */}
+                  <a className="admin-btn" href={LIVE_STUDIO_URL} target="_blank" rel="noopener noreferrer">เปิดแท็บใหม่ ↗</a>
+                </div>
+              </div>
+              {studioOpen && (
+                <iframe
+                  title="สตูดิโอไลฟ์"
+                  src={LIVE_STUDIO_URL}
+                  allow="camera; microphone; fullscreen; display-capture; autoplay"
+                  style={{ width: '100%', height: '78vh', border: 'none', display: 'block' }}
+                />
+              )}
             </div>
 
             {/* ห้องที่กำลังเปิดดูอยู่ — ฝัง Jitsi ในหน้าแอดมินเลย ไม่ต้องเปิดแท็บใหม่ */}

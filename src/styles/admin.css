@@ -1049,4 +1049,22 @@ a.attach-name:hover{text-decoration:underline}
    ไม่ต้องจำกัดความสูงเหมือนตอนเจ็ดคอลัมน์ (ที่ทำไว้เพื่อไม่ให้วันที่งานเยอะดันวันอื่นเป็นช่องว่างยาว)
    เพราะเหลือคอลัมน์เดียวแล้ว ให้ยาวตามเนื้อหาไปเลย จะได้ไม่มีกรอบเลื่อนซ้อนในหน้าที่เลื่อนอยู่แล้ว */
 .wk-grid-single{grid-template-columns:minmax(0,1fr)}
-.wk-grid-single .wk-col-body{max-height:none}
+/* คอลัมน์เดียวกินเต็มความกว้าง — ถ้ายังเรียงโพสต์ลงมาทีละใบจะได้การ์ดยาวเต็มจอใบเดียวต่อบรรทัด
+   เสียพื้นที่ด้านข้างทั้งหมด จัดเป็นแถวเดียวหลายคอลัมน์แบบเดียวกับการ์ดวันที่เลือกด้านบน
+   ความกว้างคิดจาก 6 ช่องพอดีในกรอบ (เผื่อ gap 5 ช่อง) ใบที่ 7 โผล่พ้นขอบให้รู้ว่าเลื่อนต่อได้ */
+.wk-grid-single .wk-col-body{
+  max-height:none;
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(clamp(180px,calc((100% - 5 * 8px) / 6),300px),1fr);
+  gap:8px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  padding-bottom:4px;
+}
+.wk-grid-single .wk-col-body > *{scroll-snap-align:start}
+/* มือถือ: 6 ช่องในจอแคบเหลือช่องละไม่ถึง 60px อ่านไม่ออก — ให้กว้างพออ่านแล้วเลื่อนแทน */
+@media (max-width:900px){
+  .wk-grid-single .wk-col-body{grid-auto-columns:minmax(220px,1fr)}
+}

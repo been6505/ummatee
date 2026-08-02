@@ -1044,3 +1044,9 @@ a.attach-name:hover{text-decoration:underline}
 .admin-cal-tpl-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:#eef2ef;border-radius:99px;padding:3px 6px 3px 11px;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
 .admin-cal-tpl-chip button{border:none;background:none;color:#c62828;cursor:pointer;padding:2px 4px;font-size:.72rem;opacity:.65;flex-shrink:0}
 .admin-cal-tpl-chip button:hover{opacity:1}
+
+/* มุมมองสัปดาห์แสดงเฉพาะวันที่เลือก — คอลัมน์เดียวเต็มความกว้าง
+   ไม่ต้องจำกัดความสูงเหมือนตอนเจ็ดคอลัมน์ (ที่ทำไว้เพื่อไม่ให้วันที่งานเยอะดันวันอื่นเป็นช่องว่างยาว)
+   เพราะเหลือคอลัมน์เดียวแล้ว ให้ยาวตามเนื้อหาไปเลย จะได้ไม่มีกรอบเลื่อนซ้อนในหน้าที่เลื่อนอยู่แล้ว */
+.wk-grid-single{grid-template-columns:minmax(0,1fr)}
+.wk-grid-single .wk-col-body{max-height:none}

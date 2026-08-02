@@ -1162,15 +1162,18 @@ export default function AdminCalendar() {
               ))}
             </div>
 
-            {/* มุมมองสัปดาห์: ใต้แถวปฏิทินเป็น 7 คอลัมน์ที่เห็นเนื้อหาของโพสต์จริง ไม่ใช่แค่จุดสี
+            {/* มุมมองสัปดาห์: ใต้แถวปฏิทินแสดง "เฉพาะวันที่เลือกอยู่" ไม่ใช่ทั้ง 7 วัน
+                เดิมกางครบเจ็ดคอลัมน์ ซึ่งส่วนใหญ่ว่างเปล่า กินความสูงเป็นหน้าจอโดยไม่ได้บอกอะไร
+                เพิ่มจากแถวปฏิทินด้านบนที่มีจุดสีบอกอยู่แล้วว่าวันไหนมีงาน
+                เปลี่ยนวันด้วยการกดวันในแถวปฏิทิน — คอลัมน์นี้ตามไปทันที
                 กดโพสต์ = เปิดขึ้นมาแก้ในฟอร์มด้านล่างทันที ไม่ต้องไปหน้าอื่น */}
             {viewMode === 'week' && (
-              <div className="wk-grid" style={{ marginTop: 12 }}>
-                {weekKeys.map((key, i) => {
+              <div className="wk-grid wk-grid-single" style={{ marginTop: 12 }}>
+                {weekKeys.filter((k) => k === selected).map((key) => {
+                  const i = weekKeys.indexOf(key)
                   const items = (byDate[key] || []).slice().sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))
-                  const dt = fromKey(key)
                   return (
-                    <div key={key} className={`wk-col${key === todayKey() ? ' wk-col-today' : ''}${key === selected ? ' wk-col-sel' : ''}`}>
+                    <div key={key} className={`wk-col${key === todayKey() ? ' wk-col-today' : ''} wk-col-sel`}>
                       <div className="wk-col-head">
                         <span className="wk-dow">{WEEK_COLUMNS[i].label}</span>
                         <span className="wk-date">{dayLabel(key)}</span>

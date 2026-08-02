@@ -76,7 +76,7 @@
 .admin-logout{border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:600}
 .admin-logout:hover{background:rgba(46,125,82,.08)}
 
-.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));gap:14px;margin-bottom:24px}
 /* ชุดสถิติที่ต้องการให้อยู่แถวเดียวเสมอ (เช่นหน้าคลังสินค้าที่มี 3 ใบ) — auto-fit ปกติจะตัด
    ขึ้นบรรทัดใหม่บนมือถือเพราะ min 160px ใส่ไม่ครบ กลายเป็น 2+1 ที่ดูไม่สมดุล */
 .admin-stats.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -94,7 +94,7 @@
 .admin-stat .v{font-size:2rem;font-weight:800;color:var(--green-deep)}
 .admin-stat .l{color:var(--ink-soft);font-size:.86rem;margin-top:4px}
 
-.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:16px}
 /* กริดกราฟแบบ 3 คอลัมน์ (หน้า admin iftar) — ย่อเป็น 2 และ 1 คอลัมน์บนจอเล็ก */
 .admin-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .admin-grid-3 .admin-card{padding:12px}
@@ -163,7 +163,7 @@
 .admin-visitors-label{font-size:1rem;font-weight:700;color:rgba(255,255,255,.95);margin-top:2px}
 .admin-visitors-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:4px}
 /* กราฟพรีวิวในหน้า admin/financial-dashboard */
-.fin-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.fin-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:24px}
 .fin-chart{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:16px;border:1px solid rgba(46,125,82,.12);border-radius:12px}
 .fin-chart-title{font-weight:800;color:var(--green-deep);font-size:1rem}
 .fin-chart-legend{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--ink-soft);font-weight:600}
@@ -244,7 +244,7 @@
 .admin-btn-danger:hover{filter:brightness(1.08)}
 .admin-btn-danger:hover{background:#fdeee9}
 
-.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));gap:16px}
 .admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
 .admin-form-grid input,.admin-table-edit input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
 /* ช่องกรอกต้องยืดตามคอลัมน์ ไม่ใช่ตามความกว้างธรรมชาติของตัวเอง
@@ -259,7 +259,7 @@
 .admin-table-edit input[type="text"]{width:100%}
 
 @media (max-width:640px){
-  .admin-form-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+  .admin-form-grid{grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr))}
 }
 
 /* ฟอร์มสินค้า Um Shop — บังคับ 3 คอลัมน์ตายตัว (ไม่ auto-fit) ให้จัดเรียงเป็นแถวตามที่ตั้งใจ */
@@ -648,7 +648,7 @@ a.attach-name:hover{text-decoration:underline}
 .staff-post-empty{color:var(--ink-soft);font-size:.85rem}
 .staff-post-more{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:var(--green-deep)}
 
-.staff-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:24px}
+.staff-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));gap:12px;margin-bottom:24px}
 .staff-shortcut{display:flex;align-items:center;gap:12px;padding:16px;background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:14px;text-decoration:none;color:var(--ink);box-shadow:0 6px 20px -12px rgba(27,94,54,.18);transition:transform .15s,box-shadow .15s,border-color .15s}
 .staff-shortcut:hover{transform:translateY(-2px);border-color:rgba(46,125,82,.35);box-shadow:0 12px 26px -14px rgba(27,94,54,.4)}
 .staff-shortcut-icon{flex-shrink:0;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;background:rgba(46,125,82,.1);color:var(--green-deep)}
@@ -704,7 +704,7 @@ a.attach-name:hover{text-decoration:underline}
 .b2um-filters button span{background:rgba(0,0,0,.08);border-radius:99px;padding:0 7px;font-size:.75rem}
 .b2um-filters button.on span{background:rgba(255,255,255,.25)}
 
-.b2um-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;align-items:start}
+.b2um-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:16px;align-items:start}
 .b2um-card{display:flex;flex-direction:column;gap:10px}
 .b2um-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 /* ชื่อร้านยาวได้ไม่จำกัด ต้องตัดคำได้ ไม่งั้นดันชิปสถานะตกออกนอกการ์ด */
@@ -731,7 +731,7 @@ a.attach-name:hover{text-decoration:underline}
 .mywork-count{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
 /* กลุ่มความเร่งด่วนเรียงเป็นคอลัมน์บนจอกว้าง — จำนวนกลุ่มไม่แน่นอน (โชว์เฉพาะกลุ่มที่มีงาน)
    จึงใช้ auto-fit ให้มันจัดเองแทนการกำหนดจำนวนคอลัมน์ตายตัว */
-.mywork-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start}
+.mywork-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:16px;align-items:start}
 .mywork-group-head{font-weight:700;font-size:.95rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .mywork-group-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.78rem}
 .mywork-list{list-style:none;margin:0;padding:0}
@@ -912,7 +912,10 @@ a.attach-name:hover{text-decoration:underline}
 .cd-progress-bar span{display:block;height:100%;background:var(--green-mid,#2e7d52);border-radius:99px}
 .cd-progress-text{display:flex;justify-content:space-between;font-size:.85rem;margin-top:6px}
 /* auto-fit: จำนวนกล่องคงที่ 6 กล่องก็จริง แต่ความกว้างที่มีเปลี่ยนตาม sidebar ย่อ/กาง */
-.cd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+/* minmax(min(NNNpx,100%),1fr) ไม่ใช่ minmax(NNNpx,1fr) — ถ้าพื้นที่จริงแคบกว่าค่าต่ำสุด
+   แทร็กจะถูกบังคับให้กว้างเท่าค่านั้นแล้วล้นออกนอกการ์ด (เจอจริงที่หน้ารวมแคมเปญ ล้น 14px บนจอ 360px)
+   ห่อด้วย min() ให้ยุบตามพื้นที่ได้เมื่อจอแคบกว่า — ใช้แบบเดียวกันทุกกริด auto-fit/auto-fill ในไฟล์นี้ */
+.cd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
 .cd-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
 .cd-section-head h4{margin:0;font-size:.95rem;display:flex;align-items:center;gap:8px}
 .cd-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.75rem;font-weight:700}
@@ -1144,3 +1147,12 @@ a.attach-name:hover{text-decoration:underline}
 
 /* ปุ่ม "+ เพิ่ม" กลายเป็นชิปเส้นประในแถวเดียวกับโพสต์ ไม่ใช่แถบเต็มความกว้างด้านล่าง */
 .wk-grid-single .wk-add{width:auto;align-self:flex-start;padding:6px 14px;border-radius:99px}
+
+/* ชิปโพสต์เป็นปุ่มหลักของหน้า (กดเพื่อเปิด/แก้โพสต์) แต่สูงแค่ 31–40px ซึ่งต่ำกว่าเป้าหมาย 44px
+   ของ iOS/Android — และชิปเรียงติดกันหลายอัน จึงกดพลาดง่ายเป็นพิเศษ
+   ขยายเฉพาะจอสัมผัส เดสก์ท็อปยังกะทัดรัดเหมือนเดิมเพราะเมาส์แม่นกว่า */
+@media (max-width:900px){
+  .admin-cal-today .admin-post,
+  .wk-grid-single .wk-item,
+  .wk-grid-single .wk-add{min-height:44px}
+}

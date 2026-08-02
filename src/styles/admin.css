@@ -1156,3 +1156,31 @@ a.attach-name:hover{text-decoration:underline}
   .wk-grid-single .wk-item,
   .wk-grid-single .wk-add{min-height:44px}
 }
+
+/* ── ย่อขนาด UI ฝั่งแอดมินให้พอดีจอมากขึ้น ──
+   วัดหน้าปฏิทินบนจอ 1600x900 แล้วสูงรวม 1635px (เกินจอเกือบเท่าตัว) ระยะห่าง/ความสูงหลายจุด
+   ตั้งไว้ตอนที่หน้ายังมีของน้อยกว่านี้มาก ตรงนี้รัดเข้าโดยไม่แตะขนาดพื้นที่กด 44px */
+@media (min-width:901px){
+  .admin-card{padding:14px 16px}
+  .admin-dash{padding-top:20px;padding-bottom:20px}
+  .admin-head{margin-bottom:14px}
+  .admin-cal-layout{gap:14px}
+  .admin-cal-today{margin-bottom:12px !important}
+  /* ช่องวันเตี้ยลง — 52px เผื่อไว้ตอนช่องยังมีแค่เลขวันที่ ตอนนี้มีเลขฮิจเราะห์กับจุดสถานะแล้ว
+     แต่ทั้งสามอย่างรวมกันสูงไม่ถึง 40px จริง (6 แถว × 12px = ประหยัดไป 72px) */
+  .admin-cal-day{min-height:40px}
+  .admin-cal-viewtabs{margin-bottom:8px}
+  .admin-cal-head{margin-bottom:10px}
+  .admin-cal-legend{margin-top:8px}
+  .admin-cal-form{gap:10px}
+  .admin-cal-form-main{gap:10px}
+  /* กล่องแคปชันสูง 240px ขั้นต่ำ ทั้งที่มันยืดเต็มคอลัมน์อยู่แล้ว — ค่านี้จึงเป็นแค่พื้นล่าง
+     ที่ดันการ์ดฟอร์มให้สูงเกินจำเป็นเวลาช่องอื่นสั้น */
+  .admin-cal-caption textarea{min-height:150px}
+  .admin-cal-tpl{margin-top:8px;padding-top:8px}
+}
+
+/* หัวการ์ดฟอร์มที่กดพับ/กางได้ — ฟอร์มสูงเกือบ 800px ถ้ากางค้างไว้ ปฏิทินจะไม่มีทางพอดีจอ */
+.admin-cal-form-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;background:none;border:none;font-family:inherit;font-size:1rem;font-weight:700;color:var(--green-deep,#166534);cursor:pointer;text-align:left}
+.admin-cal-form-toggle svg{font-size:.8rem;color:var(--ink-soft);transition:transform .18s}
+.admin-cal-form-toggle svg.open{transform:rotate(180deg)}

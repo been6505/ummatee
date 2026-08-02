@@ -16,7 +16,7 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faChevronLeft, faChevronRight, faCheck, faXmark, faCopy,
+  faChevronLeft, faChevronRight, faChevronDown, faCheck, faXmark, faCopy,
   faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
   faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage, faPenToSquare, faTrash,
 } from '@fortawesome/free-solid-svg-icons'
@@ -293,6 +293,9 @@ export default function AdminCalendar() {
   const [socialNotice, setSocialNotice] = useState('')
   // แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js ว่าฟิลด์ไหนใช้ซ้ำได้บ้าง)
   const { templates } = useContentTemplates()
+  // ฟอร์มพับไว้เป็นค่าเริ่มต้น — การ์ดฟอร์มสูง ~800px ถ้ากางค้างไว้ ปฏิทินจะไม่มีทางพอดีจอเลย
+  // (วัดแล้วหน้ารวมสูง 1459px บนจอสูง 900px) กางเองอัตโนมัติเมื่อผู้ใช้สั่งแก้/เพิ่มโพสต์จริงๆ
+  const [formOpen, setFormOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
@@ -395,6 +398,7 @@ export default function AdminCalendar() {
   }
 
   const startEdit = (p) => {
+    setFormOpen(true)
     setEditId(p.id)
     setForm({
       // normStatus: โพสต์เก่าที่เป็น 'scheduled' ต้องกลายเป็น 'draft' ไม่งั้นชิปไม่ตรงกับค่าใดเลยแล้วดูเหมือนไม่ได้เลือกอะไร
@@ -529,9 +533,17 @@ export default function AdminCalendar() {
 
   // withCaption=false ⇒ ฟอร์มเหลือคอลัมน์เดียว (ช่องข้อมูลได้ความกว้างเต็ม ชิปสถานะไม่ตกหลายบรรทัด)
   // แล้วผู้เรียกเอา captionField ไปวางเองข้างนอก
-  const renderFormCard = (withCaption = true) => (
+  const renderFormCard = (withCaption = true, collapsible = false) => (
               <div className="admin-card">
-                <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
+                {collapsible ? (
+                  // หัวการ์ดเป็นปุ่มพับ/กาง — ตัวฟอร์มถูกถอดออกจาก DOM ตอนพับ ไม่ใช่แค่ซ่อนด้วย CSS
+                  // เพราะถ้าแค่ซ่อน ช่องต่างๆ ยังอยู่ใน tab order และ screen reader ยังอ่านเจอ
+                  <button type="button" className="admin-cal-form-toggle" onClick={() => setFormOpen((v) => !v)}>
+                    <span>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</span>
+                    <FontAwesomeIcon icon={faChevronDown} className={formOpen ? 'open' : ''} />
+                  </button>
+                ) : <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>}
+                {collapsible && !formOpen ? null : (
                 <div className={`admin-cal-form${withCaption ? '' : ' admin-cal-form-single'}`}>
                   <div className="admin-cal-form-main">
                   <label>ชื่อกิจกรรม/โพสต์
@@ -789,6 +801,7 @@ export default function AdminCalendar() {
                   </div>
                   {withCaption && captionField}
                 </div>
+                )}
               </div>
   )
 
@@ -1201,7 +1214,7 @@ export default function AdminCalendar() {
                         ))}
                       </div>
                       {/* เลือกวันนั้นแล้วล้างฟอร์มให้พร้อมกรอกใหม่ — ฟอร์มอยู่ในหน้าเดียวกันแล้ว ไม่ต้องข้ามหน้า */}
-                      <button type="button" className="wk-add" onClick={() => { setSelected(key); cancelEdit() }}>+ เพิ่ม</button>
+                      <button type="button" className="wk-add" onClick={() => { setSelected(key); cancelEdit(); setFormOpen(true) }}>+ เพิ่ม</button>
                     </div>
                   )
                 })}
@@ -1212,7 +1225,7 @@ export default function AdminCalendar() {
           {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}
           <div className="admin-cal-side">
 
-            {renderFormCard(true)}
+            {renderFormCard(true, true)}
           </div>
         </div>}
       </div>

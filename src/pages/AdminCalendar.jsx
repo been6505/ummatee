@@ -238,7 +238,7 @@ const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t
 
 const EMPTY_FORM = {
   title: '', text: '', date: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
-  campaignId: '', contentType: 'post', liveScheduledAt: '', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
+  campaignId: '', contentType: 'post', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
   sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
   repeatDays: [], // วันในสัปดาห์ที่ทำซ้ำ (0=อา..6=ส) — ว่าง = ไม่ทำซ้ำ
   repeatWeeks: 4,
@@ -404,7 +404,7 @@ export default function AdminCalendar() {
       // normStatus: โพสต์เก่าที่เป็น 'scheduled' ต้องกลายเป็น 'draft' ไม่งั้นชิปไม่ตรงกับค่าใดเลยแล้วดูเหมือนไม่ได้เลือกอะไร
       title: p.title, text: p.text || '', date: p.date || selected, time: p.time || '10:00', platforms: p.platforms || [], status: normStatus(p.status),
       mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false,
-      campaignId: p.campaignId || '', contentType: p.contentType || 'post', liveScheduledAt: p.liveScheduledAt || '',
+      campaignId: p.campaignId || '', contentType: p.contentType || 'post',
       livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
       sources: p.sources || [],
       driveUrl: p.driveUrl || '',
@@ -441,7 +441,6 @@ export default function AdminCalendar() {
         contentType: form.contentType,
         approvalStatus: form.approvalStatus,
         ...(form.contentType === 'live' ? {
-          liveScheduledAt: form.liveScheduledAt || '',
           livePlatforms: form.livePlatforms,
           liveHost: form.liveHost.trim(),
         } : {}),
@@ -598,9 +597,9 @@ export default function AdminCalendar() {
                   </div>
                   {form.contentType === 'live' && (
                     <div className="admin-cal-form-row" style={{ flexWrap: 'wrap' }}>
-                      <label>วันเวลาไลฟ์
-                        <input type="datetime-local" value={form.liveScheduledAt} onChange={(e) => setForm({ ...form, liveScheduledAt: e.target.value })} />
-                      </label>
+                      {/* ตัดช่อง "วันเวลาไลฟ์" ออกแล้ว — ซ้ำกับ "วันเวลาโพสต์" ด้านบนที่กรอกไปแล้วทุกครั้ง
+                          และการมีเวลาสองชุดต่อโพสต์เดียวเปิดช่องให้ขัดกันเองโดยไม่มีใครรู้ว่าอันไหนจริง
+                          ตารางไลฟ์ใช้วันเวลาโพสต์เป็นหลักอยู่แล้ว (ดู liveTimeOf ใน data/liveSchedule.js) */}
                       <label>ผู้ดำเนินรายการ
                         <input value={form.liveHost} onChange={(e) => setForm({ ...form, liveHost: e.target.value })} />
                       </label>
@@ -1010,6 +1009,7 @@ export default function AdminCalendar() {
                     </div>
                     {p.contentType === 'live' && (
                       <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)', marginBottom: 6 }}>
+                        {/* โพสต์เก่าที่เคยกรอกช่องนี้ไว้ก่อนถูกตัดออก ยังแสดงให้เห็นตามเดิม ไม่ลบข้อมูลที่มีอยู่ */}
                         {p.liveScheduledAt && <>เวลาไลฟ์: {p.liveScheduledAt} · </>}
                         {(p.livePlatforms || []).length > 0 && <>แพลตฟอร์ม: {p.livePlatforms.join(', ')} · </>}
                         {p.liveHost && <>ผู้ดำเนินรายการ: {p.liveHost}</>}

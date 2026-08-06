@@ -525,6 +525,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // contentHooks/{id} — คลังประโยคเปิด (hook) ที่ทีมเก็บไว้ใช้ซ้ำ
+    // สิทธิ์ชุดเดียวกับ contentPosts/contentTemplates — เป็นเนื้อหาคอนเทนต์ ไม่มี PII
+    match /contentHooks/{id} {
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
     // contentTemplates/{id} — แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js)
     // สิทธิ์ชุดเดียวกับ contentPosts — ใครแก้ปฏิทินได้ก็ควรเก็บ/ใช้แม่แบบได้
     // ไม่มีข้อมูลอ่อนไหวเพิ่ม เป็นสำเนาของเนื้อหาโพสต์ที่คนกลุ่มเดียวกันเห็นอยู่แล้ว

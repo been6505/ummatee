@@ -23,6 +23,7 @@ export const GROUPS = [
     tone: 'plan',
     items: [
       { label: 'ปฏิทินคอนเทนต์', href: '/admin/calendar', desc: 'เดือน/สัปดาห์ + แม่แบบโพสต์' },
+      { label: 'คลัง HOOK', href: '/admin/hooks', desc: 'ประโยคเปิดที่ใช้ได้ผล' },
       { label: 'ตารางไลฟ์สด', href: '/admin/live', desc: 'ไลฟ์ที่กำลังจะถึง' },
       { label: 'บอร์ดวางแผน', href: '/admin/board', desc: 'คัมบัง + มายด์แมป' },
       { label: 'งานของฉัน', href: '/admin/my-work', desc: 'งานที่มอบหมายให้เรา' },

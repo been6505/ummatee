@@ -3,7 +3,7 @@ import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 import { useContentHooks, addHook, removeHook, markHookUsed } from '../data/contentHooks.js'
-import { HOOK_CATEGORIES, HOOK_CATEGORY_LABEL, normHookCategory, matchesHook, MAX_HOOK_LEN } from '../data/hooks.js'
+import { HOOK_CATEGORIES, HOOK_CATEGORY_LABEL, normHookCategory, matchesHook, MAX_HOOK_LEN, missingSampleHooks } from '../data/hooks.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBolt, faCopy, faCheck, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons'
 
@@ -95,7 +95,28 @@ export default function AdminHooks() {
                   <FontAwesomeIcon icon={faPlus} /> {busy ? 'กำลังบันทึก…' : 'เพิ่ม'}
                 </button>
               </div>
-              <p className="hk-hint">{HOOK_CATEGORIES.find((c) => c.key === category)?.hint}</p>
+              <div className="hk-add-foot">
+                <p className="hk-hint">{HOOK_CATEGORIES.find((c) => c.key === category)?.hint}</p>
+                {/* เติมชุดตัวอย่างให้เริ่มใช้ได้ทันที — เพิ่มเฉพาะตัวที่ยังไม่มี กดซ้ำจึงไม่ได้ของซ้ำ
+                    (ดู missingSampleHooks) ปุ่มหายไปเองเมื่อมีครบแล้ว จะได้ไม่รกหน้าตลอดไป */}
+                {missingSampleHooks(hooks).length > 0 && (
+                  <button
+                    className="admin-btn"
+                    disabled={busy}
+                    onClick={async () => {
+                      const todo = missingSampleHooks(hooks)
+                      if (!window.confirm(`เพิ่ม hook ตัวอย่าง ${todo.length} อันเข้าคลัง?`)) return
+                      setBusy(true)
+                      try {
+                        // สร้างพร้อมกัน — addDoc เป็นคำขอละเอกสาร ทำทีละอันจะช้าโดยไม่จำเป็น
+                        await Promise.all(todo.map((h) => addHook(h)))
+                      } catch (e) {
+                        window.alert('เพิ่มตัวอย่างไม่สำเร็จ: ' + e.message)
+                      } finally { setBusy(false) }
+                    }}
+                  >+ เพิ่ม hook ตัวอย่าง ({missingSampleHooks(hooks).length})</button>
+                )}
+              </div>
             </div>
 
             <div className="admin-card hk-toolbar">

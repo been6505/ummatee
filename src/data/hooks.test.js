@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  HOOK_CATEGORIES, HOOK_CATEGORY_LABEL, normHookCategory, cleanHookText, matchesHook, sortHooks, MAX_HOOK_LEN,
-} from './hooks.js'
+  HOOK_CATEGORIES, HOOK_CATEGORY_LABEL, normHookCategory, cleanHookText, matchesHook, sortHooks, MAX_HOOK_LEN, SAMPLE_HOOKS, missingSampleHooks } from './hooks.js'
 
 describe('normHookCategory', () => {
   it('หมวดที่ถูกต้องคงเดิม', () => {
@@ -90,5 +89,33 @@ describe('ความครบถ้วนของหมวด', () => {
   })
   it('key ไม่ซ้ำ', () => {
     expect(new Set(HOOK_CATEGORIES.map((c) => c.key)).size).toBe(HOOK_CATEGORIES.length)
+  })
+})
+
+describe('SAMPLE_HOOKS / missingSampleHooks', () => {
+  it('ตัวอย่างทุกอันมีหมวดที่ถูกต้องและมีข้อความ', () => {
+    for (const s of SAMPLE_HOOKS) {
+      expect(HOOK_CATEGORY_LABEL[s.category]).toBeTruthy()
+      expect(cleanHookText(s.text).length).toBeGreaterThan(10)
+    }
+  })
+  it('ครอบคลุมครบทุกหมวด — คลังตัวอย่างที่มีแต่หมวดเดียวไม่ได้สอนอะไร', () => {
+    expect(new Set(SAMPLE_HOOKS.map((s) => s.category)).size).toBe(HOOK_CATEGORIES.length)
+  })
+  it('ไม่มีข้อความซ้ำกันเองในชุดตัวอย่าง', () => {
+    const t = SAMPLE_HOOKS.map((s) => cleanHookText(s.text))
+    expect(new Set(t).size).toBe(t.length)
+  })
+  it('คลังว่าง = ได้ตัวอย่างครบทุกอัน', () => {
+    expect(missingSampleHooks([])).toHaveLength(SAMPLE_HOOKS.length)
+    expect(missingSampleHooks(undefined)).toHaveLength(SAMPLE_HOOKS.length)
+  })
+  it('กดซ้ำไม่ได้ของซ้ำ — ตัวที่มีอยู่แล้วถูกข้าม', () => {
+    const already = SAMPLE_HOOKS.map((s) => ({ text: s.text }))
+    expect(missingSampleHooks(already)).toEqual([])
+  })
+  it('เทียบหลังยุบช่องว่างแล้ว — ตัวเดียวกันที่ช่องว่างต่างกันต้องไม่ถูกเพิ่มซ้ำ', () => {
+    const spaced = [{ text: '  ' + SAMPLE_HOOKS[0].text.replace(' ', '   ') + ' ' }]
+    expect(missingSampleHooks(spaced).map((s) => s.text)).not.toContain(SAMPLE_HOOKS[0].text)
   })
 })

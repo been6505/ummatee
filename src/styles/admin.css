@@ -1322,3 +1322,6 @@ a.attach-name:hover{text-decoration:underline}
 .hk-note{margin:0;font-size:.78rem;color:var(--ink-soft);overflow-wrap:anywhere}
 .hk-actions{display:flex;gap:8px;align-items:center;margin-top:2px}
 .hk-actions .admin-btn{flex:1;justify-content:center}
+/* แถวล่างของกล่องเพิ่ม hook — คำใบ้ชิดซ้าย ปุ่มตัวอย่างชิดขวา และตกบรรทัดได้บนจอแคบ */
+.hk-add-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.hk-add-foot .admin-btn{flex-shrink:0}

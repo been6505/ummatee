@@ -1,6 +1,6 @@
 import {
   faTableColumns, faCalendar, faGlobe, faUsers, faMapLocationDot, faMicrophone,
-  faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck, faTowerBroadcast,
+  faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck, faTowerBroadcast, faDiagramProject,
 } from '@fortawesome/free-solid-svg-icons'
 import { hasStaffRole } from '../useStaffRole.js'
 
@@ -10,6 +10,7 @@ import { hasStaffRole } from '../useStaffRole.js'
 // requireRoles: ต้องมี staff doc ที่ active และ role อยู่ในลิสต์
 // superOnly:    เฉพาะแอดมินสูงสุดบัญชีเดียว ไม่ผูกกับ staff role (ให้สิทธิ์คนอื่น + ดูร่องรอยของทุกคน)
 export const STAFF_NAV_GROUPS = [
+  { label: 'แผนผังระบบ', icon: faDiagramProject, href: '/admin/system-map', requireRoles: ['admin', 'staff', 'social', 'field'] },
   { label: 'แดชบอร์ด Staff', icon: faTableColumns, href: '/admin/staff-dashboard', requireRoles: ['admin', 'staff', 'social', 'field'] },
   { label: 'งานของฉัน', icon: faListCheck, href: '/admin/my-work', requireRoles: ['admin', 'staff', 'social', 'field'] },
   { label: 'ปฏิทินคอนเทนต์', icon: faCalendar, href: '/admin/calendar', requireRoles: ['admin', 'staff', 'social'] },

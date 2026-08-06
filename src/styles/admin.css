@@ -1218,3 +1218,74 @@ a.attach-name:hover{text-decoration:underline}
 .sm-out-box:hover{filter:brightness(1.08)}
 .sm-out-box strong{display:block;font-size:.88rem}
 .sm-out-box span{font-size:.75rem;opacity:.85}
+
+/* ══════════════════════════════════════════════════════════════════
+   ธีมหน้าแอดมินแบบ "Content OS" — เปลี่ยนที่เปลือกร่วม (sidebar + การ์ด) ที่เดียว
+   ทั้ง 35 หน้าจึงเปลี่ยนตามโดยไม่ต้องแก้ทีละไฟล์ (และไม่มีหน้าไหนหลุดธีม)
+
+   แนวคิดจากตัวอย่างที่อ้างอิง: พื้นครีม-ขาว ตัวหนังสือเข้ม เมนูเป็นรายการเรียบๆ
+   มีชิปไฮไลต์เฉพาะรายการที่เปิดอยู่ ใช้สีเขียวแบรนด์เป็น "สีเน้น" แทนที่จะเป็นพื้นหลังทั้งแถบ
+   — อ่านง่ายขึ้นมากบนหน้าที่ต้องนั่งทำงานนานๆ และคอนทราสต์ของตัวหนังสือดีกว่าพื้นเขียวเข้ม
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width:769px){
+  .admin-nav{
+    background:#fbfaf7;
+    color:#1f2937;
+    border-right:1px solid rgba(27,94,54,.12);
+    box-shadow:none;
+  }
+  /* แถบแบรนด์ด้านบน — เส้นคั่นบางแทนการเปลี่ยนสีพื้น ให้ต่อเนื่องกับรายการด้านล่าง */
+  .admin-nav .admin-nav-brand{
+    color:var(--green-deep,#166534);
+    border-bottom:1px solid rgba(27,94,54,.1);
+    padding:14px 16px;
+  }
+  .admin-nav .admin-nav-collapse-btn{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-collapse-btn:hover{background:rgba(27,94,54,.16)}
+
+  /* หัวกลุ่มเป็น "ป้ายหมวด" ตัวเล็ก ไม่ใช่ปุ่มก้อนใหญ่ — สายตาจึงไปหยุดที่รายการจริง ไม่ใช่ที่หัวข้อ */
+  .admin-nav .an-group-btn{
+    color:#8a9490;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:10px 14px 4px;
+  }
+  .admin-nav .an-group-btn:hover{background:transparent;color:var(--green-deep,#166534)}
+  .admin-nav .an-group-active>.an-group-btn{background:transparent}
+  .admin-nav .an-group-children{padding-left:14px}
+
+  .admin-nav .an-item,
+  .admin-nav .an-child{
+    color:#3c4a44;
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .admin-nav .an-item:hover,
+  .admin-nav .an-child:hover{background:rgba(27,94,54,.07);color:var(--green-deep,#166534)}
+  /* รายการที่เปิดอยู่ = ชิปเขียวอ่อน ไม่ใช่พื้นทึบ — บอกตำแหน่งได้โดยไม่แย่งสายตาจากเนื้อหา */
+  .admin-nav .an-item.active,
+  .admin-nav .an-child.active{
+    background:rgba(27,94,54,.11);
+    color:var(--green-deep,#166534);
+    font-weight:700;
+  }
+  .admin-nav .admin-nav-section-divider{background:rgba(27,94,54,.12)}
+  .admin-nav .admin-nav-user{color:#8a9490}
+  .admin-nav .admin-nav-logout{color:#8a9490}
+  .admin-nav .admin-nav-logout:hover{background:rgba(198,40,40,.08);color:#c62828}
+  /* กระดิ่ง/ปุ่มบนพื้นครีม — ของเดิมเป็นสีขาวโปร่งซึ่งมองไม่เห็นเลยบนพื้นสว่าง */
+  .admin-nav .admin-nav-bell{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-bell:hover{background:rgba(27,94,54,.16)}
+
+}
+
+/* พื้นหน้างานและการ์ด — อยู่นอก media query โดยตั้งใจ
+   ตัวเปลือกเมนูธีมเฉพาะเดสก์ท็อปได้ (มือถือใช้ drawer คนละตัว) แต่ "พื้นที่ทำงาน" ต้องหน้าตาเดียวกัน
+   ทุกขนาดจอ ไม่งั้นเปิดจากมือถือแล้วรู้สึกเหมือนคนละระบบ */
+.admin-dash{background:#f7f6f2}
+/* การ์ด: มุมมนขึ้น เงาบางลง ขอบอ่อน — โทนเดียวกับตัวอย่างที่อ้างอิง */
+.admin-card{border-radius:16px;border:1px solid rgba(27,94,54,.09);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+
+/* หัวเรื่องของหน้า — ตัวอักษรเข้มขึ้นและเว้นวรรคแน่นกว่าเดิม อ่านเป็นหัวข้อชัดโดยไม่ต้องใหญ่ */
+.admin-head h1{letter-spacing:-.01em}

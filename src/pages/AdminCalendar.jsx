@@ -762,7 +762,11 @@ export default function AdminCalendar() {
                             <button
                               type="button"
                               aria-label={`ลบแม่แบบ ${t.name}`}
-                              onClick={() => { if (window.confirm(`ลบแม่แบบ "${t.name}"?`)) removeTemplate(t.id) }}
+                              onClick={() => {
+                                if (!window.confirm(`ลบแม่แบบ "${t.name}"?`)) return
+                                // จับ error ด้วย — ไม่งั้นลบไม่ผ่านแล้วเงียบ แม่แบบยังอยู่ในลิสต์เหมือนเดิม
+                                removeTemplate(t.id).catch((e) => window.alert('ลบแม่แบบไม่สำเร็จ: ' + e.message))
+                              }}
                             ><FontAwesomeIcon icon={faTrash} /></button>
                           </span>
                         ))}

@@ -49,7 +49,12 @@ export default function CommentThread({ entityType, entityId, title = 'คุย
                 <span>{timeLabel(c.createdAt)}</span>
                 {/* ลบได้เฉพาะของตัวเอง — ตรงกับ firestore.rules ไม่ใช่แค่ซ่อนปุ่ม */}
                 {c.authorUid === me && (
-                  <button onClick={() => removeComment(c.id)} aria-label="ลบคอมเมนต์" title="ลบ">
+                  <button
+                    // ต้องจับ error — ถ้าลบไม่ผ่าน (เช่น rules ปฏิเสธเพราะ authorUid ไม่ตรง) promise จะ reject
+                    // ลอยๆ คอมเมนต์ยังอยู่บนจอโดยไม่มีอะไรบอก ผู้ใช้จะกดซ้ำแล้วคิดว่าปุ่มเสีย
+                    onClick={() => removeComment(c.id).catch((e) => window.alert('ลบไม่สำเร็จ: ' + e.message))}
+                    aria-label="ลบคอมเมนต์" title="ลบ"
+                  >
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
                 )}

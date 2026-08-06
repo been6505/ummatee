@@ -61,6 +61,7 @@ export const GROUPS = [
       { label: 'um-shop — คำสั่งซื้อ', href: '/admin/shop/orders', desc: 'ออเดอร์ที่เข้ามา' },
       { label: 'um-shop — สินค้า', href: '/admin/shop', desc: 'จัดการสินค้า/สต็อก' },
       { label: 'รายงานยอดขาย', href: '/admin/shop/sales', desc: 'ยอดขายย้อนหลัง' },
+      { label: 'รีวิว & แจ้งปัญหา', href: '/admin/shop/feedback', desc: 'ตรวจรีวิว/รับเรื่องลูกค้า' },
       { label: 'บันทึกเงินบริจาค', href: '/admin/donations', desc: 'รายการบริจาค' },
       { label: 'แดชบอร์ดการเงิน', href: '/admin/financial-dashboard', desc: 'ภาพรวมรายรับ' },
     ],

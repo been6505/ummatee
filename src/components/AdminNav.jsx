@@ -41,6 +41,7 @@ const NAV_GROUPS = [
       { href: '/admin/shop/orders', label: 'คำสั่งซื้อ' },
       { href: '/admin/shop/inventory', label: 'คลังสินค้า' },
       { href: '/admin/shop/sales', label: 'รายงานยอดขาย' },
+      { href: '/admin/shop/feedback', label: 'รีวิว & แจ้งปัญหา' },
     ]
   },
   {

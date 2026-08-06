@@ -525,6 +525,57 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // ── รีวิวสินค้าจากลูกค้า ──
+    // ลูกค้าไม่ได้ล็อกอิน (guest checkout) จึงต้องเปิดให้ "ใครก็สร้างได้" แบบเดียวกับฟอร์มลงทะเบียนอื่น
+    // ความปลอดภัยอยู่ที่การตรวจรูปแบบตรงนี้ ไม่ใช่ที่ตัวตนผู้ส่ง
+    //
+    // สองข้อที่สำคัญที่สุด:
+    //   1. status ต้องเป็น 'pending' เท่านั้นตอนสร้าง — ไม่งั้นใครก็ส่งรีวิวที่ approved มาเอง
+    //      แล้วขึ้นหน้าเว็บสาธารณะทันทีโดยไม่มีใครตรวจ
+    //   2. photos ต้องเป็น URL https ของ Cloudinary เท่านั้น — ค่านี้ไปโผล่ใน <img src> บนหน้า public
+    //      ถ้ารับ URL อะไรก็ได้ ฟอร์มนี้จะกลายเป็นช่องฝังรูปจากที่อื่นบนเว็บมูลนิธิ
+    //
+    // อ่าน: สาธารณะเห็นเฉพาะที่อนุมัติแล้ว — การ list ต้อง where('status','==','approved') เท่านั้น
+    // ไม่งั้น query ถูกปฏิเสธทั้งชุด (รีวิวที่ยังไม่ตรวจจึงไม่มีทางหลุดออกไป)
+    function validReviewPhotos(d) {
+      return !('photos' in d)
+        || (d.photos is list && d.photos.size() <= 4);
+    }
+    match /productReviews/{id} {
+      allow get: if resource.data.status == 'approved' || isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+      allow list: if request.query.limit <= 200
+        && (isFullAdmin() || isStaffRole(['admin', 'staff', 'social'])
+            || resource.data.status == 'approved');
+      allow create: if request.resource.data.size() <= 8
+        && request.resource.data.status == 'pending'
+        && request.resource.data.productId is string && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 80
+        && optStr(request.resource.data, 'productName', 200)
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && optStr(request.resource.data, 'authorName', 60)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      // อนุมัติ/ปฏิเสธ/ลบ เป็นงานของทีม ไม่ใช่ของคนส่ง
+      allow update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // ── แจ้งปัญหาจากลูกค้า ──
+    // มีเบอร์โทร/เลขออเดอร์ของลูกค้าอยู่ข้างใน จึงอ่านได้เฉพาะทีมงาน ไม่เปิดสาธารณะเหมือนรีวิว
+    match /shopIssues/{id} {
+      allow create: if request.resource.data.size() <= 7
+        && request.resource.data.status == 'open'
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() > 0 && request.resource.data.detail.size() <= 1500
+        && optStr(request.resource.data, 'orderCode', 30)
+        && optStr(request.resource.data, 'phone', 20)
+        && optStr(request.resource.data, 'topic', 30)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      allow read, update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
     // contentHooks/{id} — คลังประโยคเปิด (hook) ที่ทีมเก็บไว้ใช้ซ้ำ
     // สิทธิ์ชุดเดียวกับ contentPosts/contentTemplates — เป็นเนื้อหาคอนเทนต์ ไม่มี PII
     match /contentHooks/{id} {

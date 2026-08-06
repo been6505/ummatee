@@ -1325,3 +1325,21 @@ a.attach-name:hover{text-decoration:underline}
 /* แถวล่างของกล่องเพิ่ม hook — คำใบ้ชิดซ้าย ปุ่มตัวอย่างชิดขวา และตกบรรทัดได้บนจอแคบ */
 .hk-add-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .hk-add-foot .admin-btn{flex-shrink:0}
+
+/* ── ตรวจรีวิว & เรื่องแจ้งปัญหา (/admin/shop/feedback) ── */
+.fb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.fb-card{display:flex;flex-direction:column;gap:8px}
+.fb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fb-top strong{min-width:0;overflow-wrap:anywhere}
+.fb-time{flex-shrink:0;font-size:.75rem;color:var(--ink-soft)}
+.fb-stars{color:#dcdcdc;font-size:.85rem;display:flex;gap:2px}
+.fb-stars .on{color:#f5a623}
+.fb-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--ink-soft)}
+.fb-meta a{color:var(--green-deep,#166534);text-decoration:none;font-weight:700}
+/* คงบรรทัดที่ลูกค้าพิมพ์ และตัดคำยาวไม่ให้ดันการ์ด */
+.fb-text{margin:0;font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-by{font-size:.8rem;color:var(--ink-soft)}
+.fb-photos{display:flex;flex-wrap:wrap;gap:6px}
+.fb-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd;display:block}
+.fb-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.fb-actions .admin-btn{font-size:.78rem;padding:6px 12px;min-height:38px}

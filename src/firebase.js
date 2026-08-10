@@ -17,7 +17,8 @@ const firebaseConfig = {
   measurementId: 'G-0L9D8QTV3B',
 }
 
-const app = initializeApp(firebaseConfig)
+// export ไว้ให้ getMessaging(app) ใช้ (data/pushTokens.js) — โมดูลอื่นควรใช้ db/auth/storage ที่ export ไว้แล้ว
+export const app = initializeApp(firebaseConfig)
 
 // App Check (reCAPTCHA v3) — ป้องกันการเรียก Firebase API จากนอกเว็บไซต์จริง
 // site key เป็นค่า public ใส่ในโค้ดได้ปลอดภัย (ตรงข้ามกับ secret key ที่ตั้งไว้ใน Firebase Console เท่านั้น)

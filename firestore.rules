@@ -633,6 +633,25 @@ service cloud.firestore {
       allow delete: if isFullAdmin() || isStaffRole(['admin', 'staff']);
     }
 
+    // ── token สำหรับส่งแจ้งเตือน (FCM) ──
+    //
+    // ⚠️ ต้องปิด list สนิท — collection นี้คือ "รายชื่ออุปกรณ์ผู้ใช้ทั้งหมด" ที่ติดตามมูลนิธิอยู่
+    // ถ้าใครอ่านทั้ง collection ได้ ก็ได้ทั้งจำนวนผู้ติดตามและ token ทุกตัวไป
+    // ซึ่งเอาไปยิงแจ้งเตือนปลอมได้ทันทีถ้าเขามี server key (รูปแบบเดียวกับ shopIssues)
+    //
+    // doc id คือตัว token เอง — เข้าเว็บซ้ำกี่ครั้งก็ทับ doc เดิม ไม่เกิดรายการซ้ำ
+    // ไม่มีการล็อกอินฝั่งผู้ใช้ทั่วไป จึงต้องเปิด create/update ให้ทุกคน แต่บีบ schema ให้แคบที่สุด
+    // ตั้งใจไม่เก็บ uid/อีเมล/ไอพี — ตัว token อย่างเดียวไม่บอกว่าใครเป็นใคร
+    match /pushTokens/{token} {
+      allow get, list: if isFullAdmin();
+      allow create, update: if request.resource.data.keys().hasOnly(['lang', 'updatedAt'])
+        && request.resource.data.lang in ['th', 'en', 'ar']
+        && request.resource.data.updatedAt is number
+        && token.size() > 0 && token.size() <= 4096;
+      // ผู้ใช้ปิดแจ้งเตือนเองได้ (token เดิมใช้ไม่ได้แล้ว) และแอดมินล้าง token ที่ตายแล้วได้
+      allow delete: if true;
+    }
+
     // comments/{id} — คอมเมนต์คุยงาน ผูกกับชิ้นงานด้วย (entityType, entityId)
     //
     // ต่างจาก auditLog ที่ระบบเขียนเองและลบไม่ได้ — อันนี้คนพิมพ์เอง ลบของตัวเองได้

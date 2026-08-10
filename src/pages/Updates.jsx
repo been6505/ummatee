@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
+import NotifyButton from '../components/NotifyButton.jsx'
 import { usePublicUpdates } from '../data/updates.js'
 import {
   UPDATE_CATEGORIES, CATEGORY_LABEL, CATEGORY_COLOR, normCategory, cleanPhotos,
@@ -53,6 +54,7 @@ export default function Updates() {
             <span className="upd-eyebrow">UPDATES · ความคืบหน้า</span>
             <h1>ความคืบหน้าการช่วยเหลือ</h1>
             <p>ทุกความช่วยเหลือที่ส่งถึงมือผู้รับ — รายงานจากทีมงานในพื้นที่จริง</p>
+            <NotifyButton />
           </FadeUp>
         </section>
 

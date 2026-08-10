@@ -11,6 +11,16 @@ import {
 // ตั้งใจไม่เด้งทันทีที่เปิดหน้าแรก — รอ DELAY_MS ให้คนได้เห็นเนื้อหาก่อน ไม่งั้นมันคือป๊อปอัปขวางตั้งแต่วินาทีแรก
 const DELAY_MS = 6000
 
+// นับยอดติดตั้งลง stats/site เหมือนตัวนับผู้เข้าชมใน App.jsx — โหลด firebase แบบ dynamic
+// (static import จากไฟล์นี้จะลาก Firebase SDK ทั้งก้อนกลับเข้า bundle หลักที่ทุกหน้าต้องโหลด)
+// increment() ฝั่งเซิร์ฟเวอร์ ไม่ใช่อ่านแล้วเขียนทับ — คนกดติดตั้งพร้อมกันจะไม่ทำให้ยอดหาย
+const countInstall = () => {
+  Promise.all([import('../firebase.js'), import('firebase/firestore')])
+    .then(([{ db }, { doc, setDoc, increment }]) =>
+      setDoc(doc(db, 'stats', 'site'), { installs: increment(1) }, { merge: true }))
+    .catch(() => {}) // นับไม่ได้ก็ไม่เป็นไร ห้ามทำให้การติดตั้งพัง
+}
+
 export default function InstallAppBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [visible, setVisible] = useState(false)
@@ -27,7 +37,12 @@ export default function InstallAppBanner() {
       setDeferredPrompt(e)
       show()
     }
-    const onInstalled = () => { setVisible(false); setDeferredPrompt(null); dismissInstall() }
+    const onInstalled = () => {
+      setVisible(false)
+      setDeferredPrompt(null)
+      dismissInstall(true) // ติดตั้งสำเร็จแล้ว = ไม่ต้องถามอีกเลย (ไม่ใช่แค่เงียบ 30 วัน)
+      countInstall()
+    }
 
     window.addEventListener('beforeinstallprompt', onPrompt)
     window.addEventListener('appinstalled', onInstalled)

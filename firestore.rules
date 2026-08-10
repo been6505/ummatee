@@ -394,13 +394,24 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    // นับผู้เข้าชมเว็บไซต์ — ทุกคนเพิ่มยอด views ได้ (เฉพาะ field views) แต่อ่านได้เฉพาะ admin
+    // นับผู้เข้าชมเว็บไซต์ + ยอดติดตั้งแอป — ทุกคนเพิ่มได้ (เฉพาะ 2 field นี้) แต่อ่านได้เฉพาะ admin
+    // installs มาจาก event 'appinstalled' ใน InstallAppBanner.jsx
     match /stats/site {
-      allow create: if request.resource.data.keys().hasOnly(['views'])
-        && request.resource.data.views is int && request.resource.data.views == 1;
-      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดผู้เข้าชมสะสมกู้คืนไม่ได้ถ้าถูกทับ)
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
-        && request.resource.data.views is int && request.resource.data.views == resource.data.views + 1;
+      // size() > 0 กันการสร้างเอกสารเปล่า — hasOnly([...]) เฉย ๆ ปล่อย {} ผ่าน
+      allow create: if request.resource.data.keys().hasOnly(['views', 'installs'])
+        && request.resource.data.keys().size() > 0
+        && (!('views' in request.resource.data)
+            || (request.resource.data.views is int && request.resource.data.views == 1))
+        && (!('installs' in request.resource.data)
+            || (request.resource.data.installs is int && request.resource.data.installs == 1));
+      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดสะสมกู้คืนไม่ได้ถ้าถูกทับ)
+      // เขียนเป็นเงื่อนไขต่อ field เพราะแต่ละครั้งจะแตะ field เดียว (ตัวใดตัวหนึ่ง ไม่ใช่พร้อมกัน)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'installs'])
+        && (!('views' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.views is int && request.resource.data.views == resource.data.views + 1))
+        && (!('installs' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.installs is int
+                && request.resource.data.installs == (('installs' in resource.data) ? resource.data.installs + 1 : 1)));
       allow read: if isAdmin();
     }
 

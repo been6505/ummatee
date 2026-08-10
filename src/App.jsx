@@ -262,6 +262,7 @@ export default function App() {
     'admin-shop': AdminShop,
     'admin-shop-new': AdminShopNew,
     'admin-shop-orders': AdminShopOrders,
+    'admin-shop-feedback': AdminShopFeedback,
     'admin-shop-inventory': AdminInventory,
     'admin-shop-sales': AdminShopSales,
     'admin-shop-order-detail': AdminShopOrderDetail,
@@ -345,7 +346,6 @@ export default function App() {
             {page === 'shop-checkout' && <ShopCheckout />}
             {page === 'shop-my-orders' && <ShopMyOrders />}
             {page === 'shop-support' && <ShopSupport />}
-            {page === 'admin-shop-feedback' && <AdminShopFeedback />}
             {page === 'shop-order' && <ShopOrderStatus orderId={shopOrderId} />}
             {page === 'volunteer' && <VolunteerRegister />}
             {page === 'missions' && <Missions />}

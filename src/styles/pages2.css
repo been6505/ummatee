@@ -245,6 +245,10 @@
   /* ยกเลิก aspect-ratio ให้รูปสูงเท่าการ์ด (ความสูงกำหนดโดยเนื้อหาฝั่งขวา) แต่ไม่เตี้ยกว่า 380px */
   .hf-card:only-child .hf-poster{height:100%;min-height:380px;aspect-ratio:auto}
   .hf-card:only-child .hf-card-body{justify-content:center;padding:32px 36px}
+  /* .hf-card-desc มี flex:1 เพื่อดันปุ่มของการ์ด 3 ใบให้อยู่ระดับเดียวกัน แต่พอเหลือใบเดียว
+     คำอธิบายบรรทัดเดียวจะถูกยืดจนสูง ~290px กลายเป็นช่องว่างโหว่กลางการ์ด และทำให้
+     justify-content:center ข้างบนไม่มีผลเลย — ใบเดียวจึงให้สูงเท่าเนื้อหาจริง */
+  .hf-card:only-child .hf-card-desc{flex:0 0 auto}
 }
 .hf-gradient-label{font-size:.85rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85)}
 .hf-tag-teal{background:rgba(8,145,178,.12);color:#0e7490;border:1px solid rgba(8,145,178,.25)}

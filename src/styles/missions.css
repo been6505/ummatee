@@ -66,8 +66,17 @@
 .mission-carousel-btn:hover{background:rgba(0,0,0,.7)}
 .mission-carousel-prev{left:10px}
 .mission-carousel-next{right:10px}
-.mission-carousel-dots{display:flex;justify-content:center;gap:6px;padding:8px 0 4px}
-.mission-dot{width:7px;height:7px;border-radius:50%;border:none;background:var(--border);cursor:pointer;padding:0;transition:background .15s,transform .15s}
+.mission-carousel-dots{display:flex;justify-content:center;gap:12px;padding:8px 0 4px}
+/* จุดยังเล็ก 7px เท่าเดิมตามดีไซน์ แต่ "พื้นที่กด" ต้องใหญ่กว่านั้นมาก
+   ของเดิมปุ่มกว้างจริง 7px ซึ่งเล็กกว่าเกณฑ์แตะของ iOS (44pt) มาก — บนมือถือแทบกดไม่โดน
+   หรือกดโดนจุดข้าง ๆ แทน (หน้า /missions มีจุดแบบนี้ 39 จุด)
+   ใช้ ::after ขยายพื้นที่กดออกไปรอบ ๆ แทนการเพิ่ม padding เพราะ padding จะดันจุดให้ห่างจนเสียทรง */
+.mission-dot{width:7px;height:7px;border-radius:50%;border:none;background:var(--border);cursor:pointer;padding:0;transition:background .15s,transform .15s;position:relative;flex:0 0 auto}
+/* กว้าง 19px = ระยะห่างระหว่างจุด (7 + gap 12) พอดี — ห้ามกว้างกว่านี้
+   ถ้าพื้นที่กดล้ำไปทับจุดข้าง ๆ จุดที่อยู่หลังใน DOM จะวางทับจุดก่อนหน้า
+   กลายเป็นว่ากดตรงจุดที่ 1 ตรง ๆ แล้วไปโดนจุดที่ 2 ซึ่งแย่กว่าเดิม
+   แนวตั้งขยายได้เต็มที่ ไม่มีอะไรอยู่บน/ล่าง */
+.mission-dot::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:19px;height:34px}
 .mission-dot.active{background:var(--accent,#1B5E36);transform:scale(1.3)}
 /* no-media strip */
 .mission-nomedia-strip{display:flex;align-items:center;gap:8px;padding:7px 16px;background:color-mix(in srgb,var(--accent,#1B5E36) 8%,transparent);border-top:1px solid color-mix(in srgb,var(--accent,#1B5E36) 18%,transparent);border-bottom:1px solid color-mix(in srgb,var(--accent,#1B5E36) 18%,transparent);font-size:.78rem;font-weight:600;color:color-mix(in srgb,var(--accent,#1B5E36) 70%,var(--ink));letter-spacing:.01em}

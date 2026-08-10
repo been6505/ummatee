@@ -14,6 +14,7 @@ export const ROLE_LABEL = {
   admin: 'ผู้ดูแล',
   staff: 'ทีมงาน',
   social: 'โซเชียล',
+  field: 'ภาคสนาม', // ตกหล่นไป ทำให้ AssigneePicker fallback ไปโชว์คำว่า "field" ดิบ ๆ ปนกับภาษาไทย
   pending: 'รออนุมัติ',
 }
 

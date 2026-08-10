@@ -12,6 +12,7 @@ import { applyTemplate, suggestTemplateName } from '../data/contentTemplate.js'
 import AdminLogin from '../components/AdminLogin.jsx'
 import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
+import useStaffRole, { effectiveRole } from '../useStaffRole.js'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -248,6 +249,7 @@ const EMPTY_FORM = {
 
 export default function AdminCalendar() {
   const { user, loading } = useAdminAuth()
+  const { staff } = useStaffRole(user)
 
   // เปิดหน้านี้พร้อม ?date=YYYY-MM-DD (เช่น กดรายการจากแดชบอร์ด Staff) ให้เด้งไปเดือน/วันนั้นเลย
   // ไม่งั้นกดจากรายการแล้วมาโผล่ที่เดือนปัจจุบัน ต้องไล่หาวันเองอีกที
@@ -305,11 +307,20 @@ export default function AdminCalendar() {
     return unsub
   }, [user])
 
+  // แคมเปญอ่านได้เฉพาะ role admin/staff/field (ดู firestore.rules) แต่หน้านี้เปิดให้ 'social' ด้วย
+  // เดิม subscribe ตรงๆ ไม่มี error callback: คน 'social' จึงโดน permission-denied เงียบๆ แล้วช่อง
+  // "แคมเปญที่เกี่ยวข้อง" ว่างเปล่าตลอดกาล โดยไม่มีอะไรบอกว่าทำไม (ดู canReadCampaigns ด้านล่าง)
+  const canReadCampaigns = ['admin', 'staff', 'field'].includes(effectiveRole(user, staff))
+
   useEffect(() => {
-    if (!user) return
-    const unsub = onSnapshot(collection(db, 'campaigns'), (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+    if (!user || !canReadCampaigns) return
+    const unsub = onSnapshot(
+      collection(db, 'campaigns'),
+      (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (err) => console.error('campaigns listener failed', err)
+    )
     return unsub
-  }, [user])
+  }, [user, canReadCampaigns])
 
   // ไม่ดึงสถานะ "เชื่อมต่อแล้ว/ยังไม่เชื่อม" มาแสดงที่นี่ — token เก็บอยู่ในฐานข้อมูลของ Content Hub
   // หน้านี้อ่านไม่ได้ (คนละระบบ) ถ้าเดาแล้วโชว์ว่า "ยังไม่ได้เชื่อมต่อ" ทุกอันจะเป็นข้อมูลผิดเสมอ
@@ -589,8 +600,14 @@ export default function AdminCalendar() {
                       </select>
                     </label>
                     <label>แคมเปญที่เกี่ยวข้อง
-                      <select value={form.campaignId} onChange={(e) => setForm({ ...form, campaignId: e.target.value })}>
-                        <option value="">-- ไม่ระบุ --</option>
+                      <select
+                        value={form.campaignId}
+                        onChange={(e) => setForm({ ...form, campaignId: e.target.value })}
+                        disabled={!canReadCampaigns}
+                        title={canReadCampaigns ? undefined : 'สิทธิ์ของคุณยังดูรายชื่อแคมเปญไม่ได้'}
+                      >
+                        {/* ช่องที่ว่างเพราะสิทธิ์ไม่ถึง ต้องบอกให้รู้ ไม่ใช่ปล่อยให้ดูเหมือนยังไม่มีแคมเปญสักอัน */}
+                        <option value="">{canReadCampaigns ? '-- ไม่ระบุ --' : '-- สิทธิ์ไม่ถึง ดูรายชื่อแคมเปญไม่ได้ --'}</option>
                         {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </label>

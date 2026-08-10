@@ -84,6 +84,12 @@ export default function AdminDonations() {
   const total = filtered.reduce((s, r) => s + (r.amount || 0), 0)
   const thisMonth = todayStr().slice(0, 7)
   const monthTotal = records.filter((r) => (r.date || '').startsWith(thisMonth)).reduce((s, r) => s + (r.amount || 0), 0)
+
+  // นับจาก records (ทั้งหมด) ไม่ใช่ filtered — ตัวกรองช่วงวันที่คัดรายการพวกนี้ทิ้งไปแล้ว
+  // ถ้านับจาก filtered คำเตือนจะหายไปพอดีตอนที่ผู้ใช้กรองวันที่ ซึ่งเป็นตอนที่ต้องเตือนที่สุด
+  const noDateRecords = records.filter((r) => !r.date)
+  const noDateCount = noDateRecords.length
+  const noDateTotal = noDateRecords.reduce((s, r) => s + (r.amount || 0), 0)
   const avg = filtered.length ? total / filtered.length : 0
 
   // ยอดรวมแยกตามบัญชี (จากรายการที่กรองช่วงวันที่/ค้นหาแล้ว)
@@ -103,6 +109,11 @@ export default function AdminDonations() {
 
   const add = async () => {
     if (!fAmount || Number(fAmount) <= 0) { setStatus('กรุณากรอกจำนวนเงิน'); return }
+    // ต้องมีวันที่เสมอ — ช่อง <input type="date"> ลบให้ว่างได้ และเดิมไม่มีอะไรกันไว้
+    // รายการที่ date เป็นค่าว่างจะถูกบันทึกจริง แต่หายไปจากทุกยอดรวม:
+    // ยอดเดือนนี้ (startsWith), กราฟรายเดือน (ข้าม ym ว่าง) และหลุดทั้งแถวทันทีที่กรองช่วงวันที่
+    // = เงินที่อยู่ในฐานข้อมูลแต่ไม่โผล่ในตัวเลขไหนเลย
+    if (!fDate) { setStatus('กรุณาเลือกวันที่'); return }
     setStatus('กำลังบันทึก...')
     try {
       await addDoc(collection(db, 'donations'), {
@@ -142,6 +153,15 @@ export default function AdminDonations() {
             <p>สรุปยอดบริจาคแยกตาม 8 บัญชี ibank ของมูลนิธิ</p>
           </div>
         </div>
+
+        {/* รายการที่ไม่มีวันที่หลุดจากทุกยอดรวมและหายไปเมื่อกรองช่วงวันที่ ต้องบอกให้รู้ว่ามีอยู่
+            ไม่งั้นเงินก้อนนี้จะไม่ปรากฏในตัวเลขไหนเลย และไม่มีใครรู้ว่ามันหายไป */}
+        {noDateCount > 0 && (
+          <div className="admin-card mywork-note mywork-note-error">
+            มี {noDateCount} รายการที่ยังไม่ระบุวันที่ รวม {THB(noDateTotal)} — ยอดนี้ยังไม่ถูกนับในสถิติด้านล่าง
+            และจะไม่แสดงเมื่อกรองตามช่วงวันที่ กรุณาแก้วันที่ให้ครบ
+          </div>
+        )}
 
         <div className="admin-stats">
           <div className="admin-stat"><div className="v">{THB(total)}</div><div className="l">ยอดรวม (ตามตัวกรอง)</div></div>

@@ -6,7 +6,7 @@ import { useApprovedReviews, submitReview, submitIssue } from '../data/shopRevie
 import {
   ISSUE_TOPICS, MAX_PHOTOS, MAX_REVIEW_LEN, MAX_ISSUE_LEN, averageRating, cleanPhotos,
 } from '../data/shopFeedback.js'
-import { uploadToCloudinary } from '../utils/cloudinary.js'
+import PhotoUploader from '../components/PhotoUploader.jsx'
 import { optImg } from '../utils/cloudinaryUrl.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faStar, faCamera, faXmark, faBoxOpen, faCommentDots, faTriangleExclamation, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -40,41 +40,6 @@ function Stars({ value, onChange }) {
           onClick={() => onChange(n)}
         ><FontAwesomeIcon icon={faStar} /></button>
       ))}
-    </div>
-  )
-}
-
-// อัปโหลดรูปแนบ — ใช้ร่วมกันทั้งรีวิวและแจ้งปัญหา
-function PhotoPicker({ photos, setPhotos, busy, setBusy }) {
-  const pick = async (e) => {
-    const files = [...(e.target.files || [])].slice(0, MAX_PHOTOS - photos.length)
-    e.target.value = '' // ให้เลือกไฟล์เดิมซ้ำได้ถ้าอัปโหลดรอบก่อนล้ม
-    if (files.length === 0) return
-    setBusy(true)
-    try {
-      const urls = await Promise.all(files.map((f) => uploadToCloudinary(f)))
-      setPhotos((p) => [...p, ...urls.filter(Boolean)].slice(0, MAX_PHOTOS))
-    } catch (err) {
-      window.alert('อัปโหลดรูปไม่สำเร็จ: ' + err.message)
-    } finally { setBusy(false) }
-  }
-  return (
-    <div className="sup-photos">
-      {photos.map((url, i) => (
-        <div key={i} className="sup-photo">
-          <img src={optImg(url, 200)} alt="" />
-          <button type="button" onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))} aria-label="ลบรูป">
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-        </div>
-      ))}
-      {photos.length < MAX_PHOTOS && (
-        <label className="sup-photo-add">
-          <FontAwesomeIcon icon={faCamera} />
-          <span>{busy ? 'กำลังอัปโหลด…' : 'เพิ่มรูป'}</span>
-          <input type="file" accept="image/*" multiple hidden onChange={pick} disabled={busy} />
-        </label>
-      )}
     </div>
   )
 }
@@ -208,7 +173,7 @@ export default function ShopSupport() {
                     <input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="เช่น นาซนีน" />
                   </label>
                   <div className="sup-field-label">รูปสินค้าที่ได้รับ (ไม่บังคับ · สูงสุด {MAX_PHOTOS} รูป)</div>
-                  <PhotoPicker photos={rPhotos} setPhotos={setRPhotos} busy={rBusy} setBusy={setRBusy} />
+                  <PhotoUploader photos={rPhotos} max={MAX_PHOTOS} onChange={setRPhotos} onBusyChange={setRBusy} />
                   <button className="sup-btn-primary" onClick={sendReview} disabled={rBusy || !rProduct || !rText.trim()}>
                     {rBusy ? 'กำลังส่ง…' : 'ส่งรีวิว'}
                   </button>
@@ -296,7 +261,7 @@ export default function ShopSupport() {
                   />
                 </label>
                 <div className="sup-field-label">แนบรูป (ถ้ามี · ช่วยให้แก้ไขได้เร็วขึ้น)</div>
-                <PhotoPicker photos={iPhotos} setPhotos={setIPhotos} busy={iBusy} setBusy={setIBusy} />
+                <PhotoUploader photos={iPhotos} max={MAX_PHOTOS} onChange={setIPhotos} onBusyChange={setIBusy} />
                 <button className="sup-btn-primary" onClick={sendIssue} disabled={iBusy || !iDetail.trim()}>
                   {iBusy ? 'กำลังส่ง…' : 'ส่งเรื่อง'}
                 </button>

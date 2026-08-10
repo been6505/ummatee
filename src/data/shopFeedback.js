@@ -4,6 +4,8 @@
 // ⚠️ สองอย่างนี้ "ใครก็ส่งได้" เพราะลูกค้าไม่ได้ล็อกอิน (guest checkout) การตรวจฝั่งนี้จึงเป็นแค่
 //    การช่วยผู้ใช้ ไม่ใช่การกันของเสีย — ตัวกันจริงคือ firestore.rules ที่ตรวจซ้ำทุกข้อ
 
+import { isUploadedPhotoUrl, cleanPhotoList } from '../utils/photoUrl.js'
+
 export const MAX_REVIEW_LEN = 1000
 export const MAX_ISSUE_LEN = 1500
 export const MAX_NAME_LEN = 60
@@ -37,11 +39,10 @@ const clean = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, m
 const cleanMultiline = (v, max) =>
   String(v || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max)
 
-// รับเฉพาะ https ของ Cloudinary — ค่านี้ไปโผล่ใน <img src> บนหน้าสาธารณะ
-// ถ้ารับ URL อะไรก็ได้ จะกลายเป็นช่องให้ฝังรูปจากที่อื่น (หรือ javascript:) ผ่านฟอร์มที่ใครก็ส่งได้
-export const isUploadedPhotoUrl = (u) => /^https:\/\/res\.cloudinary\.com\/[\w./-]+$/i.test(String(u || ''))
-export const cleanPhotos = (list) =>
-  (Array.isArray(list) ? list : []).filter(isUploadedPhotoUrl).slice(0, MAX_PHOTOS)
+// ตัวตรวจอยู่ที่ utils/photoUrl.js ที่เดียว — เดิมเขียนซ้ำไว้ที่นี่ด้วย regex ที่ไม่ยอมรับ ","
+// จึงปฏิเสธรูปทุกใบที่อัปโหลดจริง (URL จาก Cloudinary มี "f_auto,q_auto" ติดมาเสมอ)
+export { isUploadedPhotoUrl }
+export const cleanPhotos = (list) => cleanPhotoList(list, MAX_PHOTOS)
 
 // ดาว 1–5 เท่านั้น ไม่มีทศนิยม — ค่านอกช่วงปัดเข้าขอบ ไม่ใช่ทิ้งรีวิวทั้งอัน
 export const cleanRating = (r) => {

@@ -19,6 +19,7 @@ export const PAGE_TO_PATH = {
   give2cook: '/event/give-for-um/give2cook',
   qurban: '/missions/qurban2026',
   missions: '/missions',
+  updates: '/updates',
   shop: '/um-shop',
   'shop-cart': '/um-shop/cart',
   'shop-checkout': '/um-shop/checkout',

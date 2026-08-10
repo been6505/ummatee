@@ -6,6 +6,7 @@ import { useConfigDoc, saveConfigDoc } from './configDoc.js'
 export const NAV_MENU_ITEMS = [
   { key: 'donation', label: 'ร่วมบริจาค', path: '/donation' },
   { key: 'missions', label: 'ภารกิจ', path: '/missions' },
+  { key: 'updates', label: 'ความคืบหน้า', path: '/updates' },
   { key: 'qurban', label: 'ภารกิจกุรบาน', path: '/missions/qurban2026' },
   { key: 'shop', label: 'um-shop', path: '/um-shop' },
   { key: 'iftar', label: 'Iftar For Gaza', path: '/event/iftar-for-gaza' },

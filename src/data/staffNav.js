@@ -1,7 +1,7 @@
 import {
   faTableColumns, faCalendar, faGlobe, faUsers, faMapLocationDot, faMicrophone,
   faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck, faTowerBroadcast,
-  faDiagramProject, faBolt,
+  faDiagramProject, faBolt, faNewspaper,
 } from '@fortawesome/free-solid-svg-icons'
 import { hasStaffRole } from '../useStaffRole.js'
 
@@ -29,6 +29,9 @@ export const STAFF_NAV_GROUPS = [
       { href: '/admin/website', label: 'จัดการเว็บ', icon: faGlobe },
     ]
   },
+  // ข่าวความคืบหน้า: ALL_ROLES เพราะ 'field' คือคนลงพื้นที่จริง = คนที่มีเรื่องมารายงานที่สุด
+  // (สิทธิ์ของ publicUpdates ใน firestore.rules ตั้งไว้ให้ตรงกับลิสต์นี้)
+  { label: 'ข่าวความคืบหน้า', icon: faNewspaper, href: '/admin/updates', requireRoles: ALL_ROLES },
   {
     label: 'วางแผนงาน', icon: faTableColumns, requireRoles: FIELD_ROLES, children: [
       { href: '/admin/board', label: 'บอร์ดวางแผน', icon: faTableColumns },

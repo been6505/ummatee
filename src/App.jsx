@@ -82,6 +82,8 @@ const Give2CookReceive = lazyWithReload(() => import('./pages/Give2CookReceive.j
 const QuickDonation = lazyWithReload(() => import('./pages/QuickDonation.jsx'))
 const QuickDonations = lazyWithReload(() => import('./pages/QuickDonations.jsx')) // เวอร์ชัน payment gateway (ยังไม่อยู่ใน nav)
 import FloatingDonate from './components/FloatingDonate.jsx'
+// แถบชวนติดตั้งแอป (public) — lazy เพราะโผล่ทีหลัง 6 วิ ไม่ควรถ่วงการโหลดหน้าแรก
+const InstallAppBanner = lazyWithReload(() => import('./components/InstallAppBanner.jsx'))
 // ระบบ staff role ใหม่: CRM (พันธมิตร/แผนที่/วิทยากร) + บอร์ดวางแผน + audit log + จัดการ staff
 const AdminStaff = lazyWithReload(() => import('./pages/AdminStaff.jsx'))
 const AdminPartners = lazyWithReload(() => import('./pages/AdminPartners.jsx'))
@@ -334,6 +336,10 @@ export default function App() {
           <FloatingDonate hidden={['shop', 'shop-detail', 'shop-cart', 'shop-checkout', 'shop-order', 'shop-my-orders'].includes(page)} />
           {/* แผงแชทเอง (ChatWidget) mount ไว้เสมอเพื่อรับ custom event เปิดจากปุ่มอื่นๆ — ปุ่มลอยของตัวเองปิดตลอด ใช้ FloatingActionHub/แถบล่างแต่ละหน้าแทน */}
           <Suspense fallback={null}><ChatWidget fabHidden /></Suspense>
+          {/* ไม่ขึ้นระหว่างจ่ายเงิน — ห้ามมีอะไรมาบังปุ่ม "ยืนยันคำสั่งซื้อ" */}
+          {!['shop-checkout'].includes(page) && (
+            <Suspense fallback={null}><InstallAppBanner /></Suspense>
+          )}
           <Suspense fallback={null}>
             {page === 'home' && <Home />}
             {page === 'donation' && <Donation />}

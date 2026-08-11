@@ -236,8 +236,11 @@
 }
 
 /* แถบล่างลอยหน้ารายละเอียดสินค้า (แชท LINE / เพิ่มตะกร้า / ราคา) แบบ Shopee — แทนที่ปุ่มตะกร้าลอยรวมของเว็บ (ซ่อนไว้เฉพาะหน้านี้ใน App.jsx) */
-.shop-detail-page{padding-bottom:76px} /* กันเนื้อหาโดนแถบล่างบัง */
-.shop-detail-bar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:stretch;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.1);height:64px}
+/* env(safe-area-inset-bottom) กัน iPhone รุ่นมี home indicator (X ขึ้นไป) — ไม่มีค่านี้แล้วปุ่มซื้อจะไปชิดเส้น
+   swipe กลับหน้าโฮมพอดี ยิ่งสำคัญขึ้นตอนติดตั้งเป็นแอป (standalone) เพราะไม่มีแถบ Safari มาเผื่อพื้นที่ให้อัตโนมัติ
+   เหมือนที่ .install-banner ทำไว้แล้ว — บาร์นี้ยังไม่เคยกันไว้ */
+.shop-detail-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))} /* กันเนื้อหาโดนแถบล่างบัง */
+.shop-detail-bar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:stretch;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.1);min-height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}
 .shop-detail-bar-price{display:flex;flex-direction:column;justify-content:center;padding:0 16px;min-width:100px}
 .shop-detail-bar-price-now{font-size:2.2rem;font-weight:900;color:var(--gold);line-height:1.1} /* แสดงราคาส่วนลดอย่างเดียว ตัวใหญ่เท่าปุ่มข้างๆ — ไม่โชว์ราคาเดิมขีดฆ่าคู่กันแล้ว */
 .shop-detail-bar-line{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;flex-shrink:0;background:#06c755;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-family:inherit}
@@ -252,7 +255,7 @@
 .shop-detail-cart-badge{position:absolute;top:8px;right:10px;background:#dc2626;color:#fff;font-size:.62rem;font-weight:800;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 
 @media (max-width:480px){
-  .shop-detail-bar{height:58px}
+  .shop-detail-bar{min-height:calc(58px + env(safe-area-inset-bottom))}
   .shop-detail-bar-price{padding:0 10px;min-width:78px}
   .shop-detail-bar-price-now{font-size:1.7rem}
   .shop-detail-bar-line{width:64px;font-size:.66rem}
@@ -264,13 +267,13 @@
 /* แถบราคารวม/สั่งซื้อลอยของหน้าตะกร้า+หน้ายืนยันคำสั่งซื้อ — ใช้โครง .shop-detail-bar ร่วมกัน แต่ต้องคงแสดงผลทุกจอกว้าง
    (ต่างจากหน้ารายละเอียดสินค้าที่ซ่อนแถบลอยบนจอกว้างแล้วใช้แถบในการ์ดแทน หน้าเหล่านี้ไม่มีแถบในการ์ดสำรอง) */
 .shop-cart-page,
-.shop-checkout-page{padding-bottom:76px}
+.shop-checkout-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 .shop-cart-bar,
 .shop-checkout-bar{display:flex !important}
 .cart-bar-total-label{display:block;font-size:.7rem;color:var(--ink-soft);font-weight:400}
 @media (min-width:901px){
   .shop-cart-page,
-  .shop-checkout-page{padding-bottom:76px}
+  .shop-checkout-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 }
 
 /* แถบในการ์ด (จอกว้าง) — ราคา/ปุ่มชุดเดียวกับแถบลอยมือถือ แต่วางไว้ในพื้นที่ว่างท้ายคอลัมน์ข้อมูลแทน ไม่ลอยทับ Footer

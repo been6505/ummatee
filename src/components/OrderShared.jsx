@@ -11,7 +11,7 @@ export const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 // รายชื่อขนส่งที่ใช้บ่อยในไทย — ลิงก์ตรงไปหน้าติดตามของแต่ละเจ้า (แม่นยำกว่าเดาจากรูปแบบเลขพัสดุ)
 export const COURIERS = [
   { key: 'thailandpost', label: 'ไปรษณีย์ไทย (EMS/ลงทะเบียน)', url: (code) => `https://track.thailandpost.co.th/?trackNumber=${encodeURIComponent(code)}` },
-  { key: 'kerry', label: 'Kerry Express', url: (code) => `https://th.kerryexpress.com/th/track/?track=${encodeURIComponent(code)}` },
+  { key: 'kerry', label: 'KEX', url: (code) => `https://th.kerryexpress.com/th/track/?track=${encodeURIComponent(code)}` },
   { key: 'flash', label: 'Flash Express', url: (code) => `https://www.flashexpress.com/tracking/?se=${encodeURIComponent(code)}` },
   { key: 'jt', label: 'J&T Express', url: (code) => `https://www.jtexpress.co.th/index/query/gzquery.html?bills=${encodeURIComponent(code)}` },
   { key: 'ninjavan', label: 'Ninja Van', url: (code) => `https://www.ninjavan.co/th-th/tracking?id=${encodeURIComponent(code)}` },

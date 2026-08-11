@@ -105,8 +105,11 @@ export default function ShopSupport() {
     } finally { setIBusy(false) }
   }
 
+  // ต้องมีคลาส "page" — นาวบาร์เป็น position:fixed (nav.css) ทุกหน้าจึงต้องเว้น padding-top ชดเชยไว้เอง
+  // (.page{padding-top:72px} ใน home.css ใช้ร่วมกันทุกหน้า) หน้านี้เคยลืมใส่ไว้อันเดียวในบรรดาหน้า Shop ทั้งหมด
+  // เนื้อหาจึงเริ่มห่างจากนาวบาร์แค่ 20px (จาก .sup-wrap) ซึ่งบางกว่าความสูงนาวบาร์จริงมาก
   return (
-    <div className="shop-page sup-page">
+    <div className="page shop-page sup-page">
       <ShopAlert message={alert} onClose={() => setAlert('')} />
 
       <div className="sup-wrap">

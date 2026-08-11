@@ -339,8 +339,11 @@ export default function App() {
           <FloatingDonate hidden={['shop', 'shop-detail', 'shop-cart', 'shop-checkout', 'shop-order', 'shop-my-orders'].includes(page)} />
           {/* แผงแชทเอง (ChatWidget) mount ไว้เสมอเพื่อรับ custom event เปิดจากปุ่มอื่นๆ — ปุ่มลอยของตัวเองปิดตลอด ใช้ FloatingActionHub/แถบล่างแต่ละหน้าแทน */}
           <Suspense fallback={null}><ChatWidget fabHidden /></Suspense>
-          {/* ไม่ขึ้นระหว่างจ่ายเงิน — ห้ามมีอะไรมาบังปุ่ม "ยืนยันคำสั่งซื้อ" */}
-          {!['shop-checkout'].includes(page) && (
+          {/* หน้าที่มีแถบล่างของตัวเองอยู่แล้ว (.shop-detail-bar — รายละเอียดสินค้า/ตะกร้า/เช็คเอาท์/ติดตามออเดอร์)
+              ไม่ให้แถบชวนติดตั้งขึ้นซ้อน — เดิมกันแค่หน้าเช็คเอาท์หน้าเดียว แต่หน้ารายละเอียดสินค้าก็มีแถบราคา/ปุ่ม
+              "เพิ่มลงตะกร้า" ล่างจอเหมือนกัน แถบชวนติดตั้ง (สูง ~79px) จะบังพอดี ตรวจแล้วบนหน้าจริงว่าทับกันสนิท
+              ใช้ลิสต์เดียวกับ FloatingActionHub ด้านบน — หน้าที่มีแถบล่างของตัวเองคือกลุ่มเดียวกันเสมอ */}
+          {!['shop-detail', 'shop-cart', 'shop-checkout', 'shop-order'].includes(page) && (
             <Suspense fallback={null}><InstallAppBanner /></Suspense>
           )}
           <Suspense fallback={null}>

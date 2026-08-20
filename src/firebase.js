@@ -1,6 +1,6 @@
 // ตั้งค่าเชื่อมต่อ Firebase (โปรเจกต์ ummatee-app) และ export ตัว Firestore (db) ให้หน้าอื่นใช้
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 import { getStorage } from 'firebase/storage'
 import { getFunctions } from 'firebase/functions'
@@ -26,7 +26,13 @@ initializeAppCheck(app, {
   isTokenAutoRefreshEnabled: true,
 })
 
-export const db = getFirestore(app)
+// แคชข้อมูล Firestore ลง IndexedDB — เปิดหน้าเดิมซ้ำ/รีเฟรช จะได้ข้อมูลจากเครื่องทันที
+// แล้วค่อยอัปเดตจากเซิร์ฟเวอร์ตามหลัง (onSnapshot ยิงซ้ำให้เอง) แทนที่จะรอเน็ตก่อนเห็นอะไรเลย
+// multipleTabManager = เปิดหลายแท็บพร้อมกันได้ ไม่ต้องแย่ง lock กัน
+// ถ้าเบราว์เซอร์ไม่รองรับ IndexedDB (โหมดส่วนตัวบางตัว) Firestore จะถอยไปใช้แคชในหน่วยความจำเอง
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+})
 export const auth = getAuth(app)
 export const storage = getStorage(app)
 // Cloud Functions callable (เช่น เชื่อมต่อ/ยกเลิกเชื่อมต่อโซเชียล, โพสต์จริง) — ดู functions/index.js

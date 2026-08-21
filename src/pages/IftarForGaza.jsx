@@ -1,8 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatPhone } from '../utils/formatPhone.js'
 import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { db } from '../firebase.js'
-import { collection, addDoc } from 'firebase/firestore'
+import { collection, addDoc, doc, getDoc, setDoc, increment } from 'firebase/firestore'
+import { QRCodeSVG } from 'qrcode.react'
+import CopyIcon from '../components/CopyIcon.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass, faClipboardList } from '@fortawesome/free-solid-svg-icons'
+import useParallax from '../hooks/useParallax.js'
+
+const IFTAR_POSTERS = ['/poster-iftar.webp', '/poster-line1.webp', '/poster-line2.webp']
+
+function IftarPosterCarousel() {
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % IFTAR_POSTERS.length), 4000)
+    return () => clearInterval(t)
+  }, [])
+  const safeIdx = idx < IFTAR_POSTERS.length ? idx : 0
+  return (
+    <div className="iftar-poster-carousel">
+      <img className="iftar-poster" src={IFTAR_POSTERS[safeIdx]} alt="Iftar For Gaza" loading="lazy" />
+      <div className="iftar-poster-dots">
+        {IFTAR_POSTERS.map((_, i) => <span key={i} className={`iftar-poster-dot${i === safeIdx ? ' active' : ''}`} />)}
+      </div>
+    </div>
+  )
+}
 
 // หน้าลงทะเบียนงาน Iftar For Gaza — ฟอร์มสมัคร + ส่งข้อมูลเข้า Google Sheet (สำรองลง Firestore)
 // ตัวเลือกช่องทางที่รู้จักงาน
@@ -25,15 +50,49 @@ const PROVINCES = [
 ]
 
 // URL ของ Google Apps Script Web App ที่ deploy จากบัญชี ummatee.thailand@gmail.com
-const SHEET_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIqLLYl8qjwXXZRiZIefPPKyCK_SKZZi-0kCJDyz9vxbvHL9vQC5cHJ5ybZ3-NiXcCyA/exec'
+import { IFTAR_SHEET_ENDPOINT as SHEET_ENDPOINT, fetchWithTimeout } from '../utils/endpoints.js'
+
+// บันทึกลง Firestore แบบ retry (สำรองข้อมูลให้ครบเสมอ เพราะหน้า admin อ่านจาก Firestore)
+// ลองซ้ำสูงสุด 3 ครั้ง หน่วงเพิ่มขึ้นเรื่อย ๆ — คืน true เมื่อสำเร็จ, false เมื่อพลาดทุกครั้ง
+async function saveToFirestore(saved, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await addDoc(collection(db, 'iftarRegs'), saved)
+      return true
+    } catch (e) {
+      if (i === attempts - 1) return false
+      await new Promise((r) => setTimeout(r, 600 * (i + 1)))
+    }
+  }
+  return false
+}
+
+// ลิงก์แผนที่ไปยังสถานที่จัดงาน (ใช้ร่วมกันทุกภาษา)
+const IB_MAP_LINK = 'https://maps.app.goo.gl/MeUdbtRPhB7mKBcb7'
+
+// ไฟล์โปสเตอร์ประชาสัมพันธ์งาน (วางไฟล์ไว้ที่ public/iftar-for-gaza-poster.jpg)
+const POSTER_IMG = '/iftar-for-gaza-poster.jpg'
+
+// เพดานจำนวนที่นั่ง — ถ้ายอดลงทะเบียนถึงค่านี้จะปิดรับอัตโนมัติ (ต้องตรงกับข้อความ seatLimit ในแต่ละภาษา)
+const SEAT_LIMIT = 400
+
+// จัดรูปแบบเบอร์เป็น 0##-###-#### (เบอร์ไทย 10 หลักขึ้นต้น 0) ก่อนบันทึกลง Sheet/Firestore
+// รูปแบบอื่น (เบอร์ต่างประเทศ/ไม่ครบ 10 หลัก) เก็บตามที่กรอก
 
 const T = {
   th: {
+    campaign: '🎗️ ให้ 100 ถึง 100',
     eyebrow: 'ลงทะเบียนเข้าร่วมงาน · ฟรี',
-    lead: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาอ์ให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
-    ibDate: 'วัน & เวลา', ibDateV1: '26 กรกฎาคม 2569', ibDateV2: '15.00-20.30 น.',
-    ibPlace: 'สถานที่', ibPlaceV: 'กรุงเทพมหานคร',
+    lead: 'ร่วมละศีลอดเพื่อพี่น้องกาซ่า แบ่งปันมื้ออาหารแห่งความเป็นพี่น้อง และร่วมขอดุอาให้ผู้ถูกกดขี่ ลงทะเบียนล่วงหน้าเพื่อสำรองที่นั่ง',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'วัน & เวลา', ibDateV1: 'ศุกร์ 26 มิถุนายน 2569', ibDateV2: '15:30-20:30 น.',
+    ibPlace: 'สถานที่', ibPlaceV: 'สินธร สเต็กเฮ้าส์ ศรีนครินทร์',
+    ibMap: 'ดูแผนที่',
     ibType: 'ประเภท', ibTypeV: 'เข้าร่วมฟรี ไม่มีค่าใช้จ่าย',
+    donateTitle: 'มูลนิธิอุมมะตี เพื่อช่วยปาเลสไตน์',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'บุฟเฟ่ต์จำกัด 400 ที่นั่ง',
+    contactTel: 'สอบถามเพิ่มเติม Tel. 065-926-7512',
     formTitle: 'แบบฟอร์มลงทะเบียน',
     formSub: 'กรอกข้อมูลเพื่อสำรองที่นั่งเข้าร่วมงาน · ใช้เวลาไม่ถึง 1 นาที',
     fname: 'ชื่อ', fnamePh: 'ชื่อจริง', lname: 'นามสกุล', lnamePh: 'นามสกุล',
@@ -44,27 +103,35 @@ const T = {
     jobs: ['นักเรียน/นักศึกษา', 'พนักงานบริษัท/เอกชน', 'ข้าราชการ/รัฐวิสาหกิจ', 'เจ้าของธุรกิจ/ค้าขาย', 'อาชีพอิสระ/ฟรีแลนซ์', 'รับจ้างทั่วไป', 'แม่บ้าน/พ่อบ้าน', 'เกษียณ', 'อื่นๆ'],
     province: 'จังหวัด', provincePh: 'จังหวัดที่พำนัก', provinceSelect: 'เลือกจังหวัด',
     expect: 'สิ่งที่คาดหวังจากงานนี้',
-    expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอาอ์', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
+    expects: ['ร่วมละศีลอด', 'ฟังบรรยาย', 'ร่วมดุอา', 'พบปะพี่น้อง', 'ร่วมบริจาค'],
     comment: 'ข้อเสนอแนะเพิ่มเติม', commentPh: 'อยากบอกอะไรกับทีมงาน...',
     submit: 'ยืนยันการลงทะเบียน', submitting: 'กำลังบันทึก...',
     errFname: 'กรุณากรอกชื่อ', errLname: 'กรุณากรอกนามสกุล', errPhone: 'กรุณากรอกเบอร์โทรศัพท์',
-    errPhoneBad: 'เบอร์โทรศัพท์ไม่ถูกต้อง', errEmail: 'รูปแบบอีเมลไม่ถูกต้อง',
+    errPhoneBad: 'เบอร์โทรศัพท์ไม่ถูกต้อง', errEmail: 'รูปแบบอีเมลไม่ถูกต้อง', errNameEmail: 'ช่องชื่อ/นามสกุล ไม่ใช่อีเมล — กรุณากรอกชื่อจริง',
     errSend: 'ส่งข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
     successTitle: 'ลงทะเบียนสำเร็จ!',
     successP: 'ญะซากัลลอฮุค็อยรอน — ขอบคุณที่ร่วมเป็นส่วนหนึ่งของงาน Iftar For Gaza',
     successKeep: 'กรุณาบันทึกรหัสลงทะเบียนนี้ไว้ เพื่อใช้ยืนยันหน้างาน',
+    successEmail: 'เราได้ส่งอีเมลยืนยันไปที่ {email} แล้ว (อีเมลอัตโนมัติ ห้ามตอบกลับ)',
     successAgain: 'ลงทะเบียนเพิ่มอีกคน',
-    checkToggle: '🔍 ตรวจสอบรายชื่อผู้ลงทะเบียน',
+    checkToggle: 'ตรวจสอบรายชื่อผู้ลงทะเบียน',
     checkSearch: 'ค้นหาด้วยชื่อ จังหวัด หรือรหัส IFG...',
     checkCount: (n) => `ผู้ลงทะเบียนทั้งหมด ${n} คน`,
     checkEmpty: 'ยังไม่มีรายชื่อผู้ลงทะเบียน',
   },
   en: {
+    campaign: '🎗️ Give 100 to 100',
     eyebrow: 'Register for the event · Free',
     lead: 'Break fast together for Gaza, share a meal of brotherhood, and join in dua for the oppressed. Register in advance to reserve your seat.',
-    ibDate: 'Date & Time', ibDateV1: '26 July 2026', ibDateV2: '15:00-20:30',
-    ibPlace: 'Location', ibPlaceV: 'Bangkok',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'Date & Time', ibDateV1: 'Friday, 26 June 2026', ibDateV2: '15:30-20:30',
+    ibPlace: 'Location', ibPlaceV: 'Sinthorn Steak House Srinakarin',
+    ibMap: 'View map',
     ibType: 'Admission', ibTypeV: 'Free entry, no charge',
+    donateTitle: 'Ummatee — help Palestine',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'Buffet limited to 400 seats',
+    contactTel: 'Enquiries: Tel. 065-926-7512',
     formTitle: 'Registration Form',
     formSub: 'Fill in your details to reserve a seat · takes less than a minute',
     fname: 'First Name', fnamePh: 'First name', lname: 'Last Name', lnamePh: 'Last name',
@@ -79,23 +146,31 @@ const T = {
     comment: 'Additional comments', commentPh: 'Anything you want to tell the team...',
     submit: 'Confirm Registration', submitting: 'Saving...',
     errFname: 'Please enter your first name', errLname: 'Please enter your last name', errPhone: 'Please enter your phone number',
-    errPhoneBad: 'Invalid phone number', errEmail: 'Invalid email format',
+    errPhoneBad: 'Invalid phone number', errEmail: 'Invalid email format', errNameEmail: 'Name fields are not for email — please enter your real name',
     errSend: 'Submission failed. Please check your internet connection and try again.',
     successTitle: 'Registration Complete!',
     successP: 'Jazakallahu khairan — thank you for being part of Iftar For Gaza',
     successKeep: 'Please save this registration code to confirm at the event',
+    successEmail: 'A confirmation email has been sent to {email} (automated message, please do not reply)',
     successAgain: 'Register another person',
-    checkToggle: '🔍 Check registered names',
+    checkToggle: 'Check registered names',
     checkSearch: 'Search by name, province, or IFG code...',
     checkCount: (n) => `${n} registered in total`,
     checkEmpty: 'No registrations yet',
   },
   ar: {
+    campaign: '🎗️ أعطِ 100 لـ 100',
     eyebrow: 'سجّل لحضور الفعالية · مجاناً',
     lead: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك وجبة الأخوّة، وادعُ للمستضعفين. سجّل مسبقاً لحجز مقعدك.',
-    ibDate: 'التاريخ والوقت', ibDateV1: '26 يوليو 2026', ibDateV2: '15:00-20:30',
-    ibPlace: 'المكان', ibPlaceV: 'بانكوك',
+    tagline: 'Break your Fast, Open Your Heart',
+    ibDate: 'التاريخ والوقت', ibDateV1: 'الجمعة 26 يونيو 2026', ibDateV2: '15:30-20:30',
+    ibPlace: 'المكان', ibPlaceV: 'Sinthorn Steak House Srinakarin',
+    ibMap: 'عرض الخريطة',
     ibType: 'الدخول', ibTypeV: 'مجاني بدون رسوم',
+    donateTitle: 'Ummatee - help Palestine ',
+    donateAccount: '0011 1863 48',
+    seatLimit: 'البوفيه محدود بـ 400 مقعد',
+    contactTel: 'للاستعلام: Tel. 065-926-7512',
     formTitle: 'نموذج التسجيل',
     formSub: 'املأ بياناتك لحجز مقعدك · يستغرق أقل من دقيقة',
     fname: 'الاسم', fnamePh: 'الاسم الأول', lname: 'اسم العائلة', lnamePh: 'اسم العائلة',
@@ -110,17 +185,56 @@ const T = {
     comment: 'ملاحظات إضافية', commentPh: 'ما الذي تود إخبار الفريق به...',
     submit: 'تأكيد التسجيل', submitting: 'جارٍ الحفظ...',
     errFname: 'يرجى إدخال الاسم', errLname: 'يرجى إدخال اسم العائلة', errPhone: 'يرجى إدخال رقم الهاتف',
-    errPhoneBad: 'رقم الهاتف غير صحيح', errEmail: 'صيغة البريد الإلكتروني غير صحيحة',
+    errPhoneBad: 'رقم الهاتف غير صحيح', errEmail: 'صيغة البريد الإلكتروني غير صحيحة', errNameEmail: 'حقل الاسم ليس للبريد الإلكتروني — يرجى إدخال اسمك الحقيقي',
     errSend: 'فشل الإرسال. يرجى التحقق من اتصال الإنترنت والمحاولة مرة أخرى.',
     successTitle: 'تم التسجيل بنجاح!',
     successP: 'جزاكم الله خيراً — شكراً لمشاركتكم في إفطار من أجل غزة',
     successKeep: 'يرجى حفظ رمز التسجيل هذا لتأكيد حضورك في الفعالية',
+    successEmail: 'تم إرسال رسالة تأكيد إلى {email} (رسالة تلقائية، يرجى عدم الرد)',
     successAgain: 'تسجيل شخص آخر',
-    checkToggle: '🔍 التحقق من أسماء المسجلين',
+    checkToggle: 'التحقق من أسماء المسجلين',
     checkSearch: 'ابحث بالاسم أو المحافظة أو رمز IFG...',
     checkCount: (n) => `إجمالي المسجلين ${n}`,
     checkEmpty: 'لا توجد تسجيلات بعد',
   },
+}
+
+// กล่องเลขบัญชีบริจาค — แตะเพื่อคัดลอกเฉพาะเลขบัญชี (ตัดช่องว่างออกก่อนคัดลอก)
+function DonateAccount({ icon, title, account }) {
+  const [copied, setCopied] = useState(false)
+  // แสดง "คัดลอกแล้ว" + นับสถิติ เฉพาะเมื่อคัดลอกสำเร็จจริง — เดิมนับ/แสดงผลสำเร็จแม้คัดลอกจริงจะล้มเหลว
+  const copy = () => {
+    const clean = account.replace(/\s/g, '')
+    const onSuccess = () => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+      setDoc(doc(db, 'stats', 'iftar'), { copies: increment(1) }, { merge: true }).catch(() => {})
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean).then(onSuccess).catch(() => { if (fallbackCopy(clean)) onSuccess() })
+    } else if (fallbackCopy(clean)) {
+      onSuccess()
+    }
+  }
+  const fallbackCopy = (text) => {
+    const el = document.createElement('textarea')
+    el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+    document.body.appendChild(el); el.select()
+    let ok = false
+    try { ok = document.execCommand('copy') } catch (e) { /* noop */ }
+    document.body.removeChild(el)
+    return ok
+  }
+  return (
+    <button type="button" className="iftar-donate" onClick={copy} dir="ltr">
+      <img className="iftar-donate-icon" src={icon} alt="" />
+      <div className="iftar-donate-body">
+        <div className="iftar-donate-title">{title}</div>
+        <div className="iftar-donate-account" dir="ltr">{account}</div>
+      </div>
+      <div className={`don-copy ${copied ? 'copied' : ''}`}>{copied ? '✓' : <CopyIcon />}</div>
+    </button>
+  )
 }
 
 // ปุ่มตัวเลือกแบบ chip (กดเลือก/ยกเลิกได้)
@@ -138,6 +252,7 @@ const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', jo
 export default function Iftar() {
   const { lang } = useLang()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   const [form, setForm] = useState(EMPTY)
   const [gender, setGender] = useState('')
   const [channel, setChannel] = useState([])
@@ -145,6 +260,23 @@ export default function Iftar() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [successRef, setSuccessRef] = useState(null)
+  const [isFull, setIsFull] = useState(false)
+
+  useEffect(() => {
+    // 1) ปิดด้วยมือจากแอดมิน + อ่าน seatLimit ที่แอดมินตั้งไว้ (ถ้ามี)
+    getDoc(doc(db, 'config', 'iftarMeta'))
+      .then((snap) => {
+        if (!snap.exists()) return
+        if (snap.data().isClosed) setIsFull(true)
+        const limit = snap.data().seatLimit || SEAT_LIMIT
+        // 2) ปิดอัตโนมัติเมื่อยอดถึงเพดาน (อ่าน count สาธารณะจาก Apps Script)
+        fetchWithTimeout(`${SHEET_ENDPOINT}?count=1`)
+          .then((r) => r.json())
+          .then((o) => { if (typeof o.count === 'number' && o.count >= limit) setIsFull(true) })
+          .catch(() => {})
+      })
+      .catch(() => {})
+  }, [])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const toggle = (list, setList, v) =>
@@ -156,7 +288,9 @@ export default function Iftar() {
     setError('')
     // ตรวจช่องบังคับ: ชื่อ นามสกุล เบอร์โทร (และรูปแบบเบอร์/อีเมล)
     if (!f.fname.trim()) return setError(t.errFname)
+    if (/@/.test(f.fname.trim())) return setError(t.errNameEmail)
     if (!f.lname.trim()) return setError(t.errLname)
+    if (/@/.test(f.lname.trim())) return setError(t.errNameEmail)
     if (!f.phone.trim()) return setError(t.errPhone)
     if (!/^[0-9+\-\s]{6,15}$/.test(f.phone.trim())) return setError(t.errPhoneBad)
     if (f.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) return setError(t.errEmail)
@@ -164,34 +298,41 @@ export default function Iftar() {
     setSubmitting(true)
     const regData = {
       date: new Date().toLocaleString('th-TH'),
-      fname: f.fname.trim(), lname: f.lname.trim(), gender, age: f.age.trim(), phone: f.phone.trim(), email: f.email.trim(),
+      fname: f.fname.trim(), lname: f.lname.trim(), gender, age: f.age.trim(), phone: formatPhone(f.phone), email: f.email.trim(),
       job: (f.job === t.jobs[t.jobs.length - 1] ? f.jobOther : f.job).trim(), province: f.province.trim(),
       channel: channel.join(', '), expect: expect.join(', '), comment: f.comment.trim(),
     }
 
     try {
       // ส่งไป Google Sheet ก่อน — Apps Script เป็นผู้ออกเลข IFG (นับจากแถวจริง ไม่ซ้ำข้ามเครื่อง)
-      const res = await fetch(SHEET_ENDPOINT, {
+      const res = await fetchWithTimeout(SHEET_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(regData),
       })
+      if (!res.ok) throw new Error(`server error ${res.status}`)
       const out = await res.json()
       if (!out.ref) throw new Error('no ref')
       const saved = { ref: out.ref, ...regData }
 
-      // สำรองลง Firestore (ถ้าพลาดไม่ถือว่าลงทะเบียนล้มเหลว เพราะข้อมูลหลักอยู่ในชีตแล้ว)
-      await addDoc(collection(db, 'iftarRegs'), saved).catch(() => { /* noop */ })
+      // สำรองลง Firestore แบบ retry — ให้บันทึกครบทั้ง Sheet (หลัก) และ Firestore (สำรอง) พร้อมกัน
+      // ถ้าพลาดทุกครั้งไม่ถือว่าลงทะเบียนล้มเหลว เพราะข้อมูลหลักอยู่ในชีตแล้ว
+      await saveToFirestore(saved)
 
       // เก็บสำเนาในเครื่อง (localStorage) ไว้ให้แผง "ตรวจสอบรายชื่อ" ใช้แสดง
+      // เก็บเฉพาะ 5 ฟิลด์ที่ CheckPanel แสดงจริงเท่านั้น — ห้ามเก็บ token/เบอร์โทร/อีเมล ลงเครื่อง เพราะฟอร์มนี้
+      // มักเปิดบนแท็บเล็ตที่ตั้งให้คนลงทะเบียนต่อคิวกันหน้างาน คนถัดไปเปิด DevTools อ่านของคนก่อนได้หมด
+      // (ข้อมูลเต็มอยู่ใน Sheet + Firestore แล้ว ที่นี่เป็นแค่ตัวช่วยค้นชื่อในเครื่องนั้น)
       try {
         const regs = JSON.parse(localStorage.getItem('iftarRegs') || '[]')
-        regs.push(saved)
-        localStorage.setItem('iftarRegs', JSON.stringify(regs))
+        regs.push({ ref: saved.ref, fname: saved.fname, lname: saved.lname, province: saved.province, date: saved.date })
+        localStorage.setItem('iftarRegs', JSON.stringify(regs.slice(-200)))
       } catch (e) { /* noop */ }
 
       setSuccessRef(out.ref)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setTimeout(() => {
+        document.getElementById('iftar-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
     } catch (e) {
       setError(t.errSend)
     } finally {
@@ -206,30 +347,67 @@ export default function Iftar() {
   }
 
   return (
-    <main className="page">
+    <main className="page gaza-page">
       <section className="iftar-hero">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
+
         <div className="inner">
-          <span className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</span>
           <h1><span className="moon">Iftar</span> For Gaza</h1>
+          <p className="iftar-tagline">{t.tagline}</p>
+          <a href="#iftar-form" className="iftar-eyebrow"><span>🇵🇸</span> {t.eyebrow}</a>
+
+          <IftarPosterCarousel />
+
           <p className="lead">{t.lead}</p>
-          <div className="info-boxes">
-            <div className="info-box"><div className="ib-ic">📅</div><div className="ib-k">{t.ibDate}</div><div className="ib-v">{t.ibDateV1}</div><div className="ib-v">{t.ibDateV2}</div></div>
-            <div className="info-box"><div className="ib-ic">📍</div><div className="ib-k">{t.ibPlace}</div><div className="ib-v">{t.ibPlaceV}</div></div>
-            <div className="info-box"><div className="ib-ic">🎟️</div><div className="ib-k">{t.ibType}</div><div className="ib-v">{t.ibTypeV}</div></div>
+
+          <div className="iftar-live" style={{ padding: '24px 0' }}>
+            <div className="iftar-live-card">
+              <h2>🔴 LIVE — Iftar For Gaza 2026</h2>
+              <div className="iftar-live-embed">
+                <iframe
+                  src="https://www.youtube.com/embed/ZqFHlNyB_kM?autoplay=1"
+                  title="Iftar For Gaza 2026 Live"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <p>ร่วมรับชมงาน Iftar For Gaza 2026 · ถ่ายทอดสด</p>
+              <a href="https://www.youtube.com/live/ZqFHlNyB_kM" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ justifyContent: 'center', marginTop: 12 }}>
+                ▶️ ดูบน YouTube
+              </a>
+            </div>
           </div>
+
+          <DonateAccount icon="/ibank.png" title={t.donateTitle} account={t.donateAccount} />
         </div>
       </section>
 
-      <section className="iftar-stage">
-        {successRef ? (
+      <section className="iftar-stage" id="iftar-form">
+        {/* ฟอร์มลงทะเบียนซ่อนไว้ — งานจบแล้ว */}
+        {false && (isFull ? (
+          <div className="iftar-full">
+            <div className="iftar-full-card">
+              <div className="iftar-full-icon">🚫</div>
+              <h2>ปิดรับลงทะเบียนแล้ว</h2>
+              <p>ขออภัย — ที่นั่งครบ 400 คนแล้ว ขอบคุณทุกท่านที่ให้ความสนใจ</p>
+              <p style={{ fontSize: '0.92rem', opacity: 0.7 }}>Registration is closed · تم إغلاق التسجيل</p>
+            </div>
+          </div>
+        ) : successRef ? (
           <div className="iftar-success">
             <div className="success-card">
-              <div className="success-check">✓</div>
+              <div className="success-check"><FontAwesomeIcon icon={faCheck} /></div>
               <h2>{t.successTitle}</h2>
               <p>{t.successP}</p>
+              <div className="success-qr">
+                <QRCodeSVG value={successRef} size={188} level="M" marginSize={2} />
+              </div>
               <div className="ref-pill">{successRef}</div>
               <p>{t.successKeep}</p>
+              {form.email.trim() && (
+                <p className="success-email-note"><FontAwesomeIcon icon={faEnvelope} /> {t.successEmail.replace('{email}', form.email.trim())}</p>
+              )}
               <button className="btn btn-primary" style={{ marginTop: 22, justifyContent: 'center' }} onClick={reset}>
                 {t.successAgain}
               </button>
@@ -245,22 +423,22 @@ export default function Iftar() {
                 <div className="iftar-row">
                   <div className="iftar-field">
                     <label className="iftar-label">{t.fname} <span className="req">*</span></label>
-                    <input className="iftar-input" type="text" placeholder={t.fnamePh} value={form.fname} onChange={set('fname')} />
+                    <input className="iftar-input" type="text" placeholder={t.fnamePh} value={form.fname} onChange={set('fname')} autoComplete="given-name" />
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.lname} <span className="req">*</span></label>
-                    <input className="iftar-input" type="text" placeholder={t.lnamePh} value={form.lname} onChange={set('lname')} />
+                    <input className="iftar-input" type="text" placeholder={t.lnamePh} value={form.lname} onChange={set('lname')} autoComplete="family-name" />
                   </div>
                 </div>
 
                 <div className="iftar-row">
                   <div className="iftar-field">
                     <label className="iftar-label">{t.phone} <span className="req">*</span></label>
-                    <input className="iftar-input" type="tel" placeholder={t.phonePh} maxLength={15} value={form.phone} onChange={set('phone')} />
+                    <input className="iftar-input" type="tel" placeholder={t.phonePh} maxLength={15} value={form.phone} onChange={set('phone')} autoComplete="tel" />
                   </div>
                   <div className="iftar-field">
                     <label className="iftar-label">{t.email}</label>
-                    <input className="iftar-input" type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} />
+                    <input className="iftar-input" type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} autoComplete="email" />
                   </div>
                 </div>
 
@@ -341,7 +519,7 @@ export default function Iftar() {
 
             <CheckPanel t={t} />
           </>
-        )}
+        ))}
       </section>
 
       <Footer />
@@ -374,7 +552,7 @@ function CheckPanel({ t }) {
 
   return (
     <div className="check-block">
-      <button className="check-toggle" onClick={toggle}>{t.checkToggle}</button>
+      <button className="check-toggle" onClick={toggle}><FontAwesomeIcon icon={faMagnifyingGlass} /> {t.checkToggle}</button>
       {open && (
         <div className="check-panel">
           <input className="iftar-input check-search" type="text" placeholder={t.checkSearch} value={query} onChange={(e) => setQuery(e.target.value)} />

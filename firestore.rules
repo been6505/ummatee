@@ -2,26 +2,849 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ลงทะเบียน Iftar — ทุกคนส่งฟอร์มได้ แต่อ่าน/แก้/ลบได้เฉพาะ admin ที่ล็อกอิน
-    match /iftarRegs/{id} {
-      allow create: if true;
-      allow read, update, delete: if request.auth != null;
+    // ── แอดมินตัวจริงเท่านั้น ──
+    // ต้องล็อกอิน และอีเมลต้องอยู่ใน allowlist นี้
+    // (แค่ "ล็อกอิน" ไม่พอ เพราะใครก็สมัครบัญชี Firebase เองได้)
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'akasitlove@gmail.com',
+          'ummatee.thailand@gmail.com',
+          'ummatee.volunteer@gmail.com'
+        ];
     }
 
-    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะ admin
+    // ── แอดมินตัวจริง ไม่รวมบัญชีอาสาสมัคร ──
+    // ใช้กับคอลเลกชันที่หน้าซึ่งอาสาสมัครเข้าถึงได้ (/admin/dashboard, /admin/event/iftar2026,
+    // /admin/qrcode, /admin/give — ดู VOLUNTEER_ALLOWED ใน src/useAdminRole.js) ไม่จำเป็นต้องใช้
+    // เช่น ยอดเงินบริจาครายรายการ, แผนคอนเทนต์, ข้อมูล PII ของอาสาสมัคร/ร้านค้า B2UM คนอื่น
+    // เพราะบัญชี ummatee.volunteer@gmail.com ตั้งใจให้แชร์กับทีมอาสาสมัครกลุ่มกว้าง ความน่าเชื่อถือ
+    // ต่ำกว่าแอดมินตัวจริง จึงไม่ควรเข้าถึงข้อมูลนอกขอบเขตหน้าที่ได้ผ่าน Firestore SDK โดยตรง
+    function isFullAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'akasitlove@gmail.com',
+          'ummatee.thailand@gmail.com'
+        ];
+    }
+
+    // ── แอดมินสูงสุด (super admin) — บัญชีเดียวเท่านั้น ──
+    // ใช้กับสิ่งที่ให้สิทธิ์คนอื่นหรือเปิดดูร่องรอยการกระทำของทุกคน คือ จัดการ Staff และ Audit log
+    // แยกจาก isFullAdmin (2 อีเมล) เพราะการตั้ง role ให้คนอื่นได้ = ยกสิทธิ์ CRM/PII ให้ใครก็ได้
+    // จึงควรอยู่ที่คนเดียวที่รับผิดชอบระบบจริงๆ
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email == 'akasitlove@gmail.com';
+    }
+
+    // ── helper: ฟิลด์ optional ถ้ามีต้องเป็น string ไม่เกินความยาวที่กำหนด ──
+    function optStr(d, k, max) {
+      return !(k in d) || (d[k] is string && d[k].size() <= max);
+    }
+
+    // ── ตรวจรูปแบบฟอร์มลงทะเบียน Iftar กันสแปม/เอกสารขยะ ──
+    // จำกัดจำนวนฟิลด์ + คุมความยาวทุกฟิลด์ (กันยัด junk ขนาดใหญ่เปลือง quota)
+    function validIftarReg() {
+      let d = request.resource.data;
+      return d.size() <= 14
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'email', 200)
+        && optStr(d, 'comment', 1000)
+        && optStr(d, 'province', 100)
+        && optStr(d, 'gender', 30)
+        && optStr(d, 'age', 10)
+        && optStr(d, 'job', 100)
+        && optStr(d, 'channel', 300)
+        && optStr(d, 'expect', 300)
+        && optStr(d, 'date', 60)
+        && optStr(d, 'ref', 40);
+    }
+
+    // ลงทะเบียน Iftar — ส่งฟอร์มได้ทุกคน (มีการตรวจรูปแบบ) แต่อ่าน/แก้/ลบเฉพาะแอดมิน
+    match /iftarRegs/{id} {
+      allow create: if validIftarReg();
+      // อาสาสมัครเช็คอินหน้างานได้ (read/update) แต่ลบเอกสารผู้ลงทะเบียนถาวรต้องเป็นแอดมินตัวจริง
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin();
+    }
+
+    // ค่า config สาธารณะ (เช่น ยอดกุรบาน) — ทุกคนอ่านได้ แก้ได้เฉพาะแอดมินตัวจริง
+    //
+    // เขียนต้องเป็น isFullAdmin() ไม่ใช่ isAdmin() เพราะ config/ คุมทั้งเว็บฝั่ง public:
+    //   config/site         → maintenance mode (ปิดเว็บทั้งเว็บได้)
+    //   config/homeCards, focusCards, siteContent, navVisibility → เนื้อหา/เมนูหน้าแรกทั้งหมด
+    //   config/announcement → แบนเนอร์ประกาศ (มี linkUrl ที่ไปโผล่ใน href ของผู้เข้าชมทุกคน)
+    //   config/financialDashboard → ยอดบริจาคและเลขบัญชีธนาคารที่โชว์หน้า /challenge
+    // บัญชี ummatee.volunteer@gmail.com แชร์กับทีมอาสาสมัครกลุ่มกว้าง (ดูคอมเมนต์ isFullAdmin ด้านบน)
+    // และไม่มีหน้าไหนในขอบเขตงานอาสาที่ต้องแก้ค่าพวกนี้ — ยกเว้น config/iftarMeta ที่แยกกฎไว้ด้านล่าง
+    //
+    // หมายเหตุ: counter สาธารณะ (shopOrderCounter/volunteerRefCounter/give2Counter/give2CookCounter)
+    // มี match เฉพาะของตัวเองอยู่ด้านล่าง ซึ่ง OR กับกฎนี้ — guest checkout/ลงทะเบียนจึงยังทำงานปกติ
     match /config/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isFullAdmin();
     }
 
-    // บันทึกเงินบริจาค — เฉพาะ admin
+    // เอกสาร "เนื้อหาเว็บ" ที่ทีมงานแก้ได้จากหน้า /admin/website (ย้ายมาอยู่ในเมนู staff แล้ว)
+    // แยกออกมาจาก config/{id} ทั่วไปโดยเจตนา — ที่เหลือใน config/ ยังเป็น isFullAdmin() เท่านั้น
+    // เพราะเป็นคนละระดับความเสี่ยง:
+    //   config/site               = ปิดเว็บทั้งเว็บ (maintenance)     -> เจ้าของเท่านั้น
+    //   config/financialDashboard = เลขบัญชีธนาคารที่โชว์หน้า /challenge -> เจ้าของเท่านั้น
+    // ส่วน 5 ตัวนี้เป็นเนื้อหา/เมนู แก้ผิดก็แก้กลับได้ ไม่ทำให้เงินไปผิดบัญชีหรือเว็บล่ม
+    function canEditSiteContent() {
+      return isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+    match /config/homeCards   { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/focusCards  { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/siteContent { allow read: if true; allow write: if canEditSiteContent(); }
+    match /config/navVisibility { allow read: if true; allow write: if canEditSiteContent(); }
+    // announcement.linkUrl ไปโผล่ใน href บนหน้าแรกของผู้เข้าชมทุกคน — บังคับ http(s) ตั้งแต่ในกฎ
+    // (ฝั่ง client กรองด้วย isSafeHttpUrl อยู่แล้ว แต่คนที่เขียน Firestore ตรงข้าม UI ได้ต้องโดนกันด้วย)
+    match /config/announcement {
+      allow read: if true;
+      allow write: if canEditSiteContent()
+        && (!('linkUrl' in request.resource.data)
+            || request.resource.data.linkUrl == ''
+            || request.resource.data.linkUrl.matches('^https?://.+'));
+    }
+
+    // ตั้งจำนวนที่นั่ง/ปิดรับลงทะเบียนงาน Iftar — อยู่ในขอบเขตงานอาสาสมัคร (หน้า /admin/event/iftar2026)
+    // จำกัดเฉพาะ 2 ฟิลด์นี้ ไม่ให้ยัดฟิลด์อื่นเข้ามาผ่าน doc นี้
+    match /config/iftarMeta {
+      allow read: if true;
+      // create ใช้ keys() (ยังไม่มี resource.data ให้ diff) / update ใช้ diff เพราะเขียนแบบ merge ทีละฟิลด์
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['seatLimit', 'isClosed']);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seatLimit', 'isClosed']);
+    }
+
+    // บันทึกเงินบริจาค — เฉพาะแอดมินตัวจริง (ไม่ใช่ขอบเขตงานอาสาสมัคร)
     match /donations/{id} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isFullAdmin();
     }
 
-    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะ admin
+    // แผนคอนเทนต์/ปฏิทินโพสต์ — เฉพาะแอดมินตัวจริง (ฟิลด์โพสต์จริง realStatus/publishResults
+    // ถูกเขียนจาก Cloud Functions ด้วย Admin SDK เท่านั้น แต่แอดมินยังแก้ไฟล์แผนผ่าน client ได้ตามปกติ)
+    // ทีมโซเชียล/พนักงานวางแผนคอนเทนต์ได้ (หน้า /admin/calendar ย้ายมาอยู่ในเมนู staff แล้ว)
+    // ไม่ใช่ข้อมูล PII — เป็นแผนโพสต์/แคปชัน จึงเปิดให้ role ที่ทำงานนี้จริงเข้าถึงได้
+    // ฟิลด์ผลการโพสต์จริง (realStatus/publishResults) เขียนจาก Cloud Functions ด้วย Admin SDK เท่านั้น
     match /contentPosts/{id} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // บัญชีโซเชียลที่เชื่อมต่อ OAuth ไว้ (access/refresh token) — ห้ามฝั่ง client อ่าน/เขียนตรงเด็ดขาด
+    // เขียนได้เฉพาะ Cloud Functions ผ่าน Admin SDK เท่านั้น (bypass rules อยู่แล้ว) หน้าเว็บต้องเรียกผ่าน
+    // callable function (socialAccountsStatus) ที่กรอง token ออกก่อนส่งกลับ ไม่ใช่ query คอลเลกชันนี้ตรงๆ
+    match /socialAccounts/{id} {
+      allow read, write: if false;
+    }
+
+    // แคชผล Page/Account Insights ต่อแพลตฟอร์ม (socialGetPageInsights) — ไม่มี token อยู่ในนี้ (แค่ตัวเลข
+    // เมทริก) แต่ยังคุมให้เขียนได้เฉพาะ Cloud Functions (Admin SDK bypass rules) เหมือน socialAccounts
+    // และอ่านได้เฉพาะแอดมินตัวจริง (isFullAdmin) ให้สอดคล้อง contentPosts/socialAccounts ที่เป็นชุดข้อมูลเดียวกัน
+    match /socialInsightsCache/{platform} {
+      allow read: if isFullAdmin();
+      allow write: if false;
+    }
+
+    // สินค้า Um Shop — ทุกคนอ่านได้ (หน้า /um-shop) แก้ไขได้เฉพาะแอดมินตัวจริง
+    match /products/{id} {
+      allow read: if true;
+      allow create, delete: if isFullAdmin();
+      // ตอนสั่งซื้อ (guest checkout ไม่ล็อกอิน) ต้องตัดสต็อกได้ — อนุญาตแก้ได้แค่ stock (รวม), sizeStock (แยกต่อไซซ์), sold (ยอดขายสะสม)
+      // ห้ามเพิ่มสต็อก/ทำติดลบ (กันสั่งซื้อปลอมเพิ่มสต็อกให้ตัวเอง) และ sold ต้องเพิ่มขึ้นเสมอ (กันปั่นยอดขายลง) ฟิลด์อื่นแก้ได้เฉพาะแอดมิน
+      // sizeStock ตรวจได้แค่ว่าเป็น map เท่านั้น (Firestore rules ตรวจ diff ของ map แบบละเอียดทำยาก) — พึ่ง invariant ของ stock รวมที่บังคับลดลงเสมอเป็นเกราะหลัก
+      allow update: if isFullAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'sizeStock', 'sold'])
+            && request.resource.data.stock is int
+            && resource.data.stock is int
+            && request.resource.data.stock >= 0
+            && request.resource.data.stock < resource.data.stock
+            && (!('sizeStock' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.sizeStock is map)
+            // บั๊กเดิม: resource.data.sold is int พังทั้งเงื่อนไข (permission-denied ทั้ง write) ตอนสินค้าเก่าที่สร้างก่อนมีฟีเจอร์ sold
+            // ไม่มีฟิลด์ sold เลย — Firestore rules error ทันทีที่เข้าถึงฟิลด์ที่ไม่มีอยู่แบบ dot notation โดยไม่ guard 'sold' in resource.data ก่อน
+            // ทำให้สั่งซื้อสินค้าเก่าไม่ได้เลยทุกครั้ง (permission error ที่ดูเหมือนมาจากข้อมูลลูกค้า แต่จริงๆ มาจากจุดนี้)
+            && (!('sold' in request.resource.data.diff(resource.data).affectedKeys())
+                || (request.resource.data.sold is int
+                    && request.resource.data.sold > (('sold' in resource.data && resource.data.sold is int) ? resource.data.sold : 0))));
+    }
+
+    // ประวัติการเคลื่อนไหวสต็อก Um Shop — บันทึกทุกครั้งที่ตัด/รับเข้า อ่านได้เฉพาะแอดมิน
+    // guest checkout สร้างได้เฉพาะรายการ type 'order' ที่เป็นค่าติดลบ (ตัดสต็อก) เท่านั้น
+    // ส่วนรับเข้าคลัง (stock-in) ต้องเป็นแอดมินเท่านั้น
+    function validStockMovement() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['productId', 'productCode', 'productName', 'qty', 'type', 'reason', 'orderCode', 'at'])
+        && d.productId is string && d.productId.size() > 0 && d.productId.size() <= 100
+        && optStr(d, 'productCode', 30)
+        && optStr(d, 'productName', 200)
+        && d.qty is int && d.qty != 0 && d.qty >= -100000 && d.qty <= 100000
+        && d.type in ['order', 'stock-in', 'cancel']
+        && optStr(d, 'reason', 300)
+        && optStr(d, 'orderCode', 20)
+        && d.at is number;
+    }
+    match /stockMovements/{id} {
+      // guest ต้องอ้าง productId ที่มีสินค้าอยู่จริงเท่านั้น กันการยัด log ปลอมใส่รหัสสินค้าที่ไม่มีอยู่
+      // (ยังกันไม่ได้ว่า qty ตรงกับที่ตัดจริง — rules เทียบข้ามเอกสารแบบนั้นไม่ได้ ต้องพึ่ง transaction ใน createOrder)
+      allow create: if isFullAdmin()
+        || (validStockMovement() && request.resource.data.type == 'order' && request.resource.data.qty < 0
+            && exists(/databases/$(database)/documents/products/$(request.resource.data.productId)));
+      allow read, list, update, delete: if isFullAdmin();
+    }
+
+    // โปรโมชั่นส่วนลด Um Shop — ใช้เฉพาะฝั่งแอดมินตอนตั้งราคาส่วนลด ไม่มีหน้าไหนฝั่งลูกค้าต้องอ่าน
+    match /shopPromotions/{id} {
+      allow read, write: if isFullAdmin();
+    }
+
+    // คำสั่งซื้อ Um Shop — สั่งซื้อได้โดยไม่ต้องล็อกอิน (guest checkout)
+    // อ่านทีละรายการได้ทุกคน (เข้าผ่านลิงก์ติดตามคำสั่งซื้อที่เดา id ยาก) แต่ list ทั้งคอลเลกชันได้เฉพาะแอดมินตัวจริง
+    //
+    // ⚠️ ข้อจำกัดที่ยังปิดไม่ได้: rules ตรวจได้แค่ว่ายอดในเอกสารสอดคล้องกันเอง (total == itemsTotal + shippingFee)
+    // แต่เทียบ items[].price กับราคาจริงใน products/{id} ไม่ได้ เพราะ rules วน list เพื่อ get() ทีละสินค้าไม่ได้
+    // ⇒ คนที่เขียน Firestore ตรงๆ ข้าม UI ยังสร้างออเดอร์ราคาปลอมได้ ตัวกันชั้นสุดท้ายจึงเป็นฝั่งแอดมิน:
+    //    AdminShopOrderDetail เทียบราคากับสินค้าปัจจุบันแล้วบังคับ confirm ซ้ำก่อนกดยืนยันรับเงิน
+    // ปิดจริงต้องมี Cloud Functions (ต้องขึ้น Blaze plan) มาสร้างออเดอร์ฝั่งเซิร์ฟเวอร์แล้วล็อก create ของ client ทิ้ง
+    function validOrderCreate() {
+      let d = request.resource.data;
+      return d.size() <= 9
+        && d.orderCode is string && d.orderCode.size() <= 20
+        && d.items is list && d.items.size() > 0 && d.items.size() <= 50
+        && d.itemsTotal is number && d.itemsTotal >= 0
+        && d.shippingFee is number && d.shippingFee >= 0
+        && d.total is number && d.total == d.itemsTotal + d.shippingFee
+        && d.customer is map
+        // ฟอร์มเช็คเอาท์รวมช่องชื่อ-นามสกุลเป็นช่องเดียว (fullName) แล้ว แต่ยอมรับ firstName แบบเก่าด้วยชั่วคราว
+        // (เผื่อเบราว์เซอร์ลูกค้าแคช JS เก่าค้างไว้ผ่าน PWA service worker ยังไม่รีเฟรชมาใช้ฟอร์มใหม่ —
+        // ถ้าบังคับ fullName อย่างเดียวทันที ลูกค้าที่ค้าง JS เก่าจะสั่งซื้อไม่ได้เลยเงียบๆ ด้วย permission error)
+        && (
+          (d.customer.fullName is string && d.customer.fullName.size() > 0 && d.customer.fullName.size() <= 200)
+          || (d.customer.firstName is string && d.customer.firstName.size() > 0 && d.customer.firstName.size() <= 100)
+        )
+        && d.customer.phone is string && d.customer.phone.size() > 0 && d.customer.phone.size() <= 20
+        && optStr(d.customer, 'email', 200)
+        && d.customer.address is string && d.customer.address.size() > 0 && d.customer.address.size() <= 500
+        && d.status == 'pending_payment'
+        && d.paymentProofUrl == null
+        && d.createdAt is number;
+    }
+    match /orders/{id} {
+      allow create: if validOrderCreate();
+      allow get: if true;
+      allow list: if isFullAdmin();
+      // แอดมินตัวจริงแก้ไขได้ทุกฟิลด์ (เปลี่ยนสถานะ/แนบรูปแพ็ค/อัปเดตการจัดส่ง) — ลูกค้าแก้ได้ 2 เคส (เฉพาะตอนยังไม่ยืนยันจ่ายเงิน):
+      allow update: if isFullAdmin()
+        || (resource.data.status == 'pending_payment'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['paymentProofUrl', 'paymentProofAt', 'paymentDeclaredAt']));
+      allow delete: if isFullAdmin();
+    }
+
+    // ตัวนับเลขที่คำสั่งซื้อ ORD-0001, ORD-0002, ... — อนุญาตเพิ่มทีละ 1 เท่านั้น
+    match /config/shopOrderCounter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // อาสาสมัคร — Firestore เป็นที่เก็บหลัก (ส่งฟอร์มได้ทุกคน) อ่าน/ลบเฉพาะแอดมิน
+    // ใช้ hasOnly() ระบุฟิลด์ที่อนุญาตแบบเป๊ะ (ไม่ใช่แค่นับจำนวน) กันฟิลด์แปลกปลอมหลุดเข้ามา
+    // และคุมความยาวทุกฟิลด์ที่เคยไม่ได้เช็ค (type/token/date/gender/channel/ref)
+    function validVolunteerReg() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'ref', 'type', 'token', 'date', 'fname', 'lname', 'fnameEn', 'lnameEn',
+          'phone', 'email', 'age', 'gender', 'province', 'channel', 'expect',
+          'skills', 'missions', 'giveProjects', 'giveDates', 'note',
+          'sheetSynced', 'syncAttempts'
+        ])
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'ref', 30)
+        && optStr(d, 'type', 30)
+        && optStr(d, 'token', 100)
+        && optStr(d, 'date', 100)
+        && optStr(d, 'fnameEn', 100)
+        && optStr(d, 'lnameEn', 100)
+        && optStr(d, 'email', 200)
+        && optStr(d, 'age', 10)
+        && optStr(d, 'gender', 20)
+        && optStr(d, 'province', 100)
+        && optStr(d, 'channel', 50)
+        && optStr(d, 'expect', 1000)
+        && optStr(d, 'skills', 1000)
+        && optStr(d, 'missions', 1000)
+        && optStr(d, 'giveProjects', 500)
+        && optStr(d, 'giveDates', 500)
+        && optStr(d, 'note', 1000)
+        && (!('sheetSynced' in d) || d.sheetSynced is bool)
+        && (!('syncAttempts' in d) || (d.syncAttempts is int && d.syncAttempts >= 0 && d.syncAttempts <= 20));
+    }
+    match /volunteerRegs/{id} {
+      allow create: if validVolunteerReg();
+      allow get, list, delete: if isFullAdmin();
+      // แอดมินแก้ได้ทุกฟิลด์ — ใครก็ได้ (รวมเบราว์เซอร์ของผู้สมัครเอง) อัปเดตได้เฉพาะสถานะซิงก์ชีต
+      // เท่านั้น (ไม่ใช่ PII) เพื่อให้ backup ไป Sheet สำเร็จ/ล้มเหลวแล้วอัปเดตกลับได้โดยไม่ต้องล็อกอิน
+      allow update: if isFullAdmin()
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sheetSynced', 'syncAttempts']);
+    }
+
+    // ตัวนับเลขอ้างอิงอาสาสมัคร UMV-0001, UMV-0002, ... (แยกจาก Sheet row เพื่อไม่ให้พึ่ง Apps Script)
+    match /config/volunteerRefCounter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // Give2 — ส่งต่อของงาน "ให้" ครั้งที่ 6 (คุมจำนวน+ความยาว+ขนาด list)
+    function validGive2Reg() {
+      let d = request.resource.data;
+      return d.size() <= 14
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && d.types is list && d.types.size() > 0 && d.types.size() <= 5
+        && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        && optStr(d, 'email', 200)
+        && optStr(d, 'typeLabels', 300)
+        && optStr(d, 'detail', 2000)
+        && optStr(d, 'refCode', 40)
+        && optStr(d, 'submittedAt', 60);
+    }
+    match /give2Regs/{id} {
+      allow create: if validGive2Reg();
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin(); // ลบถาวร = นอกขอบเขตงานอาสาสมัคร
+    }
+
+    // Give2Cook — มอบเครื่องมือประกอบอาชีพ
+    function validGive2CookReg() {
+      let d = request.resource.data;
+      return d.size() <= 12
+        && d.fname is string && d.fname.size() > 0 && d.fname.size() <= 100
+        && d.lname is string && d.lname.size() > 0 && d.lname.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && d.refCode is string && d.refCode.size() <= 20
+        && d.types is list && d.types.size() > 0 && d.types.size() <= 10
+        && (!('imageUrls' in d) || (d.imageUrls is list && d.imageUrls.size() <= 10))
+        // items เป็น list ของ { name, qty } — จำกัดจำนวนรายการไว้ ไม่งั้นยัด list ยาวๆ กินพื้นที่ได้
+        // (เนื้อในแต่ละ element ตรวจไม่ได้ละเอียดใน rules แต่ต้องกันขนาดรวมไว้อย่างน้อย)
+        && (!('items' in d) || (d.items is list && d.items.size() <= 20))
+        && (!('canAttend' in d) || d.canAttend is bool)
+        && optStr(d, 'email', 200)
+        && optStr(d, 'detail', 2000)
+        && optStr(d, 'typeLabels', 500)
+        && optStr(d, 'submittedAt', 60);
+    }
+    match /give2CookRegs/{id} {
+      allow create: if validGive2CookReg();
+      allow read, update: if isAdmin();
+      allow delete: if isFullAdmin(); // ลบถาวร = นอกขอบเขตงานอาสาสมัคร
+    }
+    // ตัวนับ ref code — อนุญาตเพิ่มทีละ 1 เท่านั้น (ป้องกันการรีเซ็ตหรือข้ามค่า)
+    match /config/give2CookCounter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // counter สำหรับ give2 ref code — อนุญาตเพิ่มทีละ 1 เท่านั้น
+    match /config/give2Counter {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count'])
+        && request.resource.data.count == resource.data.count + 1;
+    }
+
+    // สถิติหน้าบริจาค — Firestore Rules ประเมิน request.resource.data.keys() ผิดพลาดเมื่อ field ที่แก้ไข
+    // ใช้ FieldValue.increment() ร่วมกับ hasOnly() ที่มีมากกว่า 1 field ในลิสต์ (พิสูจน์แล้วด้วยการทดสอบเขียนจริง
+    // — เขียนไม่ได้แม้ field/ข้อมูลถูกต้องทุกอย่าง) ต้องใช้ diff().affectedKeys() แทนสำหรับ update เพื่อเลี่ยงบั๊กนี้
+    //
+    // ต้องตรวจ "ค่า" ด้วย ไม่ใช่แค่ชื่อ field — ไม่งั้นใครก็ยิง REST เซ็ต views กลับเป็น 0 (หรือเป็น string ยาวๆ)
+    // ทำให้สถิติที่สะสมมาหายถาวรโดยไม่มี audit log ไว้สืบ ทุกจุดในแอปเพิ่มทีละ 1 เสมอจึงบังคับ +1 เป๊ะได้
+    match /stats/donation {
+      allow create: if request.resource.data.keys().hasOnly(['views', 'copies'])
+        && (!('views' in request.resource.data) || request.resource.data.views == 1)
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is map && request.resource.data.copies.keys().size() <= 20));
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'copies'])
+        // views เพิ่มได้ทีละ 1 เท่านั้น (ห้ามลด/รีเซ็ต) — copies เป็น map แยกตามปุ่มที่กดคัดลอก จำกัดจำนวนคีย์ไว้
+        && (!('views' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.views is int && request.resource.data.views == resource.data.views + 1))
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is map && request.resource.data.copies.keys().size() <= 20));
+      allow read: if isAdmin();
+    }
+
+    // สถิติหน้า Iftar — นับจำนวนกดคัดลอกเลขบัญชี (เพิ่มทีละ 1 ห้ามรีเซ็ต ดูเหตุผลด้านบน)
+    match /stats/iftar {
+      allow create: if request.resource.data.keys().hasOnly(['copies'])
+        && request.resource.data.copies is int && request.resource.data.copies == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['copies'])
+        && request.resource.data.copies is int && request.resource.data.copies == resource.data.copies + 1;
+      allow read: if isAdmin();
+    }
+
+    // นับผู้เข้าชมเว็บไซต์ + ยอดติดตั้งแอป — ทุกคนเพิ่มได้ (เฉพาะ 2 field นี้) แต่อ่านได้เฉพาะ admin
+    // installs มาจาก event 'appinstalled' ใน InstallAppBanner.jsx
+    match /stats/site {
+      // size() > 0 กันการสร้างเอกสารเปล่า — hasOnly([...]) เฉย ๆ ปล่อย {} ผ่าน
+      allow create: if request.resource.data.keys().hasOnly(['views', 'installs'])
+        && request.resource.data.keys().size() > 0
+        && (!('views' in request.resource.data)
+            || (request.resource.data.views is int && request.resource.data.views == 1))
+        && (!('installs' in request.resource.data)
+            || (request.resource.data.installs is int && request.resource.data.installs == 1));
+      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดสะสมกู้คืนไม่ได้ถ้าถูกทับ)
+      // เขียนเป็นเงื่อนไขต่อ field เพราะแต่ละครั้งจะแตะ field เดียว (ตัวใดตัวหนึ่ง ไม่ใช่พร้อมกัน)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'installs'])
+        && (!('views' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.views is int && request.resource.data.views == resource.data.views + 1))
+        && (!('installs' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.installs is int
+                && request.resource.data.installs == (('installs' in resource.data) ? resource.data.installs + 1 : 1)));
+      allow read: if isAdmin();
+    }
+
+    // B2UM ร้านค้า — ส่งฟอร์มได้ทุกคน อ่าน/แก้/ลบเฉพาะแอดมิน
+    match /b2umRegs/{id} {
+      allow create: if request.resource.data.size() <= 8
+        && request.resource.data.fname is string && request.resource.data.fname.size() <= 100
+        && request.resource.data.lname is string && request.resource.data.lname.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 20
+        && request.resource.data.shopName is string && request.resource.data.shopName.size() <= 200;
+      allow read, update, delete: if isFullAdmin();
+    }
+
+    // Give Receive — ลงทะเบียนรับคอมมือสอง / อุปกรณ์ประกอบอาชีพ
+    match /giveReceiveRegs/{id} {
+      // ทุกฟิลด์ต้องมีเพดานความยาว ไม่ใช่แค่บางฟิลด์ — ฟอร์มนี้ส่งได้โดยไม่ต้องล็อกอิน ถ้าเว้นช่องไหนไว้
+      // ไม่ตรวจ ใครก็ยิง REST ใส่ string ขนาดใหญ่วนซ้ำจนพื้นที่ Spark plan (1GiB) เต็ม แล้วฟอร์มทุกหน้าในเว็บพังหมด
+      allow create: if request.resource.data.size() <= 13
+        && request.resource.data.fname is string && request.resource.data.fname.size() <= 100
+        && request.resource.data.lname is string && request.resource.data.lname.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 20
+        && request.resource.data.type is string && request.resource.data.type.size() <= 20
+        && optStr(request.resource.data, 'email', 200)
+        && optStr(request.resource.data, 'address', 500)
+        && optStr(request.resource.data, 'reason', 2000)
+        && optStr(request.resource.data, 'wantedItems', 500)
+        && optStr(request.resource.data, 'date', 60)
+        && optStr(request.resource.data, 'age', 10)
+        && optStr(request.resource.data, 'school', 200)
+        && optStr(request.resource.data, 'teacherName', 100)
+        && optStr(request.resource.data, 'teacherPhone', 20)
+        && optStr(request.resource.data, 'job', 200)
+        && optStr(request.resource.data, 'detail', 2000);
+      // อ่านทีละรายการ (สแกน QR RCV-{id}) และแก้เฉพาะ received/receivedAt ได้ทุกแอดมิน
+      // แต่ list ทั้งคอลเลกชัน (ดึง PII ผู้รับทั้งหมดทีเดียว) และลบ เฉพาะแอดมินตัวจริง
+      allow get: if isAdmin();
+      allow list, delete: if isFullAdmin();
+      allow update: if isFullAdmin()
+        || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['received', 'receivedAt']));
+    }
+
+    // มีเดียประจำภารกิจ — ทุกคนอ่านได้ (หน้า /missions) แก้ไขได้เฉพาะแอดมินตัวจริง
+    match /missionMedia/{id} {
+      allow read: if true;
+      allow write: if isFullAdmin();
+    }
+
+    // แชทเว็บ — chatId คือ visitor id แบบสุ่มที่เก็บไว้ใน localStorage ของผู้เยี่ยมชม (ไม่ล็อกอิน)
+    // get รายตัว (รู้ id ตรง) เปิดให้ทุกคน แต่ list ทั้งคอลเลกชัน (อ่านแชททุกคนพร้อมกัน) เฉพาะแอดมิน
+    // ป้องกัน field แปลกปลอม/spam ด้วย hasOnly + จำกัดความยาว เหมือน collection อื่นๆ ในไฟล์นี้
+    function validChatDoc() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['createdAt', 'lastMessageAt', 'lastMessageText', 'lastSender', 'unreadByAdmin', 'unreadByVisitor', 'visitorName'])
+        && d.lastMessageText is string && d.lastMessageText.size() <= 2000
+        && d.lastSender in ['visitor', 'admin']
+        // ต้องเป็นแอดมินจริงถึงจะตั้ง lastSender เป็น 'admin' ได้ กัน user ทั่วไปปลอมข้อความว่ามาจากแอดมิน
+        && (d.lastSender == 'visitor' || isFullAdmin())
+        && d.unreadByAdmin is bool && d.unreadByVisitor is bool
+        && optStr(d, 'visitorName', 100);
+    }
+    // แชทของผู้เยี่ยมชมมี PII (ชื่อ/ข้อความที่คุยกับแอดมิน) และไม่อยู่ในขอบเขตงานอาสาสมัคร (ไม่มีเมนูแชท
+    // ใน VOLUNTEER_NAV) จึงจำกัด list/update/delete ไว้ที่ isFullAdmin()
+    //
+    // ⚠️ get ยังต้องเป็น true เพราะผู้เยี่ยมชมไม่ได้ล็อกอิน (chatId = visitorId แบบสุ่มใน localStorage)
+    // จึงเป็นความปลอดภัยแบบ "รู้ URL = เข้าถึงได้" — chatId เดาไม่ได้ (crypto.randomUUID) แต่รั่วได้ถ้า
+    // แอดมินแชร์ลิงก์ /admin/chat/<chatId> หรือแคปหน้าจอที่ติด URL ปิดสนิทต้องเปิด Anonymous Auth
+    // ให้ผู้เยี่ยมชมแล้วผูก chatId กับ request.auth.uid
+    match /chats/{chatId} {
+      allow get: if true;
+      allow list: if isFullAdmin();
+      allow create: if validChatDoc();
+      // ฝั่งผู้เยี่ยมชมแก้ได้เฉพาะตอนส่งข้อความตัวเอง (lastSender ต้องเป็น visitor) แอดมินแก้ได้ทุกฟิลด์ (รวม unreadByAdmin ตอนกดอ่าน)
+      allow update: if isFullAdmin() || (validChatDoc() && request.resource.data.lastSender == 'visitor');
+      allow delete: if isFullAdmin();
+
+      // การ์ดสินค้าที่แนบมากับข้อความ (กดปุ่ม "แชท" จากหน้ารายละเอียดสินค้า) — ไม่มี text ก็ได้ ถ้ามี product แทน
+      // image/url ฝั่งแอดมินเอาไปเรนเดอร์ตรงๆ เป็น <img src>/<a href> (ดู AdminChat.jsx) — ต้องบังคับ http(s):// เท่านั้น
+      // กัน visitor ปลอมข้อความ (เขียนตรงผ่าน Firestore SDK ข้าม UI) ยัด scheme อันตรายเช่น javascript: เข้ามาโจมตีแอดมินตอนคลิก
+      function optHttpUrl(d, k, max) {
+        return !(k in d) || (d[k] is string && d[k].size() <= max && d[k].matches('^https?://.+'));
+      }
+      function validProductCard() {
+        let p = request.resource.data.product;
+        return p.keys().hasOnly(['name', 'price', 'image', 'url'])
+          && p.name is string && p.name.size() > 0 && p.name.size() <= 200
+          && (!('price' in p) || p.price is number)
+          && optHttpUrl(p, 'image', 500)
+          && optHttpUrl(p, 'url', 500);
+      }
+      match /messages/{msgId} {
+        allow get, list: if true;
+        allow create: if request.resource.data.keys().hasOnly(['sender', 'text', 'createdAt', 'type', 'product'])
+          && request.resource.data.sender in ['visitor', 'admin']
+          // ต้องเป็นแอดมินจริงถึงจะส่งข้อความที่ sender: 'admin' ได้ ไม่งั้นใครก็ปลอมข้อความแอดมินได้
+          // (อันตรายเพราะ onAdminReply ใน functions/index.js จะ push ข้อความ sender:'admin' ออกไปยัง LINE/Facebook จริงของผู้ใช้)
+          && (request.resource.data.sender == 'visitor' || isFullAdmin())
+          && (
+            (!('type' in request.resource.data)
+              && request.resource.data.text is string
+              && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
+            || (request.resource.data.type == 'product' && request.resource.data.sender == 'visitor' && validProductCard())
+          );
+        allow update, delete: if isFullAdmin();
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── ระบบ Staff role ใหม่ (staff/{uid}) + CRM/บอร์ด/audit log ─────
+    // เพิ่มใหม่ทั้งหมดตั้งแต่ตรงนี้ลงไป ไม่แตะ collection เดิมด้านบนเลย
+    // ══════════════════════════════════════════════════════════════════
+
+    // อ่าน role ของผู้ใช้ที่ล็อกอินอยู่เองจาก staff/{uid} แล้วเช็คว่าอยู่ใน roles ที่อนุญาต + ต้อง active
+    function isStaffRole(roles) {
+      // เจ้าของระบบผ่านได้เสมอ (break-glass ชุดเดียวกับ StaffRoleGuard/AdminNav ฝั่ง UI)
+      // ถ้าไม่มีบรรทัดนี้ เจ้าของจะ "เข้าหน้าได้แต่ข้อมูลว่างเปล่า" เพราะ UI ปล่อยผ่านแต่ rules ปฏิเสธ
+      // ซึ่งดูเหมือนระบบพังมากกว่าจะรู้ว่าเป็นเรื่องสิทธิ์ (listener ส่วนใหญ่กลืน permission error ไว้เงียบๆ)
+      return isFullAdmin() ||
+        request.auth != null
+        && exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
+    }
+
+    // ── รีวิวสินค้าจากลูกค้า ──
+    // ลูกค้าไม่ได้ล็อกอิน (guest checkout) จึงต้องเปิดให้ "ใครก็สร้างได้" แบบเดียวกับฟอร์มลงทะเบียนอื่น
+    // ความปลอดภัยอยู่ที่การตรวจรูปแบบตรงนี้ ไม่ใช่ที่ตัวตนผู้ส่ง
+    //
+    // สองข้อที่สำคัญที่สุด:
+    //   1. status ต้องเป็น 'pending' เท่านั้นตอนสร้าง — ไม่งั้นใครก็ส่งรีวิวที่ approved มาเอง
+    //      แล้วขึ้นหน้าเว็บสาธารณะทันทีโดยไม่มีใครตรวจ
+    //   2. photos ต้องเป็น URL https ของ Cloudinary เท่านั้น — ค่านี้ไปโผล่ใน <img src> บนหน้า public
+    //      ถ้ารับ URL อะไรก็ได้ ฟอร์มนี้จะกลายเป็นช่องฝังรูปจากที่อื่นบนเว็บมูลนิธิ
+    //
+    // อ่าน: สาธารณะเห็นเฉพาะที่อนุมัติแล้ว — การ list ต้อง where('status','==','approved') เท่านั้น
+    // ไม่งั้น query ถูกปฏิเสธทั้งชุด (รีวิวที่ยังไม่ตรวจจึงไม่มีทางหลุดออกไป)
+    function validReviewPhotos(d) {
+      return !('photos' in d)
+        || (d.photos is list && d.photos.size() <= 4);
+    }
+    match /productReviews/{id} {
+      allow get: if resource.data.status == 'approved' || isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+      allow list: if request.query.limit <= 200
+        && (isFullAdmin() || isStaffRole(['admin', 'staff', 'social'])
+            || resource.data.status == 'approved');
+      allow create: if request.resource.data.size() <= 8
+        && request.resource.data.status == 'pending'
+        && request.resource.data.productId is string && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 80
+        && optStr(request.resource.data, 'productName', 200)
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && optStr(request.resource.data, 'authorName', 60)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      // อนุมัติ/ปฏิเสธ/ลบ เป็นงานของทีม ไม่ใช่ของคนส่ง
+      allow update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // ── แจ้งปัญหาจากลูกค้า ──
+    // มีเบอร์โทร/เลขออเดอร์ของลูกค้าอยู่ข้างใน จึงอ่านได้เฉพาะทีมงาน ไม่เปิดสาธารณะเหมือนรีวิว
+    match /shopIssues/{id} {
+      allow create: if request.resource.data.size() <= 7
+        && request.resource.data.status == 'open'
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() > 0 && request.resource.data.detail.size() <= 1500
+        && optStr(request.resource.data, 'orderCode', 30)
+        && optStr(request.resource.data, 'phone', 20)
+        && optStr(request.resource.data, 'topic', 30)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      allow read, update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // contentHooks/{id} — คลังประโยคเปิด (hook) ที่ทีมเก็บไว้ใช้ซ้ำ
+    // สิทธิ์ชุดเดียวกับ contentPosts/contentTemplates — เป็นเนื้อหาคอนเทนต์ ไม่มี PII
+    match /contentHooks/{id} {
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // contentTemplates/{id} — แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js)
+    // สิทธิ์ชุดเดียวกับ contentPosts — ใครแก้ปฏิทินได้ก็ควรเก็บ/ใช้แม่แบบได้
+    // ไม่มีข้อมูลอ่อนไหวเพิ่ม เป็นสำเนาของเนื้อหาโพสต์ที่คนกลุ่มเดียวกันเห็นอยู่แล้ว
+    match /contentTemplates/{id} {
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // ── ข่าวความคืบหน้าการช่วยเหลือ (หน้า /updates) ──
+    //
+    // เป็น collection แยก ไม่ได้เปิด `campaigns` ให้อ่านสาธารณะ: campaigns มีข้อมูลการทำงานภายใน
+    // (ผู้รับผิดชอบ/งบ/สถานะแผน) ปนอยู่ การเปิดอ่านทั้ง doc = เปิดทุกฟิลด์ รวมฟิลด์ที่จะเพิ่มมาทีหลัง
+    // ที่นี่เก็บเฉพาะสิ่งที่ทีมตั้งใจเขียนให้คนนอกอ่าน
+    //
+    // สาธารณะเห็นได้เฉพาะ status == 'published' เท่านั้น ฉบับร่างเป็นของทีม
+    // list ต้องให้ query ผูก status มาเอง ไม่งั้น rules ปฏิเสธทั้งชุด (แบบเดียวกับ productReviews)
+    function validUpdatePhotos(d) {
+      return !('photos' in d) || (d.photos is list && d.photos.size() <= 6);
+    }
+    match /publicUpdates/{id} {
+      allow get: if resource.data.status == 'published'
+        || isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']);
+      allow list: if request.query.limit <= 100
+        && (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field'])
+            || resource.data.status == 'published');
+      // เขียนได้เฉพาะทีม — 'field' รวมด้วยเพราะเป็นคนลงพื้นที่จริง คือคนที่มีเรื่องมารายงาน
+      allow create, update: if (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']))
+        && request.resource.data.size() <= 12
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 4000
+        && optStr(request.resource.data, 'summary', 300)
+        && optStr(request.resource.data, 'place', 80)
+        && optStr(request.resource.data, 'authorName', 60)
+        && request.resource.data.status in ['draft', 'published']
+        && validUpdatePhotos(request.resource.data);
+      // ลบข่าวที่เผยแพร่ไปแล้วเป็นเรื่องใหญ่กว่าการแก้ จำกัดไว้ที่ admin/staff
+      allow delete: if isFullAdmin() || isStaffRole(['admin', 'staff']);
+    }
+
+    // ── token สำหรับส่งแจ้งเตือน (FCM) ──
+    //
+    // ⚠️ ต้องปิด list สนิท — collection นี้คือ "รายชื่ออุปกรณ์ผู้ใช้ทั้งหมด" ที่ติดตามมูลนิธิอยู่
+    // ถ้าใครอ่านทั้ง collection ได้ ก็ได้ทั้งจำนวนผู้ติดตามและ token ทุกตัวไป
+    // ซึ่งเอาไปยิงแจ้งเตือนปลอมได้ทันทีถ้าเขามี server key (รูปแบบเดียวกับ shopIssues)
+    //
+    // doc id คือตัว token เอง — เข้าเว็บซ้ำกี่ครั้งก็ทับ doc เดิม ไม่เกิดรายการซ้ำ
+    // ไม่มีการล็อกอินฝั่งผู้ใช้ทั่วไป จึงต้องเปิด create/update ให้ทุกคน แต่บีบ schema ให้แคบที่สุด
+    // ตั้งใจไม่เก็บ uid/อีเมล/ไอพี — ตัว token อย่างเดียวไม่บอกว่าใครเป็นใคร
+    match /pushTokens/{token} {
+      allow get, list: if isFullAdmin();
+      allow create, update: if request.resource.data.keys().hasOnly(['lang', 'updatedAt'])
+        && request.resource.data.lang in ['th', 'en', 'ar']
+        && request.resource.data.updatedAt is number
+        && token.size() > 0 && token.size() <= 4096;
+      // ผู้ใช้ปิดแจ้งเตือนเองได้ (token เดิมใช้ไม่ได้แล้ว) และแอดมินล้าง token ที่ตายแล้วได้
+      allow delete: if true;
+    }
+
+    // comments/{id} — คอมเมนต์คุยงาน ผูกกับชิ้นงานด้วย (entityType, entityId)
+    //
+    // ต่างจาก auditLog ที่ระบบเขียนเองและลบไม่ได้ — อันนี้คนพิมพ์เอง ลบของตัวเองได้
+    //
+    // บังคับ authorUid == uid ผู้เขียนตอนสร้าง ไม่ให้ปลอมเป็นคนอื่น (ถ้าไม่บังคับ ใครก็เขียน
+    // คอมเมนต์ในนามหัวหน้าทีมได้ ซึ่งเป็นข้อความที่คนอื่นเอาไปใช้ตัดสินใจทำงานจริง)
+    // แก้ไขไม่ได้เลย ลบได้อย่างเดียว — คอมเมนต์ที่แก้ย้อนหลังได้ทำให้บันทึกการตกลงงานเชื่อถือไม่ได้
+    match /comments/{id} {
+      allow read: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']);
+      allow create: if (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']))
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.entityType is string
+        && request.resource.data.entityId is string;
+      allow update: if false;
+      allow delete: if isFullAdmin() || resource.data.authorUid == request.auth.uid;
+    }
+
+    // staffDirectory/{uid} — สมุดรายชื่อทีมแบบย่อ ไว้ให้ช่อง "ผู้รับผิดชอบ" เลือกคนได้
+    //
+    // ทำไมต้องมีอีก collection ทั้งที่มี staff/ อยู่แล้ว: staff/ อ่านได้เฉพาะ doc ของตัวเองกับ super admin
+    // (ตั้งใจไว้แบบนั้น เพราะการอ่าน role ของทุกคนได้ = รู้ว่าใครมีสิทธิ์อะไร) ทีมงานทั่วไปจึง
+    // "list รายชื่อเพื่อนร่วมทีม" ไม่ได้เลย ซึ่งทำให้มอบหมายงานให้กันไม่ได้
+    //
+    // ที่นี่จึงเก็บเฉพาะที่ช่องเลือกคนต้องใช้ (ชื่อ/อีเมล/role) ไม่มี field อื่นของ staff ติดมา
+    // และยังเขียนได้เฉพาะ super admin เหมือนเดิม — การเพิ่มชื่อเข้าสมุดนี้ไม่ได้ให้สิทธิ์อะไรเพิ่ม
+    // สิทธิ์จริงยังตัดสินจาก staff/{uid} เท่านั้น ที่นี่เป็นแค่ป้ายชื่อสำหรับ UI
+    //
+    // อ่านได้เฉพาะคนที่เป็นทีมงานจริง — ไม่ใช่ public เหมือน config/{id} เพราะมีอีเมลของทีมอยู่
+    match /staffDirectory/{uid} {
+      allow read: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+      allow write: if isSuperAdmin();
+    }
+
+    // staff/{uid} — doc id ต้องตรงกับ uid เจ้าของเสมอ
+    match /staff/{staffId} {
+      allow read: if request.auth != null && (request.auth.uid == staffId || isSuperAdmin());
+      // สมัครตัวเองครั้งแรก: สร้างได้เฉพาะ doc ตัวเอง และบังคับ role เป็น 'pending' เท่านั้น
+      //
+      // สำคัญ: ห้ามให้ default เป็น 'staff' เด็ดขาด — 'staff' มีสิทธิ์ read/write/delete ข้อมูล CRM ทั้งหมด
+      // (partnerOrganizations/aidLocations/speakers/boards) ซึ่งมี PII ผู้ติดต่อและยอดเงินที่จ่ายวิทยากร
+      // ถ้าใครสมัคร Firebase Auth ได้ก็จะได้สิทธิ์นั้นทันที ต่างจาก collection เดิมที่กันด้วย email allowlist
+      // 'pending' ไม่อยู่ใน allowedRoles ของ collection ไหนเลย = เข้าอะไรไม่ได้จนกว่าแอดมินจะเลื่อน role ให้
+      allow create: if request.auth != null && request.auth.uid == staffId
+        && request.resource.data.role == 'pending'
+        && request.resource.data.active == true;
+      // แก้ไขข้อมูลตัวเอง (เช่น lastLoginAt) ได้ แต่ห้ามเปลี่ยน role/active ของตัวเอง (กัน self-elevate)
+      //
+      // การตั้ง role ให้คนอื่น = ยกสิทธิ์เข้าถึง CRM ซึ่งมี PII ผู้รับความช่วยเหลือให้ใครก็ได้
+      // จึงจำกัดไว้ที่ super admin บัญชีเดียว ไม่ใช่ทุกคนที่มี role 'admin'
+      // (ไม่งั้นคนที่ถูกตั้งเป็น admin จะตั้ง admin คนต่อไปได้เอง สิทธิ์ขยายออกไปโดยเจ้าของไม่รู้ตัว)
+      //
+      // เป็น break-glass ในตัว: อีเมลนี้ hardcode ไว้ในกฎ จึงเข้าถึงได้เสมอแม้ยังไม่มีใครมี staff doc
+      // role 'admin' เลย (การสมัครเองบังคับเป็น 'pending' ตลอด) ไม่ต้องไปแก้ Firestore ผ่าน Console ด้วยมือ
+      allow update: if isSuperAdmin()
+        || (request.auth.uid == staffId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.active == resource.data.active);
+      allow delete: if isSuperAdmin();
+    }
+
+    // CRM: องค์กรพันธมิตร / จุดลงพื้นที่ (แผนที่) / วิทยากร — admin, staff, field เข้าถึงได้
+    match /partnerOrganizations/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /aidLocations/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /speakers/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // บอร์ดวางแผนสไตล์ Trello
+    match /boards/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /boardLists/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+    match /boardCards/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // โน้ดไอเดีย (แท็บมายด์แมปของบอร์ดวางแผน) — สิทธิ์เท่ากับ boardCards เพราะเป็นข้อมูลวางแผนชุดเดียวกัน
+    // เส้นเชื่อมเก็บเป็น array `links` บนโน้ดต้นทาง ไม่มี collection แยก จึงไม่ต้องมีกฎเพิ่ม
+    match /ideaNodes/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // Audit log — เขียนได้ทุก staff role ที่ยังมีสิทธิ์แก้ข้อมูล (เพื่อบันทึกการกระทำของตัวเอง)
+    // แต่อ่าน (ดูประวัติทั้งหมด) ได้เฉพาะ admin เท่านั้น และห้ามแก้/ลบใครทั้งนั้น (append-only)
+    match /auditLog/{id} {
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        && request.resource.data.staffUid == request.auth.uid;
+      allow read: if isSuperAdmin();
+      allow update, delete: if false;
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // ── Campaign / Event / campaignPartners (แผนแอดมิน-อินทราเน็ต ข้อ 2/3/6) ─
+    // gating เดียวกับ CRM/บอร์ดด้านบน (admin/staff/field) ไม่แตะ collection เดิมเลย
+    // ══════════════════════════════════════════════════════════════════
+
+    // ไฟล์แนบ (ลิงก์ Google Sheet/Doc/Slides/Drive) ผูกกับงานต่างๆ — staff เท่านั้น ทั้งอ่านและเขียน
+    // แยกเป็น collection เดียวคุมที่นี่จบ ไม่ต้องแก้ rules ของทุก collection ที่อยากแนบไฟล์ได้
+    // url บังคับ http(s) ตั้งแต่ใน rules — กัน scheme อันตราย (javascript:) หลุดไปอยู่ใน href ฝั่งแอดมิน
+    function validAttachment() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['entityType', 'entityId', 'url', 'title', 'kind', 'addedBy', 'addedAt'])
+        && d.entityType is string && d.entityType.size() > 0 && d.entityType.size() <= 40
+        && d.entityId is string && d.entityId.size() > 0 && d.entityId.size() <= 100
+        && d.url is string && d.url.size() <= 1000 && d.url.matches('^https?://.+')
+        && d.title is string && d.title.size() <= 200
+        && d.kind is string && d.kind.size() <= 20
+        && d.addedBy is string && d.addedBy.size() <= 200
+        && d.addedAt is number;
+    }
+    match /attachments/{id} {
+      allow read, list: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']) && validAttachment();
+      allow delete: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow update: if false; // แก้ไม่ได้ ให้ลบแล้วแนบใหม่ (ประวัติชัดกว่า และไม่ต้องตรวจ diff ซับซ้อน)
+    }
+
+    // ห้องประชุมวิดีโอ (Jitsi) — staff สร้าง/ปิด/ลบ ได้ คนนอกเข้าร่วมได้ด้วยลิงก์เชิญ /meet/<id>
+    //
+    // allow get: if true — จำเป็น เพราะคนนอกที่ได้รับลิงก์เชิญไม่ได้ล็อกอิน ต้องอ่าน doc เพื่อรู้ชื่อห้อง Jitsi
+    // ความปลอดภัยมาจาก doc id ที่เป็น UUID สุ่มเดาไม่ได้ (capability link แบบเดียวกับลิงก์ติดตามคำสั่งซื้อ)
+    // แต่ห้าม list เด็ดขาด ไม่งั้นคนนอกไล่ดูห้องประชุมทั้งหมด (พร้อมชื่อห้อง Jitsi) ได้ทีเดียว
+    //
+    // ปิดห้อง/ต่ออายุทำผ่าน update ที่แก้ได้แค่ active/expiresAt — กันการแก้ชื่อห้องหรือหัวข้อย้อนหลัง
+    function validMeeting() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['room', 'title', 'createdBy', 'createdAt', 'expiresAt', 'active'])
+        && d.room is string && d.room.size() > 0 && d.room.size() <= 100
+        && d.title is string && d.title.size() <= 200
+        && d.createdBy is string && d.createdBy.size() <= 200
+        && d.createdAt is number
+        && d.expiresAt is number
+        && d.active is bool;
+    }
+    match /meetings/{id} {
+      // คนนอกอ่านได้เฉพาะห้องที่ยัง "เปิด" และยังไม่หมดอายุ — บังคับที่ rules ไม่ใช่แค่ซ่อนฝั่ง client
+      // ไม่งั้นกด "ปิดห้อง" แล้วลิงก์เดิมยังอ่าน doc ได้ = อ่านชื่อห้อง Jitsi ไปเข้า meet.jit.si ตรงได้อยู่ดี
+      // (staff ยังอ่านได้ทุกห้องเพื่อจัดการห้องที่ปิด/หมดอายุไปแล้ว)
+      allow get: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        || (resource.data.active == true && resource.data.expiresAt > request.time.toMillis());
+      allow list: if isStaffRole(['admin', 'staff', 'field', 'social']);
+      allow create: if isStaffRole(['admin', 'staff', 'field', 'social']) && validMeeting();
+      allow update: if isStaffRole(['admin', 'staff', 'field', 'social'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'expiresAt']);
+      allow delete: if isStaffRole(['admin', 'staff', 'field', 'social']);
+    }
+
+    // แคมเปญบริจาค — campaignId ที่ contentPosts/boardCards อ้างถึงเป็นแค่ string เชื่อมโยงฝั่ง client
+    // (ไม่บังคับ referential integrity ใน rules เพราะ contentPosts/boardCards เขียนได้กว้างอยู่แล้ว)
+    match /campaigns/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // งาน/อีเวนต์ทั่วไป (ยกระบบจาก Iftar ให้ใช้ซ้ำได้ทุกงาน)
+    match /events/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // ผู้ลงทะเบียนงาน — เลือกเป็น flat collection (มี eventId อ้างอิง) เหมือน boardCards/boardLists
+    // ไม่ใช้ subcollection เพราะหน้าแอดมินต้อง query ข้ามอีเวนต์ได้ (เช่นนับผู้ลงทะเบียนรวมทุกงาน)
+    // ซึ่งทำกับ subcollection แยกต่อ doc อีเวนต์ลำบากกว่า (ต้อง query ซ้อนหลายชั้นเหมือนเหตุผลของ boardCards)
+    // สาธารณะ create ได้ (ลงทะเบียนเองแบบ iftarRegs/volunteerRegs) แต่อ่าน/แก้/ลบเฉพาะ staff
+    function validEventReg() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['eventId', 'name', 'phone', 'email', 'checkedIn', 'checkedInAt', 'createdAt'])
+        && d.eventId is string && d.eventId.size() > 0 && d.eventId.size() <= 100
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.phone is string && d.phone.size() > 0 && d.phone.size() <= 20
+        && optStr(d, 'email', 200)
+        && d.checkedIn is bool && d.checkedIn == false;
+    }
+    match /eventRegistrations/{id} {
+      allow create: if validEventReg();
+      allow read, update, delete: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // ร้านค้าร่วม campaign — เชื่อม campaignId <-> partnerId (partnerOrganizations ที่ partnerType == 'store')
+    match /campaignPartners/{id} {
+      allow read, write: if isStaffRole(['admin', 'staff', 'field']);
+    }
+
+    // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

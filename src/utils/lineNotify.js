@@ -1,0 +1,113 @@
+import { VOLUNTEER_ENDPOINT, GIVE_SHEET_TOKEN, fetchWithTimeout } from './endpoints.js'
+
+// แจ้งเตือนสถานะคำสั่งซื้อผ่าน LINE — ทำงานเฉพาะออเดอร์ที่ลูกค้าลงทะเบียนด้วย LINE
+// (มี customer.lineUserId) ส่งผ่าน Apps Script (ถือ channel access token ฝั่ง server)
+// เป็น best-effort: ล้มเหลวเงียบๆ ไม่กระทบการอัปเดตสถานะออเดอร์
+
+// เนื้อความทั้งหมดย้ายไปอยู่ฝั่ง Apps Script แล้ว (ดู docs/volunteer-apps-script/Code.gs)
+// เพราะ GIVE_SHEET_TOKEN เป็น token ที่อ่านได้จาก bundle — ถ้าฝั่งนี้ยังส่งผู้รับ+ข้อความไปเอง
+// ใครก็สั่ง LINE OA ของมูลนิธิให้ส่งข้อความอะไรก็ได้ไปหาผู้ติดตามคนไหนก็ได้ ที่นี่จึงส่งแค่
+// orderId + ชื่อ event ให้ Apps Script ไปอ่านผู้รับจากตัวออเดอร์และประกอบข้อความเองทั้งหมด
+// ยิงคำสั่งไปที่ Apps Script — ใช้ร่วมกันทุกชนิดการแจ้งเตือน
+//
+// กลืน error ไม่ให้กระทบ flow ของลูกค้า (แจ้งเตือนล้มไม่ควรทำให้สั่งซื้อไม่ได้) แต่ "บอกใน console" ด้วย
+// เดิมเงียบสนิท (.catch(() => {})) จึงไม่มีใครรู้เลยว่าอีเมลไม่เคยถูกส่ง ถ้า Apps Script ยังไม่ได้ deploy
+// หรือ deploy ผิดเวอร์ชัน — Apps Script ตอบ 200 พร้อมหน้า HTML ได้ทั้งที่ทำงานไม่สำเร็จ
+// จึงเช็คด้วยว่าที่ได้กลับมาเป็น JSON จริง ไม่ใช่แค่ res.ok
+function postToScript(label, payload, ctx) {
+  return fetchWithTimeout(VOLUNTEER_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ token: GIVE_SHEET_TOKEN, ...payload }),
+  })
+    .then(async (res) => {
+      const body = await res.text().catch(() => '')
+      if (!res.ok || !body.trim().startsWith('{')) {
+        console.warn(`[${label}] ไม่สำเร็จ (HTTP ${res.status}) — ตรวจการ deploy ของ Apps Script`, ctx)
+      }
+    })
+    .catch((e) => console.warn(`[${label}] ล้มเหลว:`, e?.message || e, ctx))
+}
+
+const LINE_EVENTS = ['payment_confirmed', 'shipping', 'shipping_update', 'delivered']
+
+export function notifyLineOrderStatus(order, event, extra) {
+  // ยังเช็ค lineUserId ฝั่งนี้ไว้เพื่อไม่ยิง request ที่ยังไงก็ไม่ได้ส่ง (ฝั่ง server เช็คซ้ำอยู่แล้ว)
+  if (!order?.id || !order?.customer?.lineUserId || !LINE_EVENTS.includes(event)) return
+  postToScript('notifyLineOrderStatus', {
+    type: 'lineNotify',
+    orderId: order.id,
+    event,
+    trackingNumber: extra?.trackingNumber || '',
+    text: extra?.text || '',
+  }, { orderId: order.id, event })
+}
+
+export function notifyAdmin(subject, message) {
+  postToScript('notifyAdmin', { type: 'adminNotify', subject, message }, { subject })
+}
+
+/**
+ * แจ้งออเดอร์ใหม่ — ส่งแค่ orderId ให้ Apps Script ไปอ่านออเดอร์จริงจาก Firestore เอง
+ * แล้วบันทึกลงชีต "Orders" + ส่งอีเมลสรุปให้แอดมิน
+ *
+ * ไม่ส่งยอดเงิน/รายการสินค้ามาจากฝั่งนี้ ด้วยเหตุผลเดียวกับ notifyLineOrderStatus:
+ * GIVE_SHEET_TOKEN อ่านได้จาก bundle ⇒ ถ้ารับตัวเลขจากผู้เรียก ใครก็ปลอมออเดอร์ลงชีต
+ * และส่งอีเมลหลอกแอดมินได้
+ */
+export function notifyAdminOrderCreated(orderId) {
+  if (!orderId) return
+  postToScript('notifyAdminOrderCreated', { type: 'orderCreated', orderId }, { orderId })
+}
+
+/**
+ * แจ้งเลขพัสดุถึงลูกค้าทางอีเมล เมื่อร้านกดจัดส่งแล้ว
+ * ส่งแค่ orderId — Apps Script อ่านเลขพัสดุ/ขนส่ง/อีเมลจากออเดอร์จริงใน Firestore เอง
+ * (ถ้ายังไม่มีเลขพัสดุ หรือลูกค้าไม่ได้กรอกอีเมล ฝั่งนั้นจะข้ามให้เอง)
+ */
+export function notifyCustomerShipped(orderId) {
+  if (!orderId) return
+  postToScript('notifyCustomerShipped', { type: 'orderShipped', orderId }, { orderId })
+}
+
+// เวอร์ชันเดิม (ส่งข้อความสำเร็จรูป) — เก็บไว้เผื่อ Apps Script ยังไม่รองรับ orderCreated
+export function notifyAdminNewOrder(orderCode, total, customer, items) {
+  const itemLines = (items || []).map((i) => `- ${i.name}${i.colors ? ` (${i.colors}${i.sizes ? '/' + i.sizes : ''})` : i.sizes ? ` (${i.sizes})` : ''} x${i.qty}`).join('\n')
+  notifyAdmin(
+    `🛒 ออเดอร์ใหม่ ${orderCode}`,
+    `🛒 มีคำสั่งซื้อใหม่ ${orderCode}\nลูกค้า: ${customer.fullName} (${customer.phone})\nยอดรวม: ฿${Number(total).toLocaleString('th-TH')}\n${itemLines}`
+  )
+}
+
+export function notifyAdminPaymentDeclared(order) {
+  notifyAdmin(
+    `💰 แจ้งชำระเงิน ${order.orderCode}`,
+    `💰 ลูกค้าแจ้งชำระเงินแล้ว: ${order.orderCode}\nยอด: ฿${Number(order.total).toLocaleString('th-TH')}\nกรุณาตรวจสลิปและกดยืนยันในหน้าแอดมิน`
+  )
+}
+
+// แจ้งเตือนสต็อกใกล้หมด/หมด — ยิงตอนตัดสต็อกแล้ว "ข้าม" เกณฑ์ครั้งแรก (ดู createOrder ใน orders.js)
+// กันสแปม: แจ้งเฉพาะตอนที่ stock เพิ่งลดลงมาต่ำกว่าเกณฑ์ ไม่ใช่ทุกครั้งที่ยังต่ำอยู่
+export function notifyAdminLowStock(alerts) {
+  if (!alerts || alerts.length === 0) return
+  const lines = alerts.map((a) => `- ${a.name}${a.detail ? ` (${a.detail})` : ''}: เหลือ ${a.remaining} ชิ้น`).join('\n')
+  notifyAdmin(
+    `⚠️ สต็อกใกล้หมด (${alerts.length} รายการ)`,
+    `⚠️ สินค้าต่อไปนี้สต็อกใกล้หมด/หมดแล้ว กรุณารับเข้าคลังเพิ่ม:\n${lines}`
+  )
+}
+
+// แจ้งเตือนแอดมินมีข้อความแชทใหม่จากผู้เยี่ยมชม — กันสแปม: ต่อ 1 แชท แจ้งได้ไม่เกิน 1 ครั้งทุก 10 นาที
+// (ผู้เยี่ยมชมพิมพ์หลายข้อความติดกันไม่ควรยิง LINE รัวๆ) เก็บ throttle ไว้ในหน่วยความจำฝั่ง browser พอ
+const CHAT_NOTIFY_COOLDOWN_MS = 10 * 60 * 1000
+const lastChatNotifyAt = new Map()
+export function notifyAdminNewChatMessage(chatId, text) {
+  const now = Date.now()
+  const last = lastChatNotifyAt.get(chatId) || 0
+  if (now - last < CHAT_NOTIFY_COOLDOWN_MS) return
+  lastChatNotifyAt.set(chatId, now)
+  notifyAdmin(
+    '💬 ข้อความแชทใหม่',
+    `💬 มีข้อความใหม่จากผู้เยี่ยมชมเว็บไซต์:\n"${text}"\n\nตอบกลับได้ที่หน้าแอดมิน: https://ummatee-app.web.app/admin/chat`
+  )
+}

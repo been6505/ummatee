@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { Chart, ChartTypeSwitch, PALETTE } from '../components/AdminCharts.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCaretUp, faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // แดชบอร์ดเงินบริจาค (/admin/donations) — บันทึกยอดบริจาคแยกตาม 8 บัญชี ibank ลง Firestore (collection: donations)
 // มีกราฟหลายแบบ ค้นหา/กรอง/เรียงได้ และเพิ่ม/ลบรายการได้
@@ -19,7 +23,7 @@ const monthLabel = (ym) => {
 }
 
 export default function AdminDonations() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
 
   const [records, setRecords] = useState([])
   const [recLoading, setRecLoading] = useState(true)
@@ -45,13 +49,14 @@ export default function AdminDonations() {
   const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
+    if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (donations อ่านได้เฉพาะแอดมิน) — กัน permission-denied และตารางว่างหลังล็อกอินบนหน้า
     const qy = query(collection(db, 'donations'), orderBy('date', 'desc'))
     const unsub = onSnapshot(qy, (snap) => {
       setRecords(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
       setRecLoading(false)
     }, () => setRecLoading(false))
     return unsub
-  }, [])
+  }, [user])
 
   const accName = (acc) => ACCOUNTS.find((a) => a.acc === acc)?.name || acc
 
@@ -79,6 +84,12 @@ export default function AdminDonations() {
   const total = filtered.reduce((s, r) => s + (r.amount || 0), 0)
   const thisMonth = todayStr().slice(0, 7)
   const monthTotal = records.filter((r) => (r.date || '').startsWith(thisMonth)).reduce((s, r) => s + (r.amount || 0), 0)
+
+  // นับจาก records (ทั้งหมด) ไม่ใช่ filtered — ตัวกรองช่วงวันที่คัดรายการพวกนี้ทิ้งไปแล้ว
+  // ถ้านับจาก filtered คำเตือนจะหายไปพอดีตอนที่ผู้ใช้กรองวันที่ ซึ่งเป็นตอนที่ต้องเตือนที่สุด
+  const noDateRecords = records.filter((r) => !r.date)
+  const noDateCount = noDateRecords.length
+  const noDateTotal = noDateRecords.reduce((s, r) => s + (r.amount || 0), 0)
   const avg = filtered.length ? total / filtered.length : 0
 
   // ยอดรวมแยกตามบัญชี (จากรายการที่กรองช่วงวันที่/ค้นหาแล้ว)
@@ -98,6 +109,11 @@ export default function AdminDonations() {
 
   const add = async () => {
     if (!fAmount || Number(fAmount) <= 0) { setStatus('กรุณากรอกจำนวนเงิน'); return }
+    // ต้องมีวันที่เสมอ — ช่อง <input type="date"> ลบให้ว่างได้ และเดิมไม่มีอะไรกันไว้
+    // รายการที่ date เป็นค่าว่างจะถูกบันทึกจริง แต่หายไปจากทุกยอดรวม:
+    // ยอดเดือนนี้ (startsWith), กราฟรายเดือน (ข้าม ym ว่าง) และหลุดทั้งแถวทันทีที่กรองช่วงวันที่
+    // = เงินที่อยู่ในฐานข้อมูลแต่ไม่โผล่ในตัวเลขไหนเลย
+    if (!fDate) { setStatus('กรุณาเลือกวันที่'); return }
     setStatus('กำลังบันทึก...')
     try {
       await addDoc(collection(db, 'donations'), {
@@ -125,9 +141,9 @@ export default function AdminDonations() {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(key); setSortDir('desc') }
   }
-  const arrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '')
+  const arrow = (key) => sortKey === key ? <FontAwesomeIcon icon={sortDir === 'asc' ? faCaretUp : faCaretDown} style={{ marginLeft: 4 }} /> : null
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -137,6 +153,15 @@ export default function AdminDonations() {
             <p>สรุปยอดบริจาคแยกตาม 8 บัญชี ibank ของมูลนิธิ</p>
           </div>
         </div>
+
+        {/* รายการที่ไม่มีวันที่หลุดจากทุกยอดรวมและหายไปเมื่อกรองช่วงวันที่ ต้องบอกให้รู้ว่ามีอยู่
+            ไม่งั้นเงินก้อนนี้จะไม่ปรากฏในตัวเลขไหนเลย และไม่มีใครรู้ว่ามันหายไป */}
+        {noDateCount > 0 && (
+          <div className="admin-card mywork-note mywork-note-error">
+            มี {noDateCount} รายการที่ยังไม่ระบุวันที่ รวม {THB(noDateTotal)} — ยอดนี้ยังไม่ถูกนับในสถิติด้านล่าง
+            และจะไม่แสดงเมื่อกรองตามช่วงวันที่ กรุณาแก้วันที่ให้ครบ
+          </div>
+        )}
 
         <div className="admin-stats">
           <div className="admin-stat"><div className="v">{THB(total)}</div><div className="l">ยอดรวม (ตามตัวกรอง)</div></div>
@@ -173,7 +198,7 @@ export default function AdminDonations() {
           </div>
         </div>
 
-        {recLoading ? <p>กำลังโหลดข้อมูล...</p> : (
+        {recLoading ? <ListSkeleton /> : (
           <>
             <div className="admin-grid">
               <div className="admin-card admin-card-center">
@@ -256,5 +281,5 @@ export default function AdminDonations() {
         )}
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

@@ -4,3 +4,9 @@ dist
 *.log
 .DS_Store
 ._*
+*.tmp
+
+# ไฟล์ env ของเครื่องตัวเอง (VITE_FCM_VAPID_KEY ฯลฯ) — ห้ามขึ้น git
+.env
+.env.local
+.env.*.local

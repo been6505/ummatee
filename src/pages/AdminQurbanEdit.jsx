@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { useQurbanData, saveQurbanData, DEFAULT_QURBAN } from '../data/qurbanData.js'
 
 // หน้าแก้ไขยอดกุรบาน 2026 (/admin/missions/qurban2026/edit) — แก้ไขแล้วบันทึกลง Firestore (config/qurban2026)
 // หน้า AdminQurbanDashboard และหน้า public /missions/qurban2026 จะอ่านค่านี้ไปแสดงอัตโนมัติ
 
 export default function AdminQurbanEdit() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { data, loading: dataLoading } = useQurbanData()
   const [form, setForm] = useState(DEFAULT_QURBAN)
   const [status, setStatus] = useState('')
@@ -57,7 +58,7 @@ export default function AdminQurbanEdit() {
     }
   }
 
-  return (
+  return (<VolunteerGuard>
     <main className="admin-dash admin-qurban">
       <AdminNav />
       <div className="admin-wrap">
@@ -135,5 +136,5 @@ export default function AdminQurbanEdit() {
         </div>
       </div>
     </main>
-  )
+  </VolunteerGuard>)
 }

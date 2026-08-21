@@ -1,0 +1,351 @@
+/* ===== มือถือ: บังคับ form control ทุกชนิด = 16px =====
+   กัน iOS Safari ซูมหน้าจออัตโนมัติตอนแตะช่องกรอก (zoom-on-focus)
+   จำกัดที่ ≤640px จึงไม่กระทบ desktop
+
+   ⚠️ ทำไมต้อง !important — ของเดิมเขียนเป็น `input, select, textarea` เปล่า ๆ แล้วหวังพึ่งลำดับไฟล์
+   แต่ลำดับช่วยได้เฉพาะตอน specificity "เท่ากัน" เท่านั้น selector คลาสเดียวอย่าง .shop-search (0,1,0)
+   ชนะ element selector (0,0,1) เสมอ ไม่ว่าจะประกาศทีหลังแค่ไหน
+   ช่องค้นหาในหน้า um-shop จึงยังเป็น 15.2px และ iPhone ซูมทุกครั้งที่แตะ โดยที่กฎนี้ "มีอยู่" แล้ว
+   วิธีเดิมคือไล่เติมชื่อคลาสทีละอัน ซึ่งพลาดแน่นอนเมื่อมีช่องกรอกใหม่ — อันนี้ครอบทุกอันในทีเดียว
+   นี่เป็นการกันพฤติกรรมของแพลตฟอร์ม ไม่ใช่การตกแต่ง จึงควรชนะทุกกฎจริง ๆ */
+@media (max-width:640px){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  select,
+  textarea{
+    font-size:16px !important;
+  }
+}
+
+/* Floating Donate Popup (ปุ่มลอยเปิดเองย้ายไปรวมที่ FloatingActionHub.jsx แล้ว — เหลือแค่ป็อปอัพ) */
+.fd-overlay{position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.5);animation:fd-fade-in .2s}
+@keyframes fd-fade-in{from{opacity:0}to{opacity:1}}
+.fd-popup{position:fixed;bottom:24px;left:24px;z-index:960;background:#fff;border-radius:16px;padding:24px;width:340px;max-width:calc(100vw - 32px);max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.3);animation:fd-slide-up .25s ease-out}
+@keyframes fd-slide-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fd-popup h3{margin:0 0 4px;font-size:1.2rem;color:var(--green-deep)}
+.fd-popup p{margin:0 0 16px;font-size:.85rem;color:#888}
+.fd-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;line-height:1}
+.fd-list{display:flex;flex-direction:column;gap:8px}
+.fd-acc{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e8e8e8;border-radius:10px;background:#fafafa;cursor:pointer;text-align:left;transition:border-color .15s;width:100%}
+.fd-acc:hover{border-color:var(--green-mid);background:#f0faf4}
+.fd-acc-name{flex:1;font-size:.85rem;font-weight:600;color:#333}
+.fd-acc-num{font-family:monospace;font-size:.9rem;font-weight:700;color:var(--green-deep);letter-spacing:.5px}
+.fd-acc-copy{font-size:.75rem;color:var(--green-mid);font-weight:600;white-space:nowrap}
+.fd-more{display:block;text-align:center;margin-top:16px;color:var(--green-mid);font-weight:600;font-size:.9rem;text-decoration:none}
+.fd-more:hover{text-decoration:underline}
+@media (max-width:400px){.fd-popup{right:8px;left:8px;width:auto;bottom:8px}}
+
+/* หน้าตะกร้าสินค้า (/um-shop/cart) */
+.cart-layout{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}
+.cart-items{display:flex;flex-direction:column;gap:14px}
+.cart-row{display:grid;grid-template-columns:104px 1fr auto auto auto;gap:14px;align-items:center;background:#fff;border-radius:14px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.05)}
+.cart-row-img{width:104px;height:104px;border-radius:12px;overflow:hidden;background:#f4f6f4;flex-shrink:0}
+.cart-row-img img{width:100%;height:100%;object-fit:cover;display:block}
+.cart-row-name{font-weight:700;color:var(--green-deep);font-size:.95rem}
+.cart-row-price{color:var(--ink-soft);font-size:.85rem;margin-top:2px}
+.cart-row-subtotal{font-weight:800;color:var(--gold);min-width:80px;text-align:right}
+.cart-row-remove{border:none;background:none;color:#d84315;cursor:pointer;font-size:1rem;padding:8px}
+.cart-summary{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.05);position:sticky;top:90px}
+.cart-summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:.95rem;border-bottom:1px solid #f0f0f0}
+.cart-summary-row:last-child{border-bottom:none}
+.cart-summary-total{font-weight:800;font-size:1.15rem;color:var(--green-deep)}
+
+/* ── ปุ่มลงทะเบียนหน้า checkout (กรอกเอง / LINE / Google) ── */
+.checkout-register-options{display:flex;flex-direction:column;gap:10px;max-width:360px}
+.checkout-register-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 18px;border-radius:12px;border:1.5px solid #e5e7eb;background:#fff;font-size:.95rem;font-weight:700;color:var(--green-deep);cursor:pointer;font-family:inherit;transition:all .15s}
+.checkout-register-btn:hover{border-color:var(--green-mid);background:#f5fbf7}
+.checkout-register-btn:disabled{opacity:.6;cursor:not-allowed}
+.checkout-register-line{background:#06c755;border-color:#06c755;color:#fff}
+.checkout-register-line:hover{background:#05b34c;border-color:#05b34c;color:#fff}
+.checkout-register-google{border-color:#dadce0;color:#3c4043}
+.checkout-register-google:hover{border-color:#4285f4;background:#f8faff;color:#3c4043}
+
+/* ปุ่มแอด LINE OA ในหน้าติดตามคำสั่งซื้อ — ชวนลูกค้าเป็นเพื่อนกับ OA เพื่อรับแจ้งเตือนสถานะ */
+.order-line-btn{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:11px 20px;border-radius:99px;background:#06c755;color:#fff;font-weight:700;font-size:.92rem;text-decoration:none;transition:background .15s}
+.order-line-btn:hover{background:#05b34c}
+
+/* รายการสินค้าแบบ Shopee (หน้าสรุปคำสั่งซื้อ + ติดตามออเดอร์) — รูปซ้าย ชื่อ/ราคากลาง จำนวน+รวมขวา ไม่ล้นจอมือถือ */
+.order-item-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.order-item-row:last-child{border-bottom:none}
+.order-item-img{width:72px;height:72px;border-radius:8px;object-fit:cover;background:#f4f6f4;flex-shrink:0}
+.order-item-img-ph{display:flex;align-items:center;justify-content:center;color:#ccc;font-size:1.4rem}
+.order-item-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.order-item-name{font-weight:600;color:var(--ink);line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.order-item-unit{font-size:.88rem;color:var(--ink-soft)}
+.order-item-variant{font-size:.8rem;color:var(--ink-soft);background:#f4f6f4;border-radius:6px;padding:2px 8px;align-self:flex-start}
+
+/* ชิปเลือกสี/ขนาดในหน้ารายละเอียดสินค้า */
+.variant-chip-wrap{display:inline-flex;flex-wrap:wrap;gap:8px;margin-left:8px;vertical-align:middle}
+.variant-chip{padding:7px 14px;border-radius:99px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--ink);font-family:inherit;transition:all .15s}
+.variant-chip:hover{border-color:var(--green-mid)}
+.variant-chip.selected{background:var(--green-mid);border-color:var(--green-mid);color:#fff}
+.variant-chip.disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.variant-chip.disabled:hover{border-color:#e0e0e0}
+
+/* หน้า "คำสั่งซื้อของฉัน" — การ์ดออเดอร์กดเข้าไปดูรายละเอียดได้ */
+.my-order-row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,.05);text-decoration:none;color:inherit;transition:transform .12s,box-shadow .12s}
+.my-order-row:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.09)}
+.my-order-thumb{width:64px;height:64px;border-radius:10px;overflow:hidden;background:#f4f6f4;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:1.3rem}
+.my-order-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.my-order-mid{flex:1;min-width:0}
+.my-order-code{font-family:monospace;font-weight:700;color:var(--green-deep)}
+.my-order-items{font-size:.85rem;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.my-order-total{font-weight:800;color:var(--gold);margin-top:2px}
+.my-order-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.my-order-status{font-size:.78rem;font-weight:700;padding:4px 10px;border-radius:99px;background:#f4f6f4;color:var(--ink-soft)}
+.my-order-status.st-pending_payment{background:#fffbeb;color:#b45309}
+.my-order-status.st-preparing{background:#eff6ff;color:#1d4ed8}
+.my-order-status.st-shipped{background:var(--green-mid);color:#fff}
+/* ออเดอร์เก่าที่ยังเป็น shipping/delivered — ให้หน้าตาเหมือน shipped */
+.my-order-status.st-shipping{background:var(--green-mid);color:#fff}
+.my-order-status.st-delivered{background:var(--green-mid);color:#fff}
+.shop-myorders-btn{padding:10px 16px;border-radius:10px;border:1px solid #ddd;background:#fff;font-size:.9rem;font-weight:600;font-family:inherit;cursor:pointer;color:var(--green-deep);transition:all .15s}
+.shop-myorders-btn:hover{border-color:var(--green-mid);background:#f5fbf7}
+.order-item-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;flex-shrink:0}
+.order-item-qty{font-size:.88rem;color:var(--ink-soft)}
+.order-item-total{font-weight:800;color:var(--green-deep)}
+@media (max-width:800px){
+  .cart-layout{grid-template-columns:1fr}
+  .cart-row{grid-template-columns:84px 1fr;grid-template-areas:"img info" "qty subtotal" "remove remove"}
+  .cart-row-img{grid-area:img;width:84px;height:84px}
+  .cart-row .shop-qty-stepper button{width:42px;height:42px;font-size:.95rem}
+  .cart-row-info{grid-area:info}
+  .shop-qty-stepper{grid-area:qty}
+  .cart-row-subtotal{grid-area:subtotal}
+  .cart-row-remove{grid-area:remove;justify-self:end}
+}
+
+/* Stepper แสดงสถานะคำสั่งซื้อ 5 ขั้น (/um-shop/order/:id) */
+.order-stepper{display:flex;justify-content:space-between;margin-bottom:28px;overflow-x:auto;padding-bottom:4px}
+.order-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:80px;position:relative}
+.order-step:not(:last-child)::after{content:'';position:absolute;top:16px;left:calc(50% + 20px);right:calc(-50% + 20px);height:2px;background:#e5e7eb}
+.order-step.done:not(:last-child)::after{background:var(--green-mid)}
+.order-step-dot{width:32px;height:32px;border-radius:50%;background:#e5e7eb;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;z-index:1}
+.order-step.done .order-step-dot{background:var(--green-mid);color:#fff}
+.order-step.active .order-step-dot{background:var(--green-deep);color:#fff;box-shadow:0 0 0 4px rgba(27,94,54,.15)}
+.order-step-label{font-size:.72rem;text-align:center;color:var(--ink-soft);font-weight:600}
+.order-step.done .order-step-label,.order-step.active .order-step-label{color:var(--green-deep)}
+
+/* Volunteer Card List */
+.vol-card-list{display:flex;flex-direction:column;gap:12px}
+.vol-card{border:1px solid #e8e8e8;border-radius:12px;overflow:hidden;background:#fff}
+.vol-card-row1{display:flex;align-items:center;gap:14px;padding:14px 16px;flex-wrap:wrap}
+.vol-card-num{width:28px;height:28px;border-radius:50%;background:var(--green-deep);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0}
+.vol-card-main{min-width:120px;flex:1}
+.vol-card-name{font-weight:700;font-size:.95rem;color:#222;word-break:break-word}
+.vol-card-en{display:block;font-size:.78rem;opacity:.5;font-weight:400}
+.vol-card-ref{font-family:monospace;font-size:.78rem;color:var(--green-mid);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.vol-sync-badge{font-family:inherit;display:inline-flex;align-items:center;gap:5px;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:99px;cursor:pointer}
+.vol-sync-badge:hover{background:#fee2e2}
+.vol-sync-badge:disabled{opacity:.6;cursor:default}
+.vol-card-info{display:flex;flex-direction:column;gap:2px;font-size:.82rem;color:#555;min-width:0;word-break:break-word}
+.vol-card-tags{display:flex;flex-wrap:wrap;gap:6px;max-width:100%}
+.vol-tag{font-size:.75rem;padding:4px 10px;border-radius:20px;font-weight:600;white-space:normal;word-break:break-word;max-width:100%}
+.vol-tag-skill{background:#e8f5e9;color:#2E7D52}
+.vol-tag-mission{background:#fff3e0;color:#e65100}
+.vol-tag-project{background:#e3f2fd;color:#1565c0}
+.vol-tag-date{background:#fce4ec;color:#c62828}
+.vol-card-meta{font-size:.75rem;color:#999;white-space:nowrap;flex-shrink:0}
+.vol-card-row2{padding:12px 16px;background:#fafafa;border-top:1px solid #f0f0f0;font-size:.82rem;color:#555;line-height:1.6;display:flex;flex-direction:column;gap:8px;overflow:hidden;word-break:break-word}
+.vol-card-row2 b{color:#333;font-weight:600}
+@media (max-width:760px){
+  .vol-card-row1{flex-direction:column;align-items:flex-start;gap:8px}
+  .vol-card-info{flex-direction:row;gap:12px;flex-wrap:wrap}
+  .vol-card-main{min-width:0;width:100%}
+}
+@media (max-width:480px){
+  .vol-card-row1{padding:12px}
+  .vol-card-row2{padding:10px 12px}
+  .vol-tag{font-size:.7rem;padding:3px 8px}
+  .vol-card-info{font-size:.78rem}
+}
+
+/* Iftar Live Embed */
+.iftar-live{display:flex;justify-content:center;padding:24px 16px}
+.iftar-live-card{max-width:800px;width:100%;text-align:center}
+.iftar-live-card h2{margin:0 0 16px;font-size:clamp(1.2rem,2vw,1.6rem);color:var(--green-deep)}
+.iftar-live-card p{color:var(--ink-soft);margin:12px 0 0;font-size:.92rem}
+.iftar-live-embed{position:relative;width:100%;padding-bottom:56.25%;border-radius:12px;overflow:hidden;background:#000}
+.iftar-live-embed iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
+/* Giver choose cards */
+.giver-choose{max-width:700px;margin:0 auto;text-align:center}
+.giver-choose-title{color:var(--ink);font-size:1.4rem;font-weight:800;margin:0 0 24px}
+.giver-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.giver-option{background:#fff;border:2px solid #e5e7eb;border-radius:20px;padding:32px 24px;color:var(--ink);cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.07)}
+.giver-option:hover{border-color:#7c3aed;box-shadow:0 6px 24px rgba(124,58,237,.13);transform:translateY(-4px)}
+.giver-option-icon{font-size:2.8rem;margin-bottom:4px}
+.giver-option h3{font-size:1.1rem;font-weight:800;margin:0}
+.giver-option p{font-size:.85rem;color:var(--ink-soft);margin:0;line-height:1.5}
+.giver-option-badge{display:inline-block;background:#7c3aed;color:#fff;font-size:.72rem;font-weight:700;padding:4px 14px;border-radius:99px;margin-top:4px}
+.giver-back{border:none;background:transparent;color:var(--ink-soft);font-size:.88rem;cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.giver-back:hover{color:var(--ink)}
+@media (max-width:480px){.giver-cards{grid-template-columns:1fr}}
+.g2-qty-row{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0;margin-top:0}
+.g2-qty-btn{width:32px;height:32px;border-radius:50%;border:2px solid rgba(0,0,0,.15);background:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:#333}
+.g2-qty-btn:hover{border-color:#7c3aed;color:#7c3aed}
+.g2-qty-num{font-size:1.3rem;font-weight:800;min-width:28px;text-align:center;color:#1D1D1F}
+.g2-type-card.sel .g2-qty-btn{border-color:var(--tc,#7c3aed);color:var(--tc,#7c3aed)}
+.g2-type-card.sel .g2-qty-num{color:var(--tc,#7c3aed)}
+@media (max-width:400px){
+  .g2-type-card{flex-wrap:wrap;gap:10px;padding:14px 16px}
+  .g2-type-emoji{font-size:1.6rem}
+  .g2-qty-row{margin-left:0;width:100%;justify-content:center;margin-top:6px}
+  .g2-type-check{top:8px;right:10px;width:18px;height:18px;font-size:.65rem}
+}
+/* Give2Cook add items */
+.g2-add-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.g2-add-btn{padding:10px 18px;background:#d97706;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.g2-add-btn:hover{opacity:.85}
+.g2-items-list{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.g2-item-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fef9ee;border:1px solid #fde68a;border-radius:12px}
+.g2-item-name{font-weight:700;flex:1;color:#1D1D1F}
+.g2-item-qty{font-weight:800;color:#d97706;font-size:.95rem}
+.g2-item-remove{border:none;background:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:4px}
+.g2-item-remove:hover{opacity:.7}
+@media (max-width:480px){.g2-add-row{flex-direction:column}.g2-add-row select,.g2-add-row .g2-add-btn{width:100%}}
+/* Give2Cook green-orange soft theme */
+.g2-cook .g2-hero{background:linear-gradient(135deg,#065f46 0%,#047857 50%,#059669 100%)}
+.g2-cook .g2-hero-blob.blob-1{background:radial-gradient(circle,rgba(251,191,36,.25) 0%,transparent 70%)}
+.g2-cook .g2-hero-blob.blob-2{background:radial-gradient(circle,rgba(16,185,129,.2) 0%,transparent 70%)}
+.g2-cook .g2-step-num{background:#d97706;color:#fff}
+.g2-cook .g2-step-line{background:rgba(255,255,255,.25)}
+.g2-cook .bh-purple{background:linear-gradient(135deg,#065f46,#047857)}
+.g2-cook .bh-indigo{background:linear-gradient(135deg,#92400e,#d97706)}
+.g2-cook .bh-violet{background:linear-gradient(135deg,#065f46,#059669)}
+.g2-cook .g2-band-num{background:#059669}
+.g2-cook .g2-req{color:#f59e0b}
+.g2-cook .g2-submit{background:linear-gradient(135deg,#059669,#047857)}
+.g2-cook .g2-submit:hover{box-shadow:0 8px 28px rgba(5,150,105,.3)}
+.g2-cook .g2-submit-btn{background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);box-shadow:0 6px 24px rgba(245,158,11,.3)}
+.g2-cook .g2-submit-btn:hover:not(:disabled){box-shadow:0 8px 28px rgba(217,119,6,.35)}
+.g2-cook .g2-add-btn{background:#059669}
+.g2-cook .g2-item-row{background:#ecfdf5;border-color:#a7f3d0}
+.g2-cook .g2-item-qty{color:#059669}
+
+/* ── Attend chips ── */
+.g2-attend-field{margin-top:24px;padding-top:20px;border-top:1px solid #e5e7eb}
+.g2-attend-chips{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap}
+.g2-attend-chip{flex:1;min-width:140px;padding:14px 20px;border:2px solid #e5e7eb;border-radius:14px;background:#fff;cursor:pointer;font-size:.95rem;font-weight:600;color:var(--ink-soft);transition:all .18s;font-family:inherit}
+.g2-attend-chip:hover{border-color:#7c3aed;color:#7c3aed}
+.g2-attend-chip.attend-yes{border-color:#059669;background:#ecfdf5;color:#059669}
+.g2-attend-chip.attend-no{border-color:#dc2626;background:#fef2f2;color:#dc2626}
+.g2-attend-addr-box{margin-top:16px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:14px;padding:18px 20px}
+.g2-attend-addr-title{font-weight:700;font-size:.9rem;color:#92400e;margin-bottom:6px}
+.g2-attend-addr-text{font-size:.88rem;color:#78350f;line-height:1.6}
+
+/* ──────────────────────────────────────────────
+   Quick Donation Page  (.qd-*)
+   ────────────────────────────────────────────── */
+.qd-stage{max-width:520px;margin:-44px auto 0;padding:0 20px 90px;position:relative;z-index:5}
+.qd-card{background:#fff;border-radius:20px;padding:24px 20px;margin-bottom:16px;box-shadow:0 8px 32px -12px rgba(27,94,54,.18);border:1px solid rgba(27,94,54,.08)}
+.qd-card-label{font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px}
+
+/* Project dropdown */
+.qd-project-dropdown{position:relative}
+.qd-project-trigger{width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid #e5e7eb;border-radius:14px;background:#faf8f2;cursor:pointer;font-family:inherit;font-size:1rem;font-weight:600;color:var(--black);transition:border-color .15s}
+.qd-project-trigger:hover{border-color:var(--green-mid)}
+.qd-proj-icon{font-size:1.2rem;width:28px;text-align:center}
+.qd-proj-name{flex:1;text-align:left}
+.qd-chevron{font-size:.75rem;color:var(--ink-soft);transition:transform .2s}
+.qd-chevron.open{transform:rotate(180deg)}
+.qd-project-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:16px;box-shadow:0 16px 48px -12px rgba(0,0,0,.18);z-index:50;overflow:hidden;max-height:360px;overflow-y:auto}
+.qd-project-item{width:100%;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left;transition:background .12s;border-bottom:1px solid #f3f4f6}
+.qd-project-item:last-child{border-bottom:none}
+.qd-project-item:hover{background:#f9fafb}
+.qd-project-item.active{background:rgba(27,94,54,.05)}
+.qd-proj-info{flex:1;min-width:0}
+.qd-proj-desc{font-size:.78rem;color:var(--ink-soft);line-height:1.4;margin-top:2px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qd-proj-check{margin-top:2px;flex-shrink:0}
+
+/* ibank account badge */
+.qd-account-badge{display:flex;align-items:center;gap:12px;margin-top:16px;padding:12px 16px;background:linear-gradient(135deg,rgba(27,94,54,.06),rgba(27,94,54,.02));border:1px solid rgba(27,94,54,.12);border-radius:14px}
+.qd-ibank-logo{width:36px;height:36px;object-fit:contain;border-radius:8px}
+.qd-account-name{font-size:.82rem;color:var(--ink-soft);font-weight:600}
+.qd-account-num{font-family:'Poppins',monospace;font-weight:800;font-size:1rem;color:var(--green-deep);letter-spacing:1px}
+
+/* Preset amount grid */
+.qd-preset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.qd-preset-btn{padding:12px 4px;border:1.5px solid #e5e7eb;border-radius:12px;background:#faf8f2;font-family:inherit;font-size:.95rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:all .15s}
+.qd-preset-btn:hover{border-color:var(--green-mid);color:var(--green-mid)}
+.qd-preset-btn.active{background:var(--green-deep);border-color:var(--green-deep);color:#fff;box-shadow:0 4px 14px rgba(27,94,54,.35)}
+
+/* Custom amount input */
+.qd-custom-row{display:flex;flex-direction:column;gap:6px}
+.qd-custom-label{font-size:.82rem;color:var(--ink-soft);font-weight:600}
+.qd-custom-input-wrap{position:relative}
+.qd-custom-input{width:100%;padding:12px 54px 12px 16px;border:1.5px solid #e5e7eb;border-radius:12px;font-family:inherit;font-size:1rem;font-weight:700;background:#fff;color:var(--black);outline:none;transition:border-color .15s;-moz-appearance:textfield}
+.qd-custom-input::-webkit-outer-spin-button,.qd-custom-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qd-custom-input:focus{border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(46,125,82,.12)}
+.qd-custom-unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:.88rem;font-weight:700;color:var(--ink-soft);pointer-events:none}
+.qd-amount-preview{margin-top:12px;padding:10px 16px;background:rgba(27,94,54,.06);border-radius:10px;font-size:.9rem;font-weight:600;color:var(--green-deep);text-align:center}
+.qd-amount-preview strong{font-size:1.05rem}
+
+/* Donate button */
+.qd-donate-btn{width:100%;padding:18px 24px;background:var(--mission-accent,var(--green-deep));color:#fff;border:none;border-radius:16px;font-family:inherit;font-size:1.1rem;font-weight:800;cursor:pointer;transition:opacity .15s,box-shadow .15s,transform .1s;box-shadow:0 8px 28px -6px color-mix(in srgb,var(--mission-accent,var(--green-deep)) 50%,transparent);letter-spacing:.02em}
+.qd-donate-btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px);box-shadow:0 12px 36px -6px color-mix(in srgb,var(--mission-accent,var(--green-deep)) 60%,transparent)}
+.qd-donate-btn:active:not(:disabled){transform:scale(.98)}
+.qd-donate-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.qd-trust-note{text-align:center;font-size:.8rem;color:var(--ink-soft);margin-top:14px;line-height:1.5}
+
+/* ── Bottom Sheet ── */
+.qd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;animation:qd-fade-in .18s ease}
+@keyframes qd-fade-in{from{opacity:0}to{opacity:1}}
+.qd-sheet{width:100%;max-width:520px;margin:0 auto;background:#fff;border-radius:28px 28px 0 0;padding:0 0 env(safe-area-inset-bottom,16px);animation:qd-slide-up .22s cubic-bezier(.34,1.2,.64,1)}
+@keyframes qd-slide-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.qd-sheet-handle{width:40px;height:4px;background:#e5e7eb;border-radius:2px;margin:12px auto 0}
+.qd-sheet-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px}
+.qd-sheet-title{font-size:1.1rem;font-weight:800;color:var(--black)}
+.qd-sheet-close{width:32px;height:32px;border-radius:50%;background:#f3f4f6;display:grid;place-items:center;color:var(--ink-soft);font-size:.9rem;cursor:pointer;border:none}
+.qd-sheet-close:hover{background:#e5e7eb}
+
+/* Transfer summary */
+.qd-transfer-summary{margin:0 20px;background:#f9fafb;border-radius:14px;padding:14px 16px;border:1px solid #e5e7eb}
+.qd-summary-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;gap:12px}
+.qd-summary-row+.qd-summary-row{border-top:1px solid #f3f4f6}
+.qd-summary-label{font-size:.82rem;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+.qd-summary-val{font-size:.88rem;font-weight:700;color:var(--black);text-align:right}
+.qd-summary-amount{font-size:1.15rem;font-weight:900;color:var(--green-deep)}
+.qd-summary-acc{font-family:'Poppins',monospace;font-weight:800;font-size:.95rem;color:var(--green-mid);letter-spacing:.5px}
+
+.qd-sheet-note{padding:10px 20px;font-size:.82rem;color:var(--ink-soft);text-align:center}
+
+/* Bank app grid */
+.qd-bank-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 20px 14px}
+.qd-bank-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:1.5px solid #e5e7eb;border-radius:14px;background:#faf8f2;cursor:pointer;font-family:inherit;transition:all .15s}
+.qd-bank-btn:hover{border-color:var(--green-mid);background:#fff;transform:translateY(-2px);box-shadow:0 6px 18px -6px rgba(27,94,54,.2)}
+.qd-bank-btn:active{transform:scale(.96)}
+.qd-bank-logo{font-size:1.8rem;line-height:1}
+.qd-bank-label{font-size:.7rem;font-weight:700;color:var(--black);text-align:center;line-height:1.2}
+
+/* Copy row */
+.qd-sheet-footer{padding:4px 20px 16px;border-top:1px solid #f3f4f6;margin-top:2px}
+.qd-copy-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;font-size:.84rem;color:var(--ink-soft);font-weight:600}
+.qd-copy-btn{padding:10px 18px;background:var(--green-deep);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.qd-copy-btn:hover{opacity:.85}
+.qd-copy-btn.copied{background:var(--gold)}
+
+@media (max-width:420px){
+  .qd-preset-grid{grid-template-columns:repeat(3,1fr)}
+  .qd-bank-grid{grid-template-columns:repeat(4,1fr);gap:8px}
+  .qd-bank-btn{padding:12px 6px}
+  .qd-bank-logo{font-size:1.5rem}
+  .qd-bank-label{font-size:.65rem}
+}
+
+/* หน้าร้าน Um Shop บนมือถือ — บังคับ 2 คอลัมน์แบบ Shopee แทนที่จะเหลือคอลัมน์เดียว (auto-fill ปกติแคบไป)
+   ในการ์ดให้เหลือแค่ชื่อ+ราคา ตัวหนาทั้งคู่ — ซ่อนหมวดหมู่/สี/ขนาด/สต็อก/คำอธิบายที่ทำให้การ์ดรก */
+@media (max-width:680px) {
+  .shop-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .shop-body{padding:10px}
+  .shop-name{font-size:.92rem;font-weight:800;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .shop-price{font-size:1.05rem;font-weight:800}
+  .shop-body .shop-cat,.shop-body .shop-desc,.shop-body .shop-meta-row,.shop-body .shop-stock{display:none}
+  .shop-share{width:30px;height:30px;font-size:.9rem;top:6px;right:6px}
+  .shop-badge-out,.shop-badge-discount{top:6px;left:6px;font-size:.66rem;padding:3px 8px}
+  .shop-badge-variants{bottom:6px;left:6px;font-size:.62rem;padding:3px 8px}
+}
+
+/* หน้ารายละเอียดสินค้าบนมือถือแคบ — ลดระยะห่างชิปสี/ขนาดให้กระชับ ไปพร้อมกับ shop-modal-info ที่ลด gap ไว้ใน shop.css */
+@media (max-width:480px){
+  .variant-chip-wrap{gap:6px;margin-left:6px}
+  .variant-chip{padding:5px 12px;font-size:.8rem}
+}

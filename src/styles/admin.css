@@ -1,0 +1,1374 @@
+/* ============ ADMIN DASHBOARD ============ */
+.admin-login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));padding:24px}
+.admin-login-box{background:#fff;border-radius:16px;padding:36px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.admin-login-box h2{margin-bottom:8px}
+.admin-login-box p{color:var(--ink-soft);margin-bottom:20px;font-size:.92rem}
+.admin-login-box input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:10px;font-size:1rem;margin-bottom:14px;box-sizing:border-box}
+.admin-login-box button{width:100%;padding:12px;border:none;border-radius:10px;background:var(--green-deep);color:#fff;font-weight:700;font-size:1rem;cursor:pointer}
+.admin-login-box button:hover{background:var(--green-mid)}
+.admin-login-role-btn{display:flex;align-items:center;gap:16px;width:100%;padding:18px 20px;border:2px solid #e0e0e0;border-radius:12px;background:#fff;cursor:pointer;text-align:left;transition:all .2s;color:#333}
+.admin-login-role-btn:hover{border-color:var(--green-mid);background:rgba(46,125,82,.05);color:var(--green-deep)}
+.admin-error{color:#e8194a;font-size:.86rem;margin-bottom:12px}
+
+.admin-dash{
+  min-height:100vh;
+  /* พื้นเรียบเทาอมเขียวอ่อน — เดิมเป็น gradient ไล่สีตามตำแหน่งดวงอาทิตย์ (useSunGradient)
+     ซึ่งทำให้การ์ดใบเดียวกันอยู่บนพื้นคนละสีระหว่างซ้าย-ขวาของจอ และเปลี่ยนไปเรื่อยๆ ตามเวลา
+     ⇒ ความคมชัดของตัวหนังสือไม่คงที่ และพื้นสีอิ่มตัวแย่งสายตาจากข้อมูลในหน้าเครื่องมือทำงาน
+     สีแบรนด์ยังอยู่ที่แถบเมนูซ้ายและปุ่ม พื้นหลังไม่ต้องช่วยอีก */
+  background:#f4f6f4;
+  font-family:inherit;
+}
+/* padding แยกตามจอ — เดิมประกาศ padding-left รวมกันไว้ที่นี่ (ไม่มี media query) แล้วมาอยู่หลังกฎเดสก์ท็อป
+   ใน cascade ทำให้ทับ padding-left:256px ของ sidebar เสมอไม่ว่าจอกว้างแค่ไหน (เนื้อหาไปซ้อนใต้ sidebar) */
+@media (max-width:768px) {
+  .admin-dash { padding: 72px 16px 32px; }
+}
+/* หน้าทำงานฝั่งแอดมินใช้ความกว้างที่มีทั้งหมด — เดิมคาดไว้ที่ 1200px แล้วจัดกลาง
+   ซึ่งบนจอ 1600px+ ทิ้งพื้นที่ว่างสองข้างไปหลายร้อย px ทั้งที่หน้าพวกนี้เป็นตาราง/กริดที่ยิ่งกว้างยิ่งเห็นข้อมูลได้มาก
+   (.admin-dash หัก padding ให้ sidebar ไว้แล้ว ตรงนี้จึงกินได้เต็มส่วนที่เหลือโดยไม่ชนกัน)
+   ไม่ใช่ 100vw เด็ดขาด — 100vw รวมความกว้างของ scrollbar ด้วย จะดันหน้าให้เลื่อนแนวนอนได้ */
+.admin-wrap{max-width:none;width:100%;margin:0}
+
+/* ── /admin/website: สองคอลัมน์ ──
+   ซ้าย = ตั้งค่าโครงเว็บ (เมนู / ประกาศ / ข้อความท้ายเว็บ) ฟอร์มแคบ อ่านเป็นรายการ
+   ขวา = CMS การ์ดหน้าแรก ที่แต่ละใบมีฟอร์ม 2–3 คอลัมน์ในตัว จึงกินความกว้างมากกว่า
+   ใช้ minmax(0,…) ทั้งคู่ ไม่ใช่ 1fr เปล่าๆ — ตารางเมนูและ preview รูปในนั้นดันคอลัมน์ให้กว้างเกินสัดส่วนได้ */
+/* การ์ดพับได้ — ตอนพับเหลือแค่แถบหัวข้อ padding จึงต้องมาจาก .aw-sec-head ไม่ใช่ .admin-card
+   (ถ้าปล่อย padding:20px ของการ์ดไว้ แถบที่พับแล้วจะสูงเกินจำเป็น และมีขอบตายรอบปุ่มที่กดไม่ติด)
+   ตัวเลือกต้องเจาะจงกว่า .admin-card ซึ่งตั้ง padding:20px ไว้ทีหลังในไฟล์นี้ ไม่งั้น padding:0 แพ้ */
+.admin-card.aw-sec{padding:0;overflow:hidden;margin-bottom:14px}
+.aw-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:16px 18px;background:none;border:none;font:inherit;text-align:left;cursor:pointer;color:inherit}
+.aw-sec-head:hover{background:#f7faf8}
+.aw-sec-title{font-size:1rem;font-weight:700;color:var(--green-deep,#166534);min-width:0}
+.aw-sec-caret{flex-shrink:0;font-size:.8rem;color:var(--ink-soft);transition:transform .18s}
+.aw-sec-open .aw-sec-caret{transform:rotate(180deg)}
+.aw-sec-open .aw-sec-head{border-bottom:1px solid rgba(46,125,82,.12)}
+.aw-sec-body{padding:18px}
+/* หัวข้อย่อยในแถบที่รวมสองชุดไว้ด้วยกัน — ต้องแยกสายตาให้ออกว่าปุ่ม "บันทึก" ตัวไหนคุมชุดไหน
+   ชุดที่สองมีเส้นคั่นด้านบน เพราะเนื้อหาชุดแรกจบด้วยแถวปุ่ม ถ้าไม่คั่นจะดูเหมือนปุ่มของชุดถัดไป */
+.aw-sub-title{font-size:.9rem;font-weight:700;color:var(--green-deep,#166534);margin-bottom:10px}
+.aw-sub-title-next{margin-top:28px;padding-top:22px;border-top:2px solid rgba(46,125,82,.14)}
+
+.aw-cols{display:grid;grid-template-columns:1fr;gap:0 24px;align-items:start}
+/* 1024–1399px: ยังไม่พอสำหรับสามคอลัมน์ — หักลบ sidebar 256px แล้วเหลือคอลัมน์ละ ~230px
+   ตารางเมนูกับฟอร์มการ์ดอึดอัดเกินไป จึงวางสองคอลัมน์บนแถวแรก แล้วให้การ์ดหน้าแรกกินเต็มความกว้างแถวล่าง */
+@media (min-width:1024px){
+  .aw-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .aw-col-wide{grid-column:1 / -1}
+}
+/* ≥1400px: กว้างพอให้เมนู / ประกาศ+ข้อความ / การ์ดหน้าแรก อยู่คนละคอลัมน์ครบสามอัน
+   คอลัมน์การ์ดหน้าแรกกว้างสุดเพราะฟอร์มต่อการ์ดเป็น 2–3 คอลัมน์ในตัวเอง */
+@media (min-width:1400px){
+  .aw-cols{grid-template-columns:minmax(0,.85fr) minmax(0,.85fr) minmax(0,1.3fr)}
+  /* เลื่อนเฉพาะคอลัมน์การ์ดหน้าแรก — อีกสองคอลัมน์สั้นกว่ามาก ปล่อยให้สูงตามเนื้อหา
+     อ่านครบในสายตาเดียวดีกว่าถูกตัดด้วยกรอบเลื่อนของตัวเอง
+     หน้านี้ไม่มีการ์ดหัวเรื่อง (.admin-head) ความสูงจึงหักแค่ padding บน/ล่างของ .admin-dash (32+32) */
+  .aw-col-wide{grid-column:auto;max-height:calc(100dvh - 72px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px}
+}
+/* หัวข้อหน้าเป็นการ์ดขาวเหมือนเนื้อหาส่วนอื่น — เดิมเป็นขาวโปร่ง 82% เพราะต้องกันตัวอักษร
+   อ่านไม่ออกตอนพื้นหลัง gradient เข้มช่วงกลางคืน พอพื้นเป็นสีเรียบอ่อนแล้วไม่ต้องโปร่งอีก
+   (ขาวโปร่งบนพื้นอ่อนจะออกมาเป็นแถบซีดๆ ดูเหมือนพาเนลที่ยังโหลดไม่เสร็จ) */
+.admin-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:24px;flex-wrap:wrap;background:#fff;border:1px solid rgba(46,125,82,.08);border-radius:14px;padding:14px 18px}
+/* clamp ให้หัวข้อยาวๆ (เช่น "คลังสินค้า Um Shop") อยู่บรรทัดเดียวบนมือถือ แทนที่จะตัดคำขึ้น 2 บรรทัด */
+.admin-head h1{font-size:clamp(1.15rem,4.4vw,1.6rem);margin-bottom:4px;color:var(--green-deep)}
+.admin-head p{color:var(--ink-soft)}
+.admin-logout{border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);padding:10px 18px;border-radius:10px;cursor:pointer;font-weight:600}
+.admin-logout:hover{background:rgba(46,125,82,.08)}
+
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));gap:14px;margin-bottom:24px}
+/* ชุดสถิติที่ต้องการให้อยู่แถวเดียวเสมอ (เช่นหน้าคลังสินค้าที่มี 3 ใบ) — auto-fit ปกติจะตัด
+   ขึ้นบรรทัดใหม่บนมือถือเพราะ min 160px ใส่ไม่ครบ กลายเป็น 2+1 ที่ดูไม่สมดุล */
+.admin-stats.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.admin-stats.cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:520px){
+  .admin-stats.cols-3,.admin-stats.cols-4{gap:8px}
+  .admin-stats.cols-3 .admin-stat,.admin-stats.cols-4 .admin-stat{padding:14px 4px}
+  .admin-stats.cols-3 .admin-stat .v,.admin-stats.cols-4 .admin-stat .v{font-size:1.5rem}
+  .admin-stats.cols-3 .admin-stat .l,.admin-stats.cols-4 .admin-stat .l{font-size:.72rem;line-height:1.35}
+  /* 4 ใบบนจอ 375px เหลือใบละ ~85px — ตัวเลขเล็กลงอีกนิดเพื่อไม่ให้ป้ายตัดคำแปลกๆ */
+  .admin-stats.cols-4 .admin-stat .v{font-size:1.3rem}
+  .admin-stats.cols-4 .admin-stat .l{font-size:.67rem}
+}
+.admin-stat{background:#fff;border-radius:14px;padding:20px;text-align:center;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
+.admin-stat .v{font-size:2rem;font-weight:800;color:var(--green-deep)}
+.admin-stat .l{color:var(--ink-soft);font-size:.86rem;margin-top:4px}
+
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:16px}
+/* กริดกราฟแบบ 3 คอลัมน์ (หน้า admin iftar) — ย่อเป็น 2 และ 1 คอลัมน์บนจอเล็ก */
+.admin-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.admin-grid-3 .admin-card{padding:12px}
+.admin-grid-3 button{display:none}
+@media (max-width:1000px){.admin-grid-3{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.admin-grid-3{grid-template-columns:1fr}}
+/* มือถือ: จัดหัวการ์ดกราฟ (ชื่อ + ปุ่มเลือกชนิด) และข้อความให้อยู่กึ่งกลาง */
+@media (max-width:640px){
+  .admin-grid-3 .admin-card-head{flex-direction:column;align-items:center;text-align:center;justify-content:center}
+  .admin-grid-3 .admin-card-head h4{text-align:center;width:100%}
+  .admin-grid-3 .admin-chart-switch{justify-content:center}
+  .admin-grid-3 .admin-legend{justify-content:center;text-align:center}
+  .admin-grid-3 .admin-empty{text-align:center;width:100%}
+}
+.admin-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18);border:1px solid rgba(46,125,82,.08)}
+.admin-card h4{margin-bottom:14px;font-size:1rem;color:var(--green-deep)}
+.admin-card-center{display:flex;flex-direction:column;align-items:center;text-align:center}
+
+/* บอร์ดวางแผน (/admin/board) — scroll-snap กันคอลัมน์โดนตัดครึ่งแบบไม่มีจังหวะเลื่อนที่ชัดเจนบนมือถือ
+   ความกว้างคอลัมน์ใช้ min() กันคอลัมน์แรกกว้างเกินจอมือถือ (280px คงที่เดิมทำให้คอลัมน์ 2 โผล่มาแค่เศษเสี้ยว) */
+.admin-board-row{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;align-items:flex-start}
+.admin-board-col{min-width:min(85vw,300px);flex:0 0 min(85vw,300px);scroll-snap-align:start;background:#fbfcfb}
+.admin-board-col h4{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.admin-board-cards{display:flex;flex-direction:column;gap:10px;min-height:40px}
+
+/* การ์ดงาน — ยกขึ้นเล็กน้อยตอน hover ให้รู้ว่าลากได้ ไม่ใช้เงาหนักเพราะมีหลายใบเรียงกัน */
+.admin-board-card{position:relative;border:1px solid #e5e7eb;border-radius:10px;padding:12px;background:#fff;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:box-shadow .15s,border-color .15s,transform .15s}
+.admin-board-card:hover{box-shadow:0 6px 16px -6px rgba(27,94,54,.25);border-color:rgba(46,125,82,.35);transform:translateY(-1px)}
+.admin-board-card:active{cursor:grabbing}
+.admin-board-card-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+.admin-board-card-title{flex:1;min-width:0;font-weight:700;font-size:.92rem;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+
+/* ปุ่มลบ: ไอคอนจางๆ มุมขวาบน เด่นขึ้นตอน hover — ไม่แย่งสายตาไปจากชื่อการ์ด */
+.admin-board-card-del{flex-shrink:0;border:none;background:none;padding:2px 4px;cursor:pointer;color:#c9ccd1;font-size:.8rem;line-height:1;border-radius:6px;transition:color .15s,background .15s,opacity .15s;opacity:0}
+.admin-board-card:hover .admin-board-card-del,.admin-board-card-del:focus-visible{opacity:1}
+.admin-board-card-del:hover{color:#c0392b;background:#fdecea}
+/* จอสัมผัสไม่มี hover — ต้องแสดงปุ่มลบตลอด ไม่งั้นกดลบไม่ได้เลย */
+@media (hover:none){.admin-board-card-del{opacity:.55}}
+
+/* ช่องข้อมูลในการ์ด (กำหนดส่ง/แคมเปญ) — ป้ายเล็กเหนือช่อง อ่านรู้เรื่องกว่า input ลอยๆ ไม่มีหัวข้อ */
+.admin-board-field{display:block;margin-bottom:8px}
+.admin-board-field:last-of-type{margin-bottom:0}
+.admin-board-field>span{display:block;font-size:.68rem;font-weight:700;letter-spacing:.02em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:3px}
+.admin-board-card-date,.admin-board-card-campaign{width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;font-size:.78rem;font-family:inherit;color:var(--ink);background:#fff;transition:border-color .15s,box-shadow .15s}
+.admin-board-card-date:focus,.admin-board-card-campaign:focus{outline:none;border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(46,125,82,.12)}
+/* select ต้องบังคับ appearance เอง ไม่งั้น Chrome บนวินโดวส์/แอนดรอยด์เรนเดอร์เป็นกล่องเทาสไตล์ระบบ
+   ที่ไม่เข้ากับ input ข้างๆ เลย (ตามที่เห็นในหน้าจอเดิม) */
+.admin-board-card-campaign{appearance:none;-webkit-appearance:none;padding-right:26px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center}
+
+/* แถวเพิ่มการ์ด — input ไม่มี width กำหนดไว้ browser ให้ intrinsic width ~20 ตัวอักษรและไม่ยอมหดในแถว flex
+   (ไม่มี min-width:0) ปุ่ม + เลยถูกดันล้นออกนอกการ์ดไปทับพื้นหลัง gradient ด้านนอก */
+.admin-board-add-card{margin-top:12px;display:flex;gap:8px;padding-top:12px;border-top:1px dashed #e5e7eb}
+/* คอลัมน์ที่ยังไม่มีการ์ด ไม่ต้องมีเส้นคั่น — ไม่งั้นจะเห็นเส้นประลอยอยู่เฉยๆ โดยไม่มีอะไรให้คั่น */
+.admin-board-cards:empty+.admin-board-add-card{border-top:none;padding-top:0}
+.admin-board-cards:empty{min-height:0}
+.admin-board-add-card input{flex:1;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid #e5e7eb;border-radius:9px;font-size:.85rem;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+.admin-board-add-card input:focus{outline:none;border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(46,125,82,.12)}
+.admin-board-add-card button{flex-shrink:0;width:40px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1.15rem;line-height:1;border-radius:9px}
+
+/* การ์ดผู้เข้าชมเว็บไซต์ (หน้า admin/dashboard) */
+.admin-visitors-card{display:flex;align-items:center;gap:20px;background:linear-gradient(135deg,var(--green-deep) 0%,var(--green-mid) 100%);border:none;color:#fff;box-shadow:0 12px 32px -12px rgba(27,94,54,.45)}
+.admin-visitors-icon{font-size:2.6rem;width:72px;height:72px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border-radius:18px;flex-shrink:0}
+.admin-visitors-num{font-size:2.6rem;font-weight:900;line-height:1.05;color:#fff}
+.admin-visitors-label{font-size:1rem;font-weight:700;color:rgba(255,255,255,.95);margin-top:2px}
+.admin-visitors-sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:4px}
+/* กราฟพรีวิวในหน้า admin/financial-dashboard */
+.fin-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:24px}
+.fin-chart{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:16px;border:1px solid rgba(46,125,82,.12);border-radius:12px}
+.fin-chart-title{font-weight:800;color:var(--green-deep);font-size:1rem}
+.fin-chart-legend{display:flex;flex-direction:column;gap:6px;font-size:.9rem;color:var(--ink-soft);font-weight:600}
+.fin-chart-legend span{display:flex;align-items:center;gap:8px}
+.fin-chart-legend i{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
+.admin-account-preview{margin-top:14px;display:flex;flex-direction:column;gap:6px;font-size:.92rem;color:var(--ink-soft);background:rgba(46,125,82,.05);border:1px solid rgba(46,125,82,.12);border-radius:10px;padding:14px}
+.admin-account-preview b{color:var(--green-deep)}
+.admin-empty{color:var(--ink-soft);font-size:.9rem}
+
+.admin-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:.88rem}
+.admin-bar-label{flex:0 0 110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-bar-track{flex:1;height:14px;background:#eee;border-radius:8px;overflow:hidden}
+.admin-bar-fill{height:100%;border-radius:8px}
+.admin-bar-value{flex:0 0 32px;text-align:right;font-weight:700}
+
+.admin-donut{width:160px;height:160px;margin-bottom:14px}
+.admin-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:.86rem}
+.admin-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+.admin-table-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.admin-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.admin-search{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;min-width:50px}
+.admin-select{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;background:#fff;cursor:pointer}
+.admin-select-icon{display:flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #ddd;border-radius:10px;background:#fff;color:#6b7280}
+.admin-select-icon .admin-select{border:none;padding:10px 4px;background:transparent}
+.admin-select-icon svg{flex-shrink:0}
+.admin-clear{padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.86rem;background:#fff;cursor:pointer;color:var(--ink-soft)}
+.admin-clear:hover{background:#f0f0f0}
+.admin-table-wrap{overflow-x:auto}
+.admin-table{width:100%;border-collapse:collapse;font-size:.86rem;white-space:nowrap}
+.admin-table th,.admin-table td{padding:8px 12px;border-bottom:1px solid #eee;text-align:left}
+.admin-table th{background:#f4f6f5;position:sticky;top:0}
+.admin-th-sort{cursor:pointer;user-select:none}
+.admin-th-sort:hover{background:#e9ecea}
+.admin-table tbody tr:hover{background:#fafafa}
+.admin-nav-vis-btn{width:44px;padding:8px 0;justify-content:center;font-size:1rem}
+/* ปุ่มไอคอนล้วน (แก้ไข/ทำสำเนา/ลบ/แสดง-ซ่อน ในตารางสินค้า) — สี่เหลี่ยมจัตุรัสขนาดเท่ากัน */
+/* ต้องระบุคู่คลาส (.admin-btn.admin-icon-btn) ให้ specificity ชนะ padding ของ .admin-btn/.admin-btn-danger ที่ประกาศทีหลังในไฟล์ */
+.admin-icon-btn,.admin-btn.admin-icon-btn,.admin-btn-danger.admin-icon-btn{width:46px;height:46px;padding:0;display:inline-flex;align-items:center;justify-content:center;gap:0;line-height:1;font-size:1.25rem}
+.admin-icon-btn svg{display:block}
+.admin-status-filter-table tbody tr{cursor:pointer}
+.admin-status-filter-table tbody tr.active{background:#EAF6EE}
+.admin-status-filter-table tbody tr.active td:first-child{box-shadow:inset 3px 0 0 var(--green-mid)}
+.admin-link-card{display:block;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
+.admin-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.admin-link-icon{font-size:2rem;margin-bottom:10px}
+.admin-link-desc{color:var(--ink-soft);font-size:.9rem;margin-top:6px}
+/* มือถือ: การ์ดเมนูเต็มความกว้าง 1 ใบต่อแถว ทำให้ต้องเลื่อนยาวมากกว่าจะเห็นเมนูครบ
+   ย่อเหลือไอคอน+ชื่อ 4 คอลัมน์ (ซ่อนคำอธิบาย) เห็นเมนูทั้งหมดในจอเดียว
+   ต้องประกาศคอลัมน์เป็น minmax(0,1fr) — auto (ค่าเริ่มต้นของ 1fr) คือ min-content
+   ชื่อเมนูยาวๆ จะดันคอลัมน์จนล้นจอ */
+@media (max-width:900px){
+  .admin-menu-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .admin-menu-grid .admin-link-card{padding:12px 6px;text-align:center}
+  .admin-menu-grid .admin-link-icon{font-size:1.45rem;margin-bottom:6px}
+  .admin-menu-grid .admin-link-card h4{font-size:.72rem;line-height:1.3;overflow-wrap:anywhere}
+  .admin-menu-grid .admin-link-desc{display:none}
+}
+
+/* หน้า admin Qurban — ตัวอักษรใหญ่และหนาขึ้นเป็นพิเศษ อ่านง่าย */
+/* กฎนี้ specificity สูงกว่า .admin-head h1 จึงต้อง clamp ที่นี่ด้วย ไม่งั้นหัวข้อยาวๆ
+   (เช่น "คลังสินค้า Um Shop") ยังตกเป็น 2 บรรทัดบนมือถืออยู่ดี */
+.admin-qurban .admin-head h1{font-size:clamp(1.15rem,4.6vw,2rem);font-weight:800}
+.admin-qurban .admin-head p{font-size:1.05rem;font-weight:600}
+.admin-qurban .admin-stat .v{font-size:2.4rem}
+.admin-qurban .admin-stat .l{font-size:1rem;font-weight:600}
+.admin-qurban .admin-card h4{font-size:1.15rem;font-weight:800}
+.admin-qurban .admin-bar-row{font-size:1rem;font-weight:600}
+.admin-qurban .admin-bar-label{flex:0 0 130px}
+.admin-qurban .admin-bar-value{flex:0 0 40px}
+
+/* ปุ่มและฟอร์มแก้ไขข้อมูล admin */
+.admin-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;background:#fff;border:1px solid rgba(27,94,54,.2);color:var(--green-deep);font-weight:700;text-decoration:none;font-size:.9rem;cursor:pointer;transition:background .15s,box-shadow .15s}
+.admin-btn:hover{background:#EAF6EE}
+.admin-btn-primary{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(27,94,54,.5)}
+.admin-btn-primary:hover{filter:brightness(1.08)}
+.admin-btn-danger{padding:10px 22px;border-radius:10px;border:none;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;font-weight:700;font-size:.95rem;cursor:pointer;box-shadow:0 6px 18px -8px rgba(183,28,28,.5)}
+.admin-btn-danger:hover{filter:brightness(1.08)}
+.admin-btn-danger:hover{background:#fdeee9}
+
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr));gap:16px}
+.admin-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-form-grid input,.admin-table-edit input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+/* ช่องกรอกต้องยืดตามคอลัมน์ ไม่ใช่ตามความกว้างธรรมชาติของตัวเอง
+   input[type=datetime-local]/number มีความกว้างในตัวกว้างกว่าคอลัมน์บนมือถือ (มีไอคอนปฏิทิน/ตัวหมุนอยู่ข้างใน)
+   ถ้าไม่คุมด้วย width:100% + box-sizing จะทะลุออกนอกการ์ดตามที่เห็นในหน้า "เพิ่มงานใหม่"
+   min-width:0 ให้ flex item หดได้จริง (ค่าเริ่มต้น auto = ไม่หดต่ำกว่าความกว้างในตัว) */
+.admin-form-grid input,
+.admin-form-grid select,
+.admin-form-grid textarea{width:100%;box-sizing:border-box;min-width:0}
+.admin-form-grid label{min-width:0}
+.admin-form-grid input:focus,.admin-table-edit input:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-table-edit input[type="text"]{width:100%}
+
+@media (max-width:640px){
+  .admin-form-grid{grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr))}
+}
+
+/* ฟอร์มสินค้า Um Shop — บังคับ 3 คอลัมน์ตายตัว (ไม่ auto-fit) ให้จัดเรียงเป็นแถวตามที่ตั้งใจ */
+.admin-form-grid-3col{grid-template-columns:repeat(3, 1fr)}
+@media (max-width:700px){
+  .admin-form-grid-3col{grid-template-columns:1fr 1fr}
+}
+/* ส่วนรายละเอียดสินค้า + รูปภาพสินค้า ในฟอร์ม Um Shop — บังคับ 1 แถว 2 คอลัมน์เท่ากัน (ซ้าย-ขวา) แทน auto-fit หลายคอลัมน์ */
+.admin-form-grid-2col{grid-template-columns:1fr 1fr}
+@media (max-width:700px){
+  .admin-form-grid-2col{grid-template-columns:1fr}
+}
+
+@media (max-width:460px){
+  .admin-form-grid-3col{grid-template-columns:1fr}
+}
+
+/* .admin-form-group ถูกใช้ใน JSX หลายที่แต่ไม่เคยมีสไตล์เลย — input ในนั้นจึงเป็น input ดิบของเบราว์เซอร์
+   (กว้างตายตัวราว 177px ไม่มีขอบมน ไม่เต็มความกว้างการ์ด) เห็นชัดสุดในการ์ด "จัดการเว็บ" บนมือถือ */
+.admin-form-group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.admin-form-group > label{font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-form-group input,
+.admin-form-group select,
+.admin-form-group textarea{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.admin-form-group input:focus,
+.admin-form-group select:focus,
+.admin-form-group textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}
+
+/* แถว key/value ของ "ฟิลด์เนื้อหาอิสระ" และ "ฟิลด์รูปภาพ" ใน /admin/website
+   เดิมเป็น inline style: ช่อง key เป็น flex:0 0 220px (ไม่ยอมหด) + ช่องค่า flex:1 ที่ min-width:auto
+   คิดจากความกว้างในตัวของ input (~177px) รวมกับปุ่มลบแล้วต้องใช้ราว 450px แต่ในการ์ดบนจอ 360px
+   มีพื้นที่แค่ ~296px แถวจึงล้นออกนอกการ์ดในแนวนอน ตรงนี้ให้ยุบเป็นสองบรรทัดแทน */
+.aw-kv-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
+.aw-kv-key{flex:1 1 180px;min-width:0}
+.aw-kv-val{flex:3 1 200px;min-width:0}
+.aw-kv-row input{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;box-sizing:border-box}
+.aw-kv-row input:focus{outline:2px solid var(--green-mid);border-color:transparent}
+
+/* ชิปเลือกขนาดด่วน (เสื้อ) — กดเพื่อเพิ่ม/เอาออกจากช่องขนาดแบบ comma list */
+.size-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.size-chip{padding:5px 12px;border-radius:8px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink-soft);font-family:inherit;transition:all .15s}
+.size-chip:hover{border-color:var(--green-mid)}
+.size-chip.selected{background:var(--green-mid);border-color:var(--green-mid);color:#fff}
+
+/* แถวกรอกจำนวนสต็อกแยกต่อไซซ์ (เสื้อ) — ให้ปิดปุ่มไซซ์เฉพาะตัวที่หมดในหน้า public ได้ */
+.size-stock-rows{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.size-stock-row{display:flex;align-items:center;gap:8px}
+.size-stock-row .size-chip{cursor:default;min-width:44px;text-align:center}
+.size-stock-input{width:80px;padding:6px 8px;border-radius:8px;border:1px solid #ddd;font-size:.85rem;font-family:inherit}
+.size-stock-remove{border:none;background:none;color:#d84315;cursor:pointer;padding:4px 6px;font-size:.85rem}
+.size-stock-remove:hover{opacity:.7}
+.size-stock-total{font-size:.8rem;font-weight:700;color:var(--green-deep);margin-top:2px}
+
+/* โหมดเต็มจอของแดชบอร์ด — ตอนนี้ .admin-wrap เต็มความกว้างเป็นค่าเริ่มต้นแล้ว
+   เก็บคลาสไว้เพื่อไม่ให้ต้องไล่แก้ 8 หน้าที่ใส่ไว้ และเผื่อวันหนึ่งกลับไปคาดความกว้างเริ่มต้นอีก */
+.admin-full .admin-wrap{max-width:none}
+
+/* ทุกหน้า admin/shop/* (จัดการสินค้า/คำสั่งซื้อ/รายละเอียดคำสั่งซื้อ/คลัง/ยอดขาย) — ขยายพื้นที่เนื้อหาเต็มความกว้างที่เหลือ (หลัง sidebar)
+   .admin-dash หัก padding-left ให้ sidebar ไว้แล้ว ใช้ width:100% ของ container นี้ (ไม่ใช่ 100vw) จึงชนกับ sidebar ไม่ได้ */
+.admin-shop-wide .admin-wrap{max-width:none;width:100%;margin:0}
+
+/* หัวการ์ด + ปุ่มสลับประเภทกราฟ + ตัวกรอง */
+.admin-head-actions{display:flex;gap:10px;flex-wrap:wrap}
+.admin-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.admin-card-head h4{margin:0}
+.admin-chart-switch{display:flex;gap:4px;background:#f0f4f1;border-radius:10px;padding:3px}
+.admin-chart-switch button{border:none;background:transparent;padding:5px 12px;border-radius:8px;font-size:.78rem;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit}
+.admin-chart-switch button.active{background:#fff;color:var(--green-deep);box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.admin-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.admin-filters input,.admin-filters select{padding:7px 10px;border-radius:8px;border:1px solid #ddd;font-size:.85rem;font-family:inherit;background:#fff}
+.admin-filters input:focus,.admin-filters select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-form-grid select{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+
+/* กราฟแท่งตั้ง */
+.admin-columns{display:flex;align-items:flex-end;gap:10px;padding:8px 4px;overflow-x:auto;width:100%}
+.admin-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:48px;flex:1}
+.admin-col-bar{width:100%;max-width:46px;border-radius:6px 6px 0 0;transition:height .3s}
+.admin-col-value{font-size:.7rem;font-weight:700;color:var(--ink-soft);white-space:nowrap}
+.admin-col-label{font-size:.7rem;color:var(--ink-soft);text-align:center;word-break:break-word;max-width:80px}
+
+/* กราฟเส้น */
+.admin-line-chart{width:100%;height:auto}
+.admin-hbars{width:100%}
+
+/* ปฏิทินคอนเทนต์ */
+/* โพสต์ของวันที่เลือก — แถวเดียว 6 คอลัมน์ เกินจากนั้นเลื่อนไปทางขวาต่อ
+   เดิมเป็น auto-fill ที่ตกลงมาเป็นแถวใหม่เรื่อยๆ ทำให้การ์ดบนสุดสูงขึ้นตามจำนวนโพสต์
+   จนดันปฏิทินหลุดจอไปเลยในวันที่มีงานเยอะ ซึ่งเป็นวันที่ยิ่งต้องเห็นปฏิทิน
+   grid-auto-flow:column + grid-auto-columns ⇒ ทุกใบอยู่แถวเดียวเสมอไม่ว่าจะกี่ใบ
+   ความกว้างคอลัมน์คิดจาก 6 ช่องพอดีในกรอบ (เผื่อ gap 5 ช่อง) ใบที่ 7 เป็นต้นไปจึงโผล่พ้นขอบให้รู้ว่าเลื่อนได้ */
+.admin-day-posts{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(clamp(180px,calc((100% - 5 * 12px) / 6),300px),1fr);
+  gap:12px;
+  align-items:start;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  padding-bottom:6px;
+}
+.admin-day-posts > *{scroll-snap-align:start}
+/* มือถือ: 6 ช่องในจอ 380px = ช่องละ 53px อ่านอะไรไม่ได้ — ให้ช่องกว้างพออ่านแล้วเลื่อนแทน */
+@media (max-width:900px){
+  .admin-day-posts{grid-auto-columns:minmax(240px,1fr)}
+}
+/* การ์ดวันที่เลือกกินพื้นที่บนสุดของหน้า ย่อหัวข้อ/ระยะ/ตัวหนังสือลงให้เหลือความสูงน้อยที่สุด
+   ที่ยังอ่านครบ — เนื้อหาเดิม (หัวข้อ 1rem, padding 20px, ปุ่มสถานะ 4 ปุ่มตกสองบรรทัด) สูงเกินจำเป็น */
+.admin-cal-today .admin-card{padding:14px 16px}
+.admin-cal-today .admin-card>h4{font-size:.95rem;margin-bottom:2px}
+.admin-cal-today .admin-cal-hijri-header{font-size:.75rem}
+.admin-cal-today .admin-post{padding:10px 12px;margin-bottom:0}
+.admin-cal-today .admin-post-top strong{font-size:.85rem;line-height:1.45}
+/* การ์ดวันที่เลือกโชว์แค่ เวลา·ชื่อโพสต์ + ป้ายสถานะ + ปุ่มแก้ไข/ลบ
+   รายละเอียดที่เหลือ (แคปชัน ลิงก์แหล่งข้อมูล ลิงก์ไฟล์งาน รูป/วิดีโอ และปุ่มสลับสถานะ)
+   ซ่อนไว้เพื่อให้การ์ดเตี้ยที่สุด — ดู/แก้ค่าเหล่านั้นได้ที่ฟอร์มเมื่อกดปุ่มแก้ไข
+   ⚠️ นี่คือที่เดียวที่โพสต์ถูกเรนเดอร์ ⇒ ปุ่มสลับสถานะแบบกดเดียวจึงใช้ไม่ได้อีก
+   ถ้าอยากได้กลับมา ลบบล็อกนี้ออกหรือทำเป็นกดเพื่อกาง */
+.admin-cal-today .admin-post-text,
+.admin-cal-today .admin-post-sources,
+.admin-cal-today .admin-post-media,
+.admin-cal-today .admin-post-actions{display:none}
+
+/* เรียงลงมาเป็นแถวเดียวทุกความกว้าง: โพสต์ของวันที่เลือก → ปฏิทิน → ฟอร์มเพิ่มโพสต์
+   เดิมปฏิทินกับฟอร์มอยู่คนละคอลัมน์ ทำให้ปฏิทินถูกบีบเหลือ 480px — มุมมองสัปดาห์มี 7 คอลัมน์
+   จึงเหลือคอลัมน์ละ ~60px แคบจนอ่านโพสต์ในนั้นไม่ได้ ปฏิทินได้ความกว้างเต็มแล้วฟอร์มลงไปอยู่ข้างล่างแทน
+   .admin-cal-side เหลือการ์ดใบเดียว แต่ยังเก็บ wrapper ไว้เผื่อเพิ่มการ์ดในส่วนนี้ทีหลัง */
+.admin-cal-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.admin-cal-side{display:flex;flex-direction:column;gap:24px}
+.admin-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.admin-cal-head h4{margin:0;font-size:1.1rem}
+.admin-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.admin-cal-dow{text-align:center;font-size:.75rem;font-weight:700;color:var(--ink-soft);padding:6px 0}
+/* ความสูงคุมด้วย min-height ไม่ใช่ aspect-ratio:1 — ช่องจัตุรัสทำให้ปฏิทินสูงเกินจำเป็นบนคอลัมน์กว้าง
+   (คอลัมน์ ~840px ⇒ ช่องสูงเกิน 100px) และ aspect-ratio ยังดันความกว้างตามความสูงจนล้นจอบนมือถือด้วย */
+.admin-cal-day{position:relative;min-height:52px;border:1px solid #eee;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .12s,border-color .12s}
+.admin-cal-day:hover{background:#EAF6EE}
+/* วันที่มีคอนเทนต์ลงไว้แล้ว — ระบายเต็มกรอบด้วยสีของสถานะที่ยังไม่เสร็จที่สุดในวันนั้น (--day-color)
+   ใช้ color-mix ผสมกับขาวเพื่อให้ยังอ่านตัวเลขวันที่ออก และมี fallback สีเทาอ่อนไว้ก่อน
+   สำหรับเบราว์เซอร์เก่าที่ไม่รู้จัก color-mix (บรรทัดถัดไปจะถูกข้ามไปเฉยๆ)
+   ต้องอยู่ก่อน .today/.sel เพราะ specificity เท่ากัน ให้สองอันนั้นทับได้ตามลำดับ */
+.admin-cal-day.has-posts{background:#f1f3f2;border-color:#dfe3e0;font-weight:800}
+.admin-cal-day.has-posts{background:color-mix(in srgb,var(--day-color) 16%,#fff);border-color:color-mix(in srgb,var(--day-color) 42%,#fff)}
+.admin-cal-day.has-posts:hover{background:color-mix(in srgb,var(--day-color) 28%,#fff)}
+.admin-cal-day.today{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.admin-cal-day.sel{background:linear-gradient(135deg,var(--green-mid),var(--green-deep));color:#fff;border-color:transparent}
+.admin-cal-hijri{font-size:.6rem;font-weight:500;color:var(--ink-soft);line-height:1;opacity:.8}
+.admin-cal-day.sel .admin-cal-hijri,.admin-cal-day.today .admin-cal-hijri{color:#fff;opacity:.75}
+.admin-cal-hijri-header{font-size:.72rem;color:var(--ink-soft);margin-top:2px}
+.admin-cal-dots{display:flex;gap:3px;align-items:center}
+.admin-cal-dots i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.admin-cal-dots em{font-style:normal;font-size:.6rem;font-weight:700}
+/* อัพโหลดมีเดีย — บังคับ 2 คอลัมน์แถวเดียวเสมอ (ไม่ตกบรรทัดแม้ label ยาว เช่น "อัพโหลดหลักฐานการชำระเงิน") */
+.upload-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.admin-upload-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;border-radius:8px;border:1.5px dashed var(--green-mid);background:#f5fbf7;color:var(--green-deep);font-size:.85rem;font-weight:700;cursor:pointer;transition:background .15s;text-align:center}
+.admin-upload-btn:hover{background:#e8f7ed}
+@media (max-width:400px){
+  .admin-upload-btn{font-size:.75rem;padding:8px 6px}
+}
+.admin-media-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.admin-media-thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid #ddd}
+.admin-media-thumb img,.admin-media-thumb video{width:100%;height:100%;object-fit:cover}
+.admin-media-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.admin-media-main{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:.55rem;font-weight:700;text-align:center;padding:2px 0}
+/* มีเดียในการ์ดโพสต์ */
+.admin-post-media{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-media-item{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #eee}
+/* ปุ่มแชร์แต่ละ platform */
+.admin-post-share{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-share-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;border:none;color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.admin-post-share-btn:hover{opacity:.85}
+.admin-cal-legend{display:flex;gap:14px;margin-top:12px;font-size:.78rem;color:var(--ink-soft);flex-wrap:wrap}
+.admin-cal-legend i{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+
+/* ฟอร์มเพิ่มโพสต์ */
+.admin-cal-form{display:flex;flex-direction:column;gap:12px}
+/* จอกว้าง: ฟอร์มเป็น 2 คอลัมน์ — ช่องข้อมูลทั้งหมดอยู่คอลัมน์ซ้าย, กล่องแคปชันอยู่ขวาและสูงเต็มคอลัมน์
+   ห่อฝั่งซ้ายไว้ใน .admin-cal-form-main เพื่อให้กริดมีลูกแค่ 2 ตัว วางคอลัมน์ได้ตรงๆ
+   ไม่ต้องพึ่ง grid-row:1/-1 ที่กินแถวไม่ครบเมื่อแถวเป็น implicit */
+@media (min-width:901px){
+  .admin-cal-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 16px;align-items:stretch}
+  .admin-cal-form-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .admin-cal-caption{min-width:0}
+  .admin-cal-caption textarea{height:100%;min-height:240px}
+  /* ฟอร์มในหน้ารายละเอียด: คอลัมน์เดียว เพราะกล่องแคปชันย้ายไปอยู่คอลัมน์ขวาของหน้าแล้ว
+     ช่องข้อมูลจึงได้ความกว้างเต็ม ชิปสถานะ 4 ปุ่มอยู่บรรทัดเดียวไม่ตกลงมา 4 บรรทัดเหมือนตอนบีบ */
+  .admin-cal-form.admin-cal-form-single{grid-template-columns:minmax(0,1fr)}
+  /* แถวแรก (วันเวลา + สถานะ) แยกเป็นบรรทัดละช่องในโหมดคอลัมน์เดียว — ชิปสถานะ 4 ปุ่มต้องการ ~420px
+     ถ้าแบ่งครึ่งกับช่องวันเวลาจะเหลือ ~275px แล้วตกลงมาสองบรรทัด ซึ่งสูงกว่าการแยกบรรทัด */
+  .admin-cal-form-single .admin-cal-form-row:first-of-type{grid-template-columns:minmax(0,1fr)}
+}
+.admin-cal-form label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-form input,.admin-cal-form select,.admin-cal-form textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.92rem;font-family:inherit;background:#fff;resize:vertical}
+.admin-cal-form input:focus,.admin-cal-form select:focus,.admin-cal-form textarea:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.admin-cal-form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* มือถือ: สองช่องต่อแถวเหลือช่องละ ~144px — ชิปสถานะตกลงมาสองบรรทัดและ dropdown แคมเปญ
+   แคบจนอ่านชื่อแคมเปญไม่ออก จึงวางเรียงลงมาแถวละช่อง */
+@media (max-width:640px){.admin-cal-form-row{grid-template-columns:1fr}}
+/* มือถือ: ย่อปฏิทินให้พอดีจอ — ลด padding การ์ดเพื่อคืนความกว้างให้ช่องวัน
+   และลดความสูงขั้นต่ำของช่องเหลือ 44px (เท่าเป้าหมายพื้นที่กดพอดี) */
+@media (max-width:640px){
+  .admin-cal-card{padding:12px}
+  .admin-cal-day{min-height:44px}
+  /* ปุ่มเปลี่ยนสถานะบนการ์ดโพสต์สูงแค่ 31px และชิปสถานะในฟอร์ม 38px — ต่ำกว่าเป้าหมาย 44px
+     ของ iOS/Android ทั้งคู่ และปุ่มพวกนี้เรียงติดกันหลายปุ่ม จึงกดพลาดง่าย */
+  .admin-post-actions .admin-btn,
+  .admin-post-actions .admin-btn-danger,
+  .admin-cal-status-chips button{min-height:44px}
+}
+.admin-cal-platforms{display:flex;gap:8px;flex-wrap:wrap}
+.admin-cal-platforms button{padding:6px 14px;border-radius:999px;border:1px solid #ddd;background:#fff;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink-soft);transition:all .12s}
+
+.admin-cal-social-list{display:flex;flex-direction:column;gap:8px}
+.admin-cal-social-row{display:flex;align-items:center;gap:12px;border:1px solid #eee;border-radius:10px;padding:10px 14px}
+.admin-cal-social-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ฟอร์มเพิ่มจุดลงพื้นที่ แบ่งเป็น 2 ส่วน (พิกัด / ความช่วยเหลือ) — เดิมเป็นตะแกรงเดียว 10 ช่องเรียงติดกัน
+   แยกไม่ออกว่าช่องไหนเกี่ยวกับอะไร */
+.aid-fieldset{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:16px;background:rgba(46,125,82,.02)}
+.aid-fieldset-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:14px}
+.aid-fieldset-num{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--green-mid);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
+.aid-fieldset-head h5{margin:0;font-size:.98rem;color:var(--green-deep);font-weight:800}
+.aid-fieldset-head p{margin:2px 0 0;font-size:.8rem;color:var(--ink-soft);font-weight:400;line-height:1.5}
+
+/* รูปภาพหน้างานในฟอร์มจุดลงพื้นที่ */
+.aid-photos{margin-top:14px}
+.aid-photos-label{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+.aid-photos-hint{font-size:.78rem;color:var(--ink-soft);margin:6px 0 0;opacity:.8}
+
+/* skeleton แถบชิมเมอร์ทั่วไป (ListSkeleton) — ใช้แทน "กำลังโหลด..." ในหน้า admin ทุกหน้า */
+.list-skeleton{padding:8px 0}
+.list-skeleton-row{padding:10px 0;border-bottom:1px solid #f1f1f1}
+.list-skeleton-row:last-child{border-bottom:none}
+.aid-photo-thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.aid-photo-thumb{position:relative;width:84px;height:84px;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb}
+.aid-photo-thumb img{width:100%;height:100%;object-fit:cover}
+.aid-photo-thumb button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:.7rem;line-height:1;display:flex;align-items:center;justify-content:center}
+.aid-photo-thumb button:hover{background:#c0392b}
+
+/* ค้นหาพิกัดจากชื่อสถานที่ (หน้า /admin/aid-map) */
+/* input ต้องมี min-width:0 ไม่งั้น intrinsic width ของ input ดันปุ่มล้นกรอบการ์ดบนจอแคบ */
+.aid-geo-search{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.aid-geo-search input{flex:1;min-width:0;padding:10px 14px;border:1px solid #ddd;border-radius:10px;font-size:.92rem;font-family:inherit;box-sizing:border-box}
+.aid-geo-search button{flex-shrink:0;white-space:nowrap}
+.aid-geo-msg{font-size:.85rem;color:var(--ink-soft);margin-bottom:12px}
+.aid-geo-err{color:#c0392b}
+.aid-geo-results{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:260px;overflow-y:auto}
+.aid-geo-result{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;transition:background .12s,border-color .12s}
+.aid-geo-result:hover{background:rgba(46,125,82,.06);border-color:var(--green-mid)}
+.aid-geo-name{font-size:.88rem;color:var(--ink)}
+.aid-geo-coord{font-size:.78rem;color:var(--ink-soft);font-family:monospace}
+
+/* การ์ดโพสต์ในวันที่เลือก */
+/* หน้ารายละเอียดโพสต์ (?post=<id>) — โชว์การ์ดใบเดียว ไม่ใช่กล่องลอยทับหน้าปฏิทิน
+   จอกว้างแยกเป็น 2 คอลัมน์: เนื้อหา+ฟอร์มแก้ไข | พรีวิวไฟล์งานใน Drive */
+.admin-detail-page{max-width:1200px}
+/* ปุ่มกลับอยู่บนพื้นไล่สีของหน้า อ่านยาก จึงทำเป็นปุ่มพื้นขาวเหมือนการ์ด */
+.admin-detail-back{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:9px 16px;border:1px solid rgba(46,125,82,.15);border-radius:99px;background:#fff;color:var(--green-deep);font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;box-shadow:0 6px 20px -12px rgba(27,94,54,.25);transition:background .15s,border-color .15s}
+.admin-detail-back:hover{background:#EAF6EE;border-color:rgba(46,125,82,.4)}
+.admin-detail-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+@media (min-width:1000px){.admin-detail-cols{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.admin-detail{width:100%}
+/* คอลัมน์ขวาของหน้ารายละเอียด: กล่องข้อความ/แคปชัน — ข้อความยาวขึ้นบรรทัดตามที่พิมพ์มา (pre-wrap)
+   จำกัดความสูงแล้วเลื่อนในกล่องเอง กันแคปชันยาวมากดันหน้าให้ยืดจนหาปุ่มด้านซ้ายไม่เจอ */
+.admin-detail-caption .admin-post-text{margin:0;max-height:min(60vh,520px);overflow-y:auto}
+/* ตอนแก้ไข กล่องแคปชันในคอลัมน์ขวาสูงตามจอ ไม่ต้องเลื่อนหน้าเพื่อพิมพ์ให้จบ */
+.admin-detail-caption .admin-cal-caption{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-detail-caption .admin-cal-caption textarea{min-height:min(62vh,560px);resize:vertical}
+.admin-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.admin-detail-head h4{margin:0;line-height:1.45}
+.admin-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-soft);margin:10px 0}
+.admin-detail-empty{font-size:.85rem;color:#999;margin:8px 0}
+/* การ์ดโพสต์กดได้ — ต้องมีสัญญาณว่ากดได้ ไม่งั้นผู้ใช้ไม่รู้ว่ามีรายละเอียดซ่อนอยู่ */
+.admin-post-clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.admin-post-clickable:hover{border-color:rgba(46,125,82,.45);box-shadow:0 6px 16px -8px rgba(27,94,54,.3)}
+.admin-post-clickable:focus-visible{outline:2px solid var(--green-mid);outline-offset:2px}
+
+.admin-post{border:1px solid #eee;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fafcfa}
+/* หัวการ์ดงานเป็น 2 คอลัมน์แถวเดียว: คอลัมน์แรก (กว้างกว่า) = เวลา·ชื่อโพสต์ | คอลัมน์สอง = สถานะ+แก้ไข/ลบ
+   เดิมเป็น flex-wrap ⇒ ชื่อโพสต์ยาวจะดันกลุ่มปุ่มตกลงไปบรรทัดใหม่ ทำให้แต่ละการ์ดสูงไม่เท่ากัน
+   minmax(0,1fr) จำเป็น: 1fr ปกติคือ minmax(auto,1fr) ที่ auto = min-content ชื่อยาวจะดันคอลัมน์จนล้นการ์ด
+   auto ของคอลัมน์สองทำให้กว้างเท่าที่ปุ่มต้องใช้พอดี ที่เหลือเป็นของคอลัมน์แรกทั้งหมด */
+.admin-post-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px}
+.admin-post-top strong{font-size:.92rem}
+.admin-post-status{font-size:.7rem;font-weight:700;color:#fff;padding:3px 10px;border-radius:999px}
+.admin-post-text{font-size:.85rem;color:var(--ink-soft);margin:6px 0;white-space:pre-wrap}
+.admin-post-platforms{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.admin-post-platforms span{font-size:.68rem;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px}
+.admin-post-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.admin-post-actions .admin-btn,.admin-post-actions .admin-btn-danger{font-size:.78rem;padding:5px 12px}
+
+.admin-qurban .admin-legend{font-size:.98rem;font-weight:600}
+.admin-qurban .admin-table{font-size:1rem}
+.admin-qurban .admin-table td{font-weight:600}
+.admin-qurban .admin-table th{font-weight:800;font-size:1rem}
+
+/* คู่มือย่อ "วิธีจัดการสินค้าเสื้อ" ในหน้า admin/shop */
+.shop-guide{margin-bottom:24px;border-left:4px solid var(--green-mid)}
+.shop-guide h4{color:var(--green-deep);margin-bottom:12px}
+.shop-guide-key{background:rgba(46,125,82,.06);border-radius:10px;padding:12px 14px;font-size:.9rem;line-height:1.6;color:var(--ink);margin-bottom:14px}
+.shop-guide-steps{margin:0 0 14px;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:.9rem;line-height:1.55;color:var(--ink)}
+.shop-guide-steps li{padding-left:4px}
+.shop-guide-tip{font-size:.86rem;line-height:1.6;color:var(--ink-soft);background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px}
+
+/* รายการสินค้า admin/shop — เดสก์ท็อปใช้ตาราง, มือถือใช้การ์ด 2 แถว (อ่านง่าย แตะสะดวก) */
+.admin-shop-cards{display:none}
+@media (max-width:768px){
+  .admin-shop-table-desktop{display:none}
+  .admin-shop-cards{display:flex;flex-direction:column;gap:12px}
+}
+.admin-shop-card{border:1px solid #e8ece9;border-radius:14px;padding:12px;background:#fff;box-shadow:0 2px 10px -6px rgba(27,94,54,.2)}
+.admin-shop-card.is-hidden{opacity:.55}
+/* แถวบน: รูป + ชื่อ/รหัส + ราคา */
+.admin-shop-card .asc-top{display:flex;align-items:center;gap:12px}
+.asc-thumb{width:56px;height:56px;border-radius:10px;overflow:hidden;background:#f4f6f4;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#bbb}
+.asc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.asc-info{flex:1;min-width:0}
+.asc-name{font-weight:700;color:var(--green-deep);font-size:.98rem;line-height:1.3;word-break:break-word}
+.asc-code{font-size:.76rem;color:var(--ink-soft);margin-top:2px;font-family:monospace}
+.asc-variant{font-size:.78rem;color:var(--ink-soft);margin-top:3px;word-break:break-word} /* สี/ขนาด ในแถวบน */
+.asc-price{text-align:right;flex-shrink:0}
+.asc-price-old{display:block;font-size:.72rem;color:var(--ink-soft);text-decoration:line-through}
+.asc-price-now{font-weight:800;color:var(--gold);font-size:1.02rem}
+/* แถว 2 (คงเหลือ+สถานะ) และ แถว 3 (ปุ่มจัดการ) — ทั้งคู่ชิดขวา */
+.admin-shop-card .asc-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.admin-shop-card .asc-row-status{margin-top:12px;padding-top:12px;border-top:1px solid #f0f2f0}
+.admin-shop-card .asc-row-actions{margin-top:8px}
+.asc-stock{font-size:.82rem;font-weight:700;color:var(--green-mid);margin-right:auto} /* คงเหลืออยู่ซ้ายสุด ดันปุ่มสถานะไปขวา */
+.asc-stock.out{color:#d84315}
+.asc-status-btn{font-size:.8rem;padding:6px 12px}
+/* ปุ่มในการ์ดมือถือแตะง่ายขึ้น (สูง ~38px) */
+.admin-shop-card .admin-btn,.admin-shop-card .admin-btn-danger{padding:8px 14px;font-size:.82rem}
+
+/* แถวบัญชีที่สมัครเข้ามาแล้วยังรอแอดมินเลื่อน role (role: 'pending' — ยังไม่มีสิทธิ์ใดๆ) */
+.staff-pending-row{background:#fffbeb}
+.staff-pending-tag{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:#f59e0b;color:#fff;font-size:.7rem;font-weight:700}
+
+/* ปุ่ม/เส้นคั่น "เข้าสู่ระบบด้วย Google" ในหน้าล็อกอิน
+   ปุ่มต้องพื้นขาวตัวหนังสือเข้มตามไกด์ไลน์แบรนด์ Google (ห้ามย้อมสีเขียวตามธีมเว็บ) */
+.admin-login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--ink-soft);font-size:.8rem}
+.admin-login-divider::before,.admin-login-divider::after{content:'';flex:1;height:1px;background:#e0e0e0}
+/* ต้องเจาะจงกว่า `.admin-login-box button` (ที่บังคับพื้นเขียวทึบ/ตัวอักษรขาวกับปุ่มทุกตัวในกล่อง)
+   ไม่งั้นปุ่ม Google จะกลายเป็นพื้นเขียว โลโก้หลากสีไปอยู่บนพื้นเข้ม ผิดไกด์ไลน์และอ่านยาก */
+.admin-login-box .admin-google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid #dadce0;border-radius:10px;background:#fff;color:#3c4043;font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s,box-shadow .15s}
+.admin-login-box .admin-google-btn:hover:not(:disabled){background:#f8f9fa;box-shadow:0 1px 3px rgba(60,64,67,.2)}
+.admin-login-box .admin-google-btn:disabled{opacity:.6;cursor:default}
+
+/* ไฟล์แนบ (FileAttachments.jsx) — ใช้ร่วมกันทุกหน้าที่แนบลิงก์ Google Sheet/Doc/Drive ได้ */
+.attach-block{margin-top:16px}
+.attach-label{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:8px}
+/* input ต้องมี min-width:0 ไม่งั้น intrinsic width ดันปุ่มล้นกรอบการ์ดบนจอแคบ (บั๊กเดิมที่เจอในช่องค้นหาพิกัด) */
+.attach-add{display:flex;gap:8px;flex-wrap:wrap}
+.attach-add input{flex:1;min-width:0;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:.88rem;font-family:inherit;box-sizing:border-box}
+.attach-add .attach-title-input{flex:0 1 210px}
+.attach-add button{flex-shrink:0;white-space:nowrap}
+.attach-hint{font-size:.78rem;color:var(--ink-soft);margin:8px 0 0;line-height:1.6}
+.attach-err{color:#c0392b}
+.attach-empty{font-size:.82rem;color:#999;margin:10px 0 0}
+.attach-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.attach-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #eee;border-radius:10px;background:#fafafa}
+.attach-kind{flex-shrink:0;color:#fff;font-size:.68rem;font-weight:800;padding:3px 7px;border-radius:5px;letter-spacing:.02em}
+.attach-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem;color:var(--ink);text-decoration:none;font-weight:600}
+a.attach-name:hover{text-decoration:underline}
+.attach-del{flex-shrink:0;border:none;background:none;cursor:pointer;color:#c0392b;font-size:.85rem;padding:4px}
+.attach-del:hover{color:#8e2a1f}
+@media (max-width:600px){.attach-add .attach-title-input{flex:1 1 100%}}
+.attach-drive-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+
+/* การ์ดทางลัดในหน้าแดชบอร์ด Staff — ลิงก์ไปทุกหน้าที่บัญชีนั้นเข้าได้ (ดู data/staffNav.js) */
+/* รายการโพสต์ 3 คอลัมน์ใต้ตัวเลขสรุปในแดชบอร์ด Staff
+   มือถือซ้อนเป็นคอลัมน์เดียว — 3 คอลัมน์บนจอ 375px เหลือคอลัมน์ละ ~110px อ่านชื่อโพสต์ไม่ออก */
+.staff-post-lists{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:24px}
+@media (max-width:1300px){.staff-post-lists{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.staff-post-lists{grid-template-columns:1fr}}
+/* เลื่อนดูรายการในกล่องได้เอง — เดิมตัดที่ 8 รายการแล้วต้องไปเปิดปฏิทินเพื่อดูที่เหลือ
+   คุมความสูงด้วย vh เพื่อให้ 4 คอลัมน์สูงเท่ากันและไม่ดันหน้าให้ยาวตามจำนวนโพสต์ */
+.staff-post-list ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:min(48vh,420px);overflow-y:auto;overscroll-behavior:contain}
+.staff-post-list li+li{border-top:1px solid #eef1ee}
+.staff-post-list li a{display:block;padding:10px;border-radius:8px;text-decoration:none;color:inherit;transition:background .12s}
+.staff-post-list li a:hover{background:#EAF6EE}
+.staff-post-title{display:block;font-size:.88rem;font-weight:600;overflow-wrap:anywhere}
+.staff-post-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.75rem;color:var(--ink-soft);margin-top:4px}
+.staff-post-chip{display:inline-block;padding:2px 9px;border-radius:99px;color:#fff;font-size:.7rem;font-weight:700;line-height:1.5}
+/* ป้ายบอกว่าโพสต์นี้แนบลิงก์ไฟล์งานใน Google Drive มาแล้ว — เป็นเงื่อนไขที่ทำให้ขึ้นคอลัมน์ "กำลังดำเนินการ" */
+.staff-post-file{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.7rem;font-weight:700;line-height:1.5;color:var(--green-deep);background:#EAF6EE}
+.staff-post-empty{color:var(--ink-soft);font-size:.85rem}
+.staff-post-more{display:inline-block;margin-top:10px;font-size:.8rem;font-weight:700;color:var(--green-deep)}
+
+.staff-shortcuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(190px,100%),1fr));gap:12px;margin-bottom:24px}
+.staff-shortcut{display:flex;align-items:center;gap:12px;padding:16px;background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:14px;text-decoration:none;color:var(--ink);box-shadow:0 6px 20px -12px rgba(27,94,54,.18);transition:transform .15s,box-shadow .15s,border-color .15s}
+.staff-shortcut:hover{transform:translateY(-2px);border-color:rgba(46,125,82,.35);box-shadow:0 12px 26px -14px rgba(27,94,54,.4)}
+.staff-shortcut-icon{flex-shrink:0;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;background:rgba(46,125,82,.1);color:var(--green-deep)}
+.staff-shortcut-label{min-width:0;font-weight:700;font-size:.92rem;line-height:1.35}
+/* ชื่อกลุ่มต้นสังกัด (เช่น CRM) สำหรับรายการที่แผ่ออกมาจากเมนูย่อย — กันสับสนว่ามาจากไหน */
+.staff-shortcut-group{display:block;font-size:.72rem;font-weight:600;color:var(--ink-soft);margin-top:2px}
+/* มือถือ: การ์ดทางลัดเต็มความกว้าง 1 ใบต่อแถว ต้องเลื่อนยาวมากกว่าจะเห็นเมนูครบ
+   ย่อเป็นไอคอนบน–ชื่อล่าง 4 คอลัมน์ เห็นทุกเมนูในจอเดียว (เหมือน .admin-menu-grid ของหน้าแรกแอดมิน)
+   minmax(0,1fr) จำเป็น — 1fr ปกติคือ minmax(auto,1fr) ที่ auto = min-content ชื่อเมนูยาวจะดันคอลัมน์จนล้นจอ */
+@media (max-width:900px){
+  .staff-shortcuts{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .staff-shortcut{flex-direction:column;align-items:center;text-align:center;gap:6px;padding:12px 6px}
+  .staff-shortcut-icon{width:34px;height:34px;font-size:.95rem}
+  .staff-shortcut-label{font-size:.7rem;line-height:1.3;overflow-wrap:anywhere}
+  /* ชื่อกลุ่ม (เช่น "CRM") ไม่มีที่พอในคอลัมน์ 80px และการ์ด CRM ถูกถอดออกจากหน้านี้แล้ว */
+  .staff-shortcut-group{display:none}
+}
+
+/* การ์ดโพสต์ในปฏิทินคอนเทนต์ — ปุ่มแก้ไข/ลบ อยู่มุมขวาบน แยกจากปุ่มเปลี่ยนสถานะด้านล่าง */
+.admin-post-corner{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.admin-post-corner-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:.78rem;transition:background .15s,color .15s,border-color .15s}
+.admin-post-corner-btn:hover{background:#f3f4f6;color:var(--ink)}
+.admin-post-corner-btn.danger:hover{background:#fdecea;color:#c0392b;border-color:#f3c4be}
+/* ชิปเลือกสถานะในฟอร์มเพิ่มโพสต์ */
+/* ชิปสถานะอยู่บรรทัดเดียวเสมอ — flex-wrap ตกบรรทัดเมื่อรางแคบ ("โพสต์แล้ว" หลุดไปอยู่คนเดียว)
+   grid-auto-flow:column + grid-auto-columns:minmax(0,1fr) = ทุกชิปแบ่งความกว้างเท่ากันในแถวเดียว
+   โดยไม่ต้องระบุจำนวนคอลัมน์ ⇒ เพิ่ม/ลดสถานะใน contentStatus.js แล้วยังอยู่บรรทัดเดียวเอง
+   ข้อความยาว ("กำลังดำเนินงาน") ตัดบรรทัดในชิปตัวเอง ชิปทุกอันสูงเท่ากันเพราะ stretch ตามแถว */
+/* ── กล่องคุยงาน (CommentThread) — ใช้ซ้ำได้ทุกที่ที่มีชิ้นงาน ── */
+.cmt{border-top:1px solid #eef2ef;margin-top:14px;padding-top:12px}
+.cmt-head{font-size:.85rem;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cmt-count{background:#eef2ef;border-radius:99px;padding:1px 8px;font-size:.72rem}
+.cmt-empty{font-size:.82rem;color:var(--ink-soft);opacity:.8;padding:4px 0 10px}
+/* จำกัดความสูงแล้วเลื่อนในตัวเอง — งานที่คุยกันยาวไม่ควรดันฟอร์มด้านล่างหายไปจากจอ */
+.cmt-list{list-style:none;margin:0 0 10px;padding:0;max-height:280px;overflow-y:auto;overscroll-behavior:contain}
+.cmt-list li{padding:8px 0;border-bottom:1px solid #f3f6f4}
+.cmt-meta{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--ink-soft);margin-bottom:3px}
+.cmt-meta strong{color:var(--green-deep,#166534);font-size:.8rem}
+.cmt-meta button{margin-left:auto;background:none;border:none;color:#c62828;cursor:pointer;padding:2px 6px;font-size:.75rem;opacity:.6}
+.cmt-meta button:hover{opacity:1}
+/* คงการขึ้นบรรทัดที่ผู้ใช้พิมพ์ และตัดคำยาว (เช่นลิงก์) ไม่ให้ดันกล่องกว้างเกิน */
+.cmt-text{font-size:.88rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmt-input{display:flex;gap:8px;align-items:flex-end}
+.cmt-input textarea{flex:1;min-width:0;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;resize:vertical}
+.cmt-input button{flex-shrink:0;white-space:nowrap}
+
+/* ── หน้าร้านค้า B2UM ── */
+.b2um-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.b2um-toolbar input[type=search]{flex:1 1 240px;min-width:0;padding:9px 12px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.95rem}
+.b2um-filters{display:flex;flex-wrap:wrap;gap:8px}
+.b2um-filters button{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:99px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.b2um-filters button.on{background:var(--green-deep,#166534);border-color:var(--green-deep,#166534);color:#fff}
+.b2um-filters button span{background:rgba(0,0,0,.08);border-radius:99px;padding:0 7px;font-size:.75rem}
+.b2um-filters button.on span{background:rgba(255,255,255,.25)}
+
+.b2um-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:16px;align-items:start}
+.b2um-card{display:flex;flex-direction:column;gap:10px}
+.b2um-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+/* ชื่อร้านยาวได้ไม่จำกัด ต้องตัดคำได้ ไม่งั้นดันชิปสถานะตกออกนอกการ์ด */
+.b2um-shop{font-weight:700;font-size:1rem;overflow-wrap:anywhere}
+.b2um-meta{font-size:.78rem;color:var(--ink-soft);margin-top:2px}
+.b2um-chip{flex-shrink:0;color:#fff;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.b2um-contact{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88rem;color:var(--ink-soft)}
+.b2um-contact a{color:var(--green-deep,#166534);text-decoration:none;font-weight:700}
+.b2um-images{display:flex;flex-wrap:wrap;gap:6px}
+.b2um-images img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+/* ปุ่มสถานะ 4 ปุ่มบรรทัดเดียว — minmax(0,1fr) ให้ข้อความยาว ("ใบสมัครใหม่") ตัดบรรทัดในปุ่มตัวเอง
+   แทนที่จะดันแถวให้ล้นการ์ด */
+.b2um-status-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.b2um-status-row button{padding:7px 4px;border-radius:8px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.75rem;font-weight:700;color:var(--ink-soft);cursor:pointer;line-height:1.25;overflow-wrap:anywhere}
+.b2um-status-row button:disabled{cursor:default}
+.b2um-note{display:flex;flex-direction:column;gap:5px;font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+.b2um-note textarea{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;resize:vertical}
+.b2um-note-save{align-self:flex-start}
+@media (max-width:520px){
+  .b2um-status-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ── หน้า "งานของฉัน" ── */
+.mywork-count{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+/* กลุ่มความเร่งด่วนเรียงเป็นคอลัมน์บนจอกว้าง — จำนวนกลุ่มไม่แน่นอน (โชว์เฉพาะกลุ่มที่มีงาน)
+   จึงใช้ auto-fit ให้มันจัดเองแทนการกำหนดจำนวนคอลัมน์ตายตัว */
+.mywork-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:16px;align-items:start}
+.mywork-group-head{font-weight:700;font-size:.95rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.mywork-group-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.78rem}
+.mywork-list{list-style:none;margin:0;padding:0}
+.mywork-list li + li{border-top:1px solid #eef2ef}
+.mywork-list a{display:flex;align-items:center;gap:10px;padding:10px 4px;color:inherit;text-decoration:none;border-radius:8px}
+.mywork-list a:hover{background:#f7faf8}
+.mywork-kind{color:var(--ink-soft);flex-shrink:0;font-size:.85rem}
+/* ชื่องานยาวได้ไม่จำกัด — ให้มันหดได้และตัดด้วย ellipsis ไม่งั้นมันดันวันที่ตกออกนอกการ์ด */
+.mywork-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.mywork-status{flex-shrink:0;color:#fff;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px}
+.mywork-date{flex-shrink:0;color:var(--ink-soft);font-size:.78rem;font-variant-numeric:tabular-nums}
+.mywork-empty{text-align:center;padding:40px 20px;color:var(--ink-soft)}
+.mywork-empty svg{font-size:2rem;opacity:.4;margin-bottom:12px}
+.mywork-empty-hint{font-size:.85rem;opacity:.8;max-width:420px;margin:6px auto 0}
+
+/* ── ช่องเลือกผู้รับผิดชอบ (AssigneePicker) — ใช้ร่วมกันทุกที่ที่มอบหมายงานได้ ── */
+.assignee-picker{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft);min-width:0}
+.assignee-picker select{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
+.assignee-picker select:focus{outline:2px solid var(--green-mid);border-color:transparent}
+.assignee-hint{font-weight:400;font-size:.78rem;color:#b45309}
+/* ป้ายชื่อในลิสต์/การ์ด — ต้องอ่านออกในที่แคบ จึงตัดด้วย ellipsis ไม่ดันการ์ดให้กว้างขึ้น */
+.assignee-tag{display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;padding:2px 8px;border-radius:99px;background:#e8f5e9;color:#2e7d32;font-size:.75rem;font-weight:700}
+.assignee-tag-missing{background:#fbe9e7;color:#c62828}
+
+.admin-cal-status-chips{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin-top:4px}
+.admin-cal-status-chips button{padding:8px 6px;line-height:1.3;overflow-wrap:anywhere;border:1px solid #ddd;border-radius:99px;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.admin-cal-status-chips button:hover{border-color:var(--green-mid)}
+/* แหล่งข้อมูลอ้างอิง — ในฟอร์ม (แก้ไข) และบนการ์ด (กดไปได้) */
+.admin-cal-source-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.admin-cal-source-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:.85rem;font-family:inherit;box-sizing:border-box}
+.admin-cal-source-row input:first-child{flex:0 1 38%}
+.admin-cal-source-del{flex-shrink:0;width:32px;height:32px;border:1px solid #f3c4be;background:#fff;color:#c0392b;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.admin-cal-source-del:hover{background:#fdecea}
+.admin-post-sources{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.admin-post-sources a{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--green-deep);text-decoration:none;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-post-sources a:hover{text-decoration:underline}
+
+/* แจ้งเตือนตอนบันทึกข้อมูลไม่สำเร็จ (lib/writeErrorNotice.js) — ลอยมุมล่าง ไม่ขวางการทำงาน
+   z-index สูงสุดในเว็บ เพราะต้องเห็นทับทุกอย่างรวมโมดัล/แถบลอย */
+.write-error-toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120%);z-index:3000;max-width:min(92vw,420px);background:#c0392b;color:#fff;padding:13px 18px;border-radius:12px;font-size:.9rem;font-weight:600;line-height:1.5;box-shadow:0 12px 34px rgba(0,0,0,.3);opacity:0;transition:transform .25s ease,opacity .25s ease;pointer-events:none;text-align:center}
+.write-error-toast.show{transform:translate(-50%,0);opacity:1}
+@media (prefers-reduced-motion:reduce){.write-error-toast{transition:opacity .25s ease}}
+
+/* ทำซ้ำทุกสัปดาห์ในฟอร์มโพสต์ — ชิปวันจันทร์→อาทิตย์ + จำนวนสัปดาห์ */
+.admin-cal-repeat-head{font-size:.85rem;font-weight:700;color:var(--ink-soft);margin-bottom:6px}
+/* 7 วันต้องอยู่บรรทัดเดียวเสมอ — flex-wrap + min-width:42px ตกบรรทัดเมื่อรางแคบกว่า ~340px
+   (บนมือถือรางฟอร์มแคบกว่านั้น "อา" จึงหลุดไปบรรทัดสอง)
+   กริด 7 คอลัมน์เท่ากันแก้ที่ต้นเหตุ: ชิปหารความกว้างที่มีเสมอ ไม่ว่ารางจะแคบเท่าไร
+   minmax(0,1fr) กันคอลัมน์บวมจาก min-content ของ "พฤ" ที่กว้างกว่าตัวอื่น */
+@media (max-width:520px){
+  .admin-cal-status-chips{gap:6px}
+  .admin-cal-status-chips button{font-size:.74rem;padding:8px 4px}
+}
+.admin-cal-status-chips.admin-cal-repeat-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.admin-cal-repeat-days button{min-width:0;padding:8px 2px;text-align:center;min-height:40px}
+/* จอแคบมาก ย่อตัวอักษรแทนการตกบรรทัด */
+@media (max-width:400px){
+  .admin-cal-repeat-days{gap:4px}
+  .admin-cal-repeat-days button{font-size:.78rem;padding:8px 0}
+}
+.admin-cal-repeat-weeks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-repeat-weeks select{width:auto;min-width:120px}
+.admin-cal-repeat-count{font-weight:600;color:var(--green-deep)}
+
+/* แถวกระดิ่งแจ้งเตือนในเมนูข้าง — ไม่ใช่ลิงก์ จึงไม่ต้องมี hover/cursor ของ .an-item
+   ตัวปุ่มกระดิ่งจัดการคลิกเอง (เปิด dropdown ผ่าน portal) */
+.an-bell-row{cursor:default}
+.an-bell-row > span{display:flex;align-items:center;gap:10px}
+/* ตอนย่อเหลือราง ป้าย "การแจ้งเตือน" ถูกซ่อน เหลือแต่ปุ่มกระดิ่ง — ขยายพื้นที่กดให้เต็มแถว
+   ไม่งั้นเป้ากดเหลือแค่ 30px กลางราง 64px กดพลาดง่ายมาก */
+@media (min-width:769px){
+  html.admin-nav-collapsed .an-bell-row > span{width:100%;justify-content:center}
+  html.admin-nav-collapsed .admin-nav-bell{width:40px;height:40px;font-size:1rem}
+}
+
+/* เมนูลอยของหัวกลุ่ม ตอน sidebar ย่อเหลือรางไอคอน — เมนูลูกถูกซ่อนในราง จึงเด้งออกมาข้างๆ แทน
+   render ผ่าน portal ไป body เพราะ .admin-nav มี overflow/transform ของตัวเอง จะตัดขอบกล่องนี้ */
+.an-flyout{position:fixed;z-index:1200;min-width:210px;max-width:280px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px}
+.an-flyout-head{font-size:.78rem;font-weight:700;color:#6b7280;padding:8px 10px 6px}
+.an-flyout-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:8px;color:#1f2937;text-decoration:none;font-size:.9rem;line-height:1.2}
+.an-flyout-item:hover{background:#f1f5f2}
+.an-flyout-item.active{background:var(--green-deep,#166534);color:#fff}
+.an-flyout-item.active .an-badge{background:#fff;color:var(--green-deep,#166534)}
+
+/* ── แท็บไอเดีย (มายด์แมป) ของบอร์ดวางแผน ── */
+.idea-tabs{margin-bottom:16px}
+.idea-tabs button.on{background:var(--green-deep);border-color:var(--green-deep);color:#fff}
+.idea-card{padding:14px}
+.idea-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.idea-hint{font-size:.8rem;color:var(--ink-soft)}
+.idea-status{font-size:.8rem;font-weight:700;color:#c0392b}
+/* ผ้าใบกว้างกว่าจอ — เลื่อนดูได้ทั้งสองแกน ไม่ย่อผังจนอ่านข้อความไม่ออก */
+.idea-scroll{overflow:auto;max-height:min(72vh,680px);border:1px solid #eef1ee;border-radius:12px;background:
+  linear-gradient(#f7faf8 1px,transparent 1px) 0 0/100% 28px,
+  linear-gradient(90deg,#f7faf8 1px,transparent 1px) 0 0/28px 100%,#fff}
+.idea-canvas{position:relative}
+.idea-edges{position:absolute;inset:0;pointer-events:none}
+/* เส้นเชื่อม: เส้นโปร่งหนาซ้อนใต้เส้นจริงเพื่อให้กดโดนง่ายบนจอสัมผัส */
+.idea-edge{pointer-events:auto;cursor:pointer}
+.idea-edge-hit{stroke:transparent;stroke-width:18}
+.idea-edge-line{stroke:var(--green-mid);stroke-width:2.5}
+.idea-edge:hover .idea-edge-line{stroke:#c0392b;stroke-width:3.5}
+/* touch-action:none จำเป็น — ไม่งั้นการลากบนมือถือกลายเป็นเลื่อนหน้าแทนการย้ายการ์ด */
+.idea-node{position:absolute;box-sizing:border-box;background:#fff;border:1.5px solid rgba(46,125,82,.25);border-radius:12px;padding:8px 10px;box-shadow:0 6px 18px -10px rgba(27,94,54,.35);cursor:grab;touch-action:none;user-select:none}
+.idea-node:active{cursor:grabbing}
+.idea-node.linking{border-color:var(--green-deep);box-shadow:0 0 0 3px rgba(46,125,82,.18)}
+.idea-node.target{border-style:dashed;cursor:pointer}
+.idea-node-head{display:flex;align-items:flex-start;gap:6px}
+.idea-node-title{flex:1;min-width:0;border:none;background:transparent;font:inherit;font-size:.85rem;font-weight:700;color:var(--ink);padding:0}
+.idea-node-title:focus{outline:none;border-bottom:1px solid var(--green-mid)}
+.idea-node-btns{display:flex;gap:4px;flex-shrink:0}
+.idea-node-btn{border:1px solid #e5e7eb;background:#fff;border-radius:7px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-soft);font-size:.7rem}
+.idea-node-btn.on{background:var(--green-deep);border-color:var(--green-deep);color:#fff}
+.idea-node-btn.danger:hover{background:#fdecea;color:#c0392b;border-color:#f3c4be}
+.idea-node-date{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.72rem;color:var(--ink-soft)}
+.idea-node-date input{flex:1;min-width:0;border:1px solid #e5e7eb;border-radius:6px;padding:3px 5px;font:inherit;font-size:.72rem;background:#fff}
+
+/* ── หน้ารายละเอียดคำสั่งซื้อ (แอดมิน): 3 คอลัมน์บนจอกว้าง ──
+   สินค้า | ลูกค้า | งานตามสถานะ (ชำระเงิน / เตรียมจัดส่ง / จัดส่งแล้ว)
+   เดิมเป็นคอลัมน์เดียวกว้าง 760px ต้องเลื่อนหาข้อมูลทั้งที่ครึ่งจอขวาว่างเปล่า
+   align-items:start ให้การ์ดสูงตามเนื้อหาตัวเอง ไม่ยืดเท่ากันจนเหลือที่ว่างในใบสั้น */
+.admin-order-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+/* การ์ดในคอลัมน์ไม่ต้องเว้นล่างซ้ำ กริดจัดระยะให้แล้ว — แต่การ์ดหลายใบในคอลัมน์เดียวยังต้องห่างกัน */
+.admin-order-col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.admin-order-col>.admin-card{margin-bottom:0}
+@media (max-width:1200px){.admin-order-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){.admin-order-cols{grid-template-columns:1fr}}
+
+/* ══ โครงหน้าแอดมินแบบ "หน้าไม่เลื่อน มีแต่เนื้อหาที่เลื่อน" ══
+   ก่อนหน้านี้ทั้งหน้าเลื่อนไปพร้อมกัน หัวข้อ/ปุ่มค้นหา/หัวตารางหายไปหมดเวลาไล่ดูข้อมูลยาวๆ
+
+   .admin-dash เป็นตัวเลื่อนแทน <body> ⇒ ไม่มี scrollbar ของทั้งหน้า
+   แถบเมนูซ้ายเป็น position:fixed อยู่แล้ว จึงไม่ขยับตามอยู่แล้ว (และ .admin-dash ไม่มี transform
+   จึงไม่กลายเป็น containing block ใหม่ที่จะทำให้ fixed ข้างในเพี้ยน)
+
+   เนื้อหาที่ยาวกว่าจอยังต้องเลื่อนอยู่ — ลบทิ้งไม่ได้ แต่เลื่อนอยู่ในกรอบของตัวเอง
+   โดยหัวข้อหน้ากับหัวตารางยังติดอยู่กับที่
+
+   ทำเฉพาะจอ >=769px: บนมือถือแถบเมนูเป็น top bar และเบราว์เซอร์มือถือย่อ/ขยาย URL bar
+   ตามการเลื่อนหน้า ถ้าล็อกความสูงไว้ 100dvh จะเสียพฤติกรรมนั้นและเลื่อนสะดุด */
+@media (min-width:769px){
+  .admin-dash{
+    height:100dvh;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  /* หัวข้อหน้า + ปุ่ม (ค้นหา/เพิ่มใหม่/ส่งออก) ติดอยู่ด้านบนขณะเลื่อนดูข้อมูล
+     ต้องทึบแสงและ z-index สูงกว่าหัวตาราง ไม่งั้นแถวตารางจะวิ่งทะลุให้เห็น */
+  .admin-head{position:sticky;top:0;z-index:6}
+  /* ตารางเลื่อนในกรอบของตัวเอง — หัวตาราง (th) เป็น position:sticky อยู่แล้ว แต่ sticky ยึดกับ
+     "กรอบที่เลื่อนได้ตัวใกล้สุด" ซึ่งคือ .admin-table-wrap (มี overflow-x:auto อยู่เดิม)
+     กรอบนั้นไม่เคยเลื่อนแนวตั้ง หัวตารางจึงไถลหายไปกับแถวข้อมูล — ให้มันเลื่อนแนวตั้งด้วยถึงจะติด
+     ค่า 300px ที่หักออกคือพื้นที่หัวข้อหน้า+ระยะการ์ด (ประมาณจากหน้าที่มีสถิติด้านบน) */
+  .admin-table-wrap{max-height:calc(100dvh - 300px);min-height:240px;overflow:auto}
+  .admin-table th{z-index:4}
+}
+
+/* จุดลากเชื่อมบนการ์ดไอเดีย — กดค้างที่จุดแล้วลากไปปล่อยบนการ์ดอีกใบ
+   แสดงตลอดเวลา (ไม่ซ่อนรอ hover) เพราะจอสัมผัสไม่มี hover จะไม่มีทางรู้ว่ามีจุดนี้อยู่ */
+.idea-link-dot{position:absolute;right:-7px;top:50%;transform:translateY(-50%);width:14px;height:14px;border-radius:50%;background:var(--green-deep);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:crosshair;touch-action:none;z-index:2}
+/* ขยายพื้นที่กดเป็น 30px โดยไม่ทำให้จุดใหญ่ขึ้น — นิ้วกดโดนง่ายบนมือถือ */
+.idea-link-dot::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%}
+.idea-link-dot:hover,.idea-link-dot.dragging{background:var(--green-mid);transform:translateY(-50%) scale(1.25)}
+/* เส้นระหว่างลาก — เส้นประให้รู้ว่ายังไม่ถูกบันทึก ต่างจากเส้นจริงที่เป็นเส้นทึบ */
+.idea-edge-dragging{stroke:var(--green-deep);stroke-width:2.5;stroke-dasharray:6 5;pointer-events:none}
+
+/* ปุ่มเปิด/ปิดกล่องคุยในการ์ดบอร์ด — เปิดทีละใบ (ดูคอมเมนต์ openChatCardId ใน AdminBoard.jsx) */
+.admin-board-chat-toggle{width:100%;padding:7px 10px;border-radius:8px;border:1px dashed rgba(46,125,82,.35);background:#f7faf8;color:var(--green-deep,#166534);font-family:inherit;font-size:.8rem;font-weight:700;cursor:pointer}
+.admin-board-chat-toggle:hover{background:#eef7f1}
+
+/* ── หน้ารวมของแคมเปญเดียว (/admin/campaigns/:id) ── */
+.cd-back{display:inline-block;margin-bottom:14px;color:var(--green-deep,#166534);text-decoration:none;font-size:.88rem;font-weight:700}
+.cd-hero{margin-bottom:18px}
+.cd-hero h1{margin:0 0 6px;font-size:1.35rem}
+.cd-desc{color:var(--ink-soft);font-size:.9rem;margin:0 0 10px}
+.cd-facts{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.82rem;color:var(--ink-soft);margin-bottom:12px}
+.cd-progress-bar{height:12px;border-radius:99px;background:#eef2ef;overflow:hidden}
+.cd-progress-bar span{display:block;height:100%;background:var(--green-mid,#2e7d52);border-radius:99px}
+.cd-progress-text{display:flex;justify-content:space-between;font-size:.85rem;margin-top:6px}
+/* auto-fit: จำนวนกล่องคงที่ 6 กล่องก็จริง แต่ความกว้างที่มีเปลี่ยนตาม sidebar ย่อ/กาง */
+/* minmax(min(NNNpx,100%),1fr) ไม่ใช่ minmax(NNNpx,1fr) — ถ้าพื้นที่จริงแคบกว่าค่าต่ำสุด
+   แทร็กจะถูกบังคับให้กว้างเท่าค่านั้นแล้วล้นออกนอกการ์ด (เจอจริงที่หน้ารวมแคมเปญ ล้น 14px บนจอ 360px)
+   ห่อด้วย min() ให้ยุบตามพื้นที่ได้เมื่อจอแคบกว่า — ใช้แบบเดียวกันทุกกริด auto-fit/auto-fill ในไฟล์นี้ */
+.cd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
+.cd-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.cd-section-head h4{margin:0;font-size:.95rem;display:flex;align-items:center;gap:8px}
+.cd-count{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.75rem;font-weight:700}
+.cd-more{font-size:.8rem;color:var(--green-deep,#166534);text-decoration:none;font-weight:700;white-space:nowrap}
+.cd-empty{font-size:.85rem;color:var(--ink-soft);opacity:.8;margin:0}
+.cd-list{list-style:none;margin:0;padding:0;max-height:260px;overflow-y:auto;overscroll-behavior:contain}
+.cd-list li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f6f4;font-size:.86rem}
+/* ชื่อรายการยาวได้ไม่จำกัด ต้องหดและตัด ไม่งั้นดันวันที่/ป้ายสถานะตกออกนอกกล่อง */
+.cd-item-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cd-date{flex-shrink:0;color:var(--ink-soft);font-size:.78rem;font-variant-numeric:tabular-nums}
+.cd-tag{flex-shrink:0;background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:2px 9px;font-size:.72rem;font-weight:700;white-space:nowrap}
+
+/* ── ตารางไลฟ์สด (/admin/live) ── */
+.live-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.live-next{margin-bottom:16px;border-left:4px solid var(--green-mid,#2e7d52)}
+.live-next-label{font-size:.75rem;font-weight:700;color:var(--green-mid,#2e7d52);letter-spacing:.04em}
+.live-next-title{font-size:1.15rem;font-weight:700;margin:4px 0 6px;overflow-wrap:anywhere}
+.live-next-meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.85rem;color:var(--ink-soft)}
+.live-section{margin-bottom:14px}
+.live-section-head{margin:0 0 10px;font-size:.95rem;display:flex;align-items:center;gap:8px}
+.live-section-head span{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:1px 9px;font-size:.75rem}
+.live-section-warn{color:#b45309}
+.live-empty{font-size:.85rem;color:var(--ink-soft);opacity:.8;margin:0}
+.live-list{list-style:none;margin:0;padding:0}
+/* แถวเดียวมีหลายชิ้น ความยาวไม่แน่นอน — ใช้ flex+wrap ไม่ใช่ตาราง เพื่อให้ยุบลงบรรทัดถัดไปได้เองบนจอแคบ */
+.live-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 0;border-bottom:1px solid #f3f6f4;font-size:.88rem}
+.live-row-dim{opacity:.55}
+.live-time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--green-deep,#166534);white-space:nowrap}
+/* ชื่อไลฟ์กินที่เหลือทั้งหมด แต่ต้องหดได้ ไม่งั้นดันลิงก์ท้ายแถวตกออกนอกการ์ด */
+.live-title{flex:1 1 160px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-host{color:var(--ink-soft);font-size:.8rem;white-space:nowrap}
+.live-platforms{color:var(--ink-soft);font-size:.78rem;white-space:nowrap}
+.live-status{color:#fff;font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.live-open{color:var(--green-deep,#166534);text-decoration:none;font-size:.8rem;font-weight:700;white-space:nowrap}
+
+/* ── ปฏิทินรายสัปดาห์ (/admin/week) ── */
+.wk-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.wk-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.wk-range{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.wk-range strong,.wk-range span{overflow-wrap:anywhere}
+.wk-range strong{font-size:1rem;color:var(--green-deep,#166534)}
+.wk-range span{font-size:.78rem;color:var(--ink-soft)}
+.wk-today{flex-shrink:0}
+
+/* 7 คอลัมน์เท่ากัน — minmax(0,1fr) ไม่ใช่ 1fr เปล่าๆ เพราะชื่อโพสต์ยาวจะดันคอลัมน์ให้กว้างเกินส่วน
+   แล้วตารางล้นออกนอกจอ */
+/* แถวปฏิทินด้านบนของหน้ารายสัปดาห์ — ใช้คลาสของตารางเดือนซ้ำ จึงต้องคุมแค่ระยะห่างรอบนอก */
+.wk-strip{margin-bottom:14px}
+/* ตารางเดือนมี 6 แถวจึงต้องการช่องสูง แต่แถวเดียวไม่ต้อง — ลดลงให้ไม่กินที่ก่อนถึงเนื้อหาจริง */
+.wk-strip .admin-cal-day{min-height:48px}
+
+.wk-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:start}
+.wk-col{background:#fff;border-radius:12px;border:1px solid rgba(46,125,82,.1);padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.wk-col-today{border-color:var(--green-mid,#2e7d52);box-shadow:0 0 0 2px rgba(46,125,82,.14)}
+/* วันที่กดเลือกจากแถวปฏิทิน — ต้องเด่นกว่ากรอบ "วันนี้" เพราะเป็นสิ่งที่ผู้ใช้เพิ่งสั่ง
+   ประกาศทีหลังจึงชนะเมื่อเป็นวันเดียวกัน (specificity เท่ากัน) */
+.wk-col-sel{border-color:var(--green-deep,#166534);box-shadow:0 0 0 3px rgba(22,101,52,.22)}
+.wk-col-head{display:flex;flex-direction:column;gap:1px;padding-bottom:6px;border-bottom:1px solid #eef2ef}
+.wk-dow{font-size:.78rem;font-weight:700;color:var(--green-deep,#166534)}
+.wk-date{font-size:.85rem;font-weight:700}
+.wk-hijri{font-size:.7rem;color:var(--ink-soft)}
+/* คอลัมน์เลื่อนแยกกัน — วันที่มีโพสต์เยอะไม่ควรดันทั้งแถวให้สูงตามจนวันอื่นเป็นช่องว่างยาว */
+.wk-col-body{display:flex;flex-direction:column;gap:6px;min-height:70px;max-height:min(58vh,520px);overflow-y:auto;overscroll-behavior:contain}
+.wk-none{margin:0;color:var(--ink-soft);opacity:.5;font-size:.85rem;text-align:center;padding:8px 0}
+.wk-item{display:flex;flex-direction:column;gap:3px;padding:7px 8px;border-radius:8px;border:1px solid #eef2ef;border-left:3px solid #ccc;background:#fbfdfc;text-decoration:none;color:inherit}
+.wk-item:hover{background:#f2f8f4}
+.wk-item-top{display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--ink-soft)}
+.wk-time{font-variant-numeric:tabular-nums;font-weight:700}
+.wk-type{background:#eef2ef;border-radius:99px;padding:0 6px}
+/* ชื่อโพสต์ตัดได้ 2 บรรทัด — บรรทัดเดียวสั้นเกินจนอ่านไม่รู้เรื่องในคอลัมน์แคบ
+   แต่ปล่อยยาวไม่จำกัดก็ทำให้การ์ดสูงไม่เท่ากันจนอ่านข้ามวันลำบาก */
+.wk-item-title{font-size:.82rem;font-weight:700;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.wk-item-foot{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.wk-status{color:#fff;font-size:.65rem;font-weight:700;padding:1px 7px;border-radius:99px;white-space:nowrap}
+.wk-add{text-align:center;font-size:.78rem;font-weight:700;color:var(--green-deep,#166534);text-decoration:none;padding:5px;border-radius:8px;border:1px dashed rgba(46,125,82,.3)}
+.wk-add:hover{background:#f2f8f4}
+
+/* จอแคบ: 7 คอลัมน์ข้างกันอ่านไม่ได้ ยุบเป็น 2 คอลัมน์ แล้วเหลือ 1 บนมือถือ
+   (แต่ละคอลัมน์ยังคงเป็น "วัน" ที่มีโพสต์เรียงลงมาเหมือนเดิม) */
+@media (max-width:1200px){
+  .wk-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wk-col-body{max-height:none}
+}
+@media (max-width:560px){
+  .wk-grid{grid-template-columns:1fr}
+  /* จอแคบ: ช่วงวันที่ถูกบีบอยู่กลางระหว่างปุ่มจนตัดเป็นสามบรรทัด — ยกขึ้นเป็นบรรทัดเต็มของตัวเอง
+     แล้วให้ปุ่มทั้งสามเรียงใต้มันเป็นแถวเดียว */
+  .wk-bar{display:grid;grid-template-columns:auto 1fr auto;gap:8px}
+  .wk-range{grid-column:1 / -1;grid-row:1}
+  .wk-bar > .admin-btn:nth-of-type(1){grid-column:1;grid-row:2}
+  .wk-bar > .admin-btn:nth-of-type(2){grid-column:3;grid-row:2}
+  .wk-today{grid-column:2;grid-row:2}
+}
+
+/* ── ปุ่มสลับมุมมองปฏิทิน เดือน/สัปดาห์ (รวมสองหน้าเดิมเข้าด้วยกัน) ── */
+.admin-cal-viewtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;background:#eef2ef;padding:4px;border-radius:99px}
+.admin-cal-viewtabs button{padding:8px 12px;border:none;border-radius:99px;background:none;font-family:inherit;font-size:.88rem;font-weight:700;color:var(--ink-soft);cursor:pointer;transition:background .15s,color .15s}
+.admin-cal-viewtabs button.on{background:#fff;color:var(--green-deep,#166534);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+/* แถวเดียวไม่ต้องสูงเท่าตารางเดือนที่มี 6 แถว */
+.admin-cal-grid-week .admin-cal-day{min-height:48px}
+
+/* ── ปรับ UI หน้าปฏิทินบนมือถือ ── */
+
+/* ชิปสถานะ 4 อันบรรทัดเดียวเหลือช่องละ 80px — "กำลังดำเนินงาน" ตัดเป็น 2 บรรทัด
+   ทำให้ชิปสูง 49px และอ่านยาก จัดเป็น 2x2 แทน กว้างพอให้ทุกคำอยู่บรรทัดเดียว
+   (ไม่แตะ .admin-cal-repeat-days ที่ต้องเป็น 7 ช่องวันในสัปดาห์เสมอ) */
+@media (max-width:640px){
+  .admin-cal-status-chips:not(.admin-cal-repeat-days){
+    grid-auto-flow:row;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+/* ปุ่มแชทลอยอยู่มุมล่างซ้ายแบบ fixed (.admin-chat-fab) และไม่มีอะไรกันที่ให้ —
+   มันจึงทับเนื้อหาบรรทัดล่างสุดของทุกหน้า (ในภาพคือทับป้าย "ผู้รับผิดชอบ" กับชิป "ร่าง")
+   กันที่ไว้ท้ายหน้าเท่าความสูงปุ่ม + ระยะห่าง */
+@media (max-width:768px){
+  .admin-dash{padding-bottom:86px}
+}
+
+/* แถบสลับมุมมองเตี้ยลงและไม่กว้างเกินจำเป็น — เดิมเป็นแถบสูง 45px เต็มความกว้างการ์ด
+   ทั้งที่มีแค่สองคำ ดูเป็นพื้นที่ว่างก้อนใหญ่ก่อนถึงตัวปฏิทิน */
+.admin-cal-viewtabs{max-width:280px;margin-left:auto;margin-right:auto;padding:3px}
+.admin-cal-viewtabs button{padding:6px 12px;font-size:.85rem}
+
+/* ── แม่แบบโพสต์ในฟอร์มปฏิทิน ── */
+.admin-cal-tpl{border-top:1px solid #eef2ef;margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.admin-cal-tpl-head{font-size:.8rem;font-weight:700;color:var(--ink-soft)}
+/* select ยืดได้ ปุ่มไม่หด — ชื่อแม่แบบยาวได้ ปุ่มต้องอ่านออกเสมอ */
+.admin-cal-tpl-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.admin-cal-tpl-row select{flex:1 1 180px;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.88rem;background:#fff}
+.admin-cal-tpl-row .admin-btn{flex-shrink:0;white-space:nowrap}
+.admin-cal-tpl-list{display:flex;flex-wrap:wrap;gap:6px}
+.admin-cal-tpl-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:#eef2ef;border-radius:99px;padding:3px 6px 3px 11px;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.admin-cal-tpl-chip button{border:none;background:none;color:#c62828;cursor:pointer;padding:2px 4px;font-size:.72rem;opacity:.65;flex-shrink:0}
+.admin-cal-tpl-chip button:hover{opacity:1}
+
+/* มุมมองสัปดาห์แสดงเฉพาะวันที่เลือก — คอลัมน์เดียวเต็มความกว้าง
+   ไม่ต้องจำกัดความสูงเหมือนตอนเจ็ดคอลัมน์ (ที่ทำไว้เพื่อไม่ให้วันที่งานเยอะดันวันอื่นเป็นช่องว่างยาว)
+   เพราะเหลือคอลัมน์เดียวแล้ว ให้ยาวตามเนื้อหาไปเลย จะได้ไม่มีกรอบเลื่อนซ้อนในหน้าที่เลื่อนอยู่แล้ว */
+.wk-grid-single{grid-template-columns:minmax(0,1fr)}
+/* คอลัมน์เดียวกินเต็มความกว้าง — ถ้ายังเรียงโพสต์ลงมาทีละใบจะได้การ์ดยาวเต็มจอใบเดียวต่อบรรทัด
+   เสียพื้นที่ด้านข้างทั้งหมด จัดเป็นแถวเดียวหลายคอลัมน์แบบเดียวกับการ์ดวันที่เลือกด้านบน
+   ความกว้างคิดจาก 6 ช่องพอดีในกรอบ (เผื่อ gap 5 ช่อง) ใบที่ 7 โผล่พ้นขอบให้รู้ว่าเลื่อนต่อได้ */
+.wk-grid-single .wk-col-body{
+  max-height:none;
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:minmax(clamp(180px,calc((100% - 5 * 8px) / 6),300px),1fr);
+  gap:8px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  padding-bottom:4px;
+}
+.wk-grid-single .wk-col-body > *{scroll-snap-align:start}
+/* มือถือ: 6 ช่องในจอแคบเหลือช่องละไม่ถึง 60px อ่านไม่ออก — ให้กว้างพออ่านแล้วเลื่อนแทน */
+@media (max-width:900px){
+  .wk-grid-single .wk-col-body{grid-auto-columns:minmax(220px,1fr)}
+}
+
+/* ── โพสต์เป็น "ชิป" แทนการ์ด ──
+   ทั้งการ์ดวันที่เลือกด้านบนและคอลัมน์วันในมุมมองสัปดาห์ เดิมเป็นการ์ดสูง 60–90px ต่อโพสต์
+   ทั้งที่เนื้อในเหลือแค่ เวลา · ชื่อ · สถานะ (รายละเอียดอื่นซ่อนไว้อยู่แล้ว)
+   ย่อเป็นชิปบรรทัดเดียว ⇒ เห็นโพสต์ของวันนั้นได้หลายใบพร้อมกันโดยไม่กินความสูง
+   ยังกดได้เหมือนเดิม (การ์ดบน = เปิดรายละเอียด, ในสัปดาห์ = เปิดแก้ในฟอร์ม) */
+
+/* ชิปเรียงต่อกันเป็นแถวและตกบรรทัดได้ ไม่ต้องเลื่อนแนวนอนอีก เพราะชิปเตี้ยพอจะขึ้นหลายบรรทัดได้ */
+.admin-day-posts,
+.wk-grid-single .wk-col-body{
+  display:flex;
+  /* ต้องระบุ row ให้ชัด — .wk-col-body ตัวฐานเป็น column อยู่ ถ้าไม่ทับ ชิปจะถูก stretch
+     เต็มความกว้างคอนเทนเนอร์ (align-items:stretch ของแกนขวางในโหมด column) แล้วเรียงลงมาทีละใบ
+     ซึ่งคือสิ่งที่กำลังจะเลิกทำพอดี */
+  flex-direction:row;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  gap:8px;
+  overflow:visible;
+  grid-auto-flow:initial;
+}
+
+.admin-cal-today .admin-post,
+.wk-grid-single .wk-item{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  max-width:100%;
+  min-width:0;
+  padding:6px 10px;
+  margin:0;
+  border:1px solid #e6ebe8;
+  /* แถบสีสถานะด้านซ้าย — บอกสถานะโดยไม่ต้องมีป้ายข้อความยาวๆ ในชิป */
+  border-left-width:4px;
+  border-radius:99px;
+  background:#fbfdfc;
+  box-shadow:none;
+  cursor:pointer;
+  font-size:.82rem;
+  line-height:1.3;
+  text-align:left;
+}
+.admin-cal-today .admin-post:hover,
+.wk-grid-single .wk-item:hover{background:#f2f8f4}
+
+/* หัวชิป: เวลา·ชื่อ อยู่บรรทัดเดียว ตัดด้วย ellipsis ไม่ให้ชิปยาวจนดันบรรทัด */
+.admin-cal-today .admin-post-top{display:flex;align-items:center;gap:8px;min-width:0;margin:0}
+.admin-cal-today .admin-post-top strong{
+  font-size:.82rem;font-weight:700;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34ch;
+}
+.admin-cal-today .admin-post-platforms{display:none}
+/* ป้ายสถานะข้อความซ้ำกับแถบสีซ้ายแล้ว — เอาออกให้ชิปสั้น เหลือปุ่มแก้ไข/ลบที่ยังต้องใช้ */
+.admin-cal-today .admin-post-status{display:none}
+.admin-cal-today .admin-post-corner{display:inline-flex;align-items:center;gap:2px;flex-shrink:0}
+.admin-cal-today .admin-post-corner-btn{width:26px;height:26px;font-size:.72rem}
+
+/* ชิปในมุมมองสัปดาห์ — โครงต่างจากการ์ดบน (มี .wk-item-top/-title/-foot) จึงจัดแยก */
+.wk-grid-single .wk-item{flex-direction:row}
+.wk-grid-single .wk-item .wk-item-top{gap:6px;font-size:.72rem}
+.wk-grid-single .wk-item .wk-item-type{display:none}
+.wk-grid-single .wk-item .wk-item-title{
+  font-size:.82rem;-webkit-line-clamp:initial;display:inline;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:30ch;
+}
+/* ป้ายสถานะข้อความซ้ำกับแถบสีซ้าย — ซ่อนเหมือนการ์ดบน */
+.wk-grid-single .wk-item .wk-item-foot{display:none}
+
+/* ปุ่ม "+ เพิ่ม" กลายเป็นชิปเส้นประในแถวเดียวกับโพสต์ ไม่ใช่แถบเต็มความกว้างด้านล่าง */
+.wk-grid-single .wk-add{width:auto;align-self:flex-start;padding:6px 14px;border-radius:99px}
+
+/* ชิปโพสต์เป็นปุ่มหลักของหน้า (กดเพื่อเปิด/แก้โพสต์) แต่สูงแค่ 31–40px ซึ่งต่ำกว่าเป้าหมาย 44px
+   ของ iOS/Android — และชิปเรียงติดกันหลายอัน จึงกดพลาดง่ายเป็นพิเศษ
+   ขยายเฉพาะจอสัมผัส เดสก์ท็อปยังกะทัดรัดเหมือนเดิมเพราะเมาส์แม่นกว่า */
+@media (max-width:900px){
+  .admin-cal-today .admin-post,
+  .wk-grid-single .wk-item,
+  .wk-grid-single .wk-add{min-height:44px}
+}
+
+/* ── ย่อขนาด UI ฝั่งแอดมินให้พอดีจอมากขึ้น ──
+   วัดหน้าปฏิทินบนจอ 1600x900 แล้วสูงรวม 1635px (เกินจอเกือบเท่าตัว) ระยะห่าง/ความสูงหลายจุด
+   ตั้งไว้ตอนที่หน้ายังมีของน้อยกว่านี้มาก ตรงนี้รัดเข้าโดยไม่แตะขนาดพื้นที่กด 44px */
+@media (min-width:901px){
+  .admin-card{padding:14px 16px}
+  .admin-dash{padding-top:20px;padding-bottom:20px}
+  .admin-head{margin-bottom:14px}
+  .admin-cal-layout{gap:14px}
+  .admin-cal-today{margin-bottom:12px !important}
+  /* ช่องวันเตี้ยลง — 52px เผื่อไว้ตอนช่องยังมีแค่เลขวันที่ ตอนนี้มีเลขฮิจเราะห์กับจุดสถานะแล้ว
+     แต่ทั้งสามอย่างรวมกันสูงไม่ถึง 40px จริง (6 แถว × 12px = ประหยัดไป 72px) */
+  .admin-cal-day{min-height:40px}
+  .admin-cal-viewtabs{margin-bottom:8px}
+  .admin-cal-head{margin-bottom:10px}
+  .admin-cal-legend{margin-top:8px}
+  .admin-cal-form{gap:10px}
+  .admin-cal-form-main{gap:10px}
+  /* กล่องแคปชันสูง 240px ขั้นต่ำ ทั้งที่มันยืดเต็มคอลัมน์อยู่แล้ว — ค่านี้จึงเป็นแค่พื้นล่าง
+     ที่ดันการ์ดฟอร์มให้สูงเกินจำเป็นเวลาช่องอื่นสั้น */
+  .admin-cal-caption textarea{min-height:150px}
+  .admin-cal-tpl{margin-top:8px;padding-top:8px}
+}
+
+/* หัวการ์ดฟอร์มที่กดพับ/กางได้ — ฟอร์มสูงเกือบ 800px ถ้ากางค้างไว้ ปฏิทินจะไม่มีทางพอดีจอ */
+.admin-cal-form-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;background:none;border:none;font-family:inherit;font-size:1rem;font-weight:700;color:var(--green-deep,#166534);cursor:pointer;text-align:left}
+.admin-cal-form-toggle svg{font-size:.8rem;color:var(--ink-soft);transition:transform .18s}
+.admin-cal-form-toggle svg.open{transform:rotate(180deg)}
+
+/* ── แผนผังระบบ (/admin/system-map) ── */
+.sm-layer{margin-bottom:4px}
+.sm-layer-label{font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:8px}
+/* ลูกศรเชื่อมชั้น — บอกทิศทางว่าอ่านจากบนลงล่าง ไม่ใช่สามก้อนที่ไม่เกี่ยวกัน */
+.sm-arrow{text-align:center;color:var(--ink-soft);opacity:.45;font-size:1.1rem;margin:2px 0 10px}
+
+.sm-core{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
+.sm-core-box{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;background:#fff;border:1px solid rgba(46,125,82,.16);text-decoration:none;color:inherit}
+.sm-core-box:hover{border-color:var(--green-mid,#2e7d52);background:#f7faf8}
+.sm-core-box strong{font-size:.9rem;color:var(--green-deep,#166534)}
+.sm-core-box span{font-size:.78rem;color:var(--ink-soft)}
+
+/* กลุ่มงาน — auto-fit เพราะจำนวนกลุ่มอาจเพิ่มทีหลัง และความกว้างที่มีเปลี่ยนตาม sidebar ย่อ/กาง */
+.sm-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start;margin-bottom:12px}
+.sm-group{border-radius:14px;padding:12px;border:1px solid rgba(0,0,0,.06)}
+.sm-group-head{font-size:.85rem;font-weight:700;margin-bottom:8px}
+/* สีต่อกลุ่มเป็นตัวช่วยจำตำแหน่ง ไม่ได้สื่อสถานะ จึงใช้โทนอ่อนทั้งหมดให้ยังอ่านตัวหนังสือออก */
+.sm-group-plan{background:#eef5ff}    .sm-group-plan .sm-group-head{color:#1d4ed8}
+.sm-group-reach{background:#f1f8f3}   .sm-group-reach .sm-group-head{color:#166534}
+.sm-group-network{background:#fdf2f8} .sm-group-network .sm-group-head{color:#9d174d}
+.sm-group-money{background:#fffbeb}   .sm-group-money .sm-group-head{color:#92400e}
+
+.sm-item{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:9px;background:#fff;text-decoration:none;color:inherit;margin-bottom:6px}
+.sm-item:last-child{margin-bottom:0}
+.sm-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.sm-item strong{font-size:.84rem}
+.sm-item span{font-size:.74rem;color:var(--ink-soft)}
+
+.sm-output{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.sm-out-box{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:var(--green-deep,#166534);color:#fff;text-decoration:none}
+.sm-out-box:hover{filter:brightness(1.08)}
+.sm-out-box strong{display:block;font-size:.88rem}
+.sm-out-box span{font-size:.75rem;opacity:.85}
+
+/* ══════════════════════════════════════════════════════════════════
+   ธีมหน้าแอดมินแบบ "Content OS" — เปลี่ยนที่เปลือกร่วม (sidebar + การ์ด) ที่เดียว
+   ทั้ง 35 หน้าจึงเปลี่ยนตามโดยไม่ต้องแก้ทีละไฟล์ (และไม่มีหน้าไหนหลุดธีม)
+
+   แนวคิดจากตัวอย่างที่อ้างอิง: พื้นครีม-ขาว ตัวหนังสือเข้ม เมนูเป็นรายการเรียบๆ
+   มีชิปไฮไลต์เฉพาะรายการที่เปิดอยู่ ใช้สีเขียวแบรนด์เป็น "สีเน้น" แทนที่จะเป็นพื้นหลังทั้งแถบ
+   — อ่านง่ายขึ้นมากบนหน้าที่ต้องนั่งทำงานนานๆ และคอนทราสต์ของตัวหนังสือดีกว่าพื้นเขียวเข้ม
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width:769px){
+  .admin-nav{
+    background:#fbfaf7;
+    color:#1f2937;
+    border-right:1px solid rgba(27,94,54,.12);
+    box-shadow:none;
+  }
+  /* แถบแบรนด์ด้านบน — เส้นคั่นบางแทนการเปลี่ยนสีพื้น ให้ต่อเนื่องกับรายการด้านล่าง */
+  .admin-nav .admin-nav-brand{
+    color:var(--green-deep,#166534);
+    border-bottom:1px solid rgba(27,94,54,.1);
+    padding:14px 16px;
+  }
+  .admin-nav .admin-nav-collapse-btn{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-collapse-btn:hover{background:rgba(27,94,54,.16)}
+
+  /* หัวกลุ่มเป็น "ป้ายหมวด" ตัวเล็ก ไม่ใช่ปุ่มก้อนใหญ่ — สายตาจึงไปหยุดที่รายการจริง ไม่ใช่ที่หัวข้อ */
+  .admin-nav .an-group-btn{
+    color:#8a9490;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:10px 14px 4px;
+  }
+  .admin-nav .an-group-btn:hover{background:transparent;color:var(--green-deep,#166534)}
+  .admin-nav .an-group-active>.an-group-btn{background:transparent}
+  .admin-nav .an-group-children{padding-left:14px}
+
+  .admin-nav .an-item,
+  .admin-nav .an-child{
+    color:#3c4a44;
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .admin-nav .an-item:hover,
+  .admin-nav .an-child:hover{background:rgba(27,94,54,.07);color:var(--green-deep,#166534)}
+  /* รายการที่เปิดอยู่ = ชิปเขียวอ่อน ไม่ใช่พื้นทึบ — บอกตำแหน่งได้โดยไม่แย่งสายตาจากเนื้อหา */
+  .admin-nav .an-item.active,
+  .admin-nav .an-child.active{
+    background:rgba(27,94,54,.11);
+    color:var(--green-deep,#166534);
+    font-weight:700;
+  }
+  .admin-nav .admin-nav-section-divider{background:rgba(27,94,54,.12)}
+  .admin-nav .admin-nav-user{color:#8a9490}
+  .admin-nav .admin-nav-logout{color:#8a9490}
+  .admin-nav .admin-nav-logout:hover{background:rgba(198,40,40,.08);color:#c62828}
+  /* กระดิ่ง/ปุ่มบนพื้นครีม — ของเดิมเป็นสีขาวโปร่งซึ่งมองไม่เห็นเลยบนพื้นสว่าง */
+  .admin-nav .admin-nav-bell{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-bell:hover{background:rgba(27,94,54,.16)}
+
+}
+
+/* พื้นหน้างานและการ์ด — อยู่นอก media query โดยตั้งใจ
+   ตัวเปลือกเมนูธีมเฉพาะเดสก์ท็อปได้ (มือถือใช้ drawer คนละตัว) แต่ "พื้นที่ทำงาน" ต้องหน้าตาเดียวกัน
+   ทุกขนาดจอ ไม่งั้นเปิดจากมือถือแล้วรู้สึกเหมือนคนละระบบ */
+.admin-dash{background:#f7f6f2}
+/* การ์ด: มุมมนขึ้น เงาบางลง ขอบอ่อน — โทนเดียวกับตัวอย่างที่อ้างอิง */
+.admin-card{border-radius:16px;border:1px solid rgba(27,94,54,.09);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+
+/* หัวเรื่องของหน้า — ตัวอักษรเข้มขึ้นและเว้นวรรคแน่นกว่าเดิม อ่านเป็นหัวข้อชัดโดยไม่ต้องใหญ่ */
+.admin-head h1{letter-spacing:-.01em}
+
+/* ── คลัง HOOK (/admin/hooks) ── */
+.hk-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.hk-add{margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.hk-add > label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.hk-add textarea,.hk-add input,.hk-add select{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.92rem;background:#fff}
+/* ช่องโน้ตยืดได้ ปุ่มไม่หด — โน้ตยาวได้ แต่ปุ่ม "เพิ่ม" ต้องอ่านออกเสมอ */
+.hk-add-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.hk-add-row label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft);min-width:0}
+.hk-add-row label:first-child{flex:0 0 150px}
+.hk-add-row label:nth-child(2){flex:1 1 200px}
+.hk-add-row .admin-btn-primary{flex-shrink:0}
+.hk-hint{margin:0;font-size:.78rem;color:var(--ink-soft);opacity:.85}
+
+.hk-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px}
+.hk-toolbar input[type=search]{flex:1 1 220px;min-width:0;padding:9px 12px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.95rem}
+.hk-filters{display:flex;flex-wrap:wrap;gap:8px}
+.hk-filters button{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:99px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.hk-filters button.on{background:var(--green-deep,#166534);border-color:var(--green-deep,#166534);color:#fff}
+.hk-filters button span{background:rgba(0,0,0,.08);border-radius:99px;padding:0 7px;font-size:.75rem}
+.hk-filters button.on span{background:rgba(255,255,255,.25)}
+
+.hk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
+.hk-card{display:flex;flex-direction:column;gap:8px}
+.hk-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hk-cat{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:2px 10px;font-size:.72rem;font-weight:700}
+.hk-used{font-size:.72rem;color:var(--green-deep,#166534);font-weight:700}
+/* ตัว hook เป็นพระเอกของการ์ด — ตัวใหญ่กว่าส่วนอื่นและตัดคำได้ ไม่ตัดบรรทัดทิ้ง
+   เพราะต้องอ่านทั้งประโยคถึงจะรู้ว่าจะหยิบไปใช้ไหม */
+.hk-text{margin:0;font-size:.95rem;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.hk-note{margin:0;font-size:.78rem;color:var(--ink-soft);overflow-wrap:anywhere}
+.hk-actions{display:flex;gap:8px;align-items:center;margin-top:2px}
+.hk-actions .admin-btn{flex:1;justify-content:center}
+/* แถวล่างของกล่องเพิ่ม hook — คำใบ้ชิดซ้าย ปุ่มตัวอย่างชิดขวา และตกบรรทัดได้บนจอแคบ */
+.hk-add-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.hk-add-foot .admin-btn{flex-shrink:0}
+
+/* ── ตรวจรีวิว & เรื่องแจ้งปัญหา (/admin/shop/feedback) ── */
+.fb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.fb-card{display:flex;flex-direction:column;gap:8px}
+.fb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fb-top strong{min-width:0;overflow-wrap:anywhere}
+.fb-time{flex-shrink:0;font-size:.75rem;color:var(--ink-soft)}
+.fb-stars{color:#dcdcdc;font-size:.85rem;display:flex;gap:2px}
+.fb-stars .on{color:#f5a623}
+.fb-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--ink-soft)}
+.fb-meta a{color:var(--green-deep,#166534);text-decoration:none;font-weight:700}
+/* คงบรรทัดที่ลูกค้าพิมพ์ และตัดคำยาวไม่ให้ดันการ์ด */
+.fb-text{margin:0;font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-by{font-size:.8rem;color:var(--ink-soft)}
+.fb-photos{display:flex;flex-wrap:wrap;gap:6px}
+.fb-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd;display:block}
+.fb-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.fb-actions .admin-btn{font-size:.78rem;padding:6px 12px;min-height:38px}
+
+/* หมายเหตุบนหน้า "งานของฉัน" — แจ้งว่ารายการยังไม่ครบ (สิทธิ์ไม่ถึง หรือโหลดล้ม) */
+.mywork-note{font-size:.85rem;line-height:1.6;color:#92400e;background:#fffbeb;border:1px solid #fde68a;padding:12px 14px;margin-bottom:14px}
+.mywork-note-error{color:#991b1b;background:#fef2f2;border-color:#fecaca}
+
+/* ── ภาระงานของทีม (TeamWorkload.jsx) บนแดชบอร์ด Staff ── */
+.tw-card{margin-bottom:16px}
+.tw-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.74rem;color:var(--ink-soft);font-weight:600}
+.tw-legend span{display:inline-flex;align-items:center;gap:5px}
+.tw-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.tw-note{margin:0 0 10px;font-size:.78rem;line-height:1.55;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px}
+.tw-empty{margin:8px 0 0;font-size:.85rem;color:var(--ink-soft)}
+
+.tw-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+.tw-row{display:grid;grid-template-columns:minmax(90px,150px) 1fr auto;align-items:center;gap:12px}
+.tw-row-muted .tw-name{color:#b45309;font-style:italic}
+.tw-name{font-size:.84rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tw-warn{color:#c62828;font-size:.78rem}
+.tw-bar{display:flex;height:15px;border-radius:5px;overflow:hidden;background:#f1efea;min-width:0}
+.tw-bar span{display:block;min-width:3px}
+.tw-bar-rest{background:transparent}
+.tw-counts{display:flex;align-items:center;gap:9px;font-size:.76rem;white-space:nowrap}
+.tw-total{min-width:24px;text-align:right;font-weight:800;color:var(--ink)}
+
+@media (max-width:640px){
+  .tw-row{grid-template-columns:minmax(70px,1fr) 1.4fr auto;gap:8px}
+  .tw-name{font-size:.78rem}
+  .tw-legend{gap:9px;font-size:.68rem}
+}

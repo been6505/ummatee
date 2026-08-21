@@ -1,0 +1,167 @@
+/* ── Volunteer Charts ─────────────────────────────── */
+.vol-charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:20px 0}
+.vol-chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.vol-chart-title{font-weight:700;font-size:0.95rem;margin-bottom:14px;color:var(--ink)}
+.vol-bar-list{display:flex;flex-direction:column;gap:8px}
+.vol-bar-row{display:grid;grid-template-columns:120px 1fr 32px;align-items:center;gap:8px}
+.vol-bar-label{font-size:0.8rem;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vol-bar-track{height:10px;background:var(--border);border-radius:99px;overflow:hidden}
+.vol-bar-fill{height:100%;border-radius:99px;transition:width .4s}
+.vol-bar-val{font-size:0.8rem;font-weight:600;text-align:right;color:var(--ink)}
+.vol-donut-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.vol-donut-svg{width:110px;height:110px;flex-shrink:0}
+.vol-donut-legend{display:flex;flex-direction:column;gap:6px;flex:1;min-width:120px}
+.vol-legend-row{display:flex;align-items:center;gap:6px;font-size:0.8rem}
+.vol-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.vol-legend-label{flex:1;color:var(--ink-soft)}
+.vol-legend-val{color:var(--ink);font-weight:600;white-space:nowrap}
+
+/* ── GiveForUm Event Page ──────────────────────────── */
+.give-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#6d28d9 0%,#4338ca 100%);padding:clamp(60px,10vw,100px) 20px clamp(50px,8vw,80px);text-align:center;color:#fff}
+/* B2UM */
+.b2um-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,#4338ca 0%,#6d28d9 50%,#7c3aed 100%);padding:clamp(90px,12vw,130px) 20px clamp(50px,8vw,70px);text-align:center;color:#fff}
+.b2um-eyebrow{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:7px 18px;border-radius:999px;font-size:.84rem;margin-bottom:16px}
+.b2um-h1{font-size:clamp(2.4rem,6vw,4rem);font-weight:900;margin:0 0 14px;letter-spacing:-.02em}
+.b2um-lead{font-size:1.05rem;opacity:.9;max-width:48ch;margin:0 auto;line-height:1.65}
+.b2um-stage{background:#f8f7ff;padding:48px 16px 64px;min-height:60vh}
+.b2um-hero--cook{background:linear-gradient(135deg,#065f46 0%,#047857 50%,#059669 100%)}
+.b2um-stage--cook{background:#f0fdf4}
+.b2um-stage--cook .iftar-input:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.12)}
+.b2um-card{max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:clamp(24px,4vw,40px);color:var(--ink);box-shadow:0 4px 24px rgba(0,0,0,.07)}
+
+/* form overrides for white-bg receive pages */
+.b2um-stage .form-shell{background:#fff;border:1px solid #e5e7eb;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.b2um-stage .form-shell h2{color:var(--ink)}
+.b2um-stage .form-shell .fs-sub{color:var(--ink-soft)}
+.b2um-stage .iftar-label{color:#374151}
+.b2um-stage .iftar-input{background:#f9fafb;border:1.5px solid #d1d5db;color:#111827}
+.b2um-stage .iftar-input::placeholder{color:#9ca3af}
+.b2um-stage .iftar-input:focus{border-color:#7c3aed;background:#fff;box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.b2um-stage .iftar-error{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626}
+.b2um-stage .success-card{background:#fff;border:1px solid #e5e7eb;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.b2um-stage .success-card h2{color:var(--ink)}
+.b2um-stage .success-card p{color:var(--ink-soft)}
+.give-hero-banner{width:100%;max-width:680px;margin:28px auto 0;border-radius:16px;box-shadow:0 12px 40px -12px rgba(0,0,0,.35);display:block}
+.give-hero-bg{position:absolute;inset:0;background:url('/give-page.webp') center/cover no-repeat;pointer-events:none}
+.give-hero::after{content:'';position:absolute;inset:0;background:rgba(67,56,202,.55);pointer-events:none}
+.give-hero .inner{position:relative;z-index:2}
+.give-eyebrow{display:inline-block;background:rgba(255,255,255,.15);color:#fff;font-size:.85rem;font-weight:700;letter-spacing:.08em;padding:4px 14px;border-radius:99px;margin-bottom:16px;backdrop-filter:blur(4px)}
+.give-h1{color:#fff;font-size:clamp(2rem,5vw,3.2rem);margin:0 0 16px;font-weight:900}
+.give-lead{color:rgba(255,255,255,.85);font-size:clamp(1rem,1.5vw,1.15rem);max-width:560px;margin:0 auto 28px;line-height:1.7}
+.give-info-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.give-info-chip{background:rgba(255,255,255,.15);color:#fff;font-size:.85rem;font-weight:600;padding:6px 16px;border-radius:99px;backdrop-filter:blur(4px)}
+.give-section{padding:clamp(48px,7vw,80px) 20px}
+.campaign-section{background:#fff}
+.exhibition-section{background:linear-gradient(180deg,#f5f3ff 0%,#ede9fe 100%)}
+.donation-section{background:#fff}
+.give-section-head{text-align:center;margin-bottom:40px}
+.give-section-badge{display:inline-block;font-size:.75rem;font-weight:900;letter-spacing:.12em;padding:4px 14px;border-radius:99px;margin-bottom:12px}
+.campaign-badge{background:#7c3aed;color:#fff}
+.campaign-layout{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:stretch;margin-bottom:28px}
+.give-campaign-poster{border-radius:16px;overflow:hidden;box-shadow:0 8px 32px -12px rgba(124,58,237,.25);display:flex}
+.give-campaign-poster img{width:100%;display:block;border-radius:16px;object-fit:cover}
+.campaign-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:768px){
+  .campaign-layout{grid-template-columns:1fr}
+  .give-campaign-poster{max-width:420px;margin:0 auto;position:static}
+  .campaign-cards{grid-template-columns:1fr 1fr}
+}
+@media (max-width:480px){.campaign-cards{grid-template-columns:1fr}}
+.receive-section{background:#fef9ee}
+.receive-badge{background:#d97706;color:#fff}
+.receive-card{border-top:3px solid #d97706}
+.receive-btn{background:#d97706}
+.receive-btn:hover{background:#b45309}
+.exhibition-badge{background:#0ea5e9;color:#fff}
+.stage-section{background:linear-gradient(180deg,#f5f3ff 0%,#e9d5ff 100%)}
+.stage-badge{background:#8b5cf6;color:#fff}
+.give-stage-poster{max-width:480px;margin:0 auto 8px;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px -12px rgba(139,92,246,.25)}
+.give-stage-poster img{width:100%;display:block;border-radius:16px}
+.donation-badge{background:#059669;color:#fff}
+.give-section-head h2{font-size:clamp(1.5rem,3vw,2.2rem);margin:0}
+.give-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
+.give-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px 24px;text-align:center;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 16px -8px rgba(0,0,0,.12);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.give-card:hover{transform:translateY(-4px);box-shadow:0 8px 32px rgba(0,0,0,.1)}
+.give-card-icon{font-size:2.2rem;margin-bottom:10px}
+.give-card h4{font-size:1rem;font-weight:700;margin: 10px 0 8px;color:#1D1D1F}
+.give-card p{color:#5b6660;font-size:.875rem;line-height:1.6;margin:0}
+.campaign-card{border-top:3px solid #7c3aed}
+.campaign-cta-card{background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 100%);border:2px solid #7c3aed;border-top:3px solid #7c3aed}
+.campaign-cta-card:hover{transform:translateY(-6px);box-shadow:0 12px 36px rgba(124,58,237,.2)}
+.campaign-cta-card .give-card-icon{color:#7c3aed}
+.campaign-cta-card h4{color:#7c3aed}
+.campaign-cta-link{margin-top:10px;font-size:.85rem;font-weight:700;color:#7c3aed}
+@media (max-width:600px){.featured-card{grid-column:span 1}}
+.exhibition-card{border-top:3px solid #0ea5e9}
+.donation-card{border-top:3px solid #059669}
+.give-cta-btn{display:inline-block;background:#7c3aed;color:#fff;font-weight:700;font-size:1rem;padding:14px 32px;border-radius:99px;text-decoration:none;transition:background .2s,transform .15s}
+.give-cta-btn:hover{background:#6d28d9;transform:translateY(-2px)}
+.donation-btn{background:#059669}
+.donation-btn:hover{background:#047857}
+
+/* ── Give2 Form Page ───────────────────────────────── */
+.give2-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:8px}
+.give2-type-btn{display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:12px;border:2px solid var(--border);background:var(--surface);cursor:pointer;font-size:.95rem;font-weight:600;text-align:left;transition:border-color .15s,background .15s}
+.give2-type-btn:hover{border-color:#7c3aed}
+.give2-type-btn.selected{border-color:#7c3aed;background:#f5f3ff;color:#6d28d9}
+.give2-type-icon{font-size:1.6rem;flex-shrink:0}
+.give2-previews{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.give2-preview-wrap{position:relative;width:90px;height:90px;border-radius:10px;overflow:hidden;border:2px solid var(--border)}
+.give2-preview-img{width:100%;height:100%;object-fit:cover}
+.give2-remove-btn{position:absolute;top:2px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.give2-upload-btn{display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;border:2px dashed var(--border);background:none;cursor:pointer;font-size:.9rem;color:var(--ink-soft);transition:border-color .15s}
+.give2-upload-btn:hover{border-color:#7c3aed;color:#7c3aed}
+
+/* ── AdminGive ────────────────────────────────────── */
+.give-admin-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.give-admin-tabs button{padding:8px 18px;border-radius:99px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:.88rem;font-weight:600;color:#5b6660;transition:all .15s;box-shadow:0 2px 8px -4px rgba(27,94,54,.18)}
+.give-admin-tabs button:hover{border-color:#c4b5fd}
+.give-admin-tabs button.active{border-color:#7c3aed;color:#7c3aed;background:#fff}
+
+/* ชิปสถานะจัดส่งสำเร็จรูป (หน้าแอดมินจัดการคำสั่งซื้อ) — กดแล้วบันทึกทันที ไม่ต้องพิมพ์ */
+.ship-chip-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ship-status-chip{padding:8px 16px;border-radius:99px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;font-size:.85rem;font-weight:600;color:#5b6660;transition:all .15s}
+.ship-status-chip:hover{border-color:var(--green-mid);color:var(--green-deep);background:#f5fbf7}
+.ship-status-chip:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:480px){.ship-status-chip{padding:7px 12px;font-size:.8rem}}
+
+/* ── แถวฟอร์มแบบ input+ปุ่ม ที่ต้องการวางเรียงเป็นคอลัมน์บนมือถือ (โปรโมชั่น/เลขพัสดุ/อัปเดตสถานะจัดส่ง) ── */
+.admin-inline-row{display:flex;gap:8px}
+.admin-inline-row > input,.admin-inline-row > select{flex:1;min-width:0}
+@media (max-width:480px){
+  .admin-inline-row{flex-direction:column}
+  .admin-inline-row > input,.admin-inline-row > select,.admin-inline-row > button{width:100%}
+}
+
+/* ── การ์ดแก้ไขราคาส่วนลดในตาราง (DiscountCell) — บังคับความกว้างขั้นต่ำแต่ไม่ล้นจอมือถือ ── */
+.discount-edit-box{min-width:220px;max-width:min(320px,80vw)}
+.discount-edit-box .admin-inline-row > input{width:auto}
+@media (max-width:480px){.discount-edit-box{min-width:170px}}
+
+/* ── รายการโปรโมชั่นทั้งหมด (หน้าจัดการสินค้า) — list แถวเดียว ไม่ใช่ชิป ดูรายละเอียดส่วนลดได้ครบ ── */
+.promo-list{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.promo-list-head{padding:10px 14px;font-size:.78rem;font-weight:700;color:var(--ink-soft);background:#f9fafb;border-bottom:1px solid #e5e7eb}
+.promo-list-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f0f0}
+.promo-list-row:last-child{border-bottom:none}
+.promo-list-name{font-weight:700;color:var(--green-deep);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.promo-list-value{font-size:.82rem;font-weight:700;color:#dc2626;background:#fef2f2;padding:3px 10px;border-radius:99px;flex-shrink:0}
+.promo-list-remove{border:none;background:none;cursor:pointer;color:#9ca3af;padding:4px;line-height:1;flex-shrink:0;transition:color .15s}
+.promo-list-remove:hover{color:#d84315}
+.give-admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.give-admin-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 6px 20px -10px rgba(27,94,54,.18)}
+.give-admin-ref{font-size:.75rem;font-weight:800;letter-spacing:.08em;color:#7c3aed}
+.give-admin-name{font-size:1rem;font-weight:700;color:#1D1D1F}
+.give-admin-phone{font-size:.85rem;color:#5b6660}
+.give-admin-types{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.give-type-chip{padding:3px 10px;border-radius:99px;font-size:.75rem;font-weight:700}
+.give-type-chip.computer{background:#ede9fe;color:#6d28d9}
+.give-type-chip.tools{background:#d1fae5;color:#047857}
+@media (prefers-color-scheme:dark){
+  .give-type-chip.computer{background:#2d1b4e;color:#c4b5fd}
+  .give-type-chip.tools{background:#064e3b;color:#6ee7b7}
+}
+.give-admin-detail{font-size:.85rem;color:#5b6660;margin:6px 0 0;line-height:1.5}
+.give-admin-date{font-size:.75rem;color:#9aa39e}
+.give-admin-toggle{background:none;border:none;cursor:pointer;font-size:.85rem;color:#7c3aed;font-weight:600;padding:0;text-align:left}
+.give-admin-images{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.give-admin-thumb{width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block}

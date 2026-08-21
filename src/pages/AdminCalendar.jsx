@@ -1,9 +1,208 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import { collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
+import AssigneePicker from '../components/AssigneePicker.jsx'
+import CommentThread from '../components/CommentThread.jsx'
+import { HIJRI_MONTHS, getHijri } from '../data/hijri.js'
+import { weekStart, weekDays, shiftWeek, weekRangeLabel, dayLabel, fromKey, WEEK_COLUMNS } from '../data/weekView.js'
+import { useContentTemplates, saveTemplate, removeTemplate } from '../data/contentTemplates.js'
+import { applyTemplate, suggestTemplateName } from '../data/contentTemplate.js'
 import AdminLogin from '../components/AdminLogin.jsx'
+import { isFullAdminEmail } from '../useAdminRole.js'
 import useAdminAuth from '../useAdminAuth.js'
+import useStaffRole, { effectiveRole } from '../useStaffRole.js'
+import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
+import { useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin, isSafeHttpUrl } from '../data/chat.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faChevronLeft, faChevronRight, faChevronDown, faCheck, faXmark, faCopy,
+  faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
+  faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage, faPenToSquare, faTrash,
+} from '@fortawesome/free-solid-svg-icons'
+import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
+
+import { withSearchTokens } from '../lib/searchIndex.js'
+import { STATUS, STATUS_COLOR, STATUS_ORDER, normStatus, statusAfterDriveLink } from '../data/contentStatus.js'
+import { repeatDates, WEEKDAYS, MAX_REPEAT_WEEKS } from '../lib/repeatDates.js'
+// ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
+const SEARCH_FIELDS = ['title', 'text']
+
+// ป้ายแพลตฟอร์มของกล่องข้อความ — เหมือน AdminChat.jsx (เพิ่ม instagram ที่ยังไม่มีในไฟล์นั้น)
+const CHAT_PLATFORM_BADGE = {
+  web: { icon: faGlobe, label: 'เว็บไซต์', color: '#16a34a' },
+  line: { icon: faLine, label: 'LINE', color: '#06c755' },
+  facebook: { icon: faFacebookMessenger, label: 'Messenger', color: '#0084ff' },
+  instagram: { icon: faInstagram, label: 'Instagram', color: '#e1306c' },
+}
+function ChatPlatformBadge({ platform }) {
+  const p = CHAT_PLATFORM_BADGE[platform] || CHAT_PLATFORM_BADGE.web
+  return <FontAwesomeIcon icon={p.icon || faComment} style={{ color: p.color }} title={p.label} />
+}
+function chatTimeLabel(ts) {
+  if (!ts?.toDate) return ''
+  const d = ts.toDate()
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  return sameDay
+    ? d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+}
+
+// แท็บ "กล่องข้อความ" — ดึงข้อมูล chats ทุกแพลตฟอร์ม (LINE/Messenger/Instagram) จาก Firestore เดียวกับ AdminChat.jsx
+// ใช้ hook เดิม (useAdminChatList, useChatMessages, sendAdminReply, markChatReadByAdmin) ไม่แก้ AdminChat.jsx เอง
+function ChatInboxTab() {
+  const { chats, loading: chatsLoading } = useAdminChatList()
+  const [openChatId, setOpenChatId] = useState(null)
+  const { messages } = useChatMessages(openChatId)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => { if (openChatId) markChatReadByAdmin(openChatId).catch(() => {}) }, [openChatId])
+
+  const openChat = chats.find((c) => c.id === openChatId)
+  const title = openChat ? (openChat.visitorName || `ผู้เยี่ยมชม ${openChatId.slice(0, 6)}`) : ''
+
+  const submit = async (e) => {
+    e.preventDefault()
+    const trimmed = text.trim()
+    if (!trimmed || sending || !openChatId) return
+    setSending(true)
+    setText('')
+    try { await sendAdminReply(openChatId, trimmed) } catch { setText(trimmed) } finally { setSending(false) }
+  }
+
+  if (openChatId) {
+    return (
+      <div className="admin-card">
+        <div className="admin-chat-thread-head">
+          <button className="admin-chat-back" onClick={() => setOpenChatId(null)} aria-label="กลับไปรายการแชท">
+            <FontAwesomeIcon icon={faArrowLeft} />
+          </button>
+          <span><ChatPlatformBadge platform={openChat?.platform} /> {title}</span>
+        </div>
+        <div className="admin-chat-body">
+          {messages.map((m) => (
+            m.type === 'product' && m.product ? (
+              <a
+                key={m.id} href={isSafeHttpUrl(m.product.url) ? m.product.url : '#'}
+                {...(isSafeHttpUrl(m.product.url) ? { target: '_blank', rel: 'noopener noreferrer' } : { onClick: (e) => e.preventDefault() })}
+                className={`chat-bubble admin-msg-${m.sender === 'admin' ? 'mine' : 'theirs'} chat-product-card`}
+              >
+                {isSafeHttpUrl(m.product.image) && <img src={m.product.image} alt={m.product.name} />}
+                <div className="chat-product-info">
+                  <div className="chat-product-name">{m.product.name}</div>
+                  {m.product.price != null && <div className="chat-product-price">฿{Number(m.product.price).toLocaleString('th-TH')}</div>}
+                </div>
+              </a>
+            ) : (
+              <div key={m.id} className={`chat-bubble admin-msg-${m.sender === 'admin' ? 'mine' : 'theirs'}`}>{m.text}</div>
+            )
+          ))}
+        </div>
+        <form className="admin-chat-input" onSubmit={submit}>
+          <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="พิมพ์ข้อความตอบกลับ..." maxLength={2000} />
+          <button type="submit" disabled={!text.trim() || sending}>ส่ง</button>
+        </form>
+      </div>
+    )
+  }
+
+  return (
+    <div className="admin-card">
+      <h4><FontAwesomeIcon icon={faComments} /> กล่องข้อความ (LINE / Messenger / Instagram)</h4>
+      <div className="admin-chat-list">
+        {!chatsLoading && chats.length === 0 && <div className="admin-chat-empty">ยังไม่มีแชทเข้ามา</div>}
+        {chats.map((c) => (
+          <div key={c.id} className="admin-chat-item" onClick={() => setOpenChatId(c.id)}>
+            <div className="admin-chat-item-top">
+              <span className="admin-chat-item-name"><ChatPlatformBadge platform={c.platform} /> {c.visitorName || `ผู้เยี่ยมชม ${c.id.slice(0, 6)}`}</span>
+              <span>{chatTimeLabel(c.lastMessageAt)}{c.unreadByAdmin && <span className="admin-chat-dot" />}</span>
+            </div>
+            <div className="admin-chat-item-text">{c.lastSender === 'admin' ? 'คุณ: ' : ''}{c.lastMessageText}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+// เว็บ Content Hub (Vercel) ที่ทำหน้าที่เชื่อม OAuth + โพสต์จริง — ประกาศไว้บนสุดเพราะใช้หลายจุดในไฟล์นี้
+const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
+
+// ปิดทุกส่วนที่ผูกกับ Content Hub (เว็บแยกสำหรับเชื่อม OAuth + โพสต์จริง) ไว้ก่อน
+// ครอบคลุม: ปุ่ม "เชื่อมต่อแพลตฟอร์ม / โพสต์จริง" + แผงเชื่อมบัญชี, แท็บกล่องข้อความ/คอมเมนต์/
+// ภาพรวมเพจ, ตัวเลือกแพลตฟอร์ม + ติ๊กโพสต์จริงอัตโนมัติในฟอร์ม, และปุ่ม "โพสต์จริง" ในรายการโพสต์
+// เปลี่ยนเป็น true เพื่อเปิดกลับทั้งหมดพร้อมกัน — โค้ดยังอยู่ครบ ไม่ได้ลบทิ้ง
+// ข้อมูลเดิม (platforms/realPublish ของโพสต์ที่บันทึกไว้แล้ว) ไม่ถูกแตะ ยังอยู่ใน Firestore เหมือนเดิม
+const SHOW_CONTENT_HUB = false
+
+// แท็บ "คอมเมนต์" และ "ภาพรวมเพจ" — ดึงข้อมูลจริงจากแพลตฟอร์มต้องใช้ access token ที่เก็บฝั่งเซิร์ฟเวอร์
+// ซึ่งอยู่ในฐานข้อมูลของ Content Hub หน้านี้เข้าถึงไม่ได้ (เดิมเรียก Cloud Functions ที่ไม่เคย deploy
+// ทำให้เด้ง alert error ทุกครั้งที่เปิดแท็บ) จึงเปลี่ยนเป็นบอกทางไป Content Hub ตรงๆ แทน
+function HubOnlyTab({ icon, title, desc, hubPath }) {
+  return (
+    <div className="admin-card">
+      <h4><FontAwesomeIcon icon={icon} /> {title}</h4>
+      <p style={{ color: 'var(--ink-soft)', fontSize: '.88rem', marginBottom: 14 }}>{desc}</p>
+      <button
+        className="admin-btn-primary"
+        onClick={() => window.open(`${CONTENT_HUB_URL}${hubPath}`, '_blank', 'noopener,noreferrer')}
+      >
+        <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เปิดใน Content Hub
+      </button>
+    </div>
+  )
+}
+
+function CommentsTab() {
+  return (
+    <HubOnlyTab
+      icon={faMessage}
+      title="คอมเมนต์บนโพสต์"
+      desc="คอมเมนต์ของโพสต์ที่เผยแพร่จริงดูได้ที่ Content Hub เพราะต้องใช้ token ของแต่ละแพลตฟอร์มที่เก็บไว้ฝั่งเซิร์ฟเวอร์ที่นั่น"
+      hubPath="/posts"
+    />
+  )
+}
+
+function InsightsTab() {
+  return (
+    <HubOnlyTab
+      icon={faChartLine}
+      title="ภาพรวมเพจ"
+      desc="ยอดเข้าถึง เอนเกจ และสถิติเพจดูได้ที่ Content Hub ซึ่งเป็นที่เก็บการเชื่อมต่อบัญชีของแต่ละแพลตฟอร์ม"
+      hubPath="/accounts"
+    />
+  )
+}
+
+// เชื่อมบัญชีโซเชียล + โพสต์จริง ทำที่ Content Hub (เว็บแยก บน Vercel) ไม่ใช่ที่นี่
+//
+// ทำไมไม่ทำในหน้านี้เลย: OAuth ต้องมีเซิร์ฟเวอร์ เพราะขั้นแลก code เป็น token ต้องใช้ client_secret
+// ซึ่งห้ามอยู่ในโค้ดฝั่งเบราว์เซอร์ และ access token ต้องเก็บฝั่งเซิร์ฟเวอร์ ummatee เป็น static site
+// (Firebase Hosting + Firestore บนแพลน Spark) ไม่มีเซิร์ฟเวอร์ให้ทำสองอย่างนี้
+//
+// เคยเขียน Cloud Functions ไว้ครบแล้ว (functions/index.js) แต่ deploy ไม่ได้เพราะต้องอัปเกรดเป็น
+// แพลน Blaze (ผูกบัตร) — endpoint จึงตอบ 404 เสมอ ปุ่มเดิมที่ชี้ไปที่นั้นกดแล้วพาไปหน้า error
+// จึงเปลี่ยนมาส่งต่อไป Content Hub ที่ deploy ใช้งานได้จริงอยู่แล้วแทน
+const SOCIAL_PLATFORMS = [
+  { id: 'facebook', label: 'Facebook', color: '#1877f2', needsVideo: false },
+  { id: 'instagram', label: 'Instagram', color: '#e1306c', needsVideo: false },
+  { id: 'threads', label: 'Threads', color: '#000', needsVideo: false },
+  { id: 'youtube', label: 'YouTube', color: '#ff0000', needsVideo: true },
+  { id: 'tiktok', label: 'TikTok', color: '#111', needsVideo: true },
+]
+const REAL_STATUS_LABEL = { publishing: 'กำลังโพสต์...', posted: 'โพสต์จริงแล้ว', partial: 'โพสต์สำเร็จบางแพลตฟอร์ม', failed: 'โพสต์จริงไม่สำเร็จ' }
+
+const PLATFORM_OPEN = {
+  facebook: 'https://www.facebook.com/',
+  instagram: 'https://www.instagram.com/',
+  tiktok: 'https://www.tiktok.com/upload',
+  youtube: 'https://studio.youtube.com/',
+  x: null, // filled dynamically with text
+  line: 'https://manager.line.biz/',
+}
 
 // ปฏิทินวางแผนคอนเทนต์ (/admin/calendar) — เพิ่มกิจกรรม/โพสต์ ตั้งเวลา เลือกแพลตฟอร์ม (ข้อความเท่านั้น เพิ่มรูป/วิดีโอได้ทีหลัง)
 // เก็บใน Firestore (collection: contentPosts)
@@ -18,8 +217,18 @@ const PLATFORMS = [
   { id: 'line', label: 'LINE', color: '#06c755' },
 ]
 
-const STATUS = { draft: 'ฉบับร่าง', scheduled: 'ตั้งเวลาแล้ว', posted: 'โพสต์แล้ว' }
-const STATUS_COLOR = { draft: '#999', scheduled: '#c9a84c', posted: '#2e7d52' }
+// เหลือ 2 สถานะเท่านั้น — ร่าง (ยังไม่ได้โพสต์) กับ โพสต์แล้ว
+// ทอง = ยังมีงานค้าง / เขียว = เสร็จแล้ว ใช้ระบายสีวันในปฏิทินด้วย (ดู dominant ในกริด)
+
+
+// ข้อมูลเก่ามีสถานะ 'scheduled' (ตั้งเวลาแล้ว) และ approvalStatus ที่เลิกใช้แล้ว
+// แปลงให้เป็น 2 สถานะใหม่ตอนแสดงผล โดยไม่ต้องไล่แก้ข้อมูลเดิมใน Firestore
+
+
+// ชนิดคอนเทนต์ + สถานะอนุมัติ (ข้อ 4 ของแผน admin-intranet-plan.md) — เพิ่มเป็น field ใหม่ทั้งหมด ไม่แตะ field เดิม
+// ชนิดคอนเทนต์ — 'live' มีฟิลด์เพิ่ม (เวลาไลฟ์/ผู้ดำเนินรายการ) ชนิดอื่นเป็นโพสต์ธรรมดาที่ต่างกันแค่ป้าย
+const CONTENT_TYPE_LABEL = { post: 'โพสต์', video: 'โพสต์ VDO', picture: 'โพสต์ Picture', live: 'ไลฟ์สด' }
+const LIVE_PLATFORM_OPTIONS = ['facebook', 'tiktok', 'youtube']
 
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
 const TH_DAYS = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส']
@@ -28,27 +237,111 @@ const pad = (n) => String(n).padStart(2, '0')
 const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const todayKey = () => { const t = new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()) }
 
-const EMPTY_FORM = { title: '', text: '', time: '10:00', platforms: [], status: 'scheduled' }
+const EMPTY_FORM = {
+  title: '', text: '', date: '', time: '10:00', platforms: [], status: 'draft', mediaUrls: [], mediaPublicIds: [], realPublish: false,
+  campaignId: '', contentType: 'post', livePlatforms: [], liveHost: '', approvalStatus: 'draft',
+  sources: [], // แหล่งข้อมูลอ้างอิง: [{ label, url }] กดแล้วเปิดลิงก์ในแท็บใหม่
+  repeatDays: [], // วันในสัปดาห์ที่ทำซ้ำ (0=อา..6=ส) — ว่าง = ไม่ทำซ้ำ
+  repeatWeeks: 4,
+  driveUrl: '', // ลิงก์ไฟล์งานใน Google Drive
+  assignedToStaffId: null, // uid ของทีมงานที่รับผิดชอบโพสต์นี้ (ดู staffDirectory.js)
+}
 
 export default function AdminCalendar() {
   const { user, loading } = useAdminAuth()
+  const { staff } = useStaffRole(user)
+
+  // เปิดหน้านี้พร้อม ?date=YYYY-MM-DD (เช่น กดรายการจากแดชบอร์ด Staff) ให้เด้งไปเดือน/วันนั้นเลย
+  // ไม่งั้นกดจากรายการแล้วมาโผล่ที่เดือนปัจจุบัน ต้องไล่หาวันเองอีกที
+  const initial = (() => {
+    const q = new URLSearchParams(window.location.search).get('date')
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(q || '')
+    if (!m) return null
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    return Number.isNaN(d.getTime()) ? null : { y: d.getFullYear(), mo: d.getMonth(), key: q }
+  })()
 
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth()) // 0-11
-  const [selected, setSelected] = useState(todayKey())
+  const [year, setYear] = useState(initial?.y ?? now.getFullYear())
+  const [month, setMonth] = useState(initial?.mo ?? now.getMonth()) // 0-11
+  const [selected, setSelected] = useState(initial?.key ?? todayKey())
+  // โพสต์ที่เปิดดูรายละเอียด — ผูกกับ ?post=<id> ใน URL ให้เป็นหน้าจริง
+  // (refresh แล้วยังอยู่หน้าเดิม และปุ่ม back ของเบราว์เซอร์กลับไปหน้าปฏิทิน)
+  const [detailId, setDetailId] = useState(() => new URLSearchParams(window.location.search).get('post'))
+  // จำว่าหน้ารายละเอียดถูกเปิดด้วยการกดการ์ด (มี history ให้ย้อน) หรือเข้ามาตรงๆ — ดู closeDetail
+  const pushedDetail = useRef(false)
 
   const [posts, setPosts] = useState([])
+  const [campaigns, setCampaigns] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [editId, setEditId] = useState(null)
   const [status, setStatus] = useState('')
+  const [copiedId, setCopiedId] = useState(null)
+  const [showHub, setShowHub] = useState(false)
+  const [mainTab, setMainTab] = useState('calendar') // 'calendar' | 'chat' | 'comments' | 'insights'
+  // มุมมองปฏิทิน: เดือน (ตารางทั้งเดือน) หรือ สัปดาห์ (7 คอลัมน์ เห็นเนื้อหาของแต่ละโพสต์)
+  // เดิมแยกเป็นคนละหน้า ทำให้ฟอร์ม/การ์ดวันที่เลือกมีสองชุดที่หลุดไม่ตรงกันได้ — รวมมาไว้หน้าเดียว
+  // สลับเฉพาะตัวตาราง ส่วนอื่นใช้ร่วมกันหมด
+  const [viewMode, setViewMode] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get('view')
+    if (v === 'week' || v === 'month') return v
+    // /admin/week เคยเป็นหน้าแยก ตอนนี้พามาที่นี่ — ลิงก์/บุ๊กมาร์กเก่าต้องได้มุมมองสัปดาห์ตามที่ตั้งใจ
+    if (window.location.pathname.replace(/\/$/, '') === '/admin/week') return 'week'
+    try { return localStorage.getItem('adminCalView') === 'week' ? 'week' : 'month' } catch { return 'month' }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('adminCalView', viewMode) } catch { /* โหมดส่วนตัว — แค่ไม่จำมุมมอง */ }
+  }, [viewMode])
+  const [socialNotice, setSocialNotice] = useState('')
+  // แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js ว่าฟิลด์ไหนใช้ซ้ำได้บ้าง)
+  const { templates } = useContentTemplates()
+  // ฟอร์มพับไว้เป็นค่าเริ่มต้น — การ์ดฟอร์มสูง ~800px ถ้ากางค้างไว้ ปฏิทินจะไม่มีทางพอดีจอเลย
+  // (วัดแล้วหน้ารวมสูง 1459px บนจอสูง 900px) กางเองอัตโนมัติเมื่อผู้ใช้สั่งแก้/เพิ่มโพสต์จริงๆ
+  const [formOpen, setFormOpen] = useState(false)
 
   useEffect(() => {
+    if (!user) return // อย่าเปิด listener ก่อนล็อกอิน (contentPosts อ่านได้เฉพาะแอดมิน) — กัน permission-denied และข้อมูลว่างหลังล็อกอินบนหน้า
     const unsub = onSnapshot(collection(db, 'contentPosts'), (snap) => {
       setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
     })
     return unsub
-  }, [])
+  }, [user])
+
+  // แคมเปญอ่านได้เฉพาะ role admin/staff/field (ดู firestore.rules) แต่หน้านี้เปิดให้ 'social' ด้วย
+  // เดิม subscribe ตรงๆ ไม่มี error callback: คน 'social' จึงโดน permission-denied เงียบๆ แล้วช่อง
+  // "แคมเปญที่เกี่ยวข้อง" ว่างเปล่าตลอดกาล โดยไม่มีอะไรบอกว่าทำไม (ดู canReadCampaigns ด้านล่าง)
+  const canReadCampaigns = ['admin', 'staff', 'field'].includes(effectiveRole(user, staff))
+
+  useEffect(() => {
+    if (!user || !canReadCampaigns) return
+    const unsub = onSnapshot(
+      collection(db, 'campaigns'),
+      (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (err) => console.error('campaigns listener failed', err)
+    )
+    return unsub
+  }, [user, canReadCampaigns])
+
+  // ไม่ดึงสถานะ "เชื่อมต่อแล้ว/ยังไม่เชื่อม" มาแสดงที่นี่ — token เก็บอยู่ในฐานข้อมูลของ Content Hub
+  // หน้านี้อ่านไม่ได้ (คนละระบบ) ถ้าเดาแล้วโชว์ว่า "ยังไม่ได้เชื่อมต่อ" ทุกอันจะเป็นข้อมูลผิดเสมอ
+  // สถานะจริงดูได้ที่หน้า Accounts ของ Content Hub เท่านั้น
+
+  // เปิดหน้าเชื่อมบัญชีของ Content Hub (แท็บใหม่) — ที่นั่นมีปุ่มเชื่อมต่อจริงของทั้ง 5 แพลตฟอร์ม
+  // ล็อกอินด้วยรหัสผ่านของ Content Hub เองครั้งแรก แล้วกดเชื่อมต่อได้เลย
+  const openContentHub = (path = '/accounts') => {
+    window.open(`${CONTENT_HUB_URL}${path}`, '_blank', 'noopener,noreferrer')
+  }
+
+  // "โพสต์จริง" ทำที่ Content Hub — คัดลอกข้อความ+ลิงก์รูปของโพสต์นี้ไว้ในคลิปบอร์ดให้ก่อน
+  // แล้วเปิดหน้า compose ของ Content Hub ให้วางต่อ (สองระบบเก็บข้อมูลแยกกัน ส่งข้ามให้อัตโนมัติไม่ได้)
+  const publishNow = async (postId) => {
+    const p = posts.find((x) => x.id === postId)
+    if (!p) return
+    const text = [p.title, p.text, ...(p.mediaUrls || [])].filter(Boolean).join('\n\n')
+    try { await navigator.clipboard.writeText(text) } catch { /* คลิปบอร์ดใช้ไม่ได้ก็ยังเปิดหน้าให้ */ }
+    setSocialNotice('คัดลอกเนื้อหาโพสต์แล้ว — วางในหน้า Content Hub ที่เพิ่งเปิดขึ้นมาได้เลย')
+    openContentHub('/compose')
+  }
 
   // โพสต์จัดกลุ่มตามวันที่ ใช้แสดงจุดบนปฏิทิน
   const byDate = useMemo(() => {
@@ -58,8 +351,19 @@ export default function AdminCalendar() {
     return m
   }, [posts])
 
+  // อยู่เหนือ early return ด้านล่างเสมอ — hook ต้องถูกเรียกครบทุก render
+  // (เคยพลาดวางไว้ใต้ if (loading) แล้วหน้าพังเป็น React error #310 ที่ ErrorBoundary โชว์ว่า "กำลังอัปเดตเวอร์ชันใหม่")
+  useEffect(() => {
+    const onPop = () => setDetailId(new URLSearchParams(window.location.search).get('post'))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   if (loading) return null
   if (!user) return <AdminLogin />
+  // แท็บกล่องข้อความ/คอมเมนต์/ภาพรวมเพจ อ่าน chats + socialInsightsCache ซึ่ง firestore.rules
+  // จำกัดไว้ที่ isFullAdmin() — ถ้าโชว์ให้ staff เห็นจะกดแล้วเจอหน้าว่างเปล่าโดยไม่มีอะไรบอกว่าไม่มีสิทธิ์
+  const canSeeInbox = isFullAdminEmail(user.email || '')
 
   // ตารางวันของเดือนที่แสดง (เริ่มวันอาทิตย์)
   const firstDay = new Date(year, month, 1).getDay()
@@ -69,6 +373,20 @@ export default function AdminCalendar() {
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(year - 1) } else setMonth(month - 1) }
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(year + 1) } else setMonth(month + 1) }
 
+  // ── มุมมองสัปดาห์ ──
+  // สัปดาห์อ้างอิงจากวันที่เลือกอยู่ ⇒ กดวันในตารางเดือนแล้วสลับมาสัปดาห์ ได้สัปดาห์ของวันนั้นเลย
+  const weekStartKey = weekStart(selected)
+  const weekKeys = weekDays(weekStartKey)
+  // เลื่อนสัปดาห์ = ย้ายวันที่เลือกไปสัปดาห์นั้น (คงวันในสัปดาห์เดิมไว้) แล้วให้เดือน/ปีตามไปด้วย
+  // ไม่งั้นเลื่อนข้ามเดือนแล้วหัวเรื่องยังค้างเดือนเก่า
+  const goWeek = (delta) => {
+    const d = fromKey(shiftWeek(selected, delta))
+    if (!d) return
+    setSelected(dateKey(d.getFullYear(), d.getMonth(), d.getDate()))
+    setYear(d.getFullYear())
+    setMonth(d.getMonth())
+  }
+
   const togglePlatform = (id) => {
     setForm((f) => ({
       ...f,
@@ -76,9 +394,33 @@ export default function AdminCalendar() {
     }))
   }
 
+  // ช่องอัพโหลดรูป/วิดีโอถูกแทนที่ด้วยลิงก์ Google Drive แล้ว (ดูฟอร์มด้านล่าง)
+  // แต่ยังคงแสดง mediaUrls ของโพสต์เก่าที่อัพไว้ก่อนหน้า จึงไม่ลบฟิลด์ออกจากข้อมูล
+
+  const copyAndOpen = async (p, platform) => {
+    const text = [p.title, p.text, ...(p.mediaUrls || [])].filter(Boolean).join('\n\n')
+    await navigator.clipboard.writeText(text).catch(() => {})
+    setCopiedId(p.id + platform)
+    setTimeout(() => setCopiedId(null), 2000)
+    const url = platform === 'x'
+      ? `https://x.com/intent/post?text=${encodeURIComponent((p.title || '') + (p.text ? '\n' + p.text : ''))}`
+      : PLATFORM_OPEN[platform]
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   const startEdit = (p) => {
+    setFormOpen(true)
     setEditId(p.id)
-    setForm({ title: p.title, text: p.text || '', time: p.time || '10:00', platforms: p.platforms || [], status: p.status || 'scheduled' })
+    setForm({
+      // normStatus: โพสต์เก่าที่เป็น 'scheduled' ต้องกลายเป็น 'draft' ไม่งั้นชิปไม่ตรงกับค่าใดเลยแล้วดูเหมือนไม่ได้เลือกอะไร
+      title: p.title, text: p.text || '', date: p.date || selected, time: p.time || '10:00', platforms: p.platforms || [], status: normStatus(p.status),
+      mediaUrls: p.mediaUrls || [], mediaPublicIds: p.mediaPublicIds || [], realPublish: p.realPublish || false,
+      campaignId: p.campaignId || '', contentType: p.contentType || 'post',
+      livePlatforms: p.livePlatforms || [], liveHost: p.liveHost || '', approvalStatus: p.approvalStatus || 'draft',
+      sources: p.sources || [],
+      driveUrl: p.driveUrl || '',
+      assignedToStaffId: p.assignedToStaffId || null,
+    })
   }
   const cancelEdit = () => { setEditId(null); setForm(EMPTY_FORM) }
 
@@ -87,21 +429,62 @@ export default function AdminCalendar() {
     setStatus('กำลังบันทึก...')
     try {
       const payload = {
-        date: selected,
+        // วันที่มาจากช่อง "วันเวลาโพสต์" ในฟอร์ม ไม่ใช่วันที่คลิกในปฏิทินอีกแล้ว
+        // ⇒ ย้ายวันของโพสต์ได้จากในฟอร์มเลย ไม่ต้องลบแล้วสร้างใหม่ในวันที่ถูกต้อง
+        date: form.date || selected,
         time: form.time,
         title: form.title.trim(),
         text: form.text.trim(),
         platforms: form.platforms,
         status: form.status,
+        mediaUrls: form.mediaUrls,
+        mediaPublicIds: form.mediaPublicIds,
+        driveUrl: isSafeHttpUrl((form.driveUrl || '').trim()) ? form.driveUrl.trim() : '',
+        assignedToStaffId: form.assignedToStaffId || null,
+        realPublish: form.realPublish,
+        // เก็บเฉพาะแหล่งที่มี url จริงและเป็น http(s) — ค่านี้ไปโผล่ใน href บนการ์ด ต้องกัน javascript: ไว้
+        // ชื่อว่างให้ใช้ url เป็นชื่อแทน จะได้ไม่มีลิงก์ที่กดได้แต่ไม่รู้ว่าไปไหน
+        sources: (form.sources || [])
+          .map((s) => ({ label: (s.label || '').trim(), url: (s.url || '').trim() }))
+          .filter((s) => isSafeHttpUrl(s.url))
+          .map((s) => ({ label: s.label || s.url, url: s.url })),
+        campaignId: form.campaignId || null,
+        contentType: form.contentType,
+        approvalStatus: form.approvalStatus,
+        ...(form.contentType === 'live' ? {
+          livePlatforms: form.livePlatforms,
+          liveHost: form.liveHost.trim(),
+        } : {}),
       }
       if (editId) {
-        await updateDoc(doc(db, 'contentPosts', editId), payload)
+        // แก้ไขทำทีละใบเสมอ — การทำซ้ำสร้างโพสต์จริงแยกใบ (ดู lib/repeatDates.js)
+        // จึงไม่มีการ "แก้ทั้งชุด" ให้เข้าใจผิดว่าแก้ใบนี้แล้วใบอื่นเปลี่ยนตาม
+        await updateDoc(doc(db, 'contentPosts', editId), withSearchTokens(payload, SEARCH_FIELDS))
+        setStatus('บันทึกสำเร็จ ✓')
       } else {
-        await addDoc(collection(db, 'contentPosts'), { ...payload, createdAt: Date.now() })
+        const dates = repeatDates(payload.date, form.repeatDays, form.repeatWeeks)
+        if (dates.length === 0) { setStatus('วันเวลาโพสต์ไม่ถูกต้อง'); return }
+        // สร้างพร้อมกันทั้งชุด — addDoc เป็นเอกสารละคำขอ ทำทีละใบจะช้ามากเมื่อซ้ำหลายสัปดาห์
+        const refs = await Promise.all(dates.map((date) => addDoc(
+          collection(db, 'contentPosts'),
+          withSearchTokens({ ...payload, date, createdAt: Date.now() }, SEARCH_FIELDS),
+        )))
+
+        // หลังสร้างเสร็จต้องไม่ค้างอยู่ในโหมด "เพิ่มใหม่" ทั้งที่ฟอร์มยังมีข้อมูลเดิมครบทุกช่อง —
+        // กดปุ่มบันทึกอีกครั้งจะได้โพสต์ซ้ำอีกใบทันทีโดยไม่มีอะไรเตือน
+        if (dates.length === 1) {
+          // สร้างใบเดียว: สลับเข้าโหมดแก้ไขของใบที่เพิ่งสร้าง ⇒ กดบันทึกซ้ำคือแก้ใบเดิม ไม่ใช่สร้างใหม่
+          // และมอบหมายงาน/คุยงาน/แก้ต่อในใบนั้นได้ทันที ไม่ต้องไปกดหาในปฏิทินก่อน
+          setEditId(refs[0].id)
+          setStatus('บันทึกสำเร็จ ✓ แก้ไขต่อได้เลย')
+        } else {
+          // ทำซ้ำหลายใบ: ไม่มีใบไหนเป็น "ใบที่กำลังแก้" ล้างฟอร์มให้พร้อมสร้างอันถัดไปแทน
+          // (คงวันเวลาไว้ เพราะส่วนใหญ่วางแผนต่อในวันเดิม)
+          setForm({ ...EMPTY_FORM, date: payload.date, time: payload.time })
+          setStatus(`บันทึกสำเร็จ ✓ สร้าง ${dates.length} โพสต์`)
+        }
       }
-      cancelEdit()
-      setStatus('บันทึกสำเร็จ ✓')
-      setTimeout(() => setStatus(''), 2000)
+      setTimeout(() => setStatus(''), 2500)
     } catch (e) {
       setStatus('เกิดข้อผิดพลาด: ' + e.message)
     }
@@ -112,45 +495,691 @@ export default function AdminCalendar() {
     try { await deleteDoc(doc(db, 'contentPosts', id)) } catch (e) { window.alert('ลบไม่สำเร็จ: ' + e.message) }
   }
 
-  const markPosted = async (p) => {
-    try { await updateDoc(doc(db, 'contentPosts', p.id), { status: 'posted' }) } catch (e) { window.alert(e.message) }
+  // แหล่งข้อมูล (หลายลิงก์ต่อโพสต์)
+  const addSource = () => setForm((f) => ({ ...f, sources: [...(f.sources || []), { label: '', url: '' }] }))
+  const setSource = (i, patch) => setForm((f) => ({
+    ...f, sources: (f.sources || []).map((s, j) => (j === i ? { ...s, ...patch } : s)),
+  }))
+  const removeSource = (i) => setForm((f) => ({ ...f, sources: (f.sources || []).filter((_, j) => j !== i) }))
+
+  // เปลี่ยนสถานะจากชิปบนการ์ด (ร่าง / โพสต์แล้ว)
+  const setPostStatus = async (p, status) => {
+    try { await updateDoc(doc(db, 'contentPosts', p.id), { status }) } catch (e) { window.alert(e.message) }
   }
 
   const dayPosts = byDate[selected] || []
+  // โพสต์ที่กดดูรายละเอียด — เก็บเป็น id ไม่ใช่ตัว object เพื่อให้ค่าที่โชว์อัปเดตตาม onSnapshot
+  const detailPost = detailId ? posts.find((p) => p.id === detailId) : null
+  // เปิด/ปิดหน้ารายละเอียดผ่าน history เพื่อให้ปุ่ม back ทำงานตามที่ผู้ใช้คาด
+  const openDetail = (id) => {
+    setDetailId(id)
+    const u = new URL(window.location.href)
+    u.searchParams.set('post', id)
+    window.history.pushState({}, '', u)
+    pushedDetail.current = true
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  // กด "กลับไปปฏิทิน": ถ้าเรา push เข้ามาเองใช้ back() ให้ประวัติสะอาด
+  // แต่ถ้าเข้ามาตรงๆ (refresh หรือเปิดลิงก์ ?post=) back() จะพาออกนอกเว็บไปเลย จึงล้าง query แทน
+  const closeDetail = () => {
+    if (pushedDetail.current) { window.history.back(); return }
+    const u = new URL(window.location.href)
+    u.searchParams.delete('post')
+    window.history.replaceState({}, '', u)
+    setDetailId(null)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
   const selDate = new Date(selected)
 
-  return (
-    <main className="admin-dash admin-qurban">
+  // การ์ดฟอร์มเพิ่ม/แก้ไขโพสต์ — ประกาศเป็นตัวแปรเพราะต้องเรนเดอร์ 2 ที่:
+  // คอลัมน์ขวาของหน้าปฏิทิน และในหน้ารายละเอียดเมื่อกดแก้ไข โดยใช้ state/handler ชุดเดียวกัน
+  // กล่องแคปชัน — แยกออกจาก formCard เพราะหน้ารายละเอียดเอาไปวางเป็นคอลัมน์ขวาของหน้า
+  // (ในการ์ดฟอร์มที่แคบ กล่องนี้บีบจนพิมพ์ลำบากและดันหน้าให้ต้องเลื่อน)
+  const captionField = (
+    <label className="admin-cal-caption">ข้อความ/แคปชัน
+      <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
+    </label>
+  )
+
+  // withCaption=false ⇒ ฟอร์มเหลือคอลัมน์เดียว (ช่องข้อมูลได้ความกว้างเต็ม ชิปสถานะไม่ตกหลายบรรทัด)
+  // แล้วผู้เรียกเอา captionField ไปวางเองข้างนอก
+  const renderFormCard = (withCaption = true, collapsible = false) => (
+              <div className="admin-card">
+                {collapsible ? (
+                  // หัวการ์ดเป็นปุ่มพับ/กาง — ตัวฟอร์มถูกถอดออกจาก DOM ตอนพับ ไม่ใช่แค่ซ่อนด้วย CSS
+                  // เพราะถ้าแค่ซ่อน ช่องต่างๆ ยังอยู่ใน tab order และ screen reader ยังอ่านเจอ
+                  <button type="button" className="admin-cal-form-toggle" onClick={() => setFormOpen((v) => !v)}>
+                    <span>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</span>
+                    <FontAwesomeIcon icon={faChevronDown} className={formOpen ? 'open' : ''} />
+                  </button>
+                ) : <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>}
+                {collapsible && !formOpen ? null : (
+                <div className={`admin-cal-form${withCaption ? '' : ' admin-cal-form-single'}`}>
+                  <div className="admin-cal-form-main">
+                  <label>ชื่อกิจกรรม/โพสต์
+                    <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
+                  </label>
+                  <div className="admin-cal-form-row">
+                    {/* datetime-local รับทั้งวันที่และเวลาในช่องเดียว — แยกเก็บเป็น date (YYYY-MM-DD) + time (HH:mm)
+                        ตามรูปแบบที่ Firestore เก็บอยู่เดิม (byDate จัดกลุ่มโพสต์ด้วย date) จึงไม่ต้องแปลงข้อมูลเก่า
+                        ถ้าผู้ใช้ล้างช่องจนว่าง ถอยไปใช้วันที่ที่เลือกในปฏิทิน + เวลาเดิม ไม่บันทึกวันว่าง */}
+                    <label>วันเวลาโพสต์
+                      <input
+                        type="datetime-local"
+                        value={`${form.date || selected}T${form.time || '10:00'}`}
+                        onChange={(e) => {
+                          const [date, time] = (e.target.value || '').split('T')
+                          setForm((f) => ({ ...f, date: date || selected, time: (time || '').slice(0, 5) || f.time }))
+                        }}
+                      />
+                    </label>
+                    {/* สถานะเหลือ 2 ค่า ใช้ชิปกดเลือกแทน dropdown — เห็นค่าที่เลือกอยู่ทันทีไม่ต้องกางเมนู */}
+                    <label>สถานะ
+                      <div className="admin-cal-status-chips">
+                        {Object.entries(STATUS).map(([k, v]) => (
+                          <button
+                            key={k}
+                            type="button"
+                            className={form.status === k ? 'on' : ''}
+                            style={form.status === k ? { background: STATUS_COLOR[k], borderColor: STATUS_COLOR[k], color: '#fff' } : {}}
+                            onClick={() => setForm({ ...form, status: k })}
+                          >{v}</button>
+                        ))}
+                      </div>
+                    </label>
+                  </div>
+                  <div className="admin-cal-form-row">
+                    {/* ผู้รับผิดชอบ — เก็บเป็น uid ไม่ใช่ชื่อที่พิมพ์เอง เพื่อให้หน้า "งานของฉัน" กรองได้จริง */}
+                    <AssigneePicker
+                      value={form.assignedToStaffId}
+                      onChange={(uid) => setForm((f) => ({ ...f, assignedToStaffId: uid }))}
+                    />
+                    <label>ชนิดคอนเทนต์
+                      <select value={form.contentType} onChange={(e) => setForm({ ...form, contentType: e.target.value })}>
+                        {Object.entries(CONTENT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </label>
+                    <label>แคมเปญที่เกี่ยวข้อง
+                      <select
+                        value={form.campaignId}
+                        onChange={(e) => setForm({ ...form, campaignId: e.target.value })}
+                        disabled={!canReadCampaigns}
+                        title={canReadCampaigns ? undefined : 'สิทธิ์ของคุณยังดูรายชื่อแคมเปญไม่ได้'}
+                      >
+                        {/* ช่องที่ว่างเพราะสิทธิ์ไม่ถึง ต้องบอกให้รู้ ไม่ใช่ปล่อยให้ดูเหมือนยังไม่มีแคมเปญสักอัน */}
+                        <option value="">{canReadCampaigns ? '-- ไม่ระบุ --' : '-- สิทธิ์ไม่ถึง ดูรายชื่อแคมเปญไม่ได้ --'}</option>
+                        {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  {form.contentType === 'live' && (
+                    <div className="admin-cal-form-row" style={{ flexWrap: 'wrap' }}>
+                      {/* ตัดช่อง "วันเวลาไลฟ์" ออกแล้ว — ซ้ำกับ "วันเวลาโพสต์" ด้านบนที่กรอกไปแล้วทุกครั้ง
+                          และการมีเวลาสองชุดต่อโพสต์เดียวเปิดช่องให้ขัดกันเองโดยไม่มีใครรู้ว่าอันไหนจริง
+                          ตารางไลฟ์ใช้วันเวลาโพสต์เป็นหลักอยู่แล้ว (ดู liveTimeOf ใน data/liveSchedule.js) */}
+                      <label>ผู้ดำเนินรายการ
+                        <input value={form.liveHost} onChange={(e) => setForm({ ...form, liveHost: e.target.value })} />
+                      </label>
+                      <div>
+                        <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แพลตฟอร์มไลฟ์</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {LIVE_PLATFORM_OPTIONS.map((pf) => (
+                            <button
+                              key={pf} type="button"
+                              className={form.livePlatforms.includes(pf) ? 'admin-btn-primary' : 'admin-btn'}
+                              style={{ fontSize: '.8rem', padding: '6px 14px' }}
+                              onClick={() => setForm((f) => ({ ...f, livePlatforms: f.livePlatforms.includes(pf) ? f.livePlatforms.filter((x) => x !== pf) : [...f.livePlatforms, pf] }))}
+                            >{pf}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* แหล่งข้อมูลอ้างอิง — ใส่ได้หลายลิงก์ต่อโพสต์ (เช่น ข่าวต้นทาง, โพสต์ที่อ้างถึง, ไฟล์ใน Drive)
+                      เก็บเป็น array ของ { label, url } ไม่ใช่ string เดียว เพื่อให้ตั้งชื่อให้อ่านรู้เรื่องได้
+                      กรอง scheme ตอนบันทึก (ดู save) กัน javascript: เพราะค่านี้ไปโผล่ใน href บนการ์ด */}
+                  <div>
+                    <div style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 6 }}>แหล่งข้อมูล</div>
+                    {form.sources.map((s, i) => (
+                      <div className="admin-cal-source-row" key={i}>
+                        <input
+                          placeholder="ชื่อแหล่ง (เช่น ข่าวต้นทาง)"
+                          value={s.label}
+                          onChange={(e) => setSource(i, { label: e.target.value })}
+                        />
+                        <input
+                          placeholder="https://..."
+                          value={s.url}
+                          onChange={(e) => setSource(i, { url: e.target.value })}
+                        />
+                        <button type="button" className="admin-cal-source-del" onClick={() => removeSource(i)} aria-label="ลบแหล่งข้อมูลนี้">
+                          <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                      </div>
+                    ))}
+                    <button type="button" className="admin-btn" onClick={addSource}>+ เพิ่มแหล่งข้อมูล</button>
+                  </div>
+
+                  {/* ลิงก์ไฟล์งานใน Google Drive แทนการอัพโหลดไฟล์เข้าระบบ
+                      ไฟล์งานจริง (ไฟล์ดิบ/ไฟล์ตัดต่อ) อยู่ใน Drive ของทีมอยู่แล้ว การอัพซ้ำเข้ามาที่นี่
+                      ทำให้มีไฟล์สองชุดที่ไม่ตรงกัน — เก็บแค่ลิงก์ชี้ไปที่ต้นทางชุดเดียว
+                      กรอง scheme ตอนบันทึก (ดู save) เพราะค่านี้ไปโผล่ใน href */}
+                  {/* ทำซ้ำทุกสัปดาห์ — มีเฉพาะตอนสร้างโพสต์ใหม่
+                      ตอนแก้ไขไม่ควรมี เพราะแต่ละครั้งเป็นโพสต์แยกใบแล้ว กดแก้แล้วจะสร้างชุดใหม่ซ้อนของเดิม */}
+                  {!editId && (
+                    <div>
+                      <div className="admin-cal-repeat-head">ทำซ้ำทุกสัปดาห์ (ไม่เลือก = โพสต์ครั้งเดียว)</div>
+                      <div className="admin-cal-status-chips admin-cal-repeat-days">
+                        {WEEKDAYS.map((d) => {
+                          const on = form.repeatDays.includes(d.id)
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              className={on ? 'on' : ''}
+                              style={on ? { background: 'var(--green-deep)', borderColor: 'var(--green-deep)', color: '#fff' } : {}}
+                              onClick={() => setForm((f) => ({
+                                ...f,
+                                repeatDays: on ? f.repeatDays.filter((x) => x !== d.id) : [...f.repeatDays, d.id],
+                              }))}
+                            >{d.label}</button>
+                          )
+                        })}
+                      </div>
+                      {form.repeatDays.length > 0 && (
+                        <label className="admin-cal-repeat-weeks">จำนวนสัปดาห์
+                          <select
+                            value={form.repeatWeeks}
+                            onChange={(e) => setForm({ ...form, repeatWeeks: Number(e.target.value) })}
+                          >
+                            {Array.from({ length: MAX_REPEAT_WEEKS }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={n}>{n} สัปดาห์</option>
+                            ))}
+                          </select>
+                          <span className="admin-cal-repeat-count">
+                            จะสร้าง {repeatDates(form.date || selected, form.repeatDays, form.repeatWeeks).length} โพสต์
+                          </span>
+                        </label>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ไม่เลื่อนสถานะอัตโนมัติตอนพิมพ์แล้ว — ใช้ปุ่ม "ส่งงาน" ด้านล่างเป็นตัวสั่ง
+                      ถ้าเลื่อนให้เอง ปุ่มจะหายทันทีที่ลิงก์ครบ (เงื่อนไขโชว์ปุ่มคือยังไม่ได้ส่งงาน)
+                      และกลายเป็นส่งงานโดยไม่ได้ตั้งใจแค่เพราะวางลิงก์ไว้ก่อน */}
+                  <label>ลิงก์งานจาก Google Drive
+                    <input
+                      type="url"
+                      value={form.driveUrl}
+                      onChange={(e) => setForm({ ...form, driveUrl: e.target.value })}
+                      placeholder="https://drive.google.com/..."
+                    />
+                  </label>
+
+
+                  {SHOW_CONTENT_HUB && <>
+                  <label>แพลตฟอร์ม</label>
+                  <div className="admin-cal-platforms">
+                    {PLATFORMS.map((pl) => (
+                      <button
+                        key={pl.id}
+                        type="button"
+                        className={form.platforms.includes(pl.id) ? 'on' : ''}
+                        style={form.platforms.includes(pl.id) ? { background: pl.color, borderColor: pl.color, color: '#fff' } : {}}
+                        onClick={() => togglePlatform(pl.id)}
+                      >
+                        {pl.label}
+                      </button>
+                    ))}
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row', fontWeight: 400 }}>
+                    <input type="checkbox" checked={form.realPublish} onChange={(e) => setForm({ ...form, realPublish: e.target.checked })} />
+                    ตั้งเวลาโพสต์จริงอัตโนมัติ (ต้องเชื่อมต่อแพลตฟอร์มไว้ก่อน — ระบบจะโพสต์จริงให้เมื่อถึงเวลา)
+                  </label>
+                  </>}
+                  {/* แม่แบบ — บันทึกโพสต์ที่ทำไว้แล้วเก็บไว้ใช้ซ้ำ ไม่ต้องพิมพ์ใหม่ทั้งหมด
+                      วัน/เวลา/สถานะ/ลิงก์ไฟล์งาน ไม่ติดมาด้วย (ดู contentTemplate.js) */}
+                  <div className="admin-cal-tpl">
+                    <div className="admin-cal-tpl-head">แม่แบบโพสต์</div>
+                    <div className="admin-cal-tpl-row">
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const t = templates.find((x) => x.id === e.target.value)
+                          if (!t) return
+                          // ใช้แม่แบบ = เริ่มโพสต์ใบใหม่เสมอ ไม่ใช่แก้ใบที่เปิดอยู่
+                          setEditId(null)
+                          setForm(applyTemplate(EMPTY_FORM, t, { date: selected }))
+                          setStatus(`ใช้แม่แบบ "${t.name}" แล้ว — เลือกวันเวลาแล้วกดเพิ่มโพสต์`)
+                          setTimeout(() => setStatus(''), 3000)
+                        }}
+                      >
+                        <option value="">{templates.length ? 'เลือกแม่แบบมาใช้…' : 'ยังไม่มีแม่แบบที่บันทึกไว้'}</option>
+                        {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <button
+                        type="button" className="admin-btn"
+                        disabled={!form.title.trim() && !form.text.trim()}
+                        onClick={async () => {
+                          const name = window.prompt('ตั้งชื่อแม่แบบ', suggestTemplateName(form))
+                          if (name === null) return
+                          try {
+                            await saveTemplate(name, form)
+                            setStatus('บันทึกแม่แบบแล้ว ✓')
+                          } catch (e) { setStatus('บันทึกแม่แบบไม่สำเร็จ: ' + e.message) }
+                          setTimeout(() => setStatus(''), 2500)
+                        }}
+                      >บันทึกเป็นแม่แบบ</button>
+                    </div>
+                    {templates.length > 0 && (
+                      <div className="admin-cal-tpl-list">
+                        {templates.map((t) => (
+                          <span key={t.id} className="admin-cal-tpl-chip">
+                            {t.name}
+                            <button
+                              type="button"
+                              aria-label={`ลบแม่แบบ ${t.name}`}
+                              onClick={() => {
+                                if (!window.confirm(`ลบแม่แบบ "${t.name}"?`)) return
+                                // จับ error ด้วย — ไม่งั้นลบไม่ผ่านแล้วเงียบ แม่แบบยังอยู่ในลิสต์เหมือนเดิม
+                                removeTemplate(t.id).catch((e) => window.alert('ลบแม่แบบไม่สำเร็จ: ' + e.message))
+                              }}
+                            ><FontAwesomeIcon icon={faTrash} /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
+                    <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
+                    {/* ทำสำเนา — ใช้โพสต์ที่เปิดอยู่เป็นต้นแบบของใบใหม่ทันที ไม่ต้องบันทึกเป็นแม่แบบก่อน */}
+                    {editId && (
+                      <button
+                        className="admin-btn"
+                        onClick={() => {
+                          setEditId(null)
+                          setForm(applyTemplate(EMPTY_FORM, form, { date: selected }))
+                          setStatus('ทำสำเนาแล้ว — เลือกวันเวลาแล้วกดเพิ่มโพสต์')
+                          setTimeout(() => setStatus(''), 3000)
+                        }}
+                      >ทำสำเนา</button>
+                    )}
+                    {isSafeHttpUrl((form.driveUrl || '').trim()) && form.status !== 'posted' && form.status !== 'review' && (
+                      // ส่งงาน = แนบไฟล์ใน Drive เรียบร้อยแล้วและขอให้ตรวจ ⇒ เลื่อนสถานะเป็น "ส่งงาน" (คีย์ review)
+                      <button className="admin-btn" onClick={() => setForm((f) => ({ ...f, status: statusAfterDriveLink(f.status) }))}>
+                        ส่งงาน
+                      </button>
+                    )}
+                    {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
+                    {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
+                  </div>
+
+                  {/* มีเฉพาะตอนแก้โพสต์ที่บันทึกแล้ว — โพสต์ใหม่ยังไม่มี id ให้ผูกคอมเมนต์
+                      (ถ้าให้พิมพ์ก่อนบันทึก คอมเมนต์จะไม่รู้ว่าจะไปเกาะกับอะไร) */}
+                  {editId && <CommentThread entityType="contentPost" entityId={editId} title="คุยเรื่องโพสต์นี้" />}
+                  </div>
+                  {withCaption && captionField}
+                </div>
+                )}
+              </div>
+  )
+
+  return (<StaffRoleGuard allowedRoles={['admin', 'staff', 'social']}>{() => (<VolunteerGuard>
+    <main className="admin-dash admin-qurban admin-full">
       <AdminNav />
       <div className="admin-wrap">
-        <div className="admin-head">
-          <div>
-            <h1>ปฏิทินคอนเทนต์</h1>
-            <p>วางแผนกิจกรรมและโพสต์ลงโซเชียล — เลือกวัน เพิ่มโพสต์ ตั้งเวลา เลือกแพลตฟอร์ม</p>
+        {/* การ์ดหัวเรื่องถูกเอาออก — ชื่อหน้าซ้ำกับเมนูซ้ายที่ไฮไลต์ "ปฏิทินคอนเทนต์" อยู่แล้ว
+            เหลือไว้แค่ปุ่มเชื่อมต่อแพลตฟอร์มเมื่อเปิด Content Hub */}
+        {SHOW_CONTENT_HUB && (
+          <div style={{ marginBottom: 16 }}>
+            <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
+              <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
+            </button>
           </div>
-        </div>
+        )}
 
-        <div className="admin-cal-layout">
-          {/* ปฏิทินรายเดือน */}
-          <div className="admin-card admin-cal-card">
-            <div className="admin-cal-head">
-              <button className="admin-btn" onClick={prevMonth}>‹</button>
-              <h4>{TH_MONTHS[month]} {year + 543}</h4>
-              <button className="admin-btn" onClick={nextMonth}>›</button>
+        {SHOW_CONTENT_HUB && showHub && (
+          <div className="admin-card" style={{ marginBottom: 20 }}>
+            <h4><FontAwesomeIcon icon={faLink} /> เชื่อมบัญชี &amp; โพสต์จริงลงแพลตฟอร์ม</h4>
+            <p style={{ color: 'var(--ink-soft)', fontSize: '.85rem', marginBottom: 14 }}>
+              การเชื่อมบัญชีและโพสต์จริงทำที่ <strong>Content Hub</strong> (เว็บแยก) เพราะการเชื่อมต่อแบบ OAuth ต้องมีเซิร์ฟเวอร์
+              เก็บกุญแจและ token ไว้อย่างปลอดภัย ซึ่งเว็บนี้ไม่มี — กดปุ่มด้านล่างเพื่อไปเชื่อมต่อ (ล็อกอินด้วยรหัสผ่านของ
+              Content Hub ครั้งแรกครั้งเดียว) เชื่อมแล้วโพสต์ได้ทั้ง 5 แพลตฟอร์มจากที่นั่น
+            </p>
+            {socialNotice && (
+              <p style={{ background: '#eef7ee', border: '1px solid #b7ddb7', borderRadius: 8, padding: '10px 12px', fontSize: '.82rem', color: '#2e7d52', marginBottom: 14 }}>
+                {socialNotice}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+              <button className="admin-btn-primary" onClick={() => openContentHub('/accounts')}>
+                <FontAwesomeIcon icon={faLink} /> เชื่อมต่อแพลตฟอร์ม
+              </button>
+              <button className="admin-btn" onClick={() => openContentHub('/compose')}>
+                <FontAwesomeIcon icon={faPaperPlane} /> ไปหน้าสร้างโพสต์
+              </button>
+              <button className="admin-btn" onClick={() => openContentHub('/posts')}>
+                ประวัติโพสต์
+              </button>
             </div>
-            <div className="admin-cal-grid">
+            {/* แสดงแค่รายชื่อแพลตฟอร์มที่รองรับ ไม่โชว์สถานะเชื่อมต่อ เพราะหน้านี้อ่านสถานะจริงไม่ได้ */}
+            <div className="admin-cal-social-list">
+              {SOCIAL_PLATFORMS.map((pl) => (
+                <div key={pl.id} className="admin-cal-social-row">
+                  <span className="admin-cal-social-dot" style={{ background: pl.color }} />
+                  <div style={{ flex: 1 }}>
+                    <strong>{pl.label}</strong>
+                    <div style={{ fontSize: '.8rem', color: '#999' }}>
+                      {pl.needsVideo ? 'ต้องมีไฟล์วิดีโอ' : 'โพสต์ข้อความ/รูป/วิดีโอได้'}
+                    </div>
+                  </div>
+                  <button className="admin-btn" onClick={() => openContentHub('/accounts')}>
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> เชื่อมต่อ
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* แถบแท็บมีปุ่มเดียว ("ปฏิทิน") เมื่อปิด Content Hub ⇒ กดก็ไม่ไปไหน จึงซ่อนไปเลย
+            แล้วเอาการ์ด "โพสต์ของวันที่เลือก" ขึ้นมาอยู่ตรงนี้แทน — เป็นสิ่งที่ต้องอ่านก่อนเสมอ
+            (เดิมอยู่คอลัมน์กลาง ต้องกวาดตาไปหาข้างๆ ปฏิทิน) */}
+        {SHOW_CONTENT_HUB && canSeeInbox && (
+          <div className="admin-cal-tabs" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button className="admin-btn" style={mainTab === 'calendar' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('calendar')}>
+              <FontAwesomeIcon icon={faCalendarDays} /> ปฏิทิน
+            </button>
+            <button className="admin-btn" style={mainTab === 'chat' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('chat')}>
+              <FontAwesomeIcon icon={faComments} /> กล่องข้อความ
+            </button>
+            <button className="admin-btn" style={mainTab === 'comments' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('comments')}>
+              <FontAwesomeIcon icon={faMessage} /> คอมเมนต์
+            </button>
+            <button className="admin-btn" style={mainTab === 'insights' ? { background: 'var(--brand, #2e7d52)', color: '#fff' } : {}} onClick={() => setMainTab('insights')}>
+              <FontAwesomeIcon icon={faChartLine} /> ภาพรวมเพจ
+            </button>
+          </div>
+        )}
+
+        {/* หน้ารายละเอียดโพสต์ — กดการ์ดแล้วมาที่นี่ โชว์การ์ดใบเดียว ไม่มีปฏิทิน/ฟอร์มมากวน
+            การ์ดในหน้าปฏิทินโชว์แค่หัวข้อ ที่นี่จึงเป็นที่เดียวที่เห็นแคปชัน/ลิงก์/ไฟล์งานครบ
+            และเปลี่ยนสถานะแบบกดเดียวได้ */}
+        {detailPost && (
+          <div className="admin-detail-page">
+            <button className="admin-detail-back" onClick={closeDetail}>
+              <FontAwesomeIcon icon={faArrowLeft} /> กลับไปปฏิทิน
+            </button>
+            <div className="admin-detail-cols">
+            <div className="admin-card admin-detail">
+              <div className="admin-detail-head">
+                <h4>{detailPost.time} · {detailPost.title}</h4>
+              </div>
+              <div className="admin-detail-meta">
+                <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(detailPost.status)] }}>
+                  {STATUS[normStatus(detailPost.status)]}
+                </span>
+                <span>{CONTENT_TYPE_LABEL[detailPost.contentType] || 'โพสต์'}</span>
+                {detailPost.campaignId && <span>{campaigns.find((c) => c.id === detailPost.campaignId)?.name || 'แคมเปญที่ถูกลบแล้ว'}</span>}
+              </div>
+              {isSafeHttpUrl(detailPost.driveUrl) && (
+                <div className="admin-post-sources">
+                  <a href={detailPost.driveUrl} target="_blank" rel="noopener noreferrer" title={detailPost.driveUrl}>
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
+                  </a>
+                </div>
+              )}
+              {(detailPost.sources || []).filter((x) => isSafeHttpUrl(x.url)).length > 0 && (
+                <div className="admin-post-sources">
+                  {detailPost.sources.filter((x) => isSafeHttpUrl(x.url)).map((x, xi) => (
+                    <a key={xi} href={x.url} target="_blank" rel="noopener noreferrer" title={x.url}>
+                      <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {x.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {(detailPost.mediaUrls || []).length > 0 && (
+                <div className="admin-post-media">
+                  {detailPost.mediaUrls.map((url, mi) => (
+                    url.match(/\.(mp4|mov|webm)/i)
+                      ? <video key={mi} src={url} className="admin-post-media-item" muted controls />
+                      : <img key={mi} src={url} alt="" className="admin-post-media-item" />
+                  ))}
+                </div>
+              )}
+              <div className="admin-post-actions">
+                {Object.entries(STATUS).map(([k, v]) => (
+                  <button
+                    key={k} className="admin-btn"
+                    style={normStatus(detailPost.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
+                    onClick={() => setPostStatus(detailPost, k)}
+                  >{normStatus(detailPost.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
+                ))}
+                {/* แก้ไขในหน้านี้เลย ไม่เด้งกลับไปปฏิทิน — ฟอร์มโผล่ใต้การ์ดนี้ */}
+                <button className="admin-btn" onClick={() => startEdit(detailPost)}>
+                  <FontAwesomeIcon icon={faPenToSquare} /> แก้ไข
+                </button>
+              </div>
+              {editId === detailPost.id && renderFormCard(false)}
+            </div>
+            {/* คอลัมน์ขวา: กล่องข้อความ/แคปชันของโพสต์ (แทนพรีวิวไฟล์ Drive ที่เอาออกแล้ว)
+                โชว์เฉพาะตอนไม่ได้แก้ไข — ตอนแก้ไข ฟอร์มมีกล่องแคปชันของตัวเองอยู่แล้ว จะซ้ำกันสองกล่อง */}
+            {/* ตอนแก้ไข: กล่องแคปชันที่พิมพ์ได้ย้ายออกมาอยู่คอลัมน์ขวา (กว้างกว่าในฟอร์มมาก)
+                ตอนไม่แก้ไข: แสดงแคปชันแบบอ่าน */}
+            <div className="admin-card admin-detail-caption">
+              {editId === detailPost.id ? captionField : (
+                <>
+                  <h4>ข้อความ/แคปชัน</h4>
+                  {detailPost.text
+                    ? <p className="admin-post-text">{detailPost.text}</p>
+                    : <p className="admin-detail-empty">ไม่มีข้อความ/แคปชัน</p>}
+                </>
+              )}
+            </div>
+            </div>
+          </div>
+        )}
+
+        {mainTab === 'calendar' && !detailPost && (
+          <div className="admin-cal-today" style={{ marginBottom: 20 }}>
+              <div className="admin-card">
+                <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
+                {(() => { const h = getHijri(selDate); return h ? <div className="admin-cal-hijri-header" style={{ marginTop: -6, marginBottom: 8 }}>{h.d} {HIJRI_MONTHS[h.m]} {h.y} ฮ.ศ.</div> : null })()}
+                {dayPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ในวันนี้</p>}
+                {/* การ์ดนี้กว้างเต็มหน้า ถ้าเรียงโพสต์ลงมาทีละใบจะเหลือที่ว่างด้านขวาเยอะ
+                    จึงวางเป็นกริดหลายคอลัมน์ในแถวเดียว (auto-fill ยุบเป็นคอลัมน์เดียวเองเมื่อที่ไม่พอ) */}
+                <div className="admin-day-posts">
+                {dayPosts.map((p) => (
+                  <div
+                    className="admin-post admin-post-clickable"
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openDetail(p.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(p.id) } }}
+                  >
+                    <div className="admin-post-top">
+                      {/* ป้ายชนิดคอนเทนต์ต่อท้ายชื่อ — เดิมโชว์เฉพาะไลฟ์ พอมี VDO/Picture แล้วต้องแยกออกจากกันได้ */}
+                      <strong>
+                        {p.time} · {p.title}
+                        {p.contentType === 'live' && ' 🔴 ไลฟ์'}
+                        {p.contentType === 'video' && ' 🎬 VDO'}
+                        {p.contentType === 'picture' && ' 🖼 Picture'}
+                      </strong>
+                      {/* แก้ไข/ลบ อยู่มุมขวาบนของการ์ด แยกออกจากปุ่มเปลี่ยนสถานะด้านล่าง
+                          เพราะเป็นคนละงานกัน — อันนี้จัดการตัวการ์ด อันนั้นเปลี่ยนสถานะเนื้อหา */}
+                      <span className="admin-post-corner">
+                        <span className="admin-post-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                          {STATUS[normStatus(p.status)]}
+                        </span>
+                        <button className="admin-post-corner-btn" onClick={(e) => { e.stopPropagation(); startEdit(p) }} aria-label="แก้ไขโพสต์" title="แก้ไข">
+                          <FontAwesomeIcon icon={faPenToSquare} />
+                        </button>
+                        <button className="admin-post-corner-btn danger" onClick={(e) => { e.stopPropagation(); remove(p.id) }} aria-label="ลบโพสต์" title="ลบ">
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                      {p.campaignId && (
+                        <span style={{ fontSize: '.72rem', padding: '2px 8px', borderRadius: 99, background: '#eee' }}>
+                          แคมเปญ: {campaigns.find((c) => c.id === p.campaignId)?.name || p.campaignId}
+                        </span>
+                      )}
+                    </div>
+                    {p.contentType === 'live' && (
+                      <div style={{ fontSize: '.8rem', color: 'var(--ink-soft)', marginBottom: 6 }}>
+                        {/* โพสต์เก่าที่เคยกรอกช่องนี้ไว้ก่อนถูกตัดออก ยังแสดงให้เห็นตามเดิม ไม่ลบข้อมูลที่มีอยู่ */}
+                        {p.liveScheduledAt && <>เวลาไลฟ์: {p.liveScheduledAt} · </>}
+                        {(p.livePlatforms || []).length > 0 && <>แพลตฟอร์ม: {p.livePlatforms.join(', ')} · </>}
+                        {p.liveHost && <>ผู้ดำเนินรายการ: {p.liveHost}</>}
+                      </div>
+                    )}
+                    {p.text && <p className="admin-post-text">{p.text}</p>}
+                    {isSafeHttpUrl(p.driveUrl) && (
+                      <div className="admin-post-sources">
+                        <a href={p.driveUrl} target="_blank" rel="noopener noreferrer" title={p.driveUrl}>
+                          <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> ไฟล์งานใน Google Drive
+                        </a>
+                      </div>
+                    )}
+                    {(p.sources || []).length > 0 && (
+                      <div className="admin-post-sources">
+                        {p.sources.filter((s) => isSafeHttpUrl(s.url)).map((s, si) => (
+                          <a key={si} href={s.url} target="_blank" rel="noopener noreferrer" title={s.url}>
+                            <FontAwesomeIcon icon={faArrowUpRightFromSquare} /> {s.label}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {(p.mediaUrls || []).length > 0 && (
+                      <div className="admin-post-media">
+                        {p.mediaUrls.map((url, mi) => (
+                          url.match(/\.(mp4|mov|webm)/i)
+                            ? <video key={mi} src={url} className="admin-post-media-item" muted controls />
+                            : <img key={mi} src={url} alt="" className="admin-post-media-item" />
+                        ))}
+                      </div>
+                    )}
+                    <div className="admin-post-platforms">
+                      {(p.platforms || []).map((id) => {
+                        const pl = PLATFORMS.find((x) => x.id === id)
+                        return pl ? <span key={id} style={{ background: pl.color }}>{pl.label}</span> : null
+                      })}
+                    </div>
+                    {(p.platforms || []).length > 0 && (
+                      <div className="admin-post-share">
+                        {(p.platforms || []).map((id) => {
+                          const pl = PLATFORMS.find((x) => x.id === id)
+                          if (!pl) return null
+                          const key = p.id + id
+                          return (
+                            <button key={id} className="admin-post-share-btn" style={{ background: pl.color }} onClick={() => copyAndOpen(p, id)}>
+                              <FontAwesomeIcon icon={copiedId === key ? faCheck : faCopy} /> {pl.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {p.realStatus && (
+                      <div className="admin-post-platforms" style={{ marginTop: 6 }}>
+                        <span style={{ background: p.realStatus === 'posted' ? '#2e7d52' : p.realStatus === 'failed' ? '#c0392b' : '#c9a84c' }}>
+                          {REAL_STATUS_LABEL[p.realStatus] || p.realStatus}
+                        </span>
+                        {Object.entries(p.publishResults || {}).filter(([, r]) => !r.ok).map(([pf, r]) => (
+                          <span key={pf} title={r.error} style={{ background: '#c0392b' }}>
+                            <FontAwesomeIcon icon={faTriangleExclamation} /> {pf}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="admin-post-actions">
+                      {Object.entries(STATUS).map(([k, v]) => (
+                        <button
+                          key={k} className="admin-btn" style={normStatus(p.status) === k ? { background: STATUS_COLOR[k], color: '#fff', borderColor: STATUS_COLOR[k] } : {}}
+                          onClick={() => setPostStatus(p, k)}
+                        >{normStatus(p.status) === k && <FontAwesomeIcon icon={faCheck} />} {v}</button>
+                      ))}
+                      {SHOW_CONTENT_HUB && (p.platforms || []).some((id) => SOCIAL_PLATFORMS.some((s) => s.id === id)) && (
+                        // คัดลอกเนื้อหาแล้วเปิดหน้าสร้างโพสต์ของ Content Hub ให้วางต่อ (โพสต์จริงทำที่นั่น)
+                        <button className="admin-btn" onClick={() => publishNow(p.id)}>
+                          <FontAwesomeIcon icon={faPaperPlane} /> โพสต์จริง (ไป Content Hub)
+                        </button>
+                      )}
+
+                    </div>
+                  </div>
+                ))}
+                </div>
+              </div>
+          </div>
+        )}
+
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'chat' && <ChatInboxTab />}
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'comments' && <CommentsTab />}
+        {SHOW_CONTENT_HUB && canSeeInbox && mainTab === 'insights' && <InsightsTab />}
+
+        {mainTab === 'calendar' && !detailPost && <div className="admin-cal-layout">
+          {/* ปฏิทิน — สลับระหว่างมุมมองเดือนกับสัปดาห์ในการ์ดเดียวกัน */}
+          <div className="admin-card admin-cal-card">
+            <div className="admin-cal-viewtabs">
+              <button type="button" className={viewMode === 'month' ? 'on' : ''} onClick={() => setViewMode('month')}>เดือน</button>
+              <button type="button" className={viewMode === 'week' ? 'on' : ''} onClick={() => setViewMode('week')}>สัปดาห์</button>
+            </div>
+            <div className="admin-cal-head">
+              <button
+                type="button" className="admin-btn"
+                onClick={() => (viewMode === 'week' ? goWeek(-1) : prevMonth())}
+                aria-label={viewMode === 'week' ? 'สัปดาห์ก่อนหน้า' : 'เดือนก่อนหน้า'}
+                title={viewMode === 'week' ? 'สัปดาห์ก่อนหน้า' : 'เดือนก่อนหน้า'}
+              ><FontAwesomeIcon icon={faChevronLeft} /></button>
+              <div style={{ textAlign: 'center' }}>
+                <h4 style={{ margin: 0 }}>{viewMode === 'week' ? weekRangeLabel(weekStartKey) : `${TH_MONTHS[month]} ${year + 543}`}</h4>
+                {(() => {
+                  const hFirst = getHijri(new Date(year, month, 1))
+                  const hLast = getHijri(new Date(year, month, daysInMonth))
+                  if (!hFirst || !hLast) return null
+                  const label = hFirst.m === hLast.m
+                    ? `${HIJRI_MONTHS[hFirst.m]} ${hFirst.y} ฮ.ศ.`
+                    : `${HIJRI_MONTHS[hFirst.m]} – ${HIJRI_MONTHS[hLast.m]} ${hLast.y} ฮ.ศ.`
+                  return <div className="admin-cal-hijri-header">{label}</div>
+                })()}
+              </div>
+              <button
+                type="button" className="admin-btn"
+                onClick={() => (viewMode === 'week' ? goWeek(1) : nextMonth())}
+                aria-label={viewMode === 'week' ? 'สัปดาห์ถัดไป' : 'เดือนถัดไป'}
+                title={viewMode === 'week' ? 'สัปดาห์ถัดไป' : 'เดือนถัดไป'}
+              ><FontAwesomeIcon icon={faChevronRight} /></button>
+            </div>
+            <div className={`admin-cal-grid${viewMode === 'week' ? ' admin-cal-grid-week' : ''}`}>
               {TH_DAYS.map((d) => <div className="admin-cal-dow" key={d}>{d}</div>)}
-              {cells.map((d, i) => {
-                if (d === null) return <div key={`e${i}`} />
-                const key = dateKey(year, month, d)
+              {/* มุมมองสัปดาห์วาดด้วยตารางและคลาสชุดเดียวกับเดือนเป๊ะ ต่างแค่ชุดวันที่เอามาวาด
+                  (7 วันของสัปดาห์ แทนที่จะเป็นทั้งเดือน) จึงไม่มีสไตล์คู่ขนานให้หลุดไม่ตรงกัน */}
+              {(viewMode === 'week'
+                ? weekKeys.map((k) => { const dt = fromKey(k); return { key: k, d: dt.getDate(), dt } })
+                : cells.map((d, i) => (d === null
+                    ? null
+                    : { key: dateKey(year, month, d), d, dt: new Date(year, month, d) }))
+              ).map((cell, i) => {
+                if (!cell) return <div key={`e${i}`} />
+                const { key, d, dt } = cell
                 const has = byDate[key] || []
+                // สีประจำวัน: เอาสถานะที่ "ค้างที่สุด" ของวันนั้นมาแสดง (ร่าง > ส่งตรวจ > โพสต์แล้ว)
+                // เพื่อให้กวาดตาดูปฏิทินแล้วเห็นวันที่ยังมีงานค้างก่อน ไม่ใช่เห็นวันที่ทำเสร็จแล้วเด่นสุด
+                const dominant = has.length === 0 ? null
+                  : STATUS_ORDER.find((st) => has.some((p) => normStatus(p.status) === st))
                 return (
                   <button
                     key={key}
-                    className={`admin-cal-day ${key === selected ? 'sel' : ''} ${key === todayKey() ? 'today' : ''}`}
+                    className={`admin-cal-day ${has.length > 0 ? 'has-posts' : ''} ${key === selected ? 'sel' : ''} ${key === todayKey() ? 'today' : ''}`}
+                    style={dominant ? { '--day-color': STATUS_COLOR[dominant] } : undefined}
+                    title={has.length > 0 ? `${has.length} โพสต์` : undefined}
                     onClick={() => { setSelected(key); cancelEdit() }}
                   >
                     <span>{d}</span>
+                    {(() => { const h = getHijri(dt); return h ? <span className="admin-cal-hijri">{h.d}</span> : null })()}
                     {has.length > 0 && (
                       <span className="admin-cal-dots">
                         {has.slice(0, 3).map((p, j) => <i key={j} style={{ background: STATUS_COLOR[p.status] || '#999' }} />)}
@@ -166,78 +1195,61 @@ export default function AdminCalendar() {
                 <span key={k}><i style={{ background: STATUS_COLOR[k] }} /> {v}</span>
               ))}
             </div>
-          </div>
 
-          {/* รายการโพสต์ของวันที่เลือก + ฟอร์ม */}
-          <div className="admin-cal-side">
-            <div className="admin-card">
-              <h4>{selDate.getDate()} {TH_MONTHS[selDate.getMonth()]} {selDate.getFullYear() + 543} — {dayPosts.length} โพสต์</h4>
-              {dayPosts.length === 0 && <p style={{ color: '#999', fontSize: '.9rem' }}>ยังไม่มีโพสต์ในวันนี้</p>}
-              {dayPosts.map((p) => (
-                <div className="admin-post" key={p.id}>
-                  <div className="admin-post-top">
-                    <strong>{p.time} · {p.title}</strong>
-                    <span className="admin-post-status" style={{ background: STATUS_COLOR[p.status] }}>{STATUS[p.status]}</span>
-                  </div>
-                  {p.text && <p className="admin-post-text">{p.text}</p>}
-                  <div className="admin-post-platforms">
-                    {(p.platforms || []).map((id) => {
-                      const pl = PLATFORMS.find((x) => x.id === id)
-                      return pl ? <span key={id} style={{ background: pl.color }}>{pl.label}</span> : null
-                    })}
-                  </div>
-                  <div className="admin-post-actions">
-                    {p.status !== 'posted' && <button className="admin-btn" onClick={() => markPosted(p)}>✓ โพสต์แล้ว</button>}
-                    <button className="admin-btn" onClick={() => startEdit(p)}>แก้ไข</button>
-                    <button className="admin-btn-danger" onClick={() => remove(p.id)}>ลบ</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="admin-card">
-              <h4>{editId ? 'แก้ไขโพสต์' : 'เพิ่มกิจกรรม / โพสต์ใหม่'}</h4>
-              <div className="admin-cal-form">
-                <label>ชื่อกิจกรรม/โพสต์
-                  <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="เช่น โพสต์อัปเดตภารกิจกุรบาน" />
-                </label>
-                <label>ข้อความ/แคปชัน
-                  <textarea rows="4" value={form.text} onChange={(e) => setForm({ ...form, text: e.target.value })} placeholder="เนื้อหาที่จะโพสต์..." />
-                </label>
-                <div className="admin-cal-form-row">
-                  <label>เวลาโพสต์
-                    <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-                  </label>
-                  <label>สถานะ
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                      {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </label>
-                </div>
-                <label>แพลตฟอร์ม</label>
-                <div className="admin-cal-platforms">
-                  {PLATFORMS.map((pl) => (
-                    <button
-                      key={pl.id}
-                      type="button"
-                      className={form.platforms.includes(pl.id) ? 'on' : ''}
-                      style={form.platforms.includes(pl.id) ? { background: pl.color, borderColor: pl.color, color: '#fff' } : {}}
-                      onClick={() => togglePlatform(pl.id)}
-                    >
-                      {pl.label}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
-                  <button className="admin-btn-primary" onClick={save}>{editId ? 'บันทึกการแก้ไข' : 'เพิ่มโพสต์'}</button>
-                  {editId && <button className="admin-btn" onClick={cancelEdit}>ยกเลิก</button>}
-                  {status && <span style={{ fontSize: '.85rem' }}>{status}</span>}
-                </div>
+            {/* มุมมองสัปดาห์: ใต้แถวปฏิทินแสดง "เฉพาะวันที่เลือกอยู่" ไม่ใช่ทั้ง 7 วัน
+                เดิมกางครบเจ็ดคอลัมน์ ซึ่งส่วนใหญ่ว่างเปล่า กินความสูงเป็นหน้าจอโดยไม่ได้บอกอะไร
+                เพิ่มจากแถวปฏิทินด้านบนที่มีจุดสีบอกอยู่แล้วว่าวันไหนมีงาน
+                เปลี่ยนวันด้วยการกดวันในแถวปฏิทิน — คอลัมน์นี้ตามไปทันที
+                กดโพสต์ = เปิดขึ้นมาแก้ในฟอร์มด้านล่างทันที ไม่ต้องไปหน้าอื่น */}
+            {viewMode === 'week' && (
+              <div className="wk-grid wk-grid-single" style={{ marginTop: 12 }}>
+                {weekKeys.filter((k) => k === selected).map((key) => {
+                  const i = weekKeys.indexOf(key)
+                  const items = (byDate[key] || []).slice().sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')))
+                  return (
+                    <div key={key} className={`wk-col${key === todayKey() ? ' wk-col-today' : ''} wk-col-sel`}>
+                      <div className="wk-col-head">
+                        <span className="wk-dow">{WEEK_COLUMNS[i].label}</span>
+                        <span className="wk-date">{dayLabel(key)}</span>
+                      </div>
+                      <div className="wk-col-body">
+                        {items.length === 0 ? <p className="wk-none">—</p> : items.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="wk-item"
+                            style={{ borderLeftColor: STATUS_COLOR[normStatus(p.status)] }}
+                            onClick={() => { setSelected(key); startEdit(p) }}
+                          >
+                            <span className="wk-item-top">
+                              {p.time && <span className="wk-time">{p.time}</span>}
+                              <span className="wk-type">{CONTENT_TYPE_LABEL[p.contentType] || 'โพสต์'}</span>
+                            </span>
+                            <span className="wk-item-title">{p.title || '(ไม่มีชื่อ)'}</span>
+                            <span className="wk-item-foot">
+                              <span className="wk-status" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                                {STATUS[normStatus(p.status)]}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                      {/* เลือกวันนั้นแล้วล้างฟอร์มให้พร้อมกรอกใหม่ — ฟอร์มอยู่ในหน้าเดียวกันแล้ว ไม่ต้องข้ามหน้า */}
+                      <button type="button" className="wk-add" onClick={() => { setSelected(key); cancelEdit(); setFormOpen(true) }}>+ เพิ่ม</button>
+                    </div>
+                  )
+                })}
               </div>
-            </div>
+            )}
           </div>
-        </div>
+
+          {/* ฟอร์มเพิ่ม/แก้ไขโพสต์ (การ์ดโพสต์ของวันที่เลือกย้ายขึ้นไปด้านบนแล้ว) */}
+          <div className="admin-cal-side">
+
+            {renderFormCard(true, true)}
+          </div>
+        </div>}
       </div>
     </main>
-  )
+  </VolunteerGuard>)}</StaffRoleGuard>)
 }

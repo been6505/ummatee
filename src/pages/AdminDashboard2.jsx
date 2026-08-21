@@ -1,0 +1,151 @@
+import { useEffect, useState } from 'react'
+import { collection, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase.js'
+import AdminNav from '../components/AdminNav.jsx'
+import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
+import TeamWorkload from '../components/TeamWorkload.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { auth } from '../firebase.js'
+import { isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
+import { visibleStaffNav, flattenStaffNav } from '../data/staffNav.js'
+import { hasStaffRole } from '../useStaffRole.js'
+import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
+import { isSafeHttpUrl } from '../utils/safeUrl.js'
+
+// แดชบอร์ดสรุปตาม role (/admin/staff-dashboard) — ชื่อไฟล์ AdminDashboard2 กันชนกับ AdminHome.jsx เดิม (หน้าแรกแอดมิน)
+// social role: ข้าม stat ของ CRM/บอร์ด (ไม่มีสิทธิ์อยู่แล้วตาม firestore.rules) เหลือแค่ contentPosts (ถือเป็น
+// ส่วน "โซเชียล/โพสต์" ของเว็บนี้ — โปรเจกต์นี้มี AdminCalendar.jsx ที่จัดการ contentPosts collection อยู่แล้ว)
+function useCollectionCount(name, enabled) {
+  const [docs, setDocs] = useState([])
+  useEffect(() => {
+    if (!enabled) return
+    const unsub = onSnapshot(collection(db, name), (snap) => setDocs(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => {})
+    return unsub
+  }, [enabled])
+  return docs
+}
+
+export default function AdminDashboard2() {
+  return (
+    <StaffRoleGuard allowedRoles={['admin', 'staff', 'social', 'field']}>
+      {(staff) => <DashboardBody staff={staff} />}
+    </StaffRoleGuard>
+  )
+}
+
+// รายการโพสต์ในหนึ่งคอลัมน์ — เรียงตามวันที่ (ใหม่สุดก่อน)
+// เดิมตัดที่ 8 รายการเพราะการ์ดจะยาวเกินจอ ตอนนี้กล่องเลื่อนในตัวเองได้ (ดู .staff-post-list ul ใน admin.css)
+// จึงโชว์ได้ยาวกว่ามาก เหลือเพดานไว้กันเรนเดอร์เป็นพันรายการตอนข้อมูลโตขึ้น
+const LIST_LIMIT = 200
+function PostList({ title, posts }) {
+  const sorted = [...posts].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+  return (
+    <div className="admin-card staff-post-list">
+      <h4>{title} ({posts.length})</h4>
+      {sorted.length === 0 ? (
+        <p className="staff-post-empty">ยังไม่มีรายการ</p>
+      ) : (
+        <ul>
+          {sorted.slice(0, LIST_LIMIT).map((p) => (
+            <li key={p.id}>
+              <a href={`/admin/calendar?date=${p.date || ''}`}>
+                <span className="staff-post-title">{p.title || '(ไม่มีชื่อ)'}</span>
+                <span className="staff-post-meta">
+                  <span className="staff-post-chip" style={{ background: STATUS_COLOR[normStatus(p.status)] }}>
+                    {STATUS[normStatus(p.status)]}
+                  </span>
+                  {p.date || 'ไม่ระบุวัน'}{p.time ? ` · ${p.time}` : ''}
+                  {isSafeHttpUrl(p.driveUrl) && <span className="staff-post-file">ไฟล์งานแล้ว</span>}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {sorted.length > LIST_LIMIT && (
+        <a className="staff-post-more" href="/admin/calendar">ดูทั้งหมดในปฏิทิน ({sorted.length})</a>
+      )}
+    </div>
+  )
+}
+
+function DashboardBody({ staff: staffProp }) {
+  const staff = staffProp || {} // กัน null ไม่ให้ทั้งหน้าพัง ถ้า guard ปล่อยผ่านโดยยังไม่มี staff doc
+  const canSeeCrm = hasStaffRole(staff, ['admin', 'staff', 'field'])
+  // ทีมโซเชียลอ่าน contentPosts ได้แล้ว (ปฏิทินคอนเทนต์ย้ายมาอยู่เมนู staff) — เดิม role นี้เปิดแดชบอร์ด
+  // มาแล้วเจอแค่ข้อความว่าไม่มีสิทธิ์ ไม่มีตัวเลขอะไรให้ดูเลยทั้งที่มีงานของตัวเองอยู่
+  const canSeeContent = hasStaffRole(staff, ['admin', 'staff', 'social'])
+  const posts = useCollectionCount('contentPosts', canSeeContent)
+  // สถิติ CRM (พันธมิตร/จุดลงพื้นที่/วิทยากร/การ์ดบอร์ด) ถูกถอดออกจากหน้านี้แล้ว
+  // จึงไม่เปิด onSnapshot ค้างไว้ทั้งสี่คอลเลกชัน — ดูตัวเลขเหล่านั้นได้ในหน้าของมันเอง
+  const email = auth.currentUser?.email || ''
+  const shortcuts = flattenStaffNav(
+    visibleStaffNav(staff, { isOwner: isFullAdminEmail(email), isSuper: isSuperAdminEmail(email) })
+  ).filter((s) => s.href !== '/admin/staff-dashboard' && s.group !== 'CRM')
+
+  const posted = posts.filter((p) => normStatus(p.status) === 'posted')
+  // "กำลังดำเนินการ" = งานที่เริ่มลงมือแล้ว คือสถานะ กำลังดำเนินงาน (wip) หรือ ส่งงาน (review)
+  //
+  // เดิมใช้เงื่อนไข "ยังไม่โพสต์ + มีลิงก์ Drive" ซึ่งอ่านจากฟิลด์คนละตัวกับที่ผู้ใช้กด ⇒ งาน 9 ชิ้น
+  // ที่เป็นร่างทั้งหมดทำให้คอลัมน์นี้ขึ้น (0) ทั้งที่ดูเหมือนควรมีของ ตอนนี้ผูกกับสถานะตรงๆ
+  // (ปุ่ม "ส่งงาน" โผล่เฉพาะเมื่อแนบลิงก์ Drive แล้ว ⇒ review ก็หมายถึงส่งไฟล์แล้วอยู่ในตัว)
+  const inProgress = posts.filter((p) => ['wip', 'review'].includes(normStatus(p.status)))
+  // ร่าง = ยังไม่เริ่มลงมือ (รวมค่าเก่าที่ระบบไม่รู้จัก เพราะ normStatus ตีเป็น draft)
+  const drafts = posts.filter((p) => normStatus(p.status) === 'draft')
+
+  return (
+    <main className="admin-dash">
+      <AdminNav />
+      <div className="admin-wrap">
+        <div className="admin-head">
+          <div><h1>แดชบอร์ด Staff</h1><p>สรุปภาพรวมตามสิทธิ์ของบัญชี ({staff.role})</p></div>
+        </div>
+
+        {/* "ใครถืองานอะไรอยู่ และงานไหนยังไม่มีคนรับ" มาก่อนตัวเลขรวม เพราะมันคือสิ่งที่ทำให้
+            ตัดสินใจต่อได้ (จะมอบงานให้ใคร / ใครล้นมือ) ไม่ใช่แค่รู้สถานะเฉย ๆ */}
+        <TeamWorkload role={staff.role} />
+
+        {/* ตัวเลขคอนเทนต์ — cols-4 บังคับ 4 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
+        {canSeeContent && (
+          <>
+            <div className="admin-stats cols-4">
+              <div className="admin-stat"><div className="v">{posts.length}</div><div className="l">แผนคอนเทนต์ทั้งหมด</div></div>
+              <div className="admin-stat"><div className="v">{drafts.length}</div><div className="l">ร่าง</div></div>
+              <div className="admin-stat"><div className="v">{inProgress.length}</div><div className="l">กำลังดำเนินการ</div></div>
+              <div className="admin-stat"><div className="v">{posted.length}</div><div className="l">โพสต์แล้ว</div></div>
+            </div>
+            {/* รายการจริงใต้ตัวเลขแต่ละคอลัมน์ — เดิมเห็นแค่ตัวเลขแล้วต้องเข้าปฏิทินไปหาเองว่าคืออันไหน */}
+            <div className="staff-post-lists">
+              <PostList title="แผนคอนเทนต์ทั้งหมด" posts={posts} />
+              <PostList title="ร่าง" posts={drafts} />
+              <PostList title="กำลังดำเนินการ" posts={inProgress} />
+              <PostList title="โพสต์แล้ว" posts={posted} />
+            </div>
+          </>
+        )}
+
+        {/* ทางลัดไปทุกหน้าที่บัญชีนี้เข้าได้ — ดึงจาก data/staffNav.js ตัวเดียวกับเมนูซ้าย
+            เพิ่มเมนูใหม่ที่นั่นที่เดียวแล้วขึ้นทั้งสองที่ ไม่ต้องมาเพิ่มซ้ำจนหลุดกันทีหลัง
+            ตัดหน้าแดชบอร์ดเองออก (กดแล้ววนอยู่ที่เดิม) และตัดกลุ่ม CRM ออกจากการ์ดทางลัด
+            (ยังอยู่ในเมนูซ้ายตามเดิม) */}
+        {shortcuts.length > 0 && (
+          <div className="staff-shortcuts">
+            {shortcuts.map((s) => (
+              <a key={s.href} className="staff-shortcut" href={s.href}>
+                <span className="staff-shortcut-icon"><FontAwesomeIcon icon={s.icon} /></span>
+                <span className="staff-shortcut-label">
+                  {s.label}
+                  {s.group && <span className="staff-shortcut-group">{s.group}</span>}
+                </span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {!canSeeCrm && !canSeeContent && (
+          <div className="admin-card"><p>บัญชี role "{staff.role}" ยังไม่มีสิทธิ์เข้าถึงข้อมูลส่วนไหนเลย — ติดต่อแอดมินเพื่อกำหนดสิทธิ์</p></div>
+        )}
+      </div>
+    </main>
+  )
+}

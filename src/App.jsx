@@ -44,6 +44,8 @@ const AdminMyWork = lazyWithReload(() => import('./pages/AdminMyWork.jsx'))
 const AdminB2um = lazyWithReload(() => import('./pages/AdminB2um.jsx'))
 const AdminCampaignDetail = lazyWithReload(() => import('./pages/AdminCampaignDetail.jsx'))
 const AdminLive = lazyWithReload(() => import('./pages/AdminLive.jsx'))
+const AdminSystemMap = lazyWithReload(() => import('./pages/AdminSystemMap.jsx'))
+const AdminHooks = lazyWithReload(() => import('./pages/AdminHooks.jsx'))
 const AdminHome = lazyWithReload(() => import('./pages/AdminHome.jsx'))
 const AdminWebsite = lazyWithReload(() => import('./pages/AdminWebsite.jsx'))
 const AdminChat = lazyWithReload(() => import('./pages/AdminChat.jsx'))
@@ -53,6 +55,10 @@ const ShopCart = lazyWithReload(() => import('./pages/ShopCart.jsx'))
 const ShopCheckout = lazyWithReload(() => import('./pages/ShopCheckout.jsx'))
 const ShopOrderStatus = lazyWithReload(() => import('./pages/ShopOrderStatus.jsx'))
 const ShopMyOrders = lazyWithReload(() => import('./pages/ShopMyOrders.jsx'))
+const ShopSupport = lazyWithReload(() => import('./pages/ShopSupport.jsx'))
+const AdminShopFeedback = lazyWithReload(() => import('./pages/AdminShopFeedback.jsx'))
+const Updates = lazyWithReload(() => import('./pages/Updates.jsx'))
+const AdminUpdates = lazyWithReload(() => import('./pages/AdminUpdates.jsx'))
 const AdminShop = lazyWithReload(() => import('./pages/AdminShop.jsx'))
 const AdminShopNew = lazyWithReload(() => import('./pages/AdminShopNew.jsx'))
 const AdminShopOrders = lazyWithReload(() => import('./pages/AdminShopOrders.jsx'))
@@ -78,6 +84,8 @@ const Give2CookReceive = lazyWithReload(() => import('./pages/Give2CookReceive.j
 const QuickDonation = lazyWithReload(() => import('./pages/QuickDonation.jsx'))
 const QuickDonations = lazyWithReload(() => import('./pages/QuickDonations.jsx')) // เวอร์ชัน payment gateway (ยังไม่อยู่ใน nav)
 import FloatingDonate from './components/FloatingDonate.jsx'
+// แถบชวนติดตั้งแอป (public) — lazy เพราะโผล่ทีหลัง 6 วิ ไม่ควรถ่วงการโหลดหน้าแรก
+const InstallAppBanner = lazyWithReload(() => import('./components/InstallAppBanner.jsx'))
 // ระบบ staff role ใหม่: CRM (พันธมิตร/แผนที่/วิทยากร) + บอร์ดวางแผน + audit log + จัดการ staff
 const AdminStaff = lazyWithReload(() => import('./pages/AdminStaff.jsx'))
 const AdminPartners = lazyWithReload(() => import('./pages/AdminPartners.jsx'))
@@ -93,7 +101,7 @@ const AdminVideoCall = lazyWithReload(() => import('./pages/AdminVideoCall.jsx')
 const MeetGuest = lazyWithReload(() => import('./pages/MeetGuest.jsx'))
 
 // แมประหว่าง URL path กับชื่อหน้า
-const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/quick-donate': 'quick-donate', '/quick-donations': 'quick-donations', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2com': 'give2', '/event/give-for-um/give2cook': 'give2cook', '/event/give-for-um/b2um': 'b2um', '/event/give-for-um/receive': 'give-receive', '/event/give-for-um/receive/computer': 'give2com-receive', '/event/give-for-um/receive/equipment': 'give2cook-receive', '/missions': 'missions', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions': 'admin-missions', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/my-work': 'admin-my-work', '/admin/b2um': 'admin-b2um', '/admin/live': 'admin-live', '/admin/week': 'admin-calendar', '/admin/dashboard': 'admin-home', '/admin/website': 'admin-website', '/admin/chat': 'admin-chat', '/um-shop': 'shop', '/um-shop/cart': 'shop-cart', '/um-shop/checkout': 'shop-checkout', '/um-shop/my-orders': 'shop-my-orders', '/admin/shop': 'admin-shop', '/admin/shop/new': 'admin-shop-new', '/admin/shop/orders': 'admin-shop-orders', '/admin/shop/inventory': 'admin-shop-inventory', '/admin/shop/sales': 'admin-shop-sales', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/qrcode': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give', '/admin/give/receiver': 'admin-give-receiver', '/admin/dashboard/broadcast': 'admin-broadcast', '/admin/staff': 'admin-staff', '/admin/partners': 'admin-partners', '/admin/aid-map': 'admin-aid-map', '/admin/speakers': 'admin-speakers', '/admin/board': 'admin-board', '/admin/audit-log': 'admin-audit-log', '/admin/staff-dashboard': 'admin-staff-dashboard', '/admin/campaigns': 'admin-campaigns', '/admin/events': 'admin-events', '/admin/video-call': 'admin-video-call' }
+const PATH_TO_PAGE = { '/': 'home', '/home': 'home', '/donation': 'donation', '/quick-donate': 'quick-donate', '/quick-donations': 'quick-donations', '/event': 'iftar', '/event/iftar-for-gaza': 'iftar', '/event/give-for-um': 'give', '/event/give-for-um/give2com': 'give2', '/event/give-for-um/give2cook': 'give2cook', '/event/give-for-um/b2um': 'b2um', '/event/give-for-um/receive': 'give-receive', '/event/give-for-um/receive/computer': 'give2com-receive', '/event/give-for-um/receive/equipment': 'give2cook-receive', '/updates': 'updates', '/admin/updates': 'admin-updates', '/missions': 'missions', '/missions/qurban2026': 'qurban', '/missions/quban2026': 'qurban', '/admin/event/iftar2026': 'admin-iftar', '/admin/missions': 'admin-missions', '/admin/missions/qurban2026': 'admin-qurban', '/admin/missions/qurban2026/edit': 'admin-qurban-edit', '/admin/donations': 'admin-donations', '/admin/calendar': 'admin-calendar', '/admin/my-work': 'admin-my-work', '/admin/b2um': 'admin-b2um', '/admin/live': 'admin-live', '/admin/system-map': 'admin-system-map', '/admin/hooks': 'admin-hooks', '/admin/week': 'admin-calendar', '/admin/dashboard': 'admin-home', '/admin/website': 'admin-website', '/admin/chat': 'admin-chat', '/um-shop': 'shop', '/um-shop/cart': 'shop-cart', '/um-shop/checkout': 'shop-checkout', '/um-shop/my-orders': 'shop-my-orders', '/um-shop/support': 'shop-support', '/admin/shop/feedback': 'admin-shop-feedback', '/admin/shop': 'admin-shop', '/admin/shop/new': 'admin-shop-new', '/admin/shop/orders': 'admin-shop-orders', '/admin/shop/inventory': 'admin-shop-inventory', '/admin/shop/sales': 'admin-shop-sales', '/challenge': 'challenge', '/admin/financial-dashboard': 'admin-financial', '/admin/qrcode': 'admin-register-event', '/volunteer/register': 'volunteer', '/admin/volunteer': 'admin-volunteer', '/admin/give': 'admin-give', '/admin/give/receiver': 'admin-give-receiver', '/admin/dashboard/broadcast': 'admin-broadcast', '/admin/staff': 'admin-staff', '/admin/partners': 'admin-partners', '/admin/aid-map': 'admin-aid-map', '/admin/speakers': 'admin-speakers', '/admin/board': 'admin-board', '/admin/audit-log': 'admin-audit-log', '/admin/staff-dashboard': 'admin-staff-dashboard', '/admin/campaigns': 'admin-campaigns', '/admin/events': 'admin-events', '/admin/video-call': 'admin-video-call' }
 
 // path คำสั่งซื้อแบบไดนามิก /um-shop/order/<orderId> — เช็คก่อน path สินค้าเสมอ (มี 2 ระดับ ไม่ชนกับ /um-shop/:productId)
 const shopOrderIdFromPath = () => {
@@ -258,11 +266,15 @@ export default function App() {
     'admin-shop': AdminShop,
     'admin-shop-new': AdminShopNew,
     'admin-shop-orders': AdminShopOrders,
+    'admin-shop-feedback': AdminShopFeedback,
+    'admin-updates': AdminUpdates,
     'admin-shop-inventory': AdminInventory,
     'admin-shop-sales': AdminShopSales,
     'admin-shop-order-detail': AdminShopOrderDetail,
     'admin-campaign-detail': AdminCampaignDetail,
     'admin-live': AdminLive,
+    'admin-system-map': AdminSystemMap,
+    'admin-hooks': AdminHooks,
     'challenge': FinancialDashboard,
     'admin-financial': AdminFinancialDashboard,
     'admin-register-event': AdminQRcode,
@@ -327,6 +339,13 @@ export default function App() {
           <FloatingDonate hidden={['shop', 'shop-detail', 'shop-cart', 'shop-checkout', 'shop-order', 'shop-my-orders'].includes(page)} />
           {/* แผงแชทเอง (ChatWidget) mount ไว้เสมอเพื่อรับ custom event เปิดจากปุ่มอื่นๆ — ปุ่มลอยของตัวเองปิดตลอด ใช้ FloatingActionHub/แถบล่างแต่ละหน้าแทน */}
           <Suspense fallback={null}><ChatWidget fabHidden /></Suspense>
+          {/* หน้าที่มีแถบล่างของตัวเองอยู่แล้ว (.shop-detail-bar — รายละเอียดสินค้า/ตะกร้า/เช็คเอาท์/ติดตามออเดอร์)
+              ไม่ให้แถบชวนติดตั้งขึ้นซ้อน — เดิมกันแค่หน้าเช็คเอาท์หน้าเดียว แต่หน้ารายละเอียดสินค้าก็มีแถบราคา/ปุ่ม
+              "เพิ่มลงตะกร้า" ล่างจอเหมือนกัน แถบชวนติดตั้ง (สูง ~79px) จะบังพอดี ตรวจแล้วบนหน้าจริงว่าทับกันสนิท
+              ใช้ลิสต์เดียวกับ FloatingActionHub ด้านบน — หน้าที่มีแถบล่างของตัวเองคือกลุ่มเดียวกันเสมอ */}
+          {!['shop-detail', 'shop-cart', 'shop-checkout', 'shop-order'].includes(page) && (
+            <Suspense fallback={null}><InstallAppBanner /></Suspense>
+          )}
           <Suspense fallback={null}>
             {page === 'home' && <Home />}
             {page === 'donation' && <Donation />}
@@ -338,9 +357,11 @@ export default function App() {
             {page === 'shop-cart' && <ShopCart />}
             {page === 'shop-checkout' && <ShopCheckout />}
             {page === 'shop-my-orders' && <ShopMyOrders />}
+            {page === 'shop-support' && <ShopSupport />}
             {page === 'shop-order' && <ShopOrderStatus orderId={shopOrderId} />}
             {page === 'volunteer' && <VolunteerRegister />}
             {page === 'missions' && <Missions />}
+            {page === 'updates' && <Updates />}
             {page === 'give2' && <Give2 />}
             {page === 'give2cook' && <Give2Cook />}
             {page === 'quick-donate' && <QuickDonation />}

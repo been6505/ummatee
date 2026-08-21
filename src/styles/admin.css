@@ -1184,3 +1184,191 @@ a.attach-name:hover{text-decoration:underline}
 .admin-cal-form-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:4px 0;background:none;border:none;font-family:inherit;font-size:1rem;font-weight:700;color:var(--green-deep,#166534);cursor:pointer;text-align:left}
 .admin-cal-form-toggle svg{font-size:.8rem;color:var(--ink-soft);transition:transform .18s}
 .admin-cal-form-toggle svg.open{transform:rotate(180deg)}
+
+/* ── แผนผังระบบ (/admin/system-map) ── */
+.sm-layer{margin-bottom:4px}
+.sm-layer-label{font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase;margin-bottom:8px}
+/* ลูกศรเชื่อมชั้น — บอกทิศทางว่าอ่านจากบนลงล่าง ไม่ใช่สามก้อนที่ไม่เกี่ยวกัน */
+.sm-arrow{text-align:center;color:var(--ink-soft);opacity:.45;font-size:1.1rem;margin:2px 0 10px}
+
+.sm-core{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
+.sm-core-box{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;background:#fff;border:1px solid rgba(46,125,82,.16);text-decoration:none;color:inherit}
+.sm-core-box:hover{border-color:var(--green-mid,#2e7d52);background:#f7faf8}
+.sm-core-box strong{font-size:.9rem;color:var(--green-deep,#166534)}
+.sm-core-box span{font-size:.78rem;color:var(--ink-soft)}
+
+/* กลุ่มงาน — auto-fit เพราะจำนวนกลุ่มอาจเพิ่มทีหลัง และความกว้างที่มีเปลี่ยนตาม sidebar ย่อ/กาง */
+.sm-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:start;margin-bottom:12px}
+.sm-group{border-radius:14px;padding:12px;border:1px solid rgba(0,0,0,.06)}
+.sm-group-head{font-size:.85rem;font-weight:700;margin-bottom:8px}
+/* สีต่อกลุ่มเป็นตัวช่วยจำตำแหน่ง ไม่ได้สื่อสถานะ จึงใช้โทนอ่อนทั้งหมดให้ยังอ่านตัวหนังสือออก */
+.sm-group-plan{background:#eef5ff}    .sm-group-plan .sm-group-head{color:#1d4ed8}
+.sm-group-reach{background:#f1f8f3}   .sm-group-reach .sm-group-head{color:#166534}
+.sm-group-network{background:#fdf2f8} .sm-group-network .sm-group-head{color:#9d174d}
+.sm-group-money{background:#fffbeb}   .sm-group-money .sm-group-head{color:#92400e}
+
+.sm-item{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:9px;background:#fff;text-decoration:none;color:inherit;margin-bottom:6px}
+.sm-item:last-child{margin-bottom:0}
+.sm-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.sm-item strong{font-size:.84rem}
+.sm-item span{font-size:.74rem;color:var(--ink-soft)}
+
+.sm-output{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.sm-out-box{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:12px;background:var(--green-deep,#166534);color:#fff;text-decoration:none}
+.sm-out-box:hover{filter:brightness(1.08)}
+.sm-out-box strong{display:block;font-size:.88rem}
+.sm-out-box span{font-size:.75rem;opacity:.85}
+
+/* ══════════════════════════════════════════════════════════════════
+   ธีมหน้าแอดมินแบบ "Content OS" — เปลี่ยนที่เปลือกร่วม (sidebar + การ์ด) ที่เดียว
+   ทั้ง 35 หน้าจึงเปลี่ยนตามโดยไม่ต้องแก้ทีละไฟล์ (และไม่มีหน้าไหนหลุดธีม)
+
+   แนวคิดจากตัวอย่างที่อ้างอิง: พื้นครีม-ขาว ตัวหนังสือเข้ม เมนูเป็นรายการเรียบๆ
+   มีชิปไฮไลต์เฉพาะรายการที่เปิดอยู่ ใช้สีเขียวแบรนด์เป็น "สีเน้น" แทนที่จะเป็นพื้นหลังทั้งแถบ
+   — อ่านง่ายขึ้นมากบนหน้าที่ต้องนั่งทำงานนานๆ และคอนทราสต์ของตัวหนังสือดีกว่าพื้นเขียวเข้ม
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width:769px){
+  .admin-nav{
+    background:#fbfaf7;
+    color:#1f2937;
+    border-right:1px solid rgba(27,94,54,.12);
+    box-shadow:none;
+  }
+  /* แถบแบรนด์ด้านบน — เส้นคั่นบางแทนการเปลี่ยนสีพื้น ให้ต่อเนื่องกับรายการด้านล่าง */
+  .admin-nav .admin-nav-brand{
+    color:var(--green-deep,#166534);
+    border-bottom:1px solid rgba(27,94,54,.1);
+    padding:14px 16px;
+  }
+  .admin-nav .admin-nav-collapse-btn{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-collapse-btn:hover{background:rgba(27,94,54,.16)}
+
+  /* หัวกลุ่มเป็น "ป้ายหมวด" ตัวเล็ก ไม่ใช่ปุ่มก้อนใหญ่ — สายตาจึงไปหยุดที่รายการจริง ไม่ใช่ที่หัวข้อ */
+  .admin-nav .an-group-btn{
+    color:#8a9490;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.06em;
+    padding:10px 14px 4px;
+  }
+  .admin-nav .an-group-btn:hover{background:transparent;color:var(--green-deep,#166534)}
+  .admin-nav .an-group-active>.an-group-btn{background:transparent}
+  .admin-nav .an-group-children{padding-left:14px}
+
+  .admin-nav .an-item,
+  .admin-nav .an-child{
+    color:#3c4a44;
+    border-radius:10px;
+    padding:8px 12px;
+  }
+  .admin-nav .an-item:hover,
+  .admin-nav .an-child:hover{background:rgba(27,94,54,.07);color:var(--green-deep,#166534)}
+  /* รายการที่เปิดอยู่ = ชิปเขียวอ่อน ไม่ใช่พื้นทึบ — บอกตำแหน่งได้โดยไม่แย่งสายตาจากเนื้อหา */
+  .admin-nav .an-item.active,
+  .admin-nav .an-child.active{
+    background:rgba(27,94,54,.11);
+    color:var(--green-deep,#166534);
+    font-weight:700;
+  }
+  .admin-nav .admin-nav-section-divider{background:rgba(27,94,54,.12)}
+  .admin-nav .admin-nav-user{color:#8a9490}
+  .admin-nav .admin-nav-logout{color:#8a9490}
+  .admin-nav .admin-nav-logout:hover{background:rgba(198,40,40,.08);color:#c62828}
+  /* กระดิ่ง/ปุ่มบนพื้นครีม — ของเดิมเป็นสีขาวโปร่งซึ่งมองไม่เห็นเลยบนพื้นสว่าง */
+  .admin-nav .admin-nav-bell{background:rgba(27,94,54,.08);color:var(--green-deep,#166534)}
+  .admin-nav .admin-nav-bell:hover{background:rgba(27,94,54,.16)}
+
+}
+
+/* พื้นหน้างานและการ์ด — อยู่นอก media query โดยตั้งใจ
+   ตัวเปลือกเมนูธีมเฉพาะเดสก์ท็อปได้ (มือถือใช้ drawer คนละตัว) แต่ "พื้นที่ทำงาน" ต้องหน้าตาเดียวกัน
+   ทุกขนาดจอ ไม่งั้นเปิดจากมือถือแล้วรู้สึกเหมือนคนละระบบ */
+.admin-dash{background:#f7f6f2}
+/* การ์ด: มุมมนขึ้น เงาบางลง ขอบอ่อน — โทนเดียวกับตัวอย่างที่อ้างอิง */
+.admin-card{border-radius:16px;border:1px solid rgba(27,94,54,.09);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+
+/* หัวเรื่องของหน้า — ตัวอักษรเข้มขึ้นและเว้นวรรคแน่นกว่าเดิม อ่านเป็นหัวข้อชัดโดยไม่ต้องใหญ่ */
+.admin-head h1{letter-spacing:-.01em}
+
+/* ── คลัง HOOK (/admin/hooks) ── */
+.hk-total{background:var(--green-deep,#166534);color:#fff;padding:6px 14px;border-radius:99px;font-size:.85rem;font-weight:700;white-space:nowrap}
+.hk-add{margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
+.hk-add > label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.hk-add textarea,.hk-add input,.hk-add select{width:100%;box-sizing:border-box;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.92rem;background:#fff}
+/* ช่องโน้ตยืดได้ ปุ่มไม่หด — โน้ตยาวได้ แต่ปุ่ม "เพิ่ม" ต้องอ่านออกเสมอ */
+.hk-add-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.hk-add-row label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft);min-width:0}
+.hk-add-row label:first-child{flex:0 0 150px}
+.hk-add-row label:nth-child(2){flex:1 1 200px}
+.hk-add-row .admin-btn-primary{flex-shrink:0}
+.hk-hint{margin:0;font-size:.78rem;color:var(--ink-soft);opacity:.85}
+
+.hk-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px}
+.hk-toolbar input[type=search]{flex:1 1 220px;min-width:0;padding:9px 12px;border-radius:8px;border:1px solid #ddd;font-family:inherit;font-size:.95rem}
+.hk-filters{display:flex;flex-wrap:wrap;gap:8px}
+.hk-filters button{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:99px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.hk-filters button.on{background:var(--green-deep,#166534);border-color:var(--green-deep,#166534);color:#fff}
+.hk-filters button span{background:rgba(0,0,0,.08);border-radius:99px;padding:0 7px;font-size:.75rem}
+.hk-filters button.on span{background:rgba(255,255,255,.25)}
+
+.hk-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
+.hk-card{display:flex;flex-direction:column;gap:8px}
+.hk-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hk-cat{background:#eef2ef;color:var(--ink-soft);border-radius:99px;padding:2px 10px;font-size:.72rem;font-weight:700}
+.hk-used{font-size:.72rem;color:var(--green-deep,#166534);font-weight:700}
+/* ตัว hook เป็นพระเอกของการ์ด — ตัวใหญ่กว่าส่วนอื่นและตัดคำได้ ไม่ตัดบรรทัดทิ้ง
+   เพราะต้องอ่านทั้งประโยคถึงจะรู้ว่าจะหยิบไปใช้ไหม */
+.hk-text{margin:0;font-size:.95rem;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.hk-note{margin:0;font-size:.78rem;color:var(--ink-soft);overflow-wrap:anywhere}
+.hk-actions{display:flex;gap:8px;align-items:center;margin-top:2px}
+.hk-actions .admin-btn{flex:1;justify-content:center}
+/* แถวล่างของกล่องเพิ่ม hook — คำใบ้ชิดซ้าย ปุ่มตัวอย่างชิดขวา และตกบรรทัดได้บนจอแคบ */
+.hk-add-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.hk-add-foot .admin-btn{flex-shrink:0}
+
+/* ── ตรวจรีวิว & เรื่องแจ้งปัญหา (/admin/shop/feedback) ── */
+.fb-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.fb-card{display:flex;flex-direction:column;gap:8px}
+.fb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fb-top strong{min-width:0;overflow-wrap:anywhere}
+.fb-time{flex-shrink:0;font-size:.75rem;color:var(--ink-soft)}
+.fb-stars{color:#dcdcdc;font-size:.85rem;display:flex;gap:2px}
+.fb-stars .on{color:#f5a623}
+.fb-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--ink-soft)}
+.fb-meta a{color:var(--green-deep,#166534);text-decoration:none;font-weight:700}
+/* คงบรรทัดที่ลูกค้าพิมพ์ และตัดคำยาวไม่ให้ดันการ์ด */
+.fb-text{margin:0;font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-by{font-size:.8rem;color:var(--ink-soft)}
+.fb-photos{display:flex;flex-wrap:wrap;gap:6px}
+.fb-photos img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd;display:block}
+.fb-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.fb-actions .admin-btn{font-size:.78rem;padding:6px 12px;min-height:38px}
+
+/* หมายเหตุบนหน้า "งานของฉัน" — แจ้งว่ารายการยังไม่ครบ (สิทธิ์ไม่ถึง หรือโหลดล้ม) */
+.mywork-note{font-size:.85rem;line-height:1.6;color:#92400e;background:#fffbeb;border:1px solid #fde68a;padding:12px 14px;margin-bottom:14px}
+.mywork-note-error{color:#991b1b;background:#fef2f2;border-color:#fecaca}
+
+/* ── ภาระงานของทีม (TeamWorkload.jsx) บนแดชบอร์ด Staff ── */
+.tw-card{margin-bottom:16px}
+.tw-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.74rem;color:var(--ink-soft);font-weight:600}
+.tw-legend span{display:inline-flex;align-items:center;gap:5px}
+.tw-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.tw-note{margin:0 0 10px;font-size:.78rem;line-height:1.55;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px}
+.tw-empty{margin:8px 0 0;font-size:.85rem;color:var(--ink-soft)}
+
+.tw-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:7px}
+.tw-row{display:grid;grid-template-columns:minmax(90px,150px) 1fr auto;align-items:center;gap:12px}
+.tw-row-muted .tw-name{color:#b45309;font-style:italic}
+.tw-name{font-size:.84rem;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tw-warn{color:#c62828;font-size:.78rem}
+.tw-bar{display:flex;height:15px;border-radius:5px;overflow:hidden;background:#f1efea;min-width:0}
+.tw-bar span{display:block;min-width:3px}
+.tw-bar-rest{background:transparent}
+.tw-counts{display:flex;align-items:center;gap:9px;font-size:.76rem;white-space:nowrap}
+.tw-total{min-width:24px;text-align:right;font-weight:800;color:var(--ink)}
+
+@media (max-width:640px){
+  .tw-row{grid-template-columns:minmax(70px,1fr) 1.4fr auto;gap:8px}
+  .tw-name{font-size:.78rem}
+  .tw-legend{gap:9px;font-size:.68rem}
+}

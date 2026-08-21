@@ -394,13 +394,24 @@ service cloud.firestore {
       allow read: if isAdmin();
     }
 
-    // นับผู้เข้าชมเว็บไซต์ — ทุกคนเพิ่มยอด views ได้ (เฉพาะ field views) แต่อ่านได้เฉพาะ admin
+    // นับผู้เข้าชมเว็บไซต์ + ยอดติดตั้งแอป — ทุกคนเพิ่มได้ (เฉพาะ 2 field นี้) แต่อ่านได้เฉพาะ admin
+    // installs มาจาก event 'appinstalled' ใน InstallAppBanner.jsx
     match /stats/site {
-      allow create: if request.resource.data.keys().hasOnly(['views'])
-        && request.resource.data.views is int && request.resource.data.views == 1;
-      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดผู้เข้าชมสะสมกู้คืนไม่ได้ถ้าถูกทับ)
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
-        && request.resource.data.views is int && request.resource.data.views == resource.data.views + 1;
+      // size() > 0 กันการสร้างเอกสารเปล่า — hasOnly([...]) เฉย ๆ ปล่อย {} ผ่าน
+      allow create: if request.resource.data.keys().hasOnly(['views', 'installs'])
+        && request.resource.data.keys().size() > 0
+        && (!('views' in request.resource.data)
+            || (request.resource.data.views is int && request.resource.data.views == 1))
+        && (!('installs' in request.resource.data)
+            || (request.resource.data.installs is int && request.resource.data.installs == 1));
+      // เพิ่มทีละ 1 เท่านั้น ห้ามเซ็ตย้อนหลัง/รีเซ็ตเป็น 0 (ยอดสะสมกู้คืนไม่ได้ถ้าถูกทับ)
+      // เขียนเป็นเงื่อนไขต่อ field เพราะแต่ละครั้งจะแตะ field เดียว (ตัวใดตัวหนึ่ง ไม่ใช่พร้อมกัน)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'installs'])
+        && (!('views' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.views is int && request.resource.data.views == resource.data.views + 1))
+        && (!('installs' in request.resource.data.diff(resource.data).affectedKeys())
+            || (request.resource.data.installs is int
+                && request.resource.data.installs == (('installs' in resource.data) ? resource.data.installs + 1 : 1)));
       allow read: if isAdmin();
     }
 
@@ -525,11 +536,120 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/staff/$(request.auth.uid)).data.role in roles;
     }
 
+    // ── รีวิวสินค้าจากลูกค้า ──
+    // ลูกค้าไม่ได้ล็อกอิน (guest checkout) จึงต้องเปิดให้ "ใครก็สร้างได้" แบบเดียวกับฟอร์มลงทะเบียนอื่น
+    // ความปลอดภัยอยู่ที่การตรวจรูปแบบตรงนี้ ไม่ใช่ที่ตัวตนผู้ส่ง
+    //
+    // สองข้อที่สำคัญที่สุด:
+    //   1. status ต้องเป็น 'pending' เท่านั้นตอนสร้าง — ไม่งั้นใครก็ส่งรีวิวที่ approved มาเอง
+    //      แล้วขึ้นหน้าเว็บสาธารณะทันทีโดยไม่มีใครตรวจ
+    //   2. photos ต้องเป็น URL https ของ Cloudinary เท่านั้น — ค่านี้ไปโผล่ใน <img src> บนหน้า public
+    //      ถ้ารับ URL อะไรก็ได้ ฟอร์มนี้จะกลายเป็นช่องฝังรูปจากที่อื่นบนเว็บมูลนิธิ
+    //
+    // อ่าน: สาธารณะเห็นเฉพาะที่อนุมัติแล้ว — การ list ต้อง where('status','==','approved') เท่านั้น
+    // ไม่งั้น query ถูกปฏิเสธทั้งชุด (รีวิวที่ยังไม่ตรวจจึงไม่มีทางหลุดออกไป)
+    function validReviewPhotos(d) {
+      return !('photos' in d)
+        || (d.photos is list && d.photos.size() <= 4);
+    }
+    match /productReviews/{id} {
+      allow get: if resource.data.status == 'approved' || isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+      allow list: if request.query.limit <= 200
+        && (isFullAdmin() || isStaffRole(['admin', 'staff', 'social'])
+            || resource.data.status == 'approved');
+      allow create: if request.resource.data.size() <= 8
+        && request.resource.data.status == 'pending'
+        && request.resource.data.productId is string && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 80
+        && optStr(request.resource.data, 'productName', 200)
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000
+        && optStr(request.resource.data, 'authorName', 60)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      // อนุมัติ/ปฏิเสธ/ลบ เป็นงานของทีม ไม่ใช่ของคนส่ง
+      allow update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // ── แจ้งปัญหาจากลูกค้า ──
+    // มีเบอร์โทร/เลขออเดอร์ของลูกค้าอยู่ข้างใน จึงอ่านได้เฉพาะทีมงาน ไม่เปิดสาธารณะเหมือนรีวิว
+    match /shopIssues/{id} {
+      allow create: if request.resource.data.size() <= 7
+        && request.resource.data.status == 'open'
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() > 0 && request.resource.data.detail.size() <= 1500
+        && optStr(request.resource.data, 'orderCode', 30)
+        && optStr(request.resource.data, 'phone', 20)
+        && optStr(request.resource.data, 'topic', 30)
+        && validReviewPhotos(request.resource.data)
+        && request.resource.data.createdAt is number;
+      allow read, update, delete: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // contentHooks/{id} — คลังประโยคเปิด (hook) ที่ทีมเก็บไว้ใช้ซ้ำ
+    // สิทธิ์ชุดเดียวกับ contentPosts/contentTemplates — เป็นเนื้อหาคอนเทนต์ ไม่มี PII
+    match /contentHooks/{id} {
+      allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
     // contentTemplates/{id} — แม่แบบโพสต์ที่บันทึกไว้ใช้ซ้ำ (ดู data/contentTemplate.js)
     // สิทธิ์ชุดเดียวกับ contentPosts — ใครแก้ปฏิทินได้ก็ควรเก็บ/ใช้แม่แบบได้
     // ไม่มีข้อมูลอ่อนไหวเพิ่ม เป็นสำเนาของเนื้อหาโพสต์ที่คนกลุ่มเดียวกันเห็นอยู่แล้ว
     match /contentTemplates/{id} {
       allow read, write: if isFullAdmin() || isStaffRole(['admin', 'staff', 'social']);
+    }
+
+    // ── ข่าวความคืบหน้าการช่วยเหลือ (หน้า /updates) ──
+    //
+    // เป็น collection แยก ไม่ได้เปิด `campaigns` ให้อ่านสาธารณะ: campaigns มีข้อมูลการทำงานภายใน
+    // (ผู้รับผิดชอบ/งบ/สถานะแผน) ปนอยู่ การเปิดอ่านทั้ง doc = เปิดทุกฟิลด์ รวมฟิลด์ที่จะเพิ่มมาทีหลัง
+    // ที่นี่เก็บเฉพาะสิ่งที่ทีมตั้งใจเขียนให้คนนอกอ่าน
+    //
+    // สาธารณะเห็นได้เฉพาะ status == 'published' เท่านั้น ฉบับร่างเป็นของทีม
+    // list ต้องให้ query ผูก status มาเอง ไม่งั้น rules ปฏิเสธทั้งชุด (แบบเดียวกับ productReviews)
+    function validUpdatePhotos(d) {
+      return !('photos' in d) || (d.photos is list && d.photos.size() <= 6);
+    }
+    match /publicUpdates/{id} {
+      allow get: if resource.data.status == 'published'
+        || isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']);
+      allow list: if request.query.limit <= 100
+        && (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field'])
+            || resource.data.status == 'published');
+      // เขียนได้เฉพาะทีม — 'field' รวมด้วยเพราะเป็นคนลงพื้นที่จริง คือคนที่มีเรื่องมารายงาน
+      allow create, update: if (isFullAdmin() || isStaffRole(['admin', 'staff', 'social', 'field']))
+        && request.resource.data.size() <= 12
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 4000
+        && optStr(request.resource.data, 'summary', 300)
+        && optStr(request.resource.data, 'place', 80)
+        && optStr(request.resource.data, 'authorName', 60)
+        && request.resource.data.status in ['draft', 'published']
+        && validUpdatePhotos(request.resource.data);
+      // ลบข่าวที่เผยแพร่ไปแล้วเป็นเรื่องใหญ่กว่าการแก้ จำกัดไว้ที่ admin/staff
+      allow delete: if isFullAdmin() || isStaffRole(['admin', 'staff']);
+    }
+
+    // ── token สำหรับส่งแจ้งเตือน (FCM) ──
+    //
+    // ⚠️ ต้องปิด list สนิท — collection นี้คือ "รายชื่ออุปกรณ์ผู้ใช้ทั้งหมด" ที่ติดตามมูลนิธิอยู่
+    // ถ้าใครอ่านทั้ง collection ได้ ก็ได้ทั้งจำนวนผู้ติดตามและ token ทุกตัวไป
+    // ซึ่งเอาไปยิงแจ้งเตือนปลอมได้ทันทีถ้าเขามี server key (รูปแบบเดียวกับ shopIssues)
+    //
+    // doc id คือตัว token เอง — เข้าเว็บซ้ำกี่ครั้งก็ทับ doc เดิม ไม่เกิดรายการซ้ำ
+    // ไม่มีการล็อกอินฝั่งผู้ใช้ทั่วไป จึงต้องเปิด create/update ให้ทุกคน แต่บีบ schema ให้แคบที่สุด
+    // ตั้งใจไม่เก็บ uid/อีเมล/ไอพี — ตัว token อย่างเดียวไม่บอกว่าใครเป็นใคร
+    match /pushTokens/{token} {
+      allow get, list: if isFullAdmin();
+      allow create, update: if request.resource.data.keys().hasOnly(['lang', 'updatedAt'])
+        && request.resource.data.lang in ['th', 'en', 'ar']
+        && request.resource.data.updatedAt is number
+        && token.size() > 0 && token.size() <= 4096;
+      // ผู้ใช้ปิดแจ้งเตือนเองได้ (token เดิมใช้ไม่ได้แล้ว) และแอดมินล้าง token ที่ตายแล้วได้
+      allow delete: if true;
     }
 
     // comments/{id} — คอมเมนต์คุยงาน ผูกกับชิ้นงานด้วย (entityType, entityId)

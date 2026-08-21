@@ -3,6 +3,7 @@ import { collection, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
+import TeamWorkload from '../components/TeamWorkload.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { auth } from '../firebase.js'
 import { isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
@@ -100,8 +101,11 @@ function DashboardBody({ staff: staffProp }) {
           <div><h1>แดชบอร์ด Staff</h1><p>สรุปภาพรวมตามสิทธิ์ของบัญชี ({staff.role})</p></div>
         </div>
 
-        {/* ตัวเลขคอนเทนต์อยู่บนสุด — เป็นสิ่งที่ทีมต้องเห็นก่อนทางลัดเมนู
-            cols-4 บังคับ 4 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
+        {/* "ใครถืองานอะไรอยู่ และงานไหนยังไม่มีคนรับ" มาก่อนตัวเลขรวม เพราะมันคือสิ่งที่ทำให้
+            ตัดสินใจต่อได้ (จะมอบงานให้ใคร / ใครล้นมือ) ไม่ใช่แค่รู้สถานะเฉย ๆ */}
+        <TeamWorkload role={staff.role} />
+
+        {/* ตัวเลขคอนเทนต์ — cols-4 บังคับ 4 คอลัมน์แถวเดียวและย่อฟอนต์/ระยะให้พอดีจอมือถือ */}
         {canSeeContent && (
           <>
             <div className="admin-stats cols-4">

@@ -69,11 +69,15 @@ export default function AdminCampaigns() {
     ;(async () => {
       const next = {}
       for (const c of list) {
-        const [postsSnap, cardsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'contentPosts'), where('campaignId', '==', c.id))).catch(() => ({ size: 0 })),
-          getDocs(query(collection(db, 'boardCards'), where('campaignId', '==', c.id))).catch(() => ({ size: 0 })),
+        // null = นับไม่ได้ (คนละเรื่องกับนับได้แล้วเป็น 0)
+        // เดิม catch คืน {size:0} ทำให้ role 'field' ซึ่งอ่าน contentPosts ไม่ได้ตามกฎ เห็นเลข 0
+        // ซึ่งอ่านได้ว่า "แคมเปญนี้ยังไม่มีคอนเทนต์เลย" — เป็นข้อมูลผิดที่ดูเหมือนข้อมูลจริง
+        const countOr = (p) => p.then((s) => s.size).catch(() => null)
+        const [posts, cards] = await Promise.all([
+          countOr(getDocs(query(collection(db, 'contentPosts'), where('campaignId', '==', c.id)))),
+          countOr(getDocs(query(collection(db, 'boardCards'), where('campaignId', '==', c.id)))),
         ])
-        next[c.id] = { posts: postsSnap.size || 0, cards: cardsSnap.size || 0 }
+        next[c.id] = { posts, cards }
       }
       if (!cancelled) setCounts(next)
     })()
@@ -225,7 +229,7 @@ export default function AdminCampaigns() {
               <div style={{ display: 'grid', gap: 16 }}>
                 {filtered.map((c) => {
                   const pct = c.goalAmount ? Math.min(100, Math.round((c.currentAmount / c.goalAmount) * 100)) : 0
-                  const cnt = counts[c.id] || { posts: 0, cards: 0 }
+                  const cnt = counts[c.id] || { posts: null, cards: null }
                   const campaignLinks = links[c.id] || []
                   return (
                     <div className="admin-card" key={c.id}>
@@ -258,8 +262,13 @@ export default function AdminCampaigns() {
                         <span>ผู้รับผิดชอบ: {c.ownerName || '—'}</span>
                         <span>ช่วงเวลา: {c.startDate || '—'} – {c.endDate || '—'}</span>
                         <span>ช่องทาง: {(c.channels || []).join(', ') || '—'}</span>
-                        <span>โพสต์ที่ผูก: {cnt.posts}</span>
-                        <span>การ์ดบอร์ดที่ผูก: {cnt.cards}</span>
+                        {/* null = สิทธิ์ไม่ถึง/นับไม่สำเร็จ — โชว์ "—" ไม่ใช่ 0 ที่อ่านเหมือนไม่มีจริง */}
+                        <span title={cnt.posts === null ? 'สิทธิ์ของคุณอ่านปฏิทินคอนเทนต์ไม่ได้' : undefined}>
+                          โพสต์ที่ผูก: {cnt.posts === null ? '—' : cnt.posts}
+                        </span>
+                        <span title={cnt.cards === null ? 'สิทธิ์ของคุณอ่านบอร์ดวางแผนไม่ได้' : undefined}>
+                          การ์ดบอร์ดที่ผูก: {cnt.cards === null ? '—' : cnt.cards}
+                        </span>
                       </div>
 
                       {linkPanelId === c.id && (

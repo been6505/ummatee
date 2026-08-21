@@ -159,7 +159,7 @@ export default function Give2Cook() {
           },
           styles: {
             palette: { window: '#FFFFFF', windowBorder: '#e5e7eb', tabIcon: '#059669', menuIcons: '#059669', textDark: '#1f2937', textLight: '#ffffff', link: '#059669', action: '#059669', inactiveTabIcon: '#9ca3af', error: '#ef4444', inProgress: '#059669', complete: '#059669', sourceBg: '#f9fafb' },
-            fonts: { default: null, "'Noto Sans Thai', sans-serif": { url: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600', active: true } },
+            fonts: { default: null, "'Sarabun', sans-serif": { url: 'https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600', active: true } },
           },
         },
         (error, result) => {

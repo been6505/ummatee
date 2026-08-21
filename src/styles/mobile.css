@@ -1,14 +1,18 @@
 /* ===== มือถือ: บังคับ form control ทุกชนิด = 16px =====
    กัน iOS Safari ซูมหน้าจออัตโนมัติตอนแตะช่องกรอก (zoom-on-focus)
-   วางไว้ท้ายไฟล์เพื่อให้ชนะ specificity เท่ากันที่นิยามก่อนหน้า (เช่น .g2-input)
-   จำกัดที่ ≤640px จึงไม่กระทบ desktop */
+   จำกัดที่ ≤640px จึงไม่กระทบ desktop
+
+   ⚠️ ทำไมต้อง !important — ของเดิมเขียนเป็น `input, select, textarea` เปล่า ๆ แล้วหวังพึ่งลำดับไฟล์
+   แต่ลำดับช่วยได้เฉพาะตอน specificity "เท่ากัน" เท่านั้น selector คลาสเดียวอย่าง .shop-search (0,1,0)
+   ชนะ element selector (0,0,1) เสมอ ไม่ว่าจะประกาศทีหลังแค่ไหน
+   ช่องค้นหาในหน้า um-shop จึงยังเป็น 15.2px และ iPhone ซูมทุกครั้งที่แตะ โดยที่กฎนี้ "มีอยู่" แล้ว
+   วิธีเดิมคือไล่เติมชื่อคลาสทีละอัน ซึ่งพลาดแน่นอนเมื่อมีช่องกรอกใหม่ — อันนี้ครอบทุกอันในทีเดียว
+   นี่เป็นการกันพฤติกรรมของแพลตฟอร์ม ไม่ใช่การตกแต่ง จึงควรชนะทุกกฎจริง ๆ */
 @media (max-width:640px){
-  input, select, textarea,
-  .g2-input,
-  .admin-form-grid input, .admin-form-grid select, .admin-form-grid textarea,
-  .admin-cal-form input, .admin-cal-form select, .admin-cal-form textarea,
-  .admin-filters input, .admin-filters select, .admin-select, .shop-toolbar select{
-    font-size:16px;
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  select,
+  textarea{
+    font-size:16px !important;
   }
 }
 

@@ -17,7 +17,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  font-family:'Noto Sans Thai','Poppins',system-ui,sans-serif;
+  font-family:'Sarabun','Poppins',system-ui,sans-serif;
   font-weight:500;
   color:var(--black);
   background:var(--paper);
@@ -416,3 +416,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 }
 
 
+
+/* ── ให้เห็นว่าโฟกัสอยู่ตรงไหนตอนกด Tab ──
+   มีสามช่องที่เขียน outline:none ไว้โดยไม่ได้ใส่อะไรแทน (แชทหน้าเว็บ, แชทฝั่งแอดมิน, ค้นหาในเมนูแอดมิน)
+   วัดจริงแล้ว: โฟกัสอยู่ที่ช่องแชท แต่ outline/box-shadow เป็น none และขอบไม่เปลี่ยนสีเลย
+   คนที่ใช้คีย์บอร์ดจึงไม่มีทางรู้ว่าเคอร์เซอร์อยู่ที่ไหน
+   ใช้ :focus-visible ไม่ใช่ :focus — กดด้วยเมาส์จะไม่ขึ้นกรอบ (ซึ่งเป็นเหตุผลที่คนไปปิด outline กันตั้งแต่แรก)
+   แต่กด Tab เข้ามาจะขึ้น */
+.chat-panel-input input:focus-visible,
+.admin-chat-input input:focus-visible,
+.admin-global-search input:focus-visible{
+  outline:2px solid var(--green-mid,#16a34a);
+  outline-offset:1px;
+}
+/* ช่องค้นหาอยู่บนแถบเมนูสีเข้ม ใช้สีขาวจึงจะเห็น */
+.admin-global-search input:focus-visible{outline-color:#fff}

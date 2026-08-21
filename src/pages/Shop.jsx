@@ -270,6 +270,8 @@ export default function Shop() { // คอมโพเนนต์หลัก�
             <button type="button" className="shop-myorders-btn" onClick={() => go('shop-my-orders')}>
               📦 คำสั่งซื้อของฉัน
             </button>
+            {/* ศูนย์บริการ — รีวิว/แจ้งปัญหา/ติดตาม อยู่รวมกันที่เดียว ลูกค้าจะได้ไม่ต้องหาว่าติดต่อยังไง */}
+            <a className="shop-myorders-btn" href="/um-shop/support">💬 รีวิว / แจ้งปัญหา</a>
           </div>
 
           {!loading && filtered.length === 0 && ( // ถ้าโหลดเสร็จแล้วและไม่มีสินค้าที่ตรงตามเงื่อนไข ให้แสดงข้อความว่างเปล่า

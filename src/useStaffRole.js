@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, auth } from './firebase.js'
+import { isFullAdminEmail } from './useAdminRole.js'
 
 export default function useStaffRole(user) {
   const [staff, setStaff] = useState(null)
@@ -54,4 +55,16 @@ export default function useStaffRole(user) {
 // ใช้ในหน้า React เช็คว่า role ปัจจุบันอยู่ในลิสต์ที่อนุญาตไหม (ฝั่ง client แค่ซ่อน UI — ของจริงบังคับที่ firestore.rules)
 export function hasStaffRole(staff, roles) {
   return !!staff && staff.active !== false && roles.includes(staff.role)
+}
+
+// role ที่ "ใช้จริง" — เจ้าของระบบ (email allowlist เดียวกับ isFullAdmin ใน rules) นับเป็น admin เสมอ
+// แม้จะยังไม่มี staff doc หรือยังเป็น 'pending' อยู่ ตรงกับที่ StaffRoleGuard ปล่อยผ่าน
+//
+// มีไว้ให้หน้าที่ต้องรู้ role "ก่อน" จะเปิด listener (เช่นเลือกว่าจะ subscribe collection ไหน)
+// ซึ่งเอาจาก children(staff) ของ guard ไม่ได้ เพราะ effect รันก่อนถึงตรงนั้น
+export function effectiveRole(user, staff) {
+  if (!user) return null
+  if (isFullAdminEmail(user.email || '')) return 'admin'
+  if (staff?.active === false) return null
+  return staff?.role || null
 }

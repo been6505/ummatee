@@ -6,6 +6,7 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 import useAdminAuth from '../useAdminAuth.js'
 import { STATUS, STATUS_COLOR, normStatus } from '../data/contentStatus.js'
+import { WORK_SOURCES, MY_WORK_ROLES, readableSources, hiddenSources } from '../data/workSources.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCalendar, faTableColumns, faInbox } from '@fortawesome/free-solid-svg-icons'
 
@@ -39,31 +40,41 @@ const BUCKETS = [
   { key: 'noDate', label: 'ยังไม่กำหนดวัน', color: '#6b7280' },
 ]
 
-export default function AdminMyWork() {
+function MyWork({ role }) {
   const { user } = useAdminAuth()
   const uid = user?.uid
 
   const [posts, setPosts] = useState([])
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState([]) // แหล่งที่ listener ล้ม — ต้องบอกผู้ใช้ ห้ามเงียบ
+
+  // เปิด listener เฉพาะแหล่งที่ role นี้อ่านได้จริง (ดู workSources.js)
+  // เดิมเปิดทั้งสองแหล่งเสมอ: คน role 'social' จึงโดน permission-denied ที่ boardCards
+  // และ 'field' โดนที่ contentPosts โดยที่ error callback กลืนทิ้ง แล้วหน้าขึ้นว่า "ไม่มีงาน"
+  const sources = readableSources(role).map((s) => s.key).join(',')
 
   useEffect(() => {
     if (!uid) return
-    let done = 0
-    const finish = () => { done += 1; if (done >= 2) setLoading(false) }
+    const keys = sources ? sources.split(',') : []
+    if (keys.length === 0) { setLoading(false); return }
 
-    const unsubPosts = onSnapshot(
-      query(collection(db, 'contentPosts'), where('assignedToStaffId', '==', uid)),
-      (snap) => { setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); finish() },
-      finish
+    const setter = { contentPosts: setPosts, boardCards: setCards }
+    let done = 0
+    const finish = () => { done += 1; if (done >= keys.length) setLoading(false) }
+
+    const unsubs = keys.map((key) =>
+      onSnapshot(
+        query(collection(db, key), where('assignedToStaffId', '==', uid)),
+        (snap) => { setter[key](snap.docs.map((d) => ({ id: d.id, ...d.data() }))); finish() },
+        () => { setFailed((f) => (f.includes(key) ? f : [...f, key])); finish() }
+      )
     )
-    const unsubCards = onSnapshot(
-      query(collection(db, 'boardCards'), where('assignedToStaffId', '==', uid)),
-      (snap) => { setCards(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); finish() },
-      finish
-    )
-    return () => { unsubPosts(); unsubCards() }
-  }, [uid])
+    return () => unsubs.forEach((u) => u())
+  }, [uid, sources])
+
+  const hidden = hiddenSources(role)
+  const broken = WORK_SOURCES.filter((s) => failed.includes(s.key))
 
   // โพสต์ที่ขึ้นแล้วถือว่าจบงาน ไม่ต้องรกอยู่ในรายการค้าง
   const items = [
@@ -91,8 +102,6 @@ export default function AdminMyWork() {
   const grouped = BUCKETS.map((b) => ({ ...b, items: items.filter((i) => bucketOf(i.date) === b.key) }))
 
   return (
-    <StaffRoleGuard allowedRoles={['admin', 'staff', 'social', 'field']}>
-      {() => (
         <main className="admin-dash">
           <AdminNav />
           <div className="admin-wrap">
@@ -103,6 +112,20 @@ export default function AdminMyWork() {
               </div>
               <span className="mywork-count">{items.length} งานค้าง</span>
             </div>
+
+            {/* บอกให้ชัดว่าหน้านี้ยังไม่ครบ ดีกว่าปล่อยให้เข้าใจผิดว่า "ไม่มีงาน" */}
+            {hidden.length > 0 && (
+              <div className="admin-card mywork-note">
+                สิทธิ์ของคุณ (role: {role}) ยังไม่เห็นงานจาก{hidden.map((s) => s.label).join(' และ ')} —
+                หากควรเห็นด้วย แจ้งแอดมินที่หน้า "จัดการพนักงาน"
+              </div>
+            )}
+            {broken.length > 0 && (
+              <div className="admin-card mywork-note mywork-note-error">
+                โหลดงานจาก{broken.map((s) => s.label).join(' และ ')}ไม่สำเร็จ —
+                รายการด้านล่างยังไม่ครบ ลองรีเฟรชหน้าอีกครั้ง
+              </div>
+            )}
 
             {loading ? <ListSkeleton rows={4} /> : items.length === 0 ? (
               <div className="admin-card mywork-empty">
@@ -141,7 +164,14 @@ export default function AdminMyWork() {
             )}
           </div>
         </main>
-      )}
+  )
+}
+
+export default function AdminMyWork() {
+  // role มาจาก guard — ต้องรู้ role ก่อนถึงจะเปิด listener ได้ถูกแหล่ง จึงแยก MyWork เป็นคอมโพเนนต์ลูก
+  return (
+    <StaffRoleGuard allowedRoles={MY_WORK_ROLES}>
+      {(staff) => <MyWork role={staff?.role} />}
     </StaffRoleGuard>
   )
 }

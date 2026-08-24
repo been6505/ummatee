@@ -454,7 +454,7 @@ export default function Home() {
             <h2>{t.ctaStripTitle}</h2>
             <p>{t.ctaStripP}</p>
             <div className="hero-actions">
-              <a href="#" className="btn btn-iftar" onClick={(e) => { e.preventDefault(); go('iftar') }}><FontAwesomeIcon icon={faMoon} /> {t.ctaStripIftar}</a>
+              
               <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><FontAwesomeIcon icon={faHeart} /> {t.ctaStripDonate}</a>
             </div>
           </FadeUp>

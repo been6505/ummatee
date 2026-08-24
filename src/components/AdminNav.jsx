@@ -4,7 +4,7 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
@@ -36,6 +36,7 @@ const NAV_GROUPS = [
     ]
   },
   { label: 'ปฏิทิน', icon: faCalendar, href: '/admin/calendar' },
+  { label: 'ใส่กรอบรูป', icon: faLayerGroup, href: '/admin/photo-frame' },
   {
     label: 'เงินบริจาค', icon: faMoneyBill, children: [
       { href: '/admin/donations', label: 'บันทึกเงินบริจาค' },

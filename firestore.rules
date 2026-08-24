@@ -320,6 +320,11 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['received', 'receivedAt']));
     }
 
+    // รูปที่ใส่กรอบแล้ว + พิกัด GPS จากหน้า /admin/photo-frame — ข้อมูลภายใน ไม่มีหน้า public อ่าน
+    match /framedPhotos/{id} {
+      allow read, write: if isFullAdmin();
+    }
+
     // มีเดียประจำภารกิจ — ทุกคนอ่านได้ (หน้า /missions) แก้ไขได้เฉพาะแอดมินตัวจริง
     match /missionMedia/{id} {
       allow read: if true;

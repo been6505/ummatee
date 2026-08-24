@@ -21,7 +21,7 @@ export const stepIndex = (status) => {
   return i >= 0 ? i : STATUS_STEPS.length - 1
 }
 
-const SHIPPING_FEE = 50 // ค่าจัดส่งมาตรฐาน (บาท) — ถ้าต้องคำนวณตามน้ำหนัก/พื้นที่ในอนาคตค่อยแยกฟังก์ชัน
+const SHIPPING_FEE = 40 // ค่าจัดส่งมาตรฐาน (บาท) — ถ้าต้องคำนวณตามน้ำหนัก/พื้นที่ในอนาคตค่อยแยกฟังก์ชัน
 export const getShippingFee = () => SHIPPING_FEE
 
 // สร้างคำสั่งซื้อใหม่ — คืน { id, orderCode }

@@ -90,7 +90,7 @@ service cloud.firestore {
             && request.resource.data.stock < resource.data.stock
             && (!('sizeStock' in request.resource.data.diff(resource.data).affectedKeys()) || request.resource.data.sizeStock is map)
             && (!('sold' in request.resource.data.diff(resource.data).affectedKeys())
-                || (request.resource.data.sold is int && request.resource.data.sold > (resource.data.sold is int ? resource.data.sold : 0))));
+                || (request.resource.data.sold is number && request.resource.data.sold > (resource.data.sold is number ? resource.data.sold : 0))));
     }
 
     // ประวัติการเคลื่อนไหวสต็อก Um Shop — บันทึกทุกครั้งที่ตัด/รับเข้า อ่านได้เฉพาะแอดมิน

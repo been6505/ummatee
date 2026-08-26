@@ -4,7 +4,7 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faCalendar, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faGlobe, faLayerGroup, faMoon, faSun } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
@@ -149,6 +149,14 @@ export default function AdminNav() {
     return () => document.documentElement.classList.remove('admin-nav-collapsed')
   }, [collapsed])
 
+  // โหมดมืดของหน้า admin (จำค่าไว้ใน localStorage เหมือนกัน)
+  const [dark, setDark] = useState(() => localStorage.getItem('adminDarkMode') === '1')
+  useEffect(() => {
+    document.documentElement.classList.toggle('admin-dark', dark)
+    localStorage.setItem('adminDarkMode', dark ? '1' : '0')
+    return () => document.documentElement.classList.remove('admin-dark')
+  }, [dark])
+
   // ล็อคการเลื่อนพื้นหลังขณะเปิด drawer + ปิดด้วยปุ่ม Esc
   useEffect(() => {
     if (!open) return
@@ -166,6 +174,9 @@ export default function AdminNav() {
   const navContent = (
     <>
       {groups.map((g, i) => <NavGroup key={i} g={g} path={path} onNavigate={close} />)}
+      <button type="button" className="admin-nav-dark-toggle" onClick={() => setDark((v) => !v)}>
+        <FontAwesomeIcon icon={dark ? faSun : faMoon} /> {dark ? 'โหมดสว่าง' : 'โหมดมืด'}
+      </button>
       <InstallAdminApp />
       {email && (
         <span className="admin-nav-user">{email}</span>

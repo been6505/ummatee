@@ -326,3 +326,67 @@
 .admin-login-box .admin-login-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1.5px solid #dadce0;border-radius:10px;background:#fff;color:#3c4043;font-weight:700;font-size:.95rem;cursor:pointer;transition:background .15s,box-shadow .15s}
 .admin-login-box .admin-login-google:hover{background:#f8f9fa;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .admin-login-box .admin-login-google:disabled{opacity:.6;cursor:default}
+
+/* ============ โหมดมืด (หน้า admin) ============
+   สลับด้วยปุ่มใน AdminNav — ใส่คลาส html.admin-dark แล้วจำค่าไว้ใน localStorage
+   ไม่ได้ทำแบบตัวแปร CSS ล้วนเพราะไฟล์นี้ประกาศสีขาว/เทาอ่อนเป็นค่าตรงๆ ไว้เยอะมาก
+   เลย override เฉพาะจุดที่ใช้บ่อย (การ์ด/ตาราง/ฟอร์ม/ปุ่ม) แทน */
+html.admin-dark {
+  --bg: #10161c;
+  --surface: #1a222a;
+  --border: #2b353f;
+  --ink: #e8ecef;
+  --ink-soft: #97a3ac;
+}
+html.admin-dark .admin-dash{background:linear-gradient(180deg,#0d1319 0%,#10161c 280px,#10161c 100%);color:var(--ink)}
+html.admin-dark .admin-head h1{color:#7fd9a8}
+html.admin-dark .admin-card,
+html.admin-dark .admin-stat,
+html.admin-dark .admin-login-box,
+html.admin-dark .pf-item,
+html.admin-dark .pf-savebar,
+html.admin-dark .admin-shop-card,
+html.admin-dark .admin-post,
+html.admin-dark .admin-cal-day,
+html.admin-dark .admin-login-role-btn{background:var(--surface);border-color:var(--border);color:var(--ink)}
+html.admin-dark .admin-cal-day{color:var(--ink)}
+html.admin-dark .admin-card h4,
+html.admin-dark .admin-head p,
+html.admin-dark .admin-empty,
+html.admin-dark .pf-name{color:var(--ink)}
+html.admin-dark .admin-logout,
+html.admin-dark .admin-btn,
+html.admin-dark .admin-select,
+html.admin-dark .admin-select-icon,
+html.admin-dark .admin-clear,
+html.admin-dark .admin-chart-switch button.active{background:var(--surface);color:var(--ink);border-color:var(--border)}
+html.admin-dark .admin-btn:hover,
+html.admin-dark .admin-logout:hover{background:#22303c}
+html.admin-dark .admin-chart-switch{background:#141c23}
+html.admin-dark .admin-form-grid input,html.admin-dark .admin-table-edit input,
+html.admin-dark .admin-form-grid select,
+html.admin-dark .admin-filters input,html.admin-dark .admin-filters select,
+html.admin-dark .admin-cal-form input,html.admin-dark .admin-cal-form select,html.admin-dark .admin-cal-form textarea,
+html.admin-dark .admin-search,
+html.admin-dark .pf-latlng,
+html.admin-dark .size-stock-input,
+html.admin-dark .admin-login-box input{background:#141c23;border-color:var(--border);color:var(--ink)}
+html.admin-dark .admin-table th{background:#141c23;color:var(--ink)}
+html.admin-dark .admin-table th,html.admin-dark .admin-table td{border-color:var(--border)}
+html.admin-dark .admin-table tbody tr:hover{background:#1e2830}
+html.admin-dark .admin-th-sort:hover{background:#1e2830}
+html.admin-dark .admin-status-filter-table tbody tr.active{background:#16321f}
+html.admin-dark .admin-bar-track{background:#243039}
+html.admin-dark .admin-account-preview{background:rgba(46,125,82,.14);border-color:rgba(46,125,82,.25)}
+html.admin-dark .admin-upload-btn{background:#132018}
+html.admin-dark .admin-upload-btn:hover{background:#183024}
+html.admin-dark .admin-media-thumb,html.admin-dark .admin-post-media-item,html.admin-dark .pf-row-thumb,
+html.admin-dark .asc-thumb{border-color:var(--border);background:#141c23}
+html.admin-dark .size-chip{background:#141c23;border-color:var(--border);color:var(--ink-soft)}
+html.admin-dark .shop-guide-tip{background:#241c0a;border-color:#5a4a12;color:var(--ink-soft)}
+html.admin-dark .pf-gps{background:#241c0a;color:#e0b64a}
+html.admin-dark .pf-gps.has{background:#0f2a1c;color:#5fd799}
+html.admin-dark .pf-warn{background:#241c0a;color:#e0b64a}
+html.admin-dark .admin-login-or::before,html.admin-dark .admin-login-or::after{background:var(--border)}
+html.admin-dark .admin-login-box .admin-login-google{background:var(--surface);border-color:var(--border);color:var(--ink)}
+html.admin-dark .admin-login-box .admin-login-google:hover{background:#22303c}

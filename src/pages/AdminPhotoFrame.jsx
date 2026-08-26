@@ -408,6 +408,18 @@ export default function AdminPhotoFrame() {
           )}
         </div>
 
+        {/* ── ปุ่มบันทึก แบบ sticky ให้กดได้ตลอดแม้เลื่อนหน้าจอ ── */}
+        {!convertOnly && unsavedCount > 0 && (
+          <div className="pf-savebar">
+            <span className="pf-savebar-info">
+              <FontAwesomeIcon icon={faCloudArrowUp} /> พร้อมบันทึก {unsavedCount} รูป
+            </span>
+            <button type="button" className="admin-btn-primary" onClick={saveAll} disabled={!!saving}>
+              <FontAwesomeIcon icon={saving ? faSpinner : faCloudArrowUp} spin={!!saving} /> {saving ? 'กำลังบันทึก...' : `บันทึกลงฐานข้อมูล (${unsavedCount})`}
+            </button>
+          </div>
+        )}
+
         {/* ── 3. ผลลัพธ์ ── */}
         {items.length > 0 && (
           <div className="admin-card" style={{ marginBottom: 18 }}>

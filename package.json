@@ -19,6 +19,7 @@
     "firebase": "^12.14.0",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
+    "libheif-js": "^1.19.8",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

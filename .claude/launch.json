@@ -8,6 +8,12 @@
       "port": 4323
     },
     {
+      "name": "ummatee-active",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/been/code/ummatee", "run", "dev", "--", "--port", "4324", "--strictPort"],
+      "port": 4324
+    },
+    {
       "name": "ummatee-prod",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "preview", "--port", "4500"],

@@ -15,6 +15,8 @@ import { STATUS_LABEL, normOrderStatus } from './orderStatus.js'
 
 // ค่าจัดส่งมาตรฐาน (บาท) — ถ้าต้องคำนวณตามน้ำหนัก/พื้นที่ในอนาคตค่อยแยกฟังก์ชัน
 // ออเดอร์เก่าเก็บ shippingFee ของตัวเองไว้ในเอกสาร การแก้ค่านี้จึงมีผลกับออเดอร์ใหม่เท่านั้น
+// (main แก้เป็น 40 เหมือนกัน ค่าตรงกันทั้งสองฝั่ง ส่วน STATUS_LABEL/stepIndex ที่ main
+//  ยังนิยามไว้ตรงนี้ ย้ายไป orderStatus.js แล้วและ re-export ที่บรรทัด 13 — เก็บไว้จะประกาศซ้ำ)
 const SHIPPING_FEE = 40
 export const getShippingFee = () => SHIPPING_FEE
 

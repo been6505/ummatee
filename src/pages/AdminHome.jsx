@@ -7,7 +7,7 @@ import { doc, onSnapshot } from 'firebase/firestore'
 import { ACCOUNTS } from '../data/accounts.js'
 import { isVolunteerEmail } from '../useAdminRole.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe, faComments } from '@fortawesome/free-solid-svg-icons'
+import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe, faComments, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
 
 const ALL_LINKS = [
   { href: '/admin/website', icon: faGlobe, title: 'จัดการเว็บ', desc: 'แบนเนอร์/ประกาศที่แสดงบนหน้าแรกของเว็บฝั่ง public' },
@@ -18,6 +18,7 @@ const ALL_LINKS = [
   { href: '/admin/missions/qurban2026', icon: faCow, title: 'Qurban 2026', desc: 'สรุปการแจกจ่ายกุรบาน 1447 / 2026 แยกตามประเทศ' },
   { href: '/admin/donations', icon: faMoneyBill, title: 'เงินบริจาค', desc: 'บันทึกและสรุปยอดบริจาคแยกตาม 7 บัญชี ibank' },
   { href: '/admin/calendar', icon: faCalendar, title: 'ปฏิทินคอนเทนต์', desc: 'วางแผนกิจกรรม ตั้งเวลาโพสต์ แนบรูป/วิดีโอ หลายแพลตฟอร์ม' },
+  { href: '/admin/photo-frame', icon: faLayerGroup, title: 'ใส่กรอบรูป + พิกัด', desc: 'ซ้อนกรอบ PNG ทับรูป ส่งออก JPG 1:1 พร้อมเก็บพิกัด GPS จากไฟล์' },
   { href: '/admin/shop', icon: faBagShopping, title: 'um-shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
   { href: '/admin/volunteer', icon: faHandshake, title: 'อาสาสมัคร', desc: 'รายชื่อผู้สมัครอาสาสมัคร ค้นหา กรอง และ Export CSV' },
 ]

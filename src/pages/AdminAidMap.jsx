@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -9,8 +9,8 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
 import ExportButtons from '../components/ExportButtons.jsx'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
-import exifr from 'exifr'
 import ListSkeleton from '../components/ListSkeleton.jsx'
+import { optImg } from '../utils/cloudinaryUrl.js'
 import { withSearchTokens } from '../lib/searchIndex.js'
 // ฟิลด์ที่เอาไปสร้างดัชนีคำค้น — ต้องตรงกับ SEARCH_COLLECTIONS ใน lib/searchIndex.js
 const SEARCH_FIELDS = ['villageName', 'city', 'province', 'aidType']
@@ -63,6 +63,62 @@ function MapFocus({ focus, results }) {
   return null
 }
 
+// อ่านพิกัดจากฟิลด์ที่อาจเป็นตัวเลขหรือสตริง (จุดเก่า/ที่นำเข้ามาบางอันเก็บเป็นสตริง)
+// คืน null เมื่อว่าง/ไม่ใช่ตัวเลข — ห้ามใช้ Number() ตรงๆ เพราะ Number('') = 0 จะได้หมุดกลางทะเลที่ (0,0)
+const num = (v) => {
+  const n = typeof v === 'number' ? v : parseFloat(v)
+  return Number.isFinite(n) ? n : null
+}
+
+// หมุดของจุดที่บันทึกไว้ — แยกเป็นคอมโพเนนต์ memo เพราะฟอร์มกรอกข้อมูลอยู่ในหน้าเดียวกัน
+// ถ้าไม่แยก การพิมพ์ทีละตัวอักษรในฟอร์มจะสั่ง re-render หมุด + ป๊อปอัปทุกอันใหม่ทั้งชุด
+// (ข้อมูลในป๊อปอัปเตรียมมาให้เสร็จแล้วจาก withCoords จึงเหลือแค่วางลง DOM)
+const AidMarkers = memo(function AidMarkers({ items }) {
+  return (
+    <>
+      {items.map((l) => (
+        <Marker key={l.id} position={l.pos}>
+          <Popup>
+            <strong>{l.villageName}</strong><br />
+            {l.where}<br />
+            {l.aidType && <>ประเภท: {l.aidType}<br /></>}
+            คนที่ช่วย: {l.peopleHelped.toLocaleString('th-TH')}<br />
+            {l.itemsDonatedDescription} ({l.itemsDonatedCount})<br />
+            {l.budgetUsed > 0 && <>งบ: ฿{l.budgetUsed.toLocaleString('th-TH')}<br /></>}
+            {/* loading=lazy สำคัญมาก: react-leaflet สร้าง DOM ของป๊อปอัปไว้ล่วงหน้าทุกหมุด
+                ถ้าไม่ใส่ เบราว์เซอร์จะโหลดรูปเต็มขนาดของทุกจุดพร้อมกันตั้งแต่เปิดหน้า */}
+            {l.photo && <img src={l.photo} alt="" loading="lazy" decoding="async" style={{ width: '100%', marginTop: 6, borderRadius: 6 }} />}
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  )
+})
+
+// แถวในตาราง — memo ด้วยเหตุผลเดียวกับ AidMarkers (ตารางยาวกว่าหมุดเสียอีก)
+const AidRows = memo(function AidRows({ list, onEdit, onRemove }) {
+  if (list.length === 0) return <tr><td colSpan="8" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีข้อมูล</td></tr>
+  return (
+    <>
+      {list.map((l) => (
+        <tr key={l.id}>
+          <td>{l.villageName}</td>
+          <td>{[l.city, l.province, l.country].filter(Boolean).join(', ')}</td>
+          <td>{l.aidType}</td>
+          <td>{(l.peopleHelped || 0).toLocaleString('th-TH')}</td>
+          <td>{l.itemsDonatedDescription} ({l.itemsDonatedCount || 0})</td>
+          <td>{(Number(l.budgetUsed) || 0).toLocaleString('th-TH')}</td>
+          <td>{(l.photoUrls || []).length || ''}</td>
+          <td style={{ display: 'flex', gap: 8 }}>
+            <button className="admin-btn" onClick={() => onEdit(l)}>แก้ไข</button>
+            <button className="admin-btn-danger" onClick={() => onRemove(l)}>ลบ</button>
+          </td>
+        </tr>
+      ))}
+    </>
+  )
+})
+
 export default function AdminAidMap() {
   const [list, setList] = useState([])
   const [loading, setLoading] = useState(true)
@@ -72,24 +128,64 @@ export default function AdminAidMap() {
 
   useEffect(() => {
     // รายชื่อแคมเปญไว้ให้เลือกผูกกับจุดลงพื้นที่ — หน้ารวมแคมเปญอ่านจากฟิลด์นี้
-    const unsubCampaigns = onSnapshot(collection(db, 'campaigns'),
-      (snap) => setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => setCampaigns([]))
+    // อ่านครั้งเดียวพอ (ใช้แค่เติมตัวเลือกใน <select>) ไม่ต้องเปิด listener ค้างไว้ทั้งหน้า
+    // และไม่ให้ทุกครั้งที่แคมเปญเปลี่ยนมาสั่ง re-render หน้านี้ทั้งหน้า
+    let alive = true
+    getDocs(collection(db, 'campaigns'))
+      .then((snap) => { if (alive) setCampaigns(snap.docs.map((d) => ({ id: d.id, ...d.data() }))) })
+      .catch(() => { if (alive) setCampaigns([]) })
 
     const qy = query(collection(db, 'aidLocations'), orderBy('createdAt', 'desc'))
     const unsub = onSnapshot(qy, (snap) => {
-      setList(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      // อัปเดตเฉพาะเอกสารที่เปลี่ยนจริง — snap.docChanges() บอกมาให้แล้วว่าแถวไหนขยับ
+      // ไม่ต้อง .data() ใหม่ทั้งคอลเลกชันทุกครั้งที่มีคนแก้จุดเดียว (ของเดิม map ใหม่หมดทุกรอบ)
+      setList((cur) => {
+        if (cur.length === 0) return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        const byId = new Map(cur.map((l) => [l.id, l]))
+        for (const c of snap.docChanges()) {
+          if (c.type === 'removed') byId.delete(c.doc.id)
+          else byId.set(c.doc.id, { id: c.doc.id, ...c.doc.data() })
+        }
+        // เรียงตามลำดับของ snapshot (createdAt desc) — ถูกเสมอแม้แถวจะถูกแทรกกลาง
+        return snap.docs.map((d) => byId.get(d.id)).filter(Boolean)
+      })
       setLoading(false)
     }, () => setLoading(false))
-    // ต้องคืนทั้งสองตัว — คืนแค่ unsub จะทิ้ง listener ของ campaigns ค้างไว้ทุกครั้งที่ออกจากหน้า
-    return () => { unsub(); unsubCampaigns() }
+    return () => { alive = false; unsub() }
   }, [])
 
-  const withCoords = useMemo(() => list.filter((l) => Number.isFinite(l.latitude) && Number.isFinite(l.longitude)), [list])
-  const totals = useMemo(() => ({
-    peopleHelped: list.reduce((s, l) => s + (Number(l.peopleHelped) || 0), 0),
-    itemsDonatedCount: list.reduce((s, l) => s + (Number(l.itemsDonatedCount) || 0), 0),
-    budgetUsed: list.reduce((s, l) => s + (Number(l.budgetUsed) || 0), 0),
-  }), [list])
+  // เตรียมข้อมูลของหมุดให้ครบในรอบเดียว (พิกัดเป็นตัวเลข + ที่อยู่ที่ประกอบแล้ว + URL รูปย่อ)
+  // ป๊อปอัปจึงไม่ต้องคำนวณ/ต่อสตริง/สร้าง URL ใหม่ทุกครั้งที่ re-render
+  const withCoords = useMemo(() => {
+    const out = []
+    for (const l of list) {
+      const lat = num(l.latitude)
+      const lng = num(l.longitude)
+      if (lat === null || lng === null) continue
+      out.push({
+        id: l.id,
+        pos: [lat, lng],
+        villageName: l.villageName,
+        aidType: l.aidType,
+        where: [l.neighbourhood, l.city, l.province, l.country].filter(Boolean).join(', '),
+        peopleHelped: Number(l.peopleHelped) || 0,
+        itemsDonatedDescription: l.itemsDonatedDescription,
+        itemsDonatedCount: l.itemsDonatedCount || 0,
+        budgetUsed: Number(l.budgetUsed) || 0,
+        // ย่อรูปที่ Cloudinary — ป๊อปอัปกว้างไม่ถึง 300px ไม่ต้องโหลดไฟล์เต็มขนาดหลาย MB
+        photo: (l.photoUrls || [])[0] ? optImg(l.photoUrls[0], 320) : null,
+      })
+    }
+    return out
+  }, [list])
+
+  // รวมยอดในรอบเดียว แทนการวนลิสต์ 3 รอบ
+  const totals = useMemo(() => list.reduce((t, l) => {
+    t.peopleHelped += Number(l.peopleHelped) || 0
+    t.itemsDonatedCount += Number(l.itemsDonatedCount) || 0
+    t.budgetUsed += Number(l.budgetUsed) || 0
+    return t
+  }, { peopleHelped: 0, itemsDonatedCount: 0, budgetUsed: 0 }), [list])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -169,51 +265,72 @@ export default function AdminAidMap() {
   // ให้เติมพิกัด + reverse-geocode ที่อยู่ + วันที่ถ่ายภาพให้อัตโนมัติ โดยไม่ทับพิกัดที่กรอก/เลือกไว้แล้ว
   const [uploading, setUploading] = useState(false)
   const [geoFromPhoto, setGeoFromPhoto] = useState('') // ข้อความสถานะ: กำลังอ่าน/ผลลัพธ์/ไม่พบพิกัดในรูป
+  // อ่านพิกัด/วันที่จาก EXIF ของรูปที่เลือก — แยกออกมาเพื่อให้รันขนานไปกับการอัปโหลดได้
+  // ลำดับของเดิม: อ่าน EXIF ทีละไฟล์ → reverse geocode → ค่อยเริ่มอัปโหลด (ผู้ใช้ต้องรอทุกขั้นต่อกัน)
+  // ลำดับใหม่: อ่าน EXIF ทุกไฟล์พร้อมกัน → เติมพิกัดให้เห็นทันที → ที่อยู่/วันที่ตามมาทีหลัง
+  const readCoordsFromPhotos = async (files) => {
+    setGeoFromPhoto('กำลังอ่านพิกัดจากรูปภาพ...')
+    // โหลด exifr ตอนใช้จริงเท่านั้น — เป็นไลบรารีก้อนใหญ่ที่คนเปิดหน้ามาดูแผนที่เฉยๆ ไม่ได้ใช้เลย
+    const mod = await import('exifr')
+    const exifr = mod.default || mod
+    // อ่านทุกไฟล์พร้อมกัน แทนการไล่ทีละใบ — รูปที่ไม่มี GPS จะไม่หน่วงคิวของใบถัดไปอีกต่อไป
+    const gpsList = await Promise.all(files.map((f) => withTimeout(exifr.gps(f).catch(() => null), 6000)))
+    const i = gpsList.findIndex((g) => g && Number.isFinite(g.latitude) && Number.isFinite(g.longitude))
+    if (i < 0) {
+      setGeoFromPhoto('ไม่พบพิกัด GPS ในรูปภาพที่เลือก — กรอกพิกัดเองหรือค้นหาด้านบนแทนได้')
+      return
+    }
+    const gps = gpsList[i]
+    // เติมพิกัด + ขยับแผนที่ก่อนเลย ไม่ต้องรอ Nominatim ตอบ (ส่วนที่ช้าที่สุดคือขั้นนี้)
+    setForm((f) => ({ ...f, latitude: f.latitude || String(gps.latitude), longitude: f.longitude || String(gps.longitude) }))
+    setPicked({ lat: gps.latitude, lng: gps.longitude, label: 'พิกัดจากรูปภาพ' })
+    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)} — กำลังค้นที่อยู่...`)
+
+    // วันที่ถ่ายภาพ (อ่านไฟล์) กับที่อยู่ (เรียกเน็ต) ไม่เกี่ยวกัน ยิงพร้อมกันได้
+    const [exif, place] = await Promise.all([
+      withTimeout(exifr.parse(files[i], ['DateTimeOriginal', 'CreateDate']).catch(() => null), 6000),
+      withTimeout(reverseGeocode(gps.latitude, gps.longitude).catch(() => null), 6000),
+    ])
+    const shotAt = exif?.DateTimeOriginal || exif?.CreateDate || null
+    const a = place?.address || {}
+    setForm((f) => ({
+      ...f,
+      street: f.street || a.road || a.pedestrian || a.footway || '',
+      neighbourhood: f.neighbourhood || a.neighbourhood || a.suburb || a.quarter || a.city_district || a.district || a.county || '',
+      city: f.city || a.city || a.town || a.village || a.municipality || '',
+      province: f.province || a.state || a.province || '',
+      region: f.region || a.region || a.state_district || '',
+      postcode: f.postcode || a.postcode || '',
+      country: f.country || a.country || '',
+      visitDate: f.visitDate || (shotAt ? new Date(shotAt).toISOString().slice(0, 10) : ''),
+    }))
+    if (place?.display_name) setPicked((cur) => (cur ? { ...cur, label: place.display_name } : cur))
+    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}${shotAt ? ` (ถ่ายเมื่อ ${new Date(shotAt).toLocaleString('th-TH')})` : ''}`)
+  }
+
   const uploadPhotos = async (e) => {
     const files = [...e.target.files]
     if (!files.length) return
+    e.target.value = '' // เคลียร์ทันที (ไม่ต้องรอ finally) เพื่อให้เลือกไฟล์เดิมซ้ำได้
     setUploading(true)
     setGeoFromPhoto('')
+
+    // เริ่มส่งไฟล์ขึ้น Cloudinary ทันที ไม่รอ EXIF — สองงานนี้ไม่ได้ต้องพึ่งผลของกันและกัน
+    const uploadJob = Promise.all(files.map((f) => uploadToCloudinary(f, 'image')))
+    // อ่าน EXIF เฉพาะตอนที่ยังไม่มีพิกัดในฟอร์ม (เหมือนเดิม) และไม่ให้ error ของมันไปล้มการอัปโหลด
+    const exifJob = (form.latitude && form.longitude)
+      ? Promise.resolve()
+      : readCoordsFromPhotos(files).catch(() => setGeoFromPhoto('อ่านพิกัดจากรูปภาพไม่สำเร็จ — กรอกพิกัดเองหรือค้นหาด้านบนแทนได้'))
+
     try {
-      const hadCoords = form.latitude && form.longitude
-      if (!hadCoords) {
-        setGeoFromPhoto('กำลังอ่านพิกัดจากรูปภาพ...')
-        for (const file of files) {
-          try {
-            const gps = await withTimeout(exifr.gps(file), 6000)
-            if (!gps || !Number.isFinite(gps.latitude) || !Number.isFinite(gps.longitude)) continue
-            const exif = await withTimeout(exifr.parse(file, ['DateTimeOriginal', 'CreateDate']).catch(() => null), 6000)
-            const shotAt = exif?.DateTimeOriginal || exif?.CreateDate || null
-            const place = await withTimeout(reverseGeocode(gps.latitude, gps.longitude).catch(() => null), 6000)
-            const a = place?.address || {}
-            setForm((f) => ({
-              ...f,
-              latitude: f.latitude || String(gps.latitude),
-              longitude: f.longitude || String(gps.longitude),
-              street: f.street || a.road || a.pedestrian || a.footway || '',
-              neighbourhood: f.neighbourhood || a.neighbourhood || a.suburb || a.quarter || a.city_district || a.district || a.county || '',
-              city: f.city || a.city || a.town || a.village || a.municipality || '',
-              province: f.province || a.state || a.province || '',
-              region: f.region || a.region || a.state_district || '',
-              postcode: f.postcode || a.postcode || '',
-              country: f.country || a.country || '',
-              visitDate: f.visitDate || (shotAt ? new Date(shotAt).toISOString().slice(0, 10) : ''),
-            }))
-            setPicked({ lat: gps.latitude, lng: gps.longitude, label: place?.display_name || 'พิกัดจากรูปภาพ' })
-            setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}${shotAt ? ` (ถ่ายเมื่อ ${new Date(shotAt).toLocaleString('th-TH')})` : ''}`)
-            break // เจอรูปแรกที่มี GPS พอแล้ว
-          } catch { /* รูปนี้อ่าน EXIF ไม่ได้ ข้ามไปรูปถัดไป */ }
-        }
-        setGeoFromPhoto((cur) => cur || 'ไม่พบพิกัด GPS ในรูปภาพที่เลือก — กรอกพิกัดเองหรือค้นหาด้านบนแทนได้')
-      }
-      const results = await Promise.all(files.map((f) => uploadToCloudinary(f, 'image')))
+      const results = await uploadJob
       setForm((f) => ({ ...f, photoUrls: [...(f.photoUrls || []), ...results.map((r) => r.url)] }))
     } catch (err) {
       window.alert('อัปโหลดรูปไม่สำเร็จ: ' + err.message)
     } finally {
       setUploading(false)
-      e.target.value = '' // เคลียร์เพื่อให้เลือกไฟล์เดิมซ้ำได้
     }
+    await exifJob // ปล่อยให้เดินต่อจนจบ (ปุ่มปลดล็อกไปแล้ว ไม่ต้องรอที่อยู่)
   }
   const removePhoto = (i) => setForm((f) => ({ ...f, photoUrls: (f.photoUrls || []).filter((_, j) => j !== i) }))
 
@@ -248,7 +365,7 @@ export default function AdminAidMap() {
 
   // ...EMPTY ก่อน แล้วทับด้วยข้อมูลจริง — จุดที่บันทึกไว้ก่อนมีฟิลด์ใหม่จะได้ค่าเริ่มต้นแทน undefined
   // (ถ้าปล่อย undefined เข้า input ที่เป็น controlled component React จะเตือนและ input กลายเป็น uncontrolled)
-  const edit = (l) => {
+  const edit = useCallback((l) => {
     setEditId(l.id); setPicked(null); setGeoResults(null); setGeoFromPhoto('')
     setForm({
       ...EMPTY, ...l,
@@ -257,14 +374,14 @@ export default function AdminAidMap() {
       itemsDonatedCount: String(l.itemsDonatedCount ?? ''),
       photoUrls: l.photoUrls || [],
     })
-  }
+  }, [])
   const cancel = () => { setEditId(null); setForm(EMPTY); setPicked(null); setGeoResults(null); setGeoFromPhoto('') }
 
-  const remove = async (l) => {
+  const remove = useCallback(async (l) => {
     if (!window.confirm(`ลบจุด "${l.villageName}" ถาวร?`)) return
     await deleteDoc(doc(db, 'aidLocations', l.id))
     writeAuditLog({ action: 'delete', entityType: 'aidLocation', entityId: l.id, summary: `ลบจุด ${l.villageName}` })
-  }
+  }, [])
 
   // สร้างชุดข้อมูลครั้งเดียว ใช้ได้ทั้งดาวน์โหลด CSV และส่งเข้า Google Sheets (ดู ExportButtons.jsx)
   const buildExport = () => ({
@@ -297,21 +414,7 @@ export default function AdminAidMap() {
             <div className="admin-card" style={{ marginBottom: 20, padding: 0, overflow: 'hidden' }}>
               <MapContainer center={THAILAND_CENTER} zoom={6} style={{ height: 420, width: '100%' }}>
                 <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                {withCoords.map((l) => (
-                  <Marker key={l.id} position={[l.latitude, l.longitude]}>
-                    <Popup>
-                      <strong>{l.villageName}</strong><br />
-                      {[l.neighbourhood, l.city, l.province, l.country].filter(Boolean).join(', ')}<br />
-                      {l.aidType && <>ประเภท: {l.aidType}<br /></>}
-                      คนที่ช่วย: {(l.peopleHelped || 0).toLocaleString('th-TH')}<br />
-                      {l.itemsDonatedDescription} ({l.itemsDonatedCount || 0})<br />
-                      {l.budgetUsed > 0 && <>งบ: ฿{Number(l.budgetUsed).toLocaleString('th-TH')}<br /></>}
-                      {(l.photoUrls || []).length > 0 && (
-                        <img src={l.photoUrls[0]} alt="" style={{ width: '100%', marginTop: 6, borderRadius: 6 }} />
-                      )}
-                    </Popup>
-                  </Marker>
-                ))}
+                <AidMarkers items={withCoords} />
 
                 {/* ผลค้นหา (ยังไม่ได้เลือก) — วงกลมส้ม แยกให้ต่างจากหมุดจุดที่บันทึกไว้แล้วชัดเจน */}
                 {!picked && (geoResults || []).map((r) => (
@@ -374,7 +477,7 @@ export default function AdminAidMap() {
                   <div className="aid-photo-thumbs">
                     {form.photoUrls.map((url, i) => (
                       <div key={i} className="aid-photo-thumb">
-                        <img src={url} alt={`รูปหน้างาน ${i + 1}`} />
+                        <img src={optImg(url, 200)} alt={`รูปหน้างาน ${i + 1}`} loading="lazy" decoding="async" />
                         <button type="button" onClick={() => removePhoto(i)} aria-label="ลบรูปนี้">✕</button>
                       </div>
                     ))}
@@ -466,22 +569,7 @@ export default function AdminAidMap() {
                   <table className="admin-table">
                     <thead><tr><th>ชื่อจุด</th><th>ที่อยู่</th><th>ประเภท</th><th>คนที่ช่วย</th><th>ของบริจาค</th><th>งบ (฿)</th><th>รูป</th><th></th></tr></thead>
                     <tbody>
-                      {list.map((l) => (
-                        <tr key={l.id}>
-                          <td>{l.villageName}</td>
-                          <td>{[l.city, l.province, l.country].filter(Boolean).join(', ')}</td>
-                          <td>{l.aidType}</td>
-                          <td>{(l.peopleHelped || 0).toLocaleString('th-TH')}</td>
-                          <td>{l.itemsDonatedDescription} ({l.itemsDonatedCount || 0})</td>
-                          <td>{(Number(l.budgetUsed) || 0).toLocaleString('th-TH')}</td>
-                          <td>{(l.photoUrls || []).length || ''}</td>
-                          <td style={{ display: 'flex', gap: 8 }}>
-                            <button className="admin-btn" onClick={() => edit(l)}>แก้ไข</button>
-                            <button className="admin-btn-danger" onClick={() => remove(l)}>ลบ</button>
-                          </td>
-                        </tr>
-                      ))}
-                      {list.length === 0 && <tr><td colSpan="8" style={{ textAlign: 'center', color: '#999' }}>ยังไม่มีข้อมูล</td></tr>}
+                      <AidRows list={list} onEdit={edit} onRemove={remove} />
                     </tbody>
                   </table>
                 </div>

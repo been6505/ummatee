@@ -126,6 +126,7 @@ export default function FinancialDashboard() {
         </header>
 
         {/* PROJECTS cards hidden for now */}
+        {/* eslint-disable-next-line no-constant-binary-expression -- ปิดส่วนนี้ไว้ชั่วคราวตั้งใจ ไม่ใช่บั๊ก */}
         {false && (
         <div className="uc-projects">
           {PROJECTS.map((p, i) => (
@@ -154,6 +155,7 @@ export default function FinancialDashboard() {
             <div className="uc-stat-label">Helped<br /><span>ช่วยเหลือได้</span></div>
             <div className="uc-stat-value">{fmtInt(canHelp)} <small>คน</small></div>
           </div>
+          {/* eslint-disable-next-line no-constant-binary-expression -- ปิดส่วนนี้ไว้ชั่วคราวตั้งใจ ไม่ใช่บั๊ก */}
           {false && (<>
           <div className="uc-stat">
             <div className="uc-stat-label">Target<br /><span>ยอดเป้าหมาย</span></div>

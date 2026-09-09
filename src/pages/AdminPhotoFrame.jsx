@@ -193,7 +193,7 @@ export default function AdminPhotoFrame() {
   // ── พิกัด ──
   const setItemGeo = (id, next) => setGeo((prev) => ({ ...prev, [id]: next }))
 
-  const useDeviceLocation = async (id) => {
+  const applyDeviceLocation = async (id) => {
     try {
       const pos = await getCurrentPosition()
       if (id === 'all') {
@@ -417,7 +417,7 @@ export default function AdminPhotoFrame() {
                 {composing ? ' กำลังประกอบภาพ...' : ` ${convertOnly ? '2' : '3'}. ผลลัพธ์ ${readyCount}/${items.length} รูป`}
               </h4>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {!convertOnly && <button type="button" className="admin-btn" onClick={() => useDeviceLocation('all')} title="เติมพิกัดปัจจุบันให้รูปที่ยังไม่มีพิกัด">
+                {!convertOnly && <button type="button" className="admin-btn" onClick={() => applyDeviceLocation('all')} title="เติมพิกัดปัจจุบันให้รูปที่ยังไม่มีพิกัด">
                   <FontAwesomeIcon icon={faCrosshairs} /> เติมพิกัดปัจจุบัน
                 </button>}
                 <button type="button" className="admin-btn" onClick={downloadAll} disabled={!readyCount}>
@@ -480,7 +480,7 @@ export default function AdminPhotoFrame() {
                         defaultValue={g ? `${g.lat}, ${g.lng}` : ''}
                         onChange={(e) => setManualLatLng(it.id, e.target.value)}
                       />}
-                      {!convertOnly && <button type="button" className="admin-btn admin-icon-btn" style={{ width: 40, height: 40, fontSize: '.9rem' }} onClick={() => useDeviceLocation(it.id)} title="ใช้ตำแหน่งปัจจุบัน">
+                      {!convertOnly && <button type="button" className="admin-btn admin-icon-btn" style={{ width: 40, height: 40, fontSize: '.9rem' }} onClick={() => applyDeviceLocation(it.id)} title="ใช้ตำแหน่งปัจจุบัน">
                         <FontAwesomeIcon icon={faCrosshairs} />
                       </button>}
                       <button type="button" className="admin-btn admin-icon-btn" style={{ width: 40, height: 40, fontSize: '.9rem' }} onClick={() => downloadOne(it)} disabled={!r?.blob} title="ดาวน์โหลด JPG">

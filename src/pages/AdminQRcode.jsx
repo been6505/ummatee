@@ -32,7 +32,9 @@ function beep(type = 'ok') {
       osc.stop(ctx.currentTime + 0.3)
     }
     osc.onended = () => ctx.close()
-  } catch (_) {}
+  } catch {
+    // เสียงบี๊บเป็นแค่ feedback เสริม ไม่มี AudioContext ก็ข้ามได้เลย
+  }
 }
 
 export default function AdminQRcode() {

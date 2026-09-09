@@ -385,6 +385,7 @@ export default function Iftar() {
 
       <section className="iftar-stage" id="iftar-form">
         {/* ฟอร์มลงทะเบียนซ่อนไว้ — งานจบแล้ว */}
+        {/* eslint-disable-next-line no-constant-binary-expression -- ปิดส่วนนี้ไว้ตั้งใจ ไม่ใช่บั๊ก */}
         {false && (isFull ? (
           <div className="iftar-full">
             <div className="iftar-full-card">

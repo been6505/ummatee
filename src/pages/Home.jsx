@@ -109,6 +109,7 @@ function PosterCarousel({ images, alt, onClick, href }) {
     <a href={href || '/'} onClick={(e) => { e.preventDefault(); onClick() }} className="hf-card-poster-link hf-poster-carousel">
       {/* fetchpriority ตัวเล็ก: React 18 ไม่รู้จักแบบ camelCase มันจะเตือนแล้ว "ทิ้ง attribute ทั้งอัน"
           โปสเตอร์แรกจึงไม่เคยได้ priority hint จริงเลยสักครั้ง ทั้งที่เป็นรูปใหญ่สุดของหน้าแรก */}
+      {/* eslint-disable-next-line react/no-unknown-property -- ตั้งใจใช้ตัวเล็กตามคอมเมนต์ด้านบน */}
       <img src={images[safeIdx]} alt={alt} className="hf-poster" fetchpriority={safeIdx === 0 ? 'high' : 'auto'} />
       {total > 1 && (
         <div className="hf-poster-dots">

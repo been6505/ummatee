@@ -68,7 +68,9 @@ function ReceiverCard({ item, onDelete }) {
         receivedAt: next ? new Date().toLocaleString('th-TH') : null,
       })
       setReceived(next)
-    } catch (_) {}
+    } catch (e) {
+      console.error('toggle received failed:', e.code || e.message)
+    }
     setToggling(false)
   }
 

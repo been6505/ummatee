@@ -57,7 +57,9 @@ function DonorCard({ item, onDelete }) {
         deliveredAt: next ? new Date().toLocaleString('th-TH') : null,
       })
       setDelivered(next)
-    } catch (_) {}
+    } catch (e) {
+      console.error('toggle delivered failed:', e.code || e.message)
+    }
     setToggling(false)
   }
 

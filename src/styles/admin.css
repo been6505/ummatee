@@ -23,6 +23,14 @@
    ใน cascade ทำให้ทับ padding-left:256px ของ sidebar เสมอไม่ว่าจอกว้างแค่ไหน (เนื้อหาไปซ้อนใต้ sidebar) */
 @media (max-width:768px) {
   .admin-dash { padding: 72px 16px 32px; }
+  /* กันการซูมอัตโนมัติของ iOS Safari เวลาแตะ input/select/textarea ที่ font-size < 16px
+     ใช้ !important เพราะมี selector เฉพาะเจาะจงกว่า (เช่น .admin-cal-form input, .hk-toolbar input[type=search])
+     ประกาศ font-size ของตัวเองไว้อยู่แล้ว ซึ่งจะชนะ element selector ธรรมดาตาม specificity ปกติ */
+  .admin-dash input,
+  .admin-dash select,
+  .admin-dash textarea {
+    font-size: 16px !important;
+  }
 }
 /* หน้าทำงานฝั่งแอดมินใช้ความกว้างที่มีทั้งหมด — เดิมคาดไว้ที่ 1200px แล้วจัดกลาง
    ซึ่งบนจอ 1600px+ ทิ้งพื้นที่ว่างสองข้างไปหลายร้อย px ทั้งที่หน้าพวกนี้เป็นตาราง/กริดที่ยิ่งกว้างยิ่งเห็นข้อมูลได้มาก

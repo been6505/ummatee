@@ -63,3 +63,37 @@ export function groupProductsByName(products) {
     }
   })
 }
+
+// รวมรายการในออเดอร์ตาม product doc — เสื้อตัวเดียวกันคนละไซซ์เป็นคนละรายการในตะกร้า แต่เป็น doc เดียวกัน
+// ต้องรวมก่อนเขียน Firestore ไม่งั้นการเขียนรอบหลังทับรอบแรก (คำนวณจาก snapshot ตั้งต้นชุดเดียวกัน)
+export function groupOrderItemsByProduct(items) {
+  const map = new Map()
+  for (const it of items || []) {
+    const pid = it.productDocId || it.id
+    if (!map.has(pid)) map.set(pid, [])
+    map.get(pid).push(it)
+  }
+  return map
+}
+
+// คำนวณค่าที่ต้องเขียนกลับตอน "ยกเลิกออเดอร์" ของสินค้าหนึ่งชิ้น (คืนสต็อก + ลด sold)
+// แยกออกมาเป็นฟังก์ชันบริสุทธิ์เพื่อเทสต์ได้ — ตัวจริงอยู่ใน cancelOrder ที่รันในทรานแซกชัน
+// data = ข้อมูลสินค้าปัจจุบัน, lines = รายการทุกบรรทัดในออเดอร์ที่ชี้มาที่สินค้านี้
+// คืน null = ไม่ต้องแตะสต็อก (สินค้าไม่เคยมี stock เป็นตัวเลข จึงไม่เคยถูกตัดตอนสั่งซื้อ)
+export function planStockRestore(data, lines) {
+  const totalQty = lines.reduce((s, it) => s + (Number(it.qty) || 0), 0)
+  const nextSold = Math.max(0, (Number(data.sold) || 0) - totalQty)
+  const sizeLines = lines.filter((it) => it.sizes)
+
+  if (data.sizeStock && sizeLines.length > 0) {
+    const sizeStock = { ...data.sizeStock }
+    for (const it of sizeLines) {
+      sizeStock[it.sizes] = (Number(sizeStock[it.sizes]) || 0) + (Number(it.qty) || 0)
+    }
+    const stock = Object.values(sizeStock).reduce((s, v) => s + (Number(v) || 0), 0)
+    return { sizeStock, stock, sold: nextSold }
+  }
+  if (Number.isFinite(data.stock)) return { stock: data.stock + totalQty, sold: nextSold }
+  // ไม่เคยตัดสต็อก → ห้ามบวกคืน ไม่งั้นเป็นการเติมของที่ไม่เคยถูกหัก ทำให้สต็อกเกินจริงแล้วขายเกิน
+  return { sold: nextSold }
+}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { db } from '../firebase.js'
 import { collection, query, where, getDocs, doc, runTransaction } from 'firebase/firestore'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import jsQR from 'jsqr'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faTriangleExclamation, faCamera, faMosque, faGift } from '@fortawesome/free-solid-svg-icons'
@@ -36,7 +36,7 @@ function beep(type = 'ok') {
 }
 
 export default function AdminQRcode() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)

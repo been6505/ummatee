@@ -2,18 +2,20 @@ import { useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import {
   useOrder, STATUS_LABEL, adminStatusLabel,
-  uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, confirmDelivered, setTrackingNumber,
+  uploadPaymentProof, confirmPayment, confirmPackedAndShip, addShippingUpdate, setTrackingNumber, normOrderStatus,
   addDeliveredImages,
 } from '../data/orders.js'
 import { useProducts, effectivePrice } from '../data/shop.js'
+import { auditOrderTotals } from '../data/orderAudit.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
-import { notifyLineOrderStatus } from '../utils/lineNotify.js'
+import { notifyLineOrderStatus, notifyCustomerShipped } from '../utils/lineNotify.js'
 import { Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, COURIERS } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft, faCheck, faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // หน้าจัดการคำสั่งซื้อของแอดมิน (/admin/shop/orders/:id) — ทำทุกขั้นตอน:
 // ยืนยันการชำระเงิน, แนบรูปสินค้าที่แพ็ค + ยืนยันจัดส่ง, อัปเดตสถานะการจัดส่ง, ยืนยันจัดส่งเรียบร้อย
@@ -26,12 +28,20 @@ const SHIP_STATUS_PRESETS = [
   'นำจ่ายไม่สำเร็จ ลองใหม่วันถัดไป',
 ]
 export default function AdminShopOrderDetail({ orderId }) {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const { order, loading, error } = useOrder(orderId)
-  const { products } = useProducts()
+  const { products, loading: productsLoading } = useProducts()
 
   // ราคาต่อชิ้นในออเดอร์มาจากฝั่งลูกค้า (client) — เทียบกับราคาสินค้าปัจจุบัน ถ้าไม่ตรงให้เตือนแอดมินก่อนยืนยันรับเงิน
   // (ราคาอาจต่างเพราะแอดมินเพิ่งแก้ราคา/โปรฯ หลังลูกค้าสั่ง — ไม่ใช่การโกงเสมอไป แต่ควรเช็คยอดโอนกับราคาที่ถูกต้อง)
+  // ตรวจตัวเลขเงินในตัวออเดอร์เอง — ไม่ต้องรอ products โหลด และไม่พึ่งเซิร์ฟเวอร์
+  // ถ้าวันหนึ่งได้ deploy Cloud Function verifyOrderTotal ธง priceMismatch จากฝั่งนั้นจะมาสมทบในกล่องเดียวกัน
+  const localAudit = auditOrderTotals(order)
+  const totalsAudit = {
+    ok: localAudit.ok && !order?.priceMismatch,
+    issues: order?.priceMismatch ? [...localAudit.issues, order.priceMismatchReason].filter(Boolean) : localAudit.issues,
+  }
+
   const priceMismatches = (order?.items || []).flatMap((it) => {
     const p = products.find((x) => x.id === (it.productDocId || it.id))
     if (!p) return []
@@ -92,6 +102,8 @@ export default function AdminShopOrderDetail({ orderId }) {
     try {
       await confirmPackedAndShip(order.id, packedPreview, trackingInput, courierInput)
       notifyLineOrderStatus(order, 'shipping', { trackingNumber: trackingInput })
+      // อีเมลเลขพัสดุถึงลูกค้า — LINE ได้เฉพาะคนที่ล็อกอินด้วย LINE ส่วนใหญ่กรอกแค่อีเมล
+      notifyCustomerShipped(order.id)
     }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
     finally { setConfirming(false) }
@@ -100,12 +112,38 @@ export default function AdminShopOrderDetail({ orderId }) {
   // แก้/เพิ่มเลขพัสดุภายหลัง (ตอน shipping) — เผื่อไม่มีเลขตอนแพ็ค พึ่งได้จากขนส่งทีหลัง
   const handleSaveTracking = async () => {
     setConfirming(true)
-    try { await setTrackingNumber(order.id, trackingInput, courierInput); setEditingTracking(false) }
+    try {
+      await setTrackingNumber(order.id, trackingInput, courierInput)
+      setEditingTracking(false)
+      // เพิ่ม/แก้เลขพัสดุทีหลัง (ตอนกดจัดส่งยังไม่มีเลข) — ลูกค้าต้องได้อีเมลตอนนี้เหมือนกัน
+      // ส่งเฉพาะออเดอร์ที่จัดส่งแล้ว ไม่งั้นยิงตั้งแต่ยังเตรียมของ ลูกค้าได้อีเมลก่อนของออกจากร้าน
+      if (normOrderStatus(order.status) === 'shipped' && trackingInput.trim()) notifyCustomerShipped(order.id)
+    }
     catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
     finally { setConfirming(false) }
   }
 
   const handleConfirmPayment = async () => {
+    // ราคาไม่ตรงกับสินค้าปัจจุบัน = อาจเป็นออเดอร์ที่ถูกปลอมยอดจากฝั่ง client (rules ตรวจได้แค่ว่ายอดรวม
+    // สอดคล้องกันเองในเอกสาร ไม่ได้เทียบกับราคาจริงของสินค้า — ดูคอมเมนต์ validOrderCreate ใน firestore.rules)
+    // จึงต้องให้แอดมินยืนยันซ้ำอย่างตั้งใจก่อน ไม่ปล่อยให้กดผ่านไปเงียบๆ เพราะพลาดมองแบนเนอร์เตือน
+    // ระหว่างที่รายการสินค้ายังโหลดไม่เสร็จ products เป็น [] ⇒ priceMismatches ว่างเสมอ
+    // ถ้าไม่กันไว้ แอดมินที่กดยืนยันเร็วภายในเสี้ยววินาทีแรกจะข้ามด่านตรวจราคาไปเงียบๆ
+    // ซึ่งเป็นด่านสุดท้ายที่กันออเดอร์ปลอมยอด (ดูคอมเมนต์ validOrderCreate ใน firestore.rules)
+    if (productsLoading) {
+      window.alert('กำลังโหลดข้อมูลสินค้าเพื่อตรวจสอบราคา กรุณารอสักครู่แล้วกดใหม่')
+      return
+    }
+    // ตัวเลขไม่สอดคล้องกันเองเป็นสัญญาณที่หนักกว่าราคาเปลี่ยน — ออเดอร์จากหน้าเว็บจริงไม่มีทางเป็นแบบนี้
+    if (!totalsAudit.ok) {
+      if (!window.confirm(`🚨 ตัวเลขเงินในออเดอร์นี้ไม่สอดคล้องกัน\n\n${totalsAudit.issues.map((m) => '• ' + m).join('\n')}\n\nออเดอร์ที่สั่งผ่านหน้าเว็บตามปกติจะไม่เป็นแบบนี้ ยืนยันรับเงินต่อหรือไม่?`)) return
+    }
+    if (priceMismatches.length > 0) {
+      const detail = priceMismatches
+        .map((m) => `• ${m.name}: ในออเดอร์ ฿${m.orderPrice.toLocaleString('th-TH')} / ราคาปัจจุบัน ฿${m.currentPrice.toLocaleString('th-TH')}`)
+        .join('\n')
+      if (!window.confirm(`⚠️ ราคาในออเดอร์ไม่ตรงกับราคาสินค้าปัจจุบัน\n\n${detail}\n\nกรุณาตรวจยอดที่ลูกค้าโอนมาจริงก่อน ยืนยันรับเงินต่อหรือไม่?`)) return
+    }
     setConfirming(true)
     try {
       await confirmPayment(order.id)
@@ -128,16 +166,6 @@ export default function AdminShopOrderDetail({ orderId }) {
     finally { setConfirming(false) }
   }
   const handleAddShipUpdate = () => submitShipUpdate(shipText)
-
-  const handleConfirmDelivered = async () => {
-    setConfirming(true)
-    try {
-      await confirmDelivered(order.id)
-      notifyLineOrderStatus(order, 'delivered')
-    }
-    catch (err) { setActionStatus('เกิดข้อผิดพลาด: ' + err.message) }
-    finally { setConfirming(false) }
-  }
 
   // แนบรูปหลังส่งพัสดุแล้ว (เช่น รูปหน้าบ้านลูกค้า/ใบเซ็นรับ) — อัพโหลดแล้วบันทึกทันที ไม่ต้องกดยืนยันซ้ำ
   const handleDeliveredUpload = async (e) => {
@@ -169,16 +197,29 @@ export default function AdminShopOrderDetail({ orderId }) {
           </div>
         </div>
 
-        {loading && <p>กำลังโหลดข้อมูล...</p>}
+        {loading && <ListSkeleton />}
         {!loading && (error || !order) && <p style={{ color: '#dc2626' }}>ไม่พบคำสั่งซื้อนี้</p>}
 
         {!loading && order && (
-          <div style={{ maxWidth: 760 }}>
+          <>
             <Stepper status={order.status} />
 
             {actionStatus && (
               <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: '.88rem' }}>
                 {actionStatus}
+              </div>
+            )}
+
+            {/* คนละเรื่องกับกล่องเหลืองด้านล่าง:
+                เหลือง = ราคาสินค้าถูกแก้ "หลัง" ลูกค้าสั่งไปแล้ว เกิดขึ้นได้เป็นปกติ
+                แดง = ตัวเลขในออเดอร์ไม่ตรงกันเอง แปลว่าไม่ได้ถูกสร้างผ่านหน้าเว็บ (ดู orderAudit.js) */}
+            {!totalsAudit.ok && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: '.88rem' }}>
+                <strong>🚨 ตัวเลขเงินในออเดอร์นี้ไม่สอดคล้องกัน</strong>
+                <ul style={{ margin: '6px 0 0 18px' }}>
+                  {totalsAudit.issues.map((m, i) => <li key={i}>{m}</li>)}
+                </ul>
+                <div style={{ marginTop: 6 }}>ออเดอร์ที่สั่งผ่านหน้าเว็บตามปกติจะไม่ขึ้นข้อความนี้ — ตรวจสอบให้แน่ใจก่อนยืนยันรับเงินหรือจัดส่ง</div>
               </div>
             )}
 
@@ -193,8 +234,17 @@ export default function AdminShopOrderDetail({ orderId }) {
               </div>
             )}
 
-            <OrderItemsCard order={order} />
-            <CustomerInfoCard order={order} />
+            {/* 3 คอลัมน์บนจอกว้าง: สินค้า | ลูกค้า | งานที่ต้องทำตามสถานะ
+                เดิมกล่องเนื้อหากว้าง 760px ทำให้การ์ดเรียงลงมาเป็นแถวเดียวและต้องเลื่อนหา
+                ทั้งที่พื้นที่ขวามือว่างเปล่าเกินครึ่งจอ */}
+            <div className="admin-order-cols">
+              <div className="admin-order-col">
+                <OrderItemsCard order={order} />
+              </div>
+              <div className="admin-order-col">
+                <CustomerInfoCard order={order} />
+              </div>
+              <div className="admin-order-col">
 
             {/* ── สถานะที่ 1: รอการชำระเงิน ── */}
             {order.status === 'pending_payment' && (
@@ -219,8 +269,8 @@ export default function AdminShopOrderDetail({ orderId }) {
                   uploading={uploadingProof}
                   onFiles={handleProofUpload}
                 />
-                <button className="admin-btn-primary" style={{ marginTop: 12, display: 'block' }} onClick={handleConfirmPayment} disabled={!order.paymentProofUrl || confirming}>
-                  {confirming ? 'กำลังยืนยัน...' : 'ยืนยันการชำระเงิน'}
+                <button className="admin-btn-primary" style={{ marginTop: 12, display: 'block' }} onClick={handleConfirmPayment} disabled={!order.paymentProofUrl || confirming || productsLoading}>
+                  {confirming ? 'กำลังยืนยัน...' : (productsLoading ? 'กำลังตรวจสอบราคา...' : 'ยืนยันการชำระเงิน')}
                 </button>
               </div>
             )}
@@ -264,9 +314,9 @@ export default function AdminShopOrderDetail({ orderId }) {
             )}
 
             {/* ── สถานะที่ 3: กำลังจัดส่ง ── */}
-            {order.status === 'shipping' && (
+            {normOrderStatus(order.status) === 'shipped' && (
               <div className="admin-card" style={{ marginBottom: 20 }}>
-                <h4>กำลังจัดส่ง</h4>
+                <h4>จัดส่งแล้ว</h4>
                 <div style={{ marginBottom: 14 }}>
                   {editingTracking ? (
                     <div className="admin-inline-row">
@@ -325,28 +375,10 @@ export default function AdminShopOrderDetail({ orderId }) {
                   <input type="text" value={shipText} onChange={(e) => setShipText(e.target.value)} placeholder="หรือพิมพ์สถานะเอง" />
                   <button className="admin-btn" onClick={handleAddShipUpdate} disabled={confirming}>อัปเดต</button>
                 </div>
-                <button className="admin-btn-primary" onClick={handleConfirmDelivered} disabled={confirming}>
-                  {confirming ? 'กำลังยืนยัน...' : 'ยืนยันจัดส่งเรียบร้อย'}
-                </button>
-              </div>
-            )}
-
-            {/* ── สถานะที่ 4: จัดส่งเรียบร้อย ── */}
-            {order.status === 'delivered' && (
-              <div className="admin-card" style={{ marginBottom: 20 }}>
-                <h4>{STATUS_LABEL.delivered}</h4>
-                <p style={{ color: '#15803d' }}><FontAwesomeIcon icon={faCheck} /> ได้รับสินค้าเมื่อ {order.deliveredAt}</p>
-                {order.trackingNumber && (
-                  <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                    <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
-                      <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
-                    </a>
-                  </p>
-                )}
-
+                {/* ไม่มีปุ่ม "ยืนยันจัดส่งเรียบร้อย" แล้ว — ร้านไม่รู้ว่าของถึงมือลูกค้าเมื่อไร
+                    สถานะปลายทางดูที่เว็บขนส่งผ่านเลขพัสดุแทน (ดู STATUS_STEPS ใน data/orders.js) */}
                 <div style={{ marginTop: 16 }}>
-                  <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุแล้ว (เช่น รูปหน้าบ้านลูกค้า/ใบเซ็นรับ)</p>
+                  <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุ (เช่น ใบเสร็จขนส่ง/ใบเซ็นรับ)</p>
                   {order.deliveredImages?.length > 0 && (
                     <div className="admin-media-preview" style={{ marginBottom: 10 }}>
                       {order.deliveredImages.map((url, i) => (
@@ -358,7 +390,10 @@ export default function AdminShopOrderDetail({ orderId }) {
                 </div>
               </div>
             )}
-          </div>
+
+              </div>
+            </div>
+          </>
         )}
       </div>
     </main>

@@ -8,6 +8,7 @@ import { db } from '../firebase.js'
 import { doc, setDoc, updateDoc, increment } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faShieldHalved, faScroll, faHandPointer, faHeart, faCheck, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
+import useParallax from '../hooks/useParallax.js'
 
 const statsRef = () => doc(db, 'stats', 'donation')
 
@@ -122,11 +123,12 @@ function AccountRow({ a, lang }) {
 export default function Donation() {
   const { lang } = useLang()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   useEffect(() => { trackView() }, [])
   return (
     <main className="page">
       <section className="page-band">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
         <div className="inner">
           <span className="badge">{t.badge}</span>
           <h1>{t.h1a}<span className="accent">100</span>{t.h1b}<span className="accent">100</span></h1>

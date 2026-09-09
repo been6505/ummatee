@@ -8,6 +8,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import CopyIcon from '../components/CopyIcon.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faEnvelope, faLocationDot, faMagnifyingGlass, faClipboardList } from '@fortawesome/free-solid-svg-icons'
+import useParallax from '../hooks/useParallax.js'
 
 const IFTAR_POSTERS = ['/poster-iftar.webp', '/poster-line1.webp', '/poster-line2.webp']
 
@@ -251,6 +252,7 @@ const EMPTY = { fname: '', lname: '', age: '', phone: '', email: '', job: '', jo
 export default function Iftar() {
   const { lang } = useLang()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   const [form, setForm] = useState(EMPTY)
   const [gender, setGender] = useState('')
   const [channel, setChannel] = useState([])
@@ -318,10 +320,13 @@ export default function Iftar() {
       await saveToFirestore(saved)
 
       // เก็บสำเนาในเครื่อง (localStorage) ไว้ให้แผง "ตรวจสอบรายชื่อ" ใช้แสดง
+      // เก็บเฉพาะ 5 ฟิลด์ที่ CheckPanel แสดงจริงเท่านั้น — ห้ามเก็บ token/เบอร์โทร/อีเมล ลงเครื่อง เพราะฟอร์มนี้
+      // มักเปิดบนแท็บเล็ตที่ตั้งให้คนลงทะเบียนต่อคิวกันหน้างาน คนถัดไปเปิด DevTools อ่านของคนก่อนได้หมด
+      // (ข้อมูลเต็มอยู่ใน Sheet + Firestore แล้ว ที่นี่เป็นแค่ตัวช่วยค้นชื่อในเครื่องนั้น)
       try {
         const regs = JSON.parse(localStorage.getItem('iftarRegs') || '[]')
-        regs.push(saved)
-        localStorage.setItem('iftarRegs', JSON.stringify(regs))
+        regs.push({ ref: saved.ref, fname: saved.fname, lname: saved.lname, province: saved.province, date: saved.date })
+        localStorage.setItem('iftarRegs', JSON.stringify(regs.slice(-200)))
       } catch (e) { /* noop */ }
 
       setSuccessRef(out.ref)
@@ -344,7 +349,7 @@ export default function Iftar() {
   return (
     <main className="page gaza-page">
       <section className="iftar-hero">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
 
         <div className="inner">
           <h1><span className="moon">Iftar</span> For Gaza</h1>

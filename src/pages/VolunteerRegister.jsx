@@ -100,10 +100,13 @@ export default function VolunteerRegister() {
       // ในพื้นหลัง ไม่บล็อกและไม่ทำให้การสมัครล้มเหลวถ้า Sheet ช้าหรือล่ม)
       const { ref } = await registerVolunteer(regData)
 
+      // เก็บแค่รหัสอ้างอิงไว้เตือนความจำว่าเคยสมัครแล้ว — ห้ามเก็บ PII (ชื่อ/เบอร์/อีเมล/จังหวัด) หรือ token
+      // ลงใน localStorage เพราะฟอร์มนี้มักเปิดบนแท็บเล็ตที่ตั้งให้คนกรอกต่อคิวกันหน้างาน คนถัดไปเปิด DevTools
+      // อ่านข้อมูลของคนก่อนได้ทั้งหมด (ข้อมูลตัวจริงอยู่ Firestore + Sheet แล้ว ไม่ต้องสำรองในเครื่อง)
       try {
         const regs = JSON.parse(localStorage.getItem('volunteerRegs') || '[]')
-        regs.push({ ref, ...regData })
-        localStorage.setItem('volunteerRegs', JSON.stringify(regs))
+        regs.push({ ref, at: Date.now() })
+        localStorage.setItem('volunteerRegs', JSON.stringify(regs.slice(-20)))
       } catch (e) { /* noop */ }
 
       setSuccessRef(ref)

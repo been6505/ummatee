@@ -21,6 +21,20 @@ function GoogleMark() {
 const provider = new GoogleAuthProvider()
 provider.setCustomParameters({ prompt: 'select_account' }) // ให้เลือกบัญชีทุกครั้ง ไม่เด้งเข้าบัญชีเดิมอัตโนมัติ
 
+// เข้าสู่ระบบด้วยอีเมล/รหัสผ่าน — เดิมจับ error แล้วขึ้น "อีเมลหรือรหัสผ่านไม่ถูกต้อง" ทุกกรณี
+// ทำให้แยกไม่ออกเลยว่าเป็นรหัสผิดจริง หรือโดนล็อกชั่วคราวเพราะลองหลายครั้ง หรือเน็ตมีปัญหา
+// หรือยังไม่ได้เปิด provider ใน Firebase Console — สามอย่างหลังแก้คนละทางกับ "พิมพ์รหัสใหม่"
+//
+// ตั้งใจคง invalid-credential / user-not-found / wrong-password ให้เป็นข้อความกลางเหมือนเดิม
+// เพราะการบอกว่า "ไม่มีบัญชีนี้" คือการยืนยันให้คนนอกรู้ว่าอีเมลไหนมีอยู่จริงในระบบ
+const LOGIN_ERROR = {
+  'auth/too-many-requests': 'ลองผิดหลายครั้งเกินไป Firebase ระงับการเข้าสู่ระบบจากเครื่องนี้ชั่วคราว — รอสักครู่แล้วลองใหม่ หรือใช้ "เข้าสู่ระบบด้วย Google" แทน',
+  'auth/network-request-failed': 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+  'auth/user-disabled': 'บัญชีนี้ถูกปิดใช้งานอยู่ — เปิดคืนได้ที่ Firebase Console → Authentication → Users',
+  'auth/operation-not-allowed': 'ยังไม่ได้เปิดวิธีเข้าสู่ระบบแบบอีเมล/รหัสผ่านใน Firebase Console → Authentication → Sign-in method',
+  'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+}
+
 // แปลง error code ของ Firebase Auth เป็นข้อความที่บอกได้ว่าต้องไปแก้ที่ไหน
 function googleErrorMessage(code) {
   if (code === 'auth/operation-not-allowed') return 'ยังไม่ได้เปิดใช้การล็อกอินด้วย Google — เปิดที่ Firebase Console › Authentication › Sign-in method'
@@ -55,8 +69,8 @@ export default function AdminLogin() {
     setBusy(true)
     try {
       await signInWithEmailAndPassword(auth, email.trim(), pass)
-    } catch {
-      setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง')
+    } catch (err) {
+      setError(LOGIN_ERROR[err?.code] || `อีเมลหรือรหัสผ่านไม่ถูกต้อง${err?.code ? ` (${err.code})` : ''}`)
     } finally {
       setBusy(false)
     }

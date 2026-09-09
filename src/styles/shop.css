@@ -7,6 +7,21 @@
   background:url('/shop-sale-banner.webp') center/contain no-repeat;
   display:flex;align-items:center;justify-content:center;
 }
+/* จอกว้างกว่ามือถือ: โปสเตอร์เป็นแนวตั้ง 4:5 ถ้าปล่อยให้ aspect-ratio คุมความสูงตามความกว้างเต็มจอ
+   แถบจะสูง = กว้าง x 1.25 (จอ 1900px -> สูง 2375px) ผู้ใช้ต้องเลื่อนหลายหน้าจอกว่าจะพ้นแบนเนอร์
+   -> ล็อกความสูงไว้แล้วให้ contain ย่อรูปลงมาพอดี ไม่ครอปภาพ (เจตนาเดิมของ contain ยังอยู่ครบ)
+   ที่ว่างสองข้างเติมด้วยไล่สีแดงชุดเดียวกับขอบโปสเตอร์ (#EE1A26 บน -> #CF232B ล่าง วัดจากไฟล์จริง)
+   จึงกลืนเป็นกรอบเดียวกัน ไม่เห็นเป็นแถบขาวคั่น */
+@media (min-width:560px){
+  .shop-page-band{
+    aspect-ratio:auto;
+    height:min(76vh,660px);
+    background-image:url('/shop-sale-banner.webp'),linear-gradient(180deg,#EE1A26,#CF232B);
+    background-position:center,center;
+    background-size:contain,cover;
+    background-repeat:no-repeat,no-repeat;
+  }
+}
 
 /* ===== Social media follow ===== */
 .social-section{padding:0 0 96px}
@@ -24,8 +39,17 @@
 /* Um Shop — public */
 .admin-form-grid textarea{padding:8px 10px;border-radius:8px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff;resize:vertical}
 .admin-shop-thumb{width:48px;height:48px;border-radius:8px;object-fit:cover}
-.admin-shop-top-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;margin-bottom:24px}
-@media (max-width:860px){.admin-shop-top-grid{grid-template-columns:1fr}}
+.admin-shop-top-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start;margin-bottom:24px}
+@media (max-width:860px){.admin-shop-top-grid{grid-template-columns:minmax(0,1fr)}}
+/* 1fr = minmax(auto,1fr) ซึ่ง auto = min-content ของเนื้อใน ⇒ ถ้าในการ์ดมีตารางกว้างๆ
+   คอลัมน์จะยืดตามตารางจนล้นจอ (บนมือถือ 375px คอลัมน์กลายเป็น 475px ทั้งที่ที่ว่างมีแค่ 343px)
+   ต้อง minmax(0,1fr) + min-width:0 ที่ตัวลูก ให้ยุบได้แล้วปล่อยให้ .admin-table-wrap เลื่อนแนวนอนแทน */
+.admin-shop-top-grid > *{min-width:0}
+
+/* หน้ารายงานยอดขาย: ตารางยอดขายรายเดือนมีแค่ 3 คอลัมน์สั้นๆ ไม่ต้องกว้าง
+   ส่วน "สินค้าขายดี" มีชื่อสินค้ายาว ถ้าเหลือ 320px ชื่อจะถูกตัดจนอ่านไม่จบ ⇒ สลับสัดส่วนกัน */
+.admin-shop-top-grid.sales-split{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr)}
+@media (max-width:860px){.admin-shop-top-grid.sales-split{grid-template-columns:minmax(0,1fr)}}
 .shop-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:28px}
 .shop-search{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;border:1px solid #ddd;font-size:.95rem;font-family:inherit;background:#fff}
 .shop-search:focus{outline:2px solid var(--green-mid);border-color:transparent}
@@ -37,6 +61,9 @@
 .shop-img{position:relative;aspect-ratio:1/1;background:#f4f6f4;overflow:hidden}
 .shop-img img{width:100%;height:100%;object-fit:cover;display:block}
 .shop-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;color:#ccc}
+/* สลับรูปหลายตัวเลือก (เช่น แขนสั้น/แขนยาว) แบบ fade — ซ้อนทุกรูปไว้ตำแหน่งเดียวกัน โชว์ทีละใบด้วย opacity */
+.shop-img-fade{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s ease}
+.shop-img-fade.active{opacity:1}
 .shop-badge-out{position:absolute;top:10px;left:10px;background:#d84315;color:#fff;font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:999px}
 .shop-badge-discount{position:absolute;top:10px;left:10px;background:#dc2626;color:#fff;font-size:.75rem;font-weight:800;padding:4px 10px;border-radius:999px}
 .shop-badge-variants{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.65);color:#fff;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px}
@@ -209,11 +236,14 @@
 }
 
 /* แถบล่างลอยหน้ารายละเอียดสินค้า (แชท LINE / เพิ่มตะกร้า / ราคา) แบบ Shopee — แทนที่ปุ่มตะกร้าลอยรวมของเว็บ (ซ่อนไว้เฉพาะหน้านี้ใน App.jsx) */
-.shop-detail-page{padding-bottom:76px} /* กันเนื้อหาโดนแถบล่างบัง */
-.shop-detail-bar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:stretch;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.1);height:64px}
+/* env(safe-area-inset-bottom) กัน iPhone รุ่นมี home indicator (X ขึ้นไป) — ไม่มีค่านี้แล้วปุ่มซื้อจะไปชิดเส้น
+   swipe กลับหน้าโฮมพอดี ยิ่งสำคัญขึ้นตอนติดตั้งเป็นแอป (standalone) เพราะไม่มีแถบ Safari มาเผื่อพื้นที่ให้อัตโนมัติ
+   เหมือนที่ .install-banner ทำไว้แล้ว — บาร์นี้ยังไม่เคยกันไว้ */
+.shop-detail-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))} /* กันเนื้อหาโดนแถบล่างบัง */
+.shop-detail-bar{position:fixed;left:0;right:0;bottom:0;z-index:500;display:flex;align-items:stretch;background:#fff;box-shadow:0 -4px 20px rgba(0,0,0,.1);min-height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom)}
 .shop-detail-bar-price{display:flex;flex-direction:column;justify-content:center;padding:0 16px;min-width:100px}
 .shop-detail-bar-price-now{font-size:2.2rem;font-weight:900;color:var(--gold);line-height:1.1} /* แสดงราคาส่วนลดอย่างเดียว ตัวใหญ่เท่าปุ่มข้างๆ — ไม่โชว์ราคาเดิมขีดฆ่าคู่กันแล้ว */
-.shop-detail-bar-line{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;flex-shrink:0;background:#06c755;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none}
+.shop-detail-bar-line{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;flex-shrink:0;background:#06c755;color:#fff;font-size:.72rem;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-family:inherit}
 .shop-detail-bar-line svg{font-size:1.3rem}
 .shop-detail-bar-line:hover{background:#05b34c}
 .shop-detail-bar-cart{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:none;background:var(--green-deep);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;transition:opacity .15s}
@@ -225,13 +255,25 @@
 .shop-detail-cart-badge{position:absolute;top:8px;right:10px;background:#dc2626;color:#fff;font-size:.62rem;font-weight:800;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1}
 
 @media (max-width:480px){
-  .shop-detail-bar{height:58px}
+  .shop-detail-bar{min-height:calc(58px + env(safe-area-inset-bottom))}
   .shop-detail-bar-price{padding:0 10px;min-width:78px}
   .shop-detail-bar-price-now{font-size:1.7rem}
   .shop-detail-bar-line{width:64px;font-size:.66rem}
   .shop-detail-bar-line svg{font-size:1.1rem}
   .shop-detail-bar-cart{font-size:.9rem}
   .shop-detail-bar-viewcart{width:52px;font-size:1.05rem}
+}
+
+/* แถบราคารวม/สั่งซื้อลอยของหน้าตะกร้า+หน้ายืนยันคำสั่งซื้อ — ใช้โครง .shop-detail-bar ร่วมกัน แต่ต้องคงแสดงผลทุกจอกว้าง
+   (ต่างจากหน้ารายละเอียดสินค้าที่ซ่อนแถบลอยบนจอกว้างแล้วใช้แถบในการ์ดแทน หน้าเหล่านี้ไม่มีแถบในการ์ดสำรอง) */
+.shop-cart-page,
+.shop-checkout-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+.shop-cart-bar,
+.shop-checkout-bar{display:flex !important}
+.cart-bar-total-label{display:block;font-size:.7rem;color:var(--ink-soft);font-weight:400}
+@media (min-width:901px){
+  .shop-cart-page,
+  .shop-checkout-page{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 }
 
 /* แถบในการ์ด (จอกว้าง) — ราคา/ปุ่มชุดเดียวกับแถบลอยมือถือ แต่วางไว้ในพื้นที่ว่างท้ายคอลัมน์ข้อมูลแทน ไม่ลอยทับ Footer
@@ -248,8 +290,8 @@
   }
   .shop-detail-inline-actions{display:flex; gap:10px; flex-shrink:0}
   .shop-detail-inline-line{
-    display:flex; align-items:center; gap:8px; padding:13px 20px; border-radius:999px;
-    background:#06c755; color:#fff; font-weight:700; font-size:.92rem; text-decoration:none; transition:background .15s;
+    display:flex; align-items:center; gap:8px; padding:13px 20px; border-radius:999px; border:none;
+    background:#06c755; color:#fff; font-weight:700; font-size:.92rem; text-decoration:none; cursor:pointer; font-family:inherit; transition:background .15s;
   }
   .shop-detail-inline-line:hover{background:#05b34c}
   .shop-detail-inline-line svg{font-size:1.1rem}
@@ -297,3 +339,96 @@
 .shop-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
 .shop-card-foot .shop-stock{margin-top:0}
 .shop-sold{font-size:.78rem;color:var(--ink-soft);white-space:nowrap}
+
+/* แจ้งเตือนกลางจอ (หน้ารายละเอียดสินค้า) — ตอนกดเพิ่มลงตะกร้าโดยยังเลือกสี/ขนาดไม่ครบ
+   z-index สูงกว่า .shop-detail-bar (500) เพราะแถบปุ่มล่างลอยติดจอ ถ้าต่ำกว่าจะโดนทับ */
+.shop-alert-overlay{position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:24px;animation:sa-fade .15s ease}
+@keyframes sa-fade{from{opacity:0}to{opacity:1}}
+@keyframes sa-pop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+.shop-alert{background:#fff;border-radius:18px;padding:28px 26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.3);animation:sa-pop .18s ease}
+.shop-alert-icon{width:56px;height:56px;margin:0 auto 14px;border-radius:50%;background:#fff4e5;color:#d97706;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.shop-alert h3{font-size:1.1rem;font-weight:800;color:var(--ink);margin:0 0 6px}
+.shop-alert p{font-size:.95rem;color:var(--ink-soft);margin:0 0 20px;line-height:1.6}
+.shop-alert-btn{width:100%;padding:13px;border:none;border-radius:99px;background:var(--green-deep);color:#fff;font-weight:800;font-size:.95rem;font-family:inherit;cursor:pointer;transition:background .15s}
+.shop-alert-btn:hover{background:var(--green-mid)}
+@media (prefers-reduced-motion:reduce){.shop-alert-overlay,.shop-alert{animation:none}}
+
+/* ── กล่องเลขพัสดุในหน้าติดตามคำสั่งซื้อ (สถานะ "จัดส่งแล้ว") ──
+   เป็นสิ่งเดียวที่ลูกค้าเปิดหน้านี้มาหา จึงทำให้เด่นที่สุดในการ์ด และกดคัดลอก/เปิดเว็บขนส่งได้ในปุ่มเดียว */
+.order-track-box{background:#f5fbf7;border:1.5px solid var(--green-mid);border-radius:12px;padding:16px;text-align:center}
+.order-track-courier{font-size:.85rem;color:var(--ink-soft);font-weight:700}
+.order-track-code{font-family:monospace;font-size:1.35rem;font-weight:800;letter-spacing:1px;color:var(--green-deep);margin:4px 0 12px;overflow-wrap:anywhere}
+.order-track-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.order-track-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:99px;background:var(--green-deep);color:#fff;text-decoration:none;font-weight:800;font-size:.9rem;min-height:44px;box-sizing:border-box}
+.order-track-btn:hover{background:var(--green-mid)}
+.order-track-copy{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:99px;border:1px solid var(--green-mid);background:#fff;color:var(--green-deep);font-family:inherit;font-weight:700;font-size:.9rem;cursor:pointer;min-height:44px}
+.order-track-copy:hover{background:#EAF6EE}
+.order-track-note{font-size:.8rem;color:var(--ink-soft);margin:10px 0 0}
+
+/* คำอธิบายสถานะใต้แถบขั้นตอน — บอกว่าสถานะตอนนี้แปลว่าอะไร/ต้องทำอะไรต่อ */
+.order-status-hint{background:#f5fbf7;border-left:4px solid var(--green-mid);border-radius:10px;padding:14px 16px;margin-bottom:20px}
+.order-status-hint-title{font-weight:800;color:var(--green-deep);margin-bottom:4px}
+.order-status-hint p{margin:0;font-size:.88rem;color:var(--ink-soft);line-height:1.7}
+
+/* ── ศูนย์บริการลูกค้า um-shop (/um-shop/support) ── */
+.sup-page{background:var(--paper,#fdfcfa);min-height:100vh}
+.sup-wrap{max-width:840px;margin:0 auto;padding:20px 16px 40px}
+.sup-back{display:inline-block;margin-bottom:12px;color:var(--green-deep,#166534);text-decoration:none;font-weight:700;font-size:.9rem}
+.sup-title{margin:0;font-size:1.5rem;color:var(--green-deep,#166534)}
+.sup-sub{margin:4px 0 16px;color:var(--ink-soft);font-size:.9rem}
+
+/* แถบ 3 อัน — เท่ากันทุกช่องด้วย minmax(0,1fr) ไม่งั้นชื่อยาว ("ติดตามสถานะ") ดันช่องอื่นแคบ */
+.sup-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.sup-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:8px 6px;border-radius:12px;border:1px solid rgba(46,125,82,.2);background:#fff;font-family:inherit;font-size:.85rem;font-weight:700;color:var(--ink-soft);cursor:pointer;line-height:1.25;overflow-wrap:anywhere}
+.sup-tabs button.on{background:var(--green-deep,#166534);border-color:var(--green-deep,#166534);color:#fff}
+
+.sup-card{background:#fff;border:1px solid rgba(46,125,82,.1);border-radius:16px;padding:18px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px}
+.sup-card h2{margin:0;font-size:1.05rem;color:var(--green-deep,#166534)}
+.sup-card > label{display:flex;flex-direction:column;gap:6px;font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.sup-card input,.sup-card select,.sup-card textarea{width:100%;box-sizing:border-box;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid #ddd;font-family:inherit;font-size:.95rem;background:#fff}
+.sup-card textarea{resize:vertical}
+.sup-field-label{font-size:.85rem;font-weight:700;color:var(--ink-soft)}
+.sup-note{margin:0;font-size:.88rem;color:var(--ink-soft);line-height:1.6}
+.sup-note-dim{opacity:.8;font-size:.82rem}
+
+.sup-btn-primary{align-self:flex-start;padding:11px 22px;border-radius:99px;border:none;background:var(--green-deep,#166534);color:#fff;font-family:inherit;font-size:.95rem;font-weight:700;cursor:pointer;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.sup-btn-primary:disabled{opacity:.5;cursor:default}
+.sup-btn{align-self:flex-start;padding:9px 18px;border-radius:99px;border:1px solid rgba(46,125,82,.3);background:#fff;color:var(--green-deep,#166534);font-family:inherit;font-weight:700;cursor:pointer;min-height:44px}
+
+.sup-done{display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:#f1f8f3;border-radius:12px;padding:16px}
+.sup-done p{margin:0;font-size:.88rem;color:var(--ink-soft)}
+
+/* ให้ดาว — 44px ต่อดวงเพื่อให้กดถูกบนมือถือ ดาวเล็กๆ ติดกันคือจุดที่กดพลาดบ่อยที่สุด */
+.sup-stars{display:flex;gap:4px}
+.sup-stars button{width:44px;height:44px;border:none;background:none;cursor:pointer;font-size:1.5rem;color:#dcdcdc;padding:0}
+.sup-stars button.on{color:#f5a623}
+
+.sup-photos{display:flex;flex-wrap:wrap;gap:8px}
+.sup-photo{position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;border:1px solid #ddd}
+.sup-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.sup-photo button{position:absolute;top:2px;right:2px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;font-size:.7rem}
+.sup-photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:84px;height:84px;border-radius:10px;border:1.5px dashed var(--green-mid,#2e7d52);color:var(--green-deep,#166534);background:#f7faf8;cursor:pointer;font-size:.7rem;font-weight:700;text-align:center;padding:4px}
+.sup-photo-add svg{font-size:1.1rem}
+
+.sup-reviews-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.sup-avg{color:#f5a623;font-weight:800;font-size:.95rem;white-space:nowrap}
+.sup-filters{display:flex;flex-wrap:wrap;gap:6px}
+.sup-filters button{padding:6px 13px;border-radius:99px;border:1px solid #ddd;background:#fff;font-family:inherit;font-size:.8rem;font-weight:700;color:var(--ink-soft);cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sup-filters button.on{background:#7f1d1d;border-color:#7f1d1d;color:#fff}
+
+/* รีวิวเรียงแบบ masonry ไม่ได้ในกริดธรรมดา — ใช้คอลัมน์ที่ยืดตามความกว้าง แล้วปล่อยความสูงตามเนื้อหา */
+.sup-review-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:start}
+.sup-review{border:1px solid #eee;border-radius:14px;overflow:hidden;background:#fff}
+.sup-review-photos{display:grid;grid-template-columns:1fr;gap:2px}
+.sup-review-photos img{width:100%;display:block;object-fit:cover;max-height:280px}
+.sup-review-body{padding:12px;display:flex;flex-direction:column;gap:6px}
+.sup-review-tag{align-self:flex-start;background:#fdf2f2;color:#7f1d1d;border-radius:99px;padding:3px 10px;font-size:.72rem;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sup-review-stars{color:#dcdcdc;font-size:.85rem;display:flex;gap:2px}
+.sup-review-stars .on{color:#f5a623}
+/* คงการขึ้นบรรทัดที่ลูกค้าพิมพ์ และตัดคำยาวไม่ให้ดันการ์ด */
+.sup-review-text{margin:0;font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.sup-review-by{font-size:.8rem;color:var(--ink-soft)}
+
+@media (max-width:420px){
+  .sup-tabs{grid-template-columns:1fr}
+}

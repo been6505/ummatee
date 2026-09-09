@@ -4,9 +4,10 @@ import { db } from '../firebase.js'
 import { collection, getDocs } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 
 import { IFTAR_SHEET_ENDPOINT as SEND_SCRIPT, fetchWithTimeout } from '../utils/endpoints.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // ── กลุ่มผู้รับที่รองรับ ────────────────────────────────────────────────────
 const SOURCES = [
@@ -111,7 +112,7 @@ function buildEmailHtml(headerTitle, message, posterUrl, reg) {
 }
 
 export default function AdminBroadcast() {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
 
   const [sourceKey, setSourceKey] = useState('iftarRegs')
   const [regs, setRegs] = useState([])
@@ -249,7 +250,7 @@ export default function AdminBroadcast() {
           </div>
 
           {loading ? (
-            <p style={{ textAlign: 'center', padding: 40 }}>กำลังโหลดข้อมูล...</p>
+            <ListSkeleton />
           ) : (
             <>
               {/* ── ตั้งค่าอีเมล ── */}

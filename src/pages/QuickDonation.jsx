@@ -59,7 +59,7 @@ function BankSheet({ amount, project, account, onClose }) {
 
         <div className="qd-sheet-header">
           <div className="qd-sheet-title">เลือกแอปธนาคาร</div>
-          <button className="qd-sheet-close" onClick={onClose}><FontAwesomeIcon icon={faXmark} /></button>
+          <button type="button" className="qd-sheet-close" onClick={onClose} aria-label="ปิด"><FontAwesomeIcon icon={faXmark} /></button>
         </div>
 
         {/* สรุปการโอน */}

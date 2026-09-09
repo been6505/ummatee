@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import VolunteerGuard from '../components/VolunteerGuard.jsx'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import {
   useProducts, addProduct, updateProduct, csvToList,
   usePromotions, addPromotion, deletePromotion, applyPromotion, SHOP_SIZES_BY_CATEGORY,
@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faImage, faXmark, faSpinner, faTag, faCamera } from '@fortawesome/free-solid-svg-icons'
 
 import { uploadToCloudinary } from '../utils/cloudinary.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // เพิ่มสินค้าใหม่ / แก้ไขสินค้า / โปรโมชั่น (/admin/shop/new) — แยกออกมาจาก /admin/shop เพื่อให้หน้ารายการสินค้าโล่งขึ้น
 // รับ mode + productId ผ่าน path แบบไดนามิก: /admin/shop/new/edit/<id> หรือ /admin/shop/new/duplicate/<id>
@@ -37,7 +38,7 @@ const nextProductId = (products) => {
 const EMPTY_PROMO = { label: '', type: 'percent', value: '' }
 
 export default function AdminShopNew({ mode, seedId }) {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const { products, loading: prodLoading } = useProducts()
   const { promotions, loading: promoLoading } = usePromotions()
 
@@ -332,12 +333,12 @@ export default function AdminShopNew({ mode, seedId }) {
                 <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
                   <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
                   {uploading ? ' กำลังอัพโหลด...' : ' เลือกรูปภาพสินค้า'}
-                  <input type="file" accept="image/*" multiple hidden onChange={uploadImages} />
+                  <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadImages} />
                 </label>
                 <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }} title="ถ่ายภาพด้วยกล้อง">
                   <FontAwesomeIcon icon={faCamera} />
                   {' ถ่ายภาพ'}
-                  <input type="file" accept="image/*" capture="environment" hidden onChange={uploadImages} />
+                  <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" capture="environment" hidden onChange={uploadImages} />
                 </label>
               </div>
               {form.images.length > 0 && (
@@ -366,7 +367,7 @@ export default function AdminShopNew({ mode, seedId }) {
             ตั้งส่วนลดไว้เป็นชิป แล้วเลือกใช้ได้ทันทีในคอลัมน์ "ราคาส่วนลด" ของแต่ละสินค้า
           </p>
 
-          {promoLoading ? <p style={{ fontSize: '.85rem', color: 'var(--ink-soft)' }}>กำลังโหลด...</p> : (
+          {promoLoading ? <ListSkeleton rows={2} /> : (
             promotions.length > 0 && (
               <div className="promo-list">
                 <div className="promo-list-head">โปรโมชั่นทั้งหมด ({promotions.length})</div>

@@ -1,15 +1,19 @@
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { useOrder, uploadPaymentProof, declarePayment } from '../data/orders.js'
+import { useOrder, uploadPaymentProof, declarePayment, normOrderStatus, STATUS_LABEL, STATUS_HINT } from '../data/orders.js'
 import { notifyAdminPaymentDeclared } from '../utils/lineNotify.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import { ACCOUNTS } from '../data/accounts.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
-import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl } from '../components/OrderShared.jsx'
+import ShopAlert from '../components/ShopAlert.jsx'
+import { THB, Stepper, UploadButton, OrderItemsCard, CustomerInfoCard, trackingUrl, courierLabel } from '../components/OrderShared.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faCartShopping, faCheck, faCamera, faCopy, faLocationDot, faComments } from '@fortawesome/free-solid-svg-icons'
 import { optImg } from '../utils/cloudinaryUrl.js'
+
+// เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — เหมือนหน้าอื่นๆ ในร้าน
+const openChat = () => window.dispatchEvent(new Event('ummatee-open-chat'))
 
 // หน้าติดตามคำสั่งซื้อสำหรับลูกค้า (/um-shop/order/:orderId) — ดูสถานะ + อัพหลักฐานการโอนเท่านั้น
 // การจัดการฝั่งแอดมิน (ยืนยันชำระเงิน/แพ็คของ/อัปเดตจัดส่ง) ย้ายไปหน้า /admin/shop/orders/:id แล้ว
@@ -70,6 +74,8 @@ export default function ShopOrderStatus({ orderId }) {
   const [uploadingProof, setUploadingProof] = useState(false)
   const [declaring, setDeclaring] = useState(false)
   const [actionStatus, setActionStatus] = useState('')
+  // ปุ่มคัดลอกเลขพัสดุ — ลูกค้าส่วนใหญ่เอาเลขไปวางในแอปขนส่ง/ไลน์ พิมพ์ตามเองผิดง่าย
+  const [copiedTracking, setCopiedTracking] = useState(false)
 
   if (loading) return null
 
@@ -85,6 +91,16 @@ export default function ShopOrderStatus({ orderId }) {
         <Footer />
       </main>
     )
+  }
+
+  const copyTracking = async () => {
+    const code = order?.trackingNumber || ''
+    if (!code) return
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedTracking(true)
+      setTimeout(() => setCopiedTracking(false), 2000)
+    } catch { setActionStatus('คัดลอกไม่สำเร็จ — กรุณาจดเลขพัสดุเอง') }
   }
 
   const handleProofUpload = async (e) => {
@@ -113,7 +129,11 @@ export default function ShopOrderStatus({ orderId }) {
   }
 
   return (
-    <main className="page">
+    <>
+    {/* ข้อผิดพลาด (อัพโหลดสลิป / แจ้งชำระเงิน) ขึ้นเป็นกล่องกลางจอ — ปุ่ม "ยืนยันการชำระเงิน"
+        อยู่ในแถบล่างที่ลอยติดจอ แต่แถบข้อความเดิมอยู่บนสุดของหน้า ผู้ใช้กดแล้วไม่เห็นว่าพลาดอะไร */}
+    <ShopAlert message={actionStatus} title="แจ้งเตือน" onClose={() => setActionStatus('')} />
+    <main className={`page${order.status === 'pending_payment' ? ' shop-checkout-page' : ''}`}>
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
@@ -140,11 +160,13 @@ export default function ShopOrderStatus({ orderId }) {
 
           <Stepper status={order.status} />
 
-          {actionStatus && (
-            <div style={{ background: '#fef2f2', color: '#dc2626', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: '.88rem' }}>
-              {actionStatus}
-            </div>
-          )}
+          {/* บอกด้วยคำพูดว่าสถานะตอนนี้แปลว่าอะไรและต้องทำอะไรต่อ — แถบขั้นตอนบอกได้แค่ว่าอยู่ขั้นไหน
+              ลูกค้าที่ไม่คุ้นกับขั้นตอนสั่งของออนไลน์มักไม่รู้ว่า "เตรียมจัดส่ง" ต่างจาก "ส่งมอบขนส่งแล้ว" อย่างไร */}
+          <div className="order-status-hint">
+            <div className="order-status-hint-title">{STATUS_LABEL[normOrderStatus(order.status)] || order.status}</div>
+            <p>{STATUS_HINT[normOrderStatus(order.status)]}</p>
+          </div>
+
 
           {/* QR โค้ด + คำเตือนให้แคปหน้าจอเก็บไว้ — ลิงก์นี้เป็นทางเดียวที่ลูกค้ากลับมาติดตามสถานะภายหลังได้ */}
           <div className="admin-card" style={{ marginBottom: 20, textAlign: 'center' }}>
@@ -163,7 +185,7 @@ export default function ShopOrderStatus({ orderId }) {
 
           {/* ── สถานะที่ 1: รอการชำระเงิน ── */}
           {order.status === 'pending_payment' && (
-            <div className="admin-card" style={{ marginBottom: 20 }}>
+            <div className="admin-card" style={{ marginBottom: 20 }} id="payment-section">
               <h4>การชำระเงิน</h4>
               {!order.paymentProofUrl && <PaymentAccountBox amount={order.total} />}
               {order.paymentProofUrl ? (
@@ -175,21 +197,10 @@ export default function ShopOrderStatus({ orderId }) {
                 <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem' }}>โอนเงินตามยอดด้านบน แล้วอัพโหลดหลักฐานการโอนด้านล่าง</p>
               )}
               <UploadButton label="อัพโหลดหลักฐานการชำระเงิน" uploading={uploadingProof} onFiles={handleProofUpload} />
-<br/> 
-              {order.paymentDeclaredAt ? (
+              {order.paymentDeclaredAt && (
                 <p style={{ color: '#15803d', fontSize: '.88rem', marginTop: 12 }}>
                   <FontAwesomeIcon icon={faCheck} /> แจ้งชำระเงินแล้วเมื่อ {order.paymentDeclaredAt} — รอทีมงานยืนยัน
                 </p>
-              ) : (
-                <button
-                  type="button"
-                  className="shop-addcart-btn"
-                  style={{ marginTop: 12 }}
-                  onClick={handleDeclarePayment}
-                  disabled={!order.paymentProofUrl || declaring}
-                >
-                  {declaring ? 'กำลังส่ง...' : 'ชำระเงิน'}
-                </button>
               )}
             </div>
           )}
@@ -202,53 +213,41 @@ export default function ShopOrderStatus({ orderId }) {
             </div>
           )}
 
-          {/* ── สถานะที่ 3: กำลังจัดส่ง ── */}
-          {order.status === 'shipping' && (
+          {/* ── สถานะที่ 3: จัดส่งแล้ว (ขั้นสุดท้าย) ──
+              เลขพัสดุ + ปุ่มไปเว็บขนส่งอยู่บนสุดและเด่นที่สุด เพราะเป็นสิ่งเดียวที่ลูกค้าเปิดหน้านี้มาหา
+              สถานะละเอียด (ถึงไหนแล้ว/ส่งสำเร็จหรือยัง) ดูที่เว็บขนส่ง ร้านไม่รู้ข้อมูลนั้นเอง */}
+          {normOrderStatus(order.status) === 'shipped' && (
             <div className="admin-card" style={{ marginBottom: 20 }}>
-              <h4>กำลังจัดส่ง</h4>
-              {order.trackingNumber && (
-                <p style={{ fontSize: '.95rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
-                    <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
-                  </a>
-                </p>
-              )}
-              {order.packedImages?.length > 0 && (
-                <div className="admin-media-preview" style={{ marginBottom: 14 }}>
-                  {order.packedImages.map((url, i) => (
-                    <div key={i} className="admin-media-thumb"><img src={url} alt="สินค้าที่แพ็ค" /></div>
-                  ))}
-                </div>
-              )}
-              {order.shippingUpdates?.length > 0 ? (
-                <div>
-                  {[...order.shippingUpdates].reverse().map((u, i) => (
-                    <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0', fontSize: '.9rem' }}>
-                      <div>{u.text}</div>
-                      <div style={{ color: 'var(--ink-soft)', fontSize: '.78rem' }}>{u.at}</div>
-                    </div>
-                  ))}
+              <h4>{STATUS_LABEL.shipped}</h4>
+              {order.trackingNumber ? (
+                <div className="order-track-box">
+                  <div className="order-track-courier">{courierLabel(order.courier)}</div>
+                  <div className="order-track-code">{order.trackingNumber}</div>
+                  <div className="order-track-actions">
+                    <a className="order-track-btn" href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
+                      <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุที่เว็บขนส่ง
+                    </a>
+                    <button type="button" className="order-track-copy" onClick={copyTracking}>
+                      <FontAwesomeIcon icon={copiedTracking ? faCheck : faCopy} /> {copiedTracking ? 'คัดลอกแล้ว' : 'คัดลอกเลขพัสดุ'}
+                    </button>
+                  </div>
+                  <p className="order-track-note">กดปุ่มด้านบนเพื่อดูว่าพัสดุถึงไหนแล้วจากเว็บของขนส่งโดยตรง</p>
                 </div>
               ) : (
-                <p style={{ color: 'var(--ink-soft)' }}>พัสดุของคุณกำลังจัดส่ง</p>
+                <p style={{ color: 'var(--ink-soft)' }}>ร้านส่งพัสดุแล้ว — จะแจ้งเลขพัสดุให้เร็วๆ นี้</p>
               )}
-            </div>
-          )}
 
-          {/* ── สถานะที่ 4: จัดส่งเรียบร้อย (ขั้นสุดท้าย) ── */}
-          {order.status === 'delivered' && (
-            <div className="admin-card" style={{ marginBottom: 20 }}>
-              <h4>จัดส่งเรียบร้อยแล้ว</h4>
-              <p style={{ color: '#15803d' }}><FontAwesomeIcon icon={faCheck} /> ได้รับสินค้าเมื่อ {order.deliveredAt}</p>
-              {order.trackingNumber && (
-                <p style={{ fontSize: '.9rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span><strong>เลขพัสดุ:</strong> {order.trackingNumber}</span>
-                  <a className="admin-btn" style={{ fontSize: '.78rem', padding: '3px 10px' }} href={trackingUrl(order.trackingNumber, order.courier)} target="_blank" rel="noopener noreferrer">
-                    <FontAwesomeIcon icon={faLocationDot} /> ติดตามพัสดุ
-                  </a>
-                </p>
+              {order.packedImages?.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปสินค้าที่แพ็ค</p>
+                  <div className="admin-media-preview">
+                    {order.packedImages.map((url, i) => (
+                      <div key={i} className="admin-media-thumb"><img src={optImg(url, 220)} alt="สินค้าที่แพ็ค" /></div>
+                    ))}
+                  </div>
+                </div>
               )}
+
               {order.deliveredImages?.length > 0 && (
                 <div style={{ marginTop: 14 }}>
                   <p style={{ fontSize: '.85rem', fontWeight: 700, color: 'var(--ink-soft)', marginBottom: 8 }}>รูปหลังส่งพัสดุแล้ว</p>
@@ -259,12 +258,52 @@ export default function ShopOrderStatus({ orderId }) {
                   </div>
                 </div>
               )}
-              <p style={{ color: 'var(--ink-soft)', marginTop: 12 }}>ขอบคุณที่อุดหนุนสินค้าของมูลนิธิอุมมะตี 🤍</p>
+
+              {order.shippingUpdates?.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  {[...order.shippingUpdates].reverse().map((u, i) => (
+                    <div key={i} style={{ padding: '8px 0', borderBottom: '1px solid #f0f0f0', fontSize: '.9rem' }}>
+                      <div>{u.text}</div>
+                      <div style={{ color: 'var(--ink-soft)', fontSize: '.78rem' }}>{u.at}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       </section>
       <Footer />
     </main>
+
+    {/* แถบลอยติดขอบล่างจอ (แชท / ชำระเงิน) — โชว์เฉพาะตอนยังรอชำระเงินและยังไม่เคยแจ้งชำระ
+        สถานะอื่น (global ChatWidget fab ถูกซ่อนไว้ทั้งหน้านี้ใน App.jsx) เหลือปุ่มแชทกลมลอยธรรมดาแทน กันไม่มีทางเข้าแชทเลย */}
+    {order.status === 'pending_payment' && !order.paymentDeclaredAt ? (
+      <div className="shop-detail-bar shop-checkout-bar">
+        <button type="button" onClick={openChat} className="shop-detail-bar-line" aria-label="แชท">
+          <FontAwesomeIcon icon={faComments} />
+          <span>แชท</span>
+        </button>
+        <div className="shop-detail-bar-price">
+          <span className="cart-bar-total-label">ยอดที่ต้องโอน</span>
+          <span className="shop-detail-bar-price-now">{THB(order.total)}</span>
+        </div>
+        <button
+          type="button"
+          className="shop-detail-bar-cart"
+          onClick={order.paymentProofUrl
+            ? handleDeclarePayment
+            : () => document.getElementById('payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          disabled={declaring}
+        >
+          {declaring ? 'กำลังส่ง...' : order.paymentProofUrl ? 'ยืนยันการชำระเงิน' : 'ชำระเงิน'}
+        </button>
+      </div>
+    ) : (
+      <button className="chat-fab" onClick={openChat} aria-label="แชทกับแอดมิน">
+        <FontAwesomeIcon icon={faComments} />
+      </button>
+    )}
+    </>
   )
 }

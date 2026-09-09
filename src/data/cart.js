@@ -87,6 +87,23 @@ export function clearCart() {
   saveCart([])
 }
 
+// อัปเดตราคาในตะกร้าให้ตรงกับราคาจริงล่าสุด — ใช้ตอน createOrder เจอว่าราคาที่ตะกร้าจับไว้ไม่ตรงกับ Firestore
+// (ตะกร้าอยู่ localStorage จับราคาไว้ตอนกดใส่ตะกร้า ถ้าแอดมินแก้ราคา/โปรฯ ทีหลังจะค้างราคาเก่า)
+// รับ [{ id, price }] แล้วเขียนทับเฉพาะรายการที่ราคาเปลี่ยน คืน true ถ้ามีการเปลี่ยนจริง
+export function updateCartPrices(priced) {
+  const items = getCart()
+  let changed = false
+  for (const it of items) {
+    const found = priced.find((p) => p.id === it.id)
+    if (found && Number(found.price) !== Number(it.price)) {
+      it.price = found.price
+      changed = true
+    }
+  }
+  if (changed) saveCart(items)
+  return changed
+}
+
 export function useCart() {
   const [items, setItems] = useState(getCart())
   useEffect(() => {

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin, isVolunteerEmail } from '../useAdminRole.js'
 import { db } from '../firebase.js'
 import { collection, getDocs, orderBy, query, deleteDoc, doc, updateDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPhone, faGift, faLaptop, faUtensils, faBoxOpen, faQrcode, faArrowRight, faTrash, faTriangleExclamation, faEnvelope, faCheckCircle, faTruck, faHandshake } from '@fortawesome/free-solid-svg-icons'
 import { QRCodeSVG } from 'qrcode.react'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 function ConfirmDelete({ item, onConfirm, onCancel }) {
   return (
@@ -124,9 +125,12 @@ function DonorCard({ item, onDelete }) {
               <FontAwesomeIcon icon={faQrcode} />
             </button>
             {showQr && <div><QRCodeSVG value={item.refCode || item.id} size={80} level="M" /></div>}
-            <button onClick={() => setConfirmDelete(true)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', marginTop: 4 }} title="ลบข้อมูล">
-              <FontAwesomeIcon icon={faTrash} />
-            </button>
+            {/* onDelete = null เมื่อบัญชีไม่มีสิทธิ์ลบ (บัญชี volunteer) — ไม่โชว์ปุ่มที่กดแล้วต้องเจอ permission error */}
+            {onDelete && (
+              <button onClick={() => setConfirmDelete(true)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '1rem', marginTop: 4 }} title="ลบข้อมูล">
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
+            )}
           </div>
         </div>
         {item.imageUrls?.length > 0 && (
@@ -151,7 +155,9 @@ function DonorCard({ item, onDelete }) {
 }
 
 export default function AdminGive() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
+  // ปุ่มลบโชว์เฉพาะแอดมินตัวจริง (ดู handleDelete + firestore.rules give2Regs/give2CookRegs)
+  const canDelete = !isVolunteerEmail(user?.email || '')
   const [comItems, setComItems] = useState([])
   const [cookItems, setCookItems] = useState([])
   const [tab, setTab] = useState('all')
@@ -171,9 +177,17 @@ export default function AdminGive() {
       .catch(() => {}).finally(finish)
   }, [user])
 
+  // ลบเอกสารผู้บริจาคเป็นการทำลายข้อมูลถาวร firestore.rules จำกัดไว้ที่ isFullAdmin() เท่านั้น
+  // (บัญชี volunteer แชร์กันหลายคน อยู่นอกขอบเขตหน้าที่) — ต้อง catch ด้วย ไม่งั้น permission error
+  // จะเงียบหายเป็น unhandled rejection ผู้ใช้กดแล้วไม่มีอะไรเกิดขึ้นโดยไม่รู้สาเหตุ
   const handleDelete = async (item) => {
     const colName = item._source === 'cook' ? 'give2CookRegs' : 'give2Regs'
-    await deleteDoc(doc(db, colName, item.id))
+    try {
+      await deleteDoc(doc(db, colName, item.id))
+    } catch (e) {
+      window.alert('ลบไม่สำเร็จ: บัญชีนี้ไม่มีสิทธิ์ลบข้อมูลผู้บริจาค กรุณาแจ้งแอดมินตัวจริง')
+      return
+    }
     if (item._source === 'cook') setCookItems(prev => prev.filter(i => i.id !== item.id))
     else setComItems(prev => prev.filter(i => i.id !== item.id))
   }
@@ -218,12 +232,12 @@ export default function AdminGive() {
         </div>
 
         {fetching ? (
-          <p style={{ color: 'var(--ink-soft)', textAlign: 'center', padding: '40px 0' }}>กำลังโหลด...</p>
+          <ListSkeleton />
         ) : displayed.length === 0 ? (
           <p style={{ color: 'var(--ink-soft)', textAlign: 'center', padding: '40px 0' }}>ยังไม่มีข้อมูล</p>
         ) : (
           <div className="give-admin-grid">
-            {displayed.map((item) => <DonorCard key={item.id} item={item} onDelete={handleDelete} />)}
+            {displayed.map((item) => <DonorCard key={item.id} item={item} onDelete={canDelete ? handleDelete : null} />)}
           </div>
         )}
       </div>

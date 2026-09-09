@@ -2,11 +2,14 @@ import { useCart, setItemQty, removeFromCart } from '../data/cart.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMinus, faPlus, faTrash, faCartShopping, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { faMinus, faPlus, faTrash, faCartShopping, faArrowLeft, faComments } from '@fortawesome/free-solid-svg-icons'
 
 // หน้าตะกร้าสินค้า (/um-shop/cart) — แสดงรายการที่เพิ่มไว้ ปรับจำนวน/ลบได้ พร้อมราคารวม แล้วไปหน้ายืนยันการสั่งซื้อ
 import { optImg } from '../utils/cloudinaryUrl.js'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
+
+// เปิดวิดเจ็ตแชทหน้าเว็บ (ChatWidget.jsx mount อยู่ที่ App.jsx) ผ่าน custom event — เหมือนปุ่มแชทหน้ารายละเอียดสินค้า
+const openChat = () => window.dispatchEvent(new Event('ummatee-open-chat'))
 
 export default function ShopCart() {
   const items = useCart()
@@ -15,7 +18,8 @@ export default function ShopCart() {
   const total = items.reduce((s, i) => s + i.price * i.qty, 0)
 
   return (
-    <main className="page">
+    <>
+    <main className="page shop-cart-page">
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
@@ -65,21 +69,30 @@ export default function ShopCart() {
                   </div>
                 ))}
               </div>
-
-              <div className="cart-summary">
-                <div className="cart-summary-row cart-summary-total">
-                  <span>ราคารวม</span>
-                  <span>{THB(total)}</span>
-                </div>
-                <button type="button" className="shop-addcart-btn" style={{ width: '100%' }} onClick={() => go('shop-checkout')}>
-                  ทำการสั่งซื้อ
-                </button>
-              </div>
             </div>
           )}
         </div>
       </section>
       <Footer />
     </main>
+
+    {/* แถบราคารวม/สั่งซื้อลอยติดขอบล่างจอ (แชท / ราคารวม / สั่งซื้อ) — เหมือนแถบล่างหน้ารายละเอียดสินค้า
+        อยู่นอก <main className="page"> โดยตั้งใจเหมือนกัน กัน .page transform ค้างทำให้ position:fixed เพี้ยน */}
+    {items.length > 0 && (
+      <div className="shop-detail-bar shop-cart-bar">
+        <button type="button" onClick={openChat} className="shop-detail-bar-line" aria-label="แชท">
+          <FontAwesomeIcon icon={faComments} />
+          <span>แชท</span>
+        </button>
+        <div className="shop-detail-bar-price">
+          <span className="cart-bar-total-label">ราคารวม</span>
+          <span className="shop-detail-bar-price-now">{THB(total)}</span>
+        </div>
+        <button type="button" className="shop-detail-bar-cart" onClick={() => go('shop-checkout')}>
+          ทำการสั่งซื้อ
+        </button>
+      </div>
+    )}
+    </>
   )
 }

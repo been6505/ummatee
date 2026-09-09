@@ -6,6 +6,7 @@ import Footer from '../components/Footer.jsx'
 import { useLang } from '../i18n.jsx'
 import { useNavigate } from '../navContext'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
+import useParallax from '../hooks/useParallax.js'
 import { ACCOUNTS } from '../data/accounts'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCopy, faCheck, faArrowRight, faPlay, faChevronLeft, faChevronRight, faClock } from '@fortawesome/free-solid-svg-icons'
@@ -124,6 +125,7 @@ export default function Missions() {
   const { lang } = useLang()
   const go = useNavigate()
   const t = T[lang]
+  const heroParallaxRef = useParallax(0.15)
   const [mediaMap, setMediaMap] = useState({})
 
   useEffect(() => {
@@ -140,7 +142,7 @@ export default function Missions() {
   return (
     <main className="page missions-page">
       <section className="page-band">
-        <div className="fc-pattern hero-pattern"></div>
+        <div className="fc-pattern hero-pattern" ref={heroParallaxRef}></div>
         <div className="inner">
           <span className="badge">{t.eyebrow}</span>
           <h1>{t.h1}</h1>

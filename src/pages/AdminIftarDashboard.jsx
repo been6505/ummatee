@@ -3,10 +3,11 @@ import { db } from '../firebase.js'
 import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { Chart, ChartTypeSwitch, PALETTE, legendColors } from '../components/AdminCharts.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faChartBar, faLock, faLockOpen } from '@fortawesome/free-solid-svg-icons'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 
 // แดชบอร์ด admin ของงาน Iftar For Gaza (/admin/event/iftar2026)
 // ดึงรายชื่อผู้ลงทะเบียนจาก Firestore (admin ล็อกอินแล้วอ่านได้ตาม rules) แล้วสรุปเป็นกราฟ + ตาราง
@@ -88,7 +89,7 @@ const FILTER_FIELDS = [
 ]
 
 export default function AdminIftarDashboard() {
-  const { user, loading: authLoading } = useAdminAuth()
+  const { user, loading: authLoading } = useAllowlistedAdmin()
   const authed = !!user
   const [regs, setRegs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -250,7 +251,7 @@ export default function AdminIftarDashboard() {
         </div>
 
         {loading ? (
-          <p style={{ textAlign: 'center', padding: 40 }}>กำลังโหลดข้อมูล...</p>
+          <ListSkeleton />
         ) : (
           <>
             <div className="admin-grid-3">

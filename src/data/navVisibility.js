@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
-import { db } from '../firebase.js'
-import { doc, onSnapshot, setDoc } from 'firebase/firestore'
+import { useConfigDoc, saveConfigDoc } from './configDoc.js'
 
 // เปิด/ปิดรายการเมนูของ Nav ฝั่ง public — เก็บ doc เดียวที่ config/navVisibility
 // (อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน ตาม firestore.rules เดิม — เหมือน config/announcement)
@@ -8,8 +6,9 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore'
 export const NAV_MENU_ITEMS = [
   { key: 'donation', label: 'ร่วมบริจาค', path: '/donation' },
   { key: 'missions', label: 'ภารกิจ', path: '/missions' },
+  { key: 'updates', label: 'ความคืบหน้า', path: '/updates' },
   { key: 'qurban', label: 'ภารกิจกุรบาน', path: '/missions/qurban2026' },
-  { key: 'shop', label: 'Um Shop', path: '/um-shop' },
+  { key: 'shop', label: 'um-shop', path: '/um-shop' },
   { key: 'iftar', label: 'Iftar For Gaza', path: '/event/iftar-for-gaza' },
   { key: 'give', label: 'งาน "ให้"', path: '/event/give-for-um' },
   { key: 'volunteer', label: 'อาสาสมัคร', path: '/volunteer/register' },
@@ -30,19 +29,9 @@ export const navKeyForPath = (link) => {
 }
 
 export function useNavVisibility() {
-  const [visibility, setVisibility] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, 'config', 'navVisibility'),
-      (snap) => { setVisibility(snap.exists() ? snap.data() : {}); setLoading(false) },
-      () => setLoading(false)
-    )
-    return unsub
-  }, [])
-
-  return { visibility, loading }
+  // ยังไม่มีเอกสาร = ยังไม่เคยปิดเมนูไหนเลย ⇒ {} ว่าง (ผู้เรียกเช็ค visibility?.[key] !== false)
+  const { data, loading } = useConfigDoc('navVisibility')
+  return { visibility: data || {}, loading }
 }
 
-export const saveNavVisibility = (data) => setDoc(doc(db, 'config', 'navVisibility'), data, { merge: true })
+export const saveNavVisibility = (data) => saveConfigDoc('navVisibility', data)

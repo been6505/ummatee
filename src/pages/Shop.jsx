@@ -16,7 +16,7 @@ const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH') // ฟัง�
 
 const T = { // อ็อบเจกต์เก็บข้อความแปลภาษา แยกตามภาษา (th/en/ar)
   th: { // ข้อความภาษาไทย
-    badge: 'Um Shop', // ป้าย badge บนหัวหน้า
+    badge: 'um-shop', // ป้าย badge บนหัวหน้า
     h1: 'สินค้าจากมูลนิธิอุมมะตี', // หัวข้อใหญ่
     p: 'เลือกซื้อสินค้าเพื่อสนับสนุนภารกิจของมูลนิธิ — รายได้นำไปช่วยเหลือผู้ยากไร้', // คำบรรยายใต้หัวข้อ
     searchPh: 'ค้นหา', // placeholder ของช่องค้นหา
@@ -26,7 +26,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     empty: 'ยังไม่มีสินค้าในขณะนี้', // ข้อความตอนไม่มีสินค้า
   },
   en: { // ข้อความภาษาอังกฤษ
-    badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
+    badge: '🛍️ um-shop', // ป้าย badge บนหัวหน้า
     h1: 'Ummatee Foundation Products', // หัวข้อใหญ่
     p: 'Shop to support the foundation\'s mission — proceeds help those in need', // คำบรรยายใต้หัวข้อ
     searchPh: 'Search products...', // placeholder ของช่องค้นหา
@@ -36,7 +36,7 @@ const T = { // อ็อบเจกต์เก็บข้อความแ�
     empty: 'No products available yet', // ข้อความตอนไม่มีสินค้า
   },
   ar: { // ข้อความภาษาอาหรับ
-    badge: '🛍️ Um Shop', // ป้าย badge บนหัวหน้า
+    badge: '🛍️ um-shop', // ป้าย badge บนหัวหน้า
     h1: 'منتجات مؤسسة أمّتي', // หัวข้อใหญ่
     p: 'تسوّق لدعم مهمة المؤسسة — تذهب العائدات لمساعدة المحتاجين', // คำบรรยายใต้หัวข้อ
     searchPh: 'البحث عن المنتجات...', // placeholder ของช่องค้นหา
@@ -68,6 +68,19 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
   const { primary, variants, totalStock, totalSold, minPrice, maxPrice, anyDiscount } = g
   const img = variants.find((v) => v.images?.length)?.images?.[0] // ใช้รูปแรกที่เจอในกลุ่ม (เผื่อ variant แรกสุดยังไม่อัพรูป)
   const multiVariant = variants.length > 1
+
+  // มีหลายตัวเลือก (เช่น แขนสั้น/แขนยาว) แต่ละตัวรูปไม่เหมือนกัน — สลับโชว์รูปทีละตัวเลือกแบบ fade
+  // ให้ลูกค้าเห็นครบทุกตัวเลือกจากในตะแกรงสินค้าเลย ไม่ต้องกดเข้าไปดูทีละอัน
+  const cardImages = useMemo(
+    () => [...new Set(variants.map((v) => v.images?.[0]).filter(Boolean))],
+    [variants]
+  )
+  const [imgIndex, setImgIndex] = useState(0)
+  useEffect(() => {
+    if (cardImages.length < 2) return
+    const id = setInterval(() => setImgIndex((i) => (i + 1) % cardImages.length), 2800)
+    return () => clearInterval(id)
+  }, [cardImages.length])
 
   const share = async (e) => { // ฟังก์ชันแชร์สินค้า เมื่อกดปุ่มแชร์บนการ์ด — แนบทั้งรูปสินค้าและลิงก์ไปด้วยกัน
     e.stopPropagation() // กันไม่ให้ event ลอยไปกระตุ้น onClick ของการ์ด (ซึ่งจะเปิดหน้ารายละเอียด)
@@ -119,9 +132,22 @@ export function ProductCard({ g, t, onOpen }) { // การ์ดสินค�
   })
 
   return ( // ส่วนแสดงผลของการ์ดสินค้า
-    <FadeUp className="shop-card" id={primary.id} onClick={() => onOpen(primary)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
+    // เปิดด้วย cheapestVariant (ไม่ใช่ primary) — การ์ดโชว์ราคาต่ำสุดของกลุ่ม (minPrice) กดเข้าไปต้องเจอตัวเลือกที่ตรงกับราคานั้นเป๊ะ
+    // ไม่งั้นลูกค้าจะเจอราคาอื่น (เช่น การ์ดโชว์ ฿225 ของแขนสั้น แต่กดเข้าไปดันเปิดแขนยาว ฿270 แทน)
+    <FadeUp className="shop-card" id={primary.id} onClick={() => onOpen(cheapestVariant)} role="button" tabIndex={0}> {/* การ์ดทั้งใบคลิกได้ — เรียก onOpen เพื่อเปิดรายละเอียดสินค้านี้ */}
       <div className="shop-img"> {/* ส่วนแสดงรูปภาพของการ์ด */}
-        {img ? <img src={optImg(img, 500)} alt={primary.name} loading="lazy" /> : <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
+        {cardImages.length > 1 ? ( // หลายตัวเลือก หลายรูป — ซ้อนรูปทั้งหมดไว้ สลับ opacity ทีละใบแบบ fade
+          cardImages.map((src, i) => (
+            <img
+              key={src} src={optImg(src, 500)} alt={primary.name} loading="lazy"
+              className={`shop-img-fade${i === imgIndex ? ' active' : ''}`}
+            />
+          ))
+        ) : img ? (
+          <img src={optImg(img, 500)} alt={primary.name} loading="lazy" />
+        ) : (
+          <div className="shop-img-ph"><FontAwesomeIcon icon={faBagShopping} /></div>
+        )} {/* แสดงรูปจริงถ้ามี ไม่มีก็แสดงไอคอนแทน */}
         {outOfStock && <span className="shop-badge-out">{t.out}</span>} {/* ป้าย "สินค้าหมด" แสดงเมื่อทุก variant หมด */}
         {!outOfStock && anyDiscount && <span className="shop-badge-discount">-{maxDiscountPercent}%</span>} {/* ป้ายเปอร์เซ็นต์ส่วนลดสูงสุดในกลุ่ม */}
         {multiVariant && <span className="shop-badge-variants">{variants.length} ตัวเลือก</span>} {/* บอกว่ามีให้เลือกหลายสี/ขนาด */}
@@ -244,6 +270,8 @@ export default function Shop() { // คอมโพเนนต์หลัก�
             <button type="button" className="shop-myorders-btn" onClick={() => go('shop-my-orders')}>
               📦 คำสั่งซื้อของฉัน
             </button>
+            {/* ศูนย์บริการ — รีวิว/แจ้งปัญหา/ติดตาม อยู่รวมกันที่เดียว ลูกค้าจะได้ไม่ต้องหาว่าติดต่อยังไง */}
+            <a className="shop-myorders-btn" href="/um-shop/support">💬 รีวิว / แจ้งปัญหา</a>
           </div>
 
           {!loading && filtered.length === 0 && ( // ถ้าโหลดเสร็จแล้วและไม่มีสินค้าที่ตรงตามเงื่อนไข ให้แสดงข้อความว่างเปล่า

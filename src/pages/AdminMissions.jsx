@@ -4,7 +4,7 @@ import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase.js'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { MISSIONS } from '../data/missions.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faImage, faXmark, faSpinner, faVideo } from '@fortawesome/free-solid-svg-icons'
@@ -17,7 +17,7 @@ import { uploadToCloudinary } from '../utils/cloudinary.js'
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
 export default function AdminMissions() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const [mediaMap, setMediaMap] = useState({})
   const [uploading, setUploading] = useState('')
   const [status, setStatus] = useState('')
@@ -106,7 +106,7 @@ export default function AdminMissions() {
                 <label className="admin-upload-btn" style={{ marginTop: 14, opacity: uploading === m.key ? .6 : 1, pointerEvents: uploading === m.key ? 'none' : 'auto' }}>
                   <FontAwesomeIcon icon={uploading === m.key ? faSpinner : faImage} spin={uploading === m.key} />
                   {uploading === m.key ? ' กำลังอัพโหลด...' : ' เพิ่มรูป / วิดีโอ'}
-                  <input type="file" accept="image/*,video/*" multiple hidden onChange={(e) => upload(m.key, e)} />
+                  <input type="file" accept="image/*,video/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={(e) => upload(m.key, e)} />
                 </label>
               </div>
             )

@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCheck, faSpinner, faImage, faCartShopping, faCamera } from '@fortawesome/free-solid-svg-icons'
-import { STATUS_STEPS, STATUS_LABEL, stepIndex } from '../data/orders.js'
+import { STATUS_STEPS, STATUS_LABEL_SHORT, stepIndex } from '../data/orders.js'
 
 // ชิ้นส่วน UI ที่ใช้ร่วมกันระหว่างหน้าติดตามคำสั่งซื้อของลูกค้า (ShopOrderStatus)
 // และหน้าจัดการคำสั่งซื้อของแอดมิน (AdminShopOrderDetail)
@@ -11,13 +11,20 @@ export const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 // รายชื่อขนส่งที่ใช้บ่อยในไทย — ลิงก์ตรงไปหน้าติดตามของแต่ละเจ้า (แม่นยำกว่าเดาจากรูปแบบเลขพัสดุ)
 export const COURIERS = [
   { key: 'thailandpost', label: 'ไปรษณีย์ไทย (EMS/ลงทะเบียน)', url: (code) => `https://track.thailandpost.co.th/?trackNumber=${encodeURIComponent(code)}` },
-  { key: 'kerry', label: 'Kerry Express', url: (code) => `https://th.kerryexpress.com/th/track/?track=${encodeURIComponent(code)}` },
+  // โดเมนเก่า th.kerryexpress.com เลิกใช้แล้ว (DNS ไม่ resolve เลย — ตรวจแล้วว่าไม่ได้แค่ redirect)
+  // ย้ายมาที่ th.kex-express.com พารามิเตอร์ ?track= ยังใช้แบบเดิม ตรวจแล้วว่าเติมเลขพัสดุลงช่องค้นหาอัตโนมัติจริง
+  { key: 'kerry', label: 'KEX', url: (code) => `https://th.kex-express.com/th/track/?track=${encodeURIComponent(code)}` },
   { key: 'flash', label: 'Flash Express', url: (code) => `https://www.flashexpress.com/tracking/?se=${encodeURIComponent(code)}` },
   { key: 'jt', label: 'J&T Express', url: (code) => `https://www.jtexpress.co.th/index/query/gzquery.html?bills=${encodeURIComponent(code)}` },
   { key: 'ninjavan', label: 'Ninja Van', url: (code) => `https://www.ninjavan.co/th-th/tracking?id=${encodeURIComponent(code)}` },
+  { key: 'spx', label: 'SPX Express (Shopee)', url: (code) => `https://spx.co.th/th/track?${new URLSearchParams({ sls_tracking_number: code })}` },
 ]
 
 // ลิงก์ติดตามพัสดุ — ถ้ารู้ขนส่งให้ไปหน้าติดตามของเจ้านั้นตรงๆ ถ้าไม่รู้ (ออเดอร์เก่าก่อนมีช่องเลือกขนส่ง) fallback ไป 17TRACK ที่เดาขนส่งจากรูปแบบเลขพัสดุ
+/** ชื่อขนส่งสำหรับแสดงผล — ไม่รู้ว่าเจ้าไหนก็บอกกลางๆ ดีกว่าโชว์คีย์ดิบหรือช่องว่าง */
+export const courierLabel = (courierKey) =>
+  (COURIERS.find((c) => c.key === courierKey) || {}).label || 'พัสดุของคุณ'
+
 export const trackingUrl = (code, courierKey) => {
   const trimmed = code.trim()
   const courier = COURIERS.find((c) => c.key === courierKey)
@@ -25,7 +32,7 @@ export const trackingUrl = (code, courierKey) => {
   return `https://t.17track.net/en#nums=${encodeURIComponent(trimmed)}`
 }
 
-const STEP_ICONS = ['1', '2', '3', '4']
+const STEP_ICONS = ['1', '2', '3']
 
 export function Stepper({ status }) {
   const idx = stepIndex(status)
@@ -34,7 +41,7 @@ export function Stepper({ status }) {
       {STATUS_STEPS.map((s, i) => (
         <div key={s} className={`order-step ${i <= idx ? 'done' : ''} ${i === idx ? 'active' : ''}`}>
           <div className="order-step-dot">{i < idx ? <FontAwesomeIcon icon={faCheck} /> : STEP_ICONS[i]}</div>
-          <div className="order-step-label">{STATUS_LABEL[s]}</div>
+          <div className="order-step-label">{STATUS_LABEL_SHORT[s]}</div>
         </div>
       ))}
     </div>
@@ -42,18 +49,19 @@ export function Stepper({ status }) {
 }
 
 // ปุ่มอัพโหลดรูป — มี 2 ตัวเลือก: เลือกจากคลังรูปภาพ / ถ่ายภาพด้วยกล้องโดยตรง (capture="environment" เปิดกล้องหลังทันทีบนมือถือ)
+// จัดเป็น grid 2 คอลัมน์แถวเดียวเสมอ (ไม่ใช้ flex-wrap ที่จะตกบรรทัดเมื่อ label ยาวเกินความกว้างจอ)
 export function UploadButton({ label, multiple, uploading, onFiles }) {
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    <div className="upload-btn-row">
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }}>
         <FontAwesomeIcon icon={uploading ? faSpinner : faImage} spin={uploading} />
         {uploading ? ' กำลังอัพโหลด...' : ` ${label}`}
-        <input type="file" accept="image/*" multiple={multiple} hidden onChange={onFiles} />
+        <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple={multiple} hidden onChange={onFiles} />
       </label>
       <label className="admin-upload-btn" style={{ opacity: uploading ? .6 : 1, pointerEvents: uploading ? 'none' : 'auto' }} title="ถ่ายภาพด้วยกล้อง">
         <FontAwesomeIcon icon={faCamera} />
         {' ถ่ายภาพ'}
-        <input type="file" accept="image/*" capture="environment" hidden onChange={onFiles} />
+        <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" capture="environment" hidden onChange={onFiles} />
       </label>
     </div>
   )
@@ -99,7 +107,7 @@ export function CustomerInfoCard({ order }) {
   return (
     <div className="admin-card" style={{ marginBottom: 20 }}>
       <h4>ข้อมูลลูกค้า</h4>
-      <p style={{ margin: '4px 0' }}>{order.customer.firstName} {order.customer.lastName} · {order.customer.phone}</p>
+      <p style={{ margin: '4px 0' }}>{order.customer.fullName} · {order.customer.phone}</p>
       {order.customer.email && <p style={{ margin: '4px 0', color: 'var(--ink-soft)' }}>{order.customer.email}</p>}
       <p style={{ margin: '4px 0', color: 'var(--ink-soft)' }}>{order.customer.address}</p>
     </div>

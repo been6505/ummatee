@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { db } from '../firebase.js'
 import { doc, getDoc } from 'firebase/firestore'
-import { STATUS_LABEL } from '../data/orders.js'
+import { STATUS_LABEL, normOrderStatus } from '../data/orders.js'
 import { useNavigate } from '../navContext'
 import Footer from '../components/Footer.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -12,6 +12,7 @@ import { faArrowLeft, faBoxOpen, faChevronRight } from '@fortawesome/free-solid-
 // ลูกค้ายังเข้าผ่านลิงก์/QR ที่แคปไว้ได้เสมอ)
 
 import { optImg } from '../utils/cloudinaryUrl.js'
+import ListSkeleton from '../components/ListSkeleton.jsx'
 const THB = (n) => '฿' + Number(n || 0).toLocaleString('th-TH')
 
 function myOrderIds() {
@@ -43,7 +44,7 @@ export default function ShopMyOrders() {
       <section className="page-band">
         <div className="fc-pattern hero-pattern"></div>
         <div className="inner">
-          <span className="badge"><FontAwesomeIcon icon={faBoxOpen} /> Um Shop</span>
+          <span className="badge"><FontAwesomeIcon icon={faBoxOpen} /> um-shop</span>
           <h1>คำสั่งซื้อของฉัน</h1>
         </div>
       </section>
@@ -55,7 +56,7 @@ export default function ShopMyOrders() {
           </a>
 
           {orders === null ? (
-            <p style={{ textAlign: 'center', padding: 40, color: 'var(--ink-soft)' }}>กำลังโหลด...</p>
+            <ListSkeleton />
           ) : orders.length === 0 ? (
             <div className="shop-empty">
               <FontAwesomeIcon icon={faBoxOpen} className="shop-empty-icon" />
@@ -78,7 +79,7 @@ export default function ShopMyOrders() {
                     <div className="my-order-total">{THB(o.total)}</div>
                   </div>
                   <div className="my-order-right">
-                    <span className={`my-order-status st-${o.status}`}>{STATUS_LABEL[o.status] || o.status}</span>
+                    <span className={`my-order-status st-${normOrderStatus(o.status)}`}>{STATUS_LABEL[normOrderStatus(o.status)] || o.status}</span>
                     <FontAwesomeIcon icon={faChevronRight} style={{ color: '#ccc' }} />
                   </div>
                 </a>

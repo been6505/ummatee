@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '../navContext'
+import { PAGE_TO_PATH } from '../data/routes.js'
 import { useLang } from '../i18n.jsx'
 import FadeUp from '../components/FadeUp.jsx'
 import Footer from '../components/Footer.jsx'
@@ -8,8 +9,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMoon, faHandHoldingHeart, faHands, faHandSparkles, faHandshake, faUtensils, faMosque, faBookOpen, faHeart, faFlag, faArrowRight, faChevronLeft, faChevronRight, faPlay, faShareNodes, faCheck } from '@fortawesome/free-solid-svg-icons'
 import { MISSIONS, QURBAN_CARD } from '../data/missions.js'
 import { useHomeCards, DEFAULT_HOME_CARDS, L } from '../data/homeCards.js'
+import { useFocusCards, DEFAULT_FOCUS_CARDS } from '../data/focusCards.js'
 import { useNavVisibility, navKeyForPath } from '../data/navVisibility.js'
 import { optImg } from '../utils/cloudinaryUrl.js'
+import { isSafeHttpUrl } from '../utils/safeUrl.js'
+import useParallax from '../hooks/useParallax.js'
 
 // นำทางไป path ใดๆ แบบ SPA (การ์ดที่แอดมินสร้างใส่ path อิสระได้ ไม่จำกัดแค่ชื่อหน้าใน go())
 // pushState แล้วยิง popstate ให้ App.jsx จับและเรนเดอร์หน้าใหม่ — ไม่ต้อง reload ทั้งเว็บ
@@ -55,9 +59,44 @@ function ShareCardBtn({ title, desc, link, image, className, iconOnly }) {
   )
 }
 
+// ตัวเลขนับขึ้นในแถบสถิติ (stats-band) — เล่นครั้งเดียวตอนเลื่อนมาเห็น (IntersectionObserver)
+// แยกส่วนคำนำ/ตัวเลข/ส่วนต่อท้ายด้วย regex เพื่อรองรับรูปแบบอย่าง "31+", "100%" — ถ้าไม่มีตัวเลขเลย (เช่น "24/7"
+// ที่ไม่ได้ขึ้นต้นด้วยตัวเลขล้วนๆ ก็ยังจับ "24" ได้แล้วต่อด้วย "/7" แบบสถิตย์) ก็แค่โชว์ค่าเดิมไปเลย
+function CountUpStat({ value }) {
+  const ref = useRef(null)
+  const match = String(value).match(/^(\D*)(\d+)(.*)$/)
+  const [display, setDisplay] = useState(() => (match ? `${match[1]}0${match[3]}` : value))
+  useEffect(() => {
+    const m = String(value).match(/^(\D*)(\d+)(.*)$/)
+    if (!m) { setDisplay(value); return }
+    const [, prefix, numStr, suffix] = m
+    const target = parseInt(numStr, 10)
+    const el = ref.current
+    if (!el) return
+    let animated = false
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || animated) return
+      animated = true
+      io.disconnect()
+      const duration = 1100
+      const start = performance.now()
+      const tick = (now) => {
+        const p = Math.min(1, (now - start) / duration)
+        const eased = 1 - Math.pow(1 - p, 3) // ease-out cubic
+        setDisplay(`${prefix}${Math.round(target * eased)}${suffix}`)
+        if (p < 1) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }, { threshold: 0.4 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [value])
+  return <div className="stat-number" ref={ref}>{display ?? value}</div>
+}
+
 const isVideo = (url) => /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)
 
-function PosterCarousel({ images, alt, onClick }) {
+function PosterCarousel({ images, alt, onClick, href }) {
   const [idx, setIdx] = useState(0)
   const total = images.length
   useEffect(() => {
@@ -67,8 +106,10 @@ function PosterCarousel({ images, alt, onClick }) {
   }, [total])
   const safeIdx = idx < total ? idx : 0
   return (
-    <a href="#" onClick={(e) => { e.preventDefault(); onClick() }} className="hf-card-poster-link hf-poster-carousel">
-      <img src={images[safeIdx]} alt={alt} className="hf-poster" fetchPriority={safeIdx === 0 ? 'high' : 'auto'} />
+    <a href={href || '/'} onClick={(e) => { e.preventDefault(); onClick() }} className="hf-card-poster-link hf-poster-carousel">
+      {/* fetchpriority ตัวเล็ก: React 18 ไม่รู้จักแบบ camelCase มันจะเตือนแล้ว "ทิ้ง attribute ทั้งอัน"
+          โปสเตอร์แรกจึงไม่เคยได้ priority hint จริงเลยสักครั้ง ทั้งที่เป็นรูปใหญ่สุดของหน้าแรก */}
+      <img src={images[safeIdx]} alt={alt} className="hf-poster" fetchpriority={safeIdx === 0 ? 'high' : 'auto'} />
       {total > 1 && (
         <div className="hf-poster-dots">
           {images.map((_, i) => <span key={i} className={`hf-poster-dot${i === safeIdx ? ' active' : ''}`} />)}
@@ -107,13 +148,13 @@ function GazaCarousel({ items, lang, go }) {
             : <img key={idx} src={cur} alt="Gaza" loading="lazy" className="hm-gaza-media" />}
           {isVideo(cur) && <span className="hm-gaza-play"><FontAwesomeIcon icon={faPlay} /></span>}
           {total > 1 && <>
-            <button className="hm-gaza-btn hm-gaza-prev" onClick={prev}><FontAwesomeIcon icon={faChevronLeft} /></button>
-            <button className="hm-gaza-btn hm-gaza-next" onClick={next}><FontAwesomeIcon icon={faChevronRight} /></button>
+            <button type="button" className="hm-gaza-btn hm-gaza-prev" onClick={prev} aria-label="รูปก่อนหน้า"><FontAwesomeIcon icon={faChevronLeft} /></button>
+            <button type="button" className="hm-gaza-btn hm-gaza-next" onClick={next} aria-label="รูปถัดไป"><FontAwesomeIcon icon={faChevronRight} /></button>
           </>}
         </div>
         {total > 1 && (
           <div className="hm-gaza-dots">
-            {items.map((_, i) => <button key={i} className={`hm-gaza-dot${i === safeIdx ? ' active' : ''}`} onClick={() => setIdx(i)} />)}
+            {items.map((_, i) => <button key={i} type="button" className={`hm-gaza-dot${i === safeIdx ? ' active' : ''}`} onClick={() => setIdx(i)} aria-label={`ไปรูปที่ ${i + 1}`} />)}
           </div>
         )}
       </div>
@@ -149,15 +190,6 @@ const T = {
     ],
     waysEyebrow: 'สองหนทางแห่งการให้', waysTitle: 'เริ่มต้นทำความดีได้ตั้งแต่วันนี้',
     waysSub: 'ไม่ว่าจะเป็นการมาร่วมแบ่งปันมื้ออาหารกับพี่น้อง หรือการบริจาคเพื่อหล่อเลี้ยงชีวิต — ทุกก้าวเล็ก ๆ ของคุณสร้างความเปลี่ยนแปลงที่ยิ่งใหญ่',
-    fcEventTag: '🌙 EVENT · กิจกรรม', fcEventTitle: 'Iftar For Gaza',
-    fcEventP: 'ร่วมละศีลอดเพื่อกาซา แบ่งปันมื้ออาหารและดุอาอ์ให้พี่น้องผู้ถูกกดขี่ ลงทะเบียนเข้าร่วมงานฟรี',
-    fcEventLink: 'ชมภาพและวิดีโอจากงาน',
-    fcDonTag: '💚 DONATE · บริจาค', fcDonTitle: 'ช่วยเหลือผู้ยากไร้',
-    fcDonP: 'บริจาคผ่านบัญชีมูลนิธิอุมมะตี เลือกได้ทั้งซะกาต ช่วยในไทย ปาเลสไตน์ ซีเรีย และอาหารทั่วโลก',
-    fcDonLink: 'ดูบัญชีบริจาค',
-    fcVolTag: '🤝 VOLUNTEER · อาสาสมัคร', fcVolTitle: 'เป็นส่วนหนึ่งกับเรา',
-    fcVolP: 'ร่วมเป็นอาสาสมัครมูลนิธิอุมมะตี ช่วยเหลือกิจกรรม งานมนุษยธรรม และการสนับสนุนชุมชน สมัครได้เลย',
-    fcVolLink: 'สมัครอาสาสมัคร',
     helpEyebrow: 'เราช่วยเหลืออะไรบ้าง', helpTitle: 'ความเมตตาที่ส่งถึงทุกชีวิต',
     help: [
       { e: '🍚', h: 'อาหาร', p: 'มื้ออาหารและน้ำสะอาดสำหรับผู้หิวโหยทั่วโลก' },
@@ -184,15 +216,6 @@ const T = {
     ],
     waysEyebrow: 'Two Ways to Give', waysTitle: 'Start Doing Good Today',
     waysSub: 'Whether sharing a meal with your brothers and sisters or donating to sustain lives — every small step you take creates great change.',
-    fcEventTag: '🌙 EVENT', fcEventTitle: 'Iftar For Gaza',
-    fcEventP: 'Break fast together for Gaza, share meals and dua for our oppressed brothers and sisters. Free registration.',
-    fcEventLink: 'Register Now',
-    fcDonTag: '💚 DONATE', fcDonTitle: 'Help Those in Need',
-    fcDonP: 'Donate via Ummatee Foundation accounts — zakat, aid for Thailand, Palestine, Syria, and food worldwide.',
-    fcDonLink: 'View Donation Accounts',
-    fcVolTag: '🤝 VOLUNTEER', fcVolTitle: 'Join Our Team',
-    fcVolP: 'Become an Ummatee volunteer — help with events, humanitarian work, and community support. Register today.',
-    fcVolLink: 'Register as Volunteer',
     helpEyebrow: 'What We Do', helpTitle: 'Mercy That Reaches Every Life',
     help: [
       { e: '🍚', h: 'Food', p: 'Meals and clean water for the hungry around the world' },
@@ -219,15 +242,6 @@ const T = {
     ],
     waysEyebrow: 'طريقان للعطاء', waysTitle: 'ابدأ فعل الخير اليوم',
     waysSub: 'سواء بمشاركة وجبة مع إخوانك أو بالتبرع لإحياء النفوس — كل خطوة صغيرة منك تصنع تغييراً عظيماً.',
-    fcEventTag: '🌙 فعالية', fcEventTitle: 'إفطار من أجل غزة',
-    fcEventP: 'شارك في إفطارٍ جماعي من أجل غزة، وشارك الطعام والدعاء لإخواننا المستضعفين. التسجيل مجاني.',
-    fcEventLink: 'سجّل الآن',
-    fcDonTag: '💚 تبرّع', fcDonTitle: 'مساعدة المحتاجين',
-    fcDonP: 'تبرّع عبر حسابات مؤسسة أمّتي — زكاة، إغاثة في تايلاند وفلسطين وسوريا، وإطعام حول العالم.',
-    fcDonLink: 'عرض حسابات التبرع',
-    fcVolTag: '🤝 تطوّع', fcVolTitle: 'كن جزءاً منّا',
-    fcVolP: 'انضم إلى متطوعي مؤسسة أمّتي — ساعدنا في الفعاليات والعمل الإنساني ودعم المجتمع. سجّل الآن.',
-    fcVolLink: 'سجّل كمتطوع',
     helpEyebrow: 'مجالات عملنا', helpTitle: 'رحمةٌ تصل إلى كل حياة',
     help: [
       { e: '🍚', h: 'الطعام', p: 'وجبات ومياه نظيفة للجائعين حول العالم' },
@@ -250,11 +264,32 @@ export default function Home() {
   const [gazaMedia, setGazaMedia] = useState([])
   const [announcement, setAnnouncement] = useState(null)
   // การ์ด Hero Feed จากแอดมิน (config/homeCards) — null = ยังไม่ตั้งค่า ให้ใช้การ์ดมาตรฐาน 3 ใบเดิม
-  const { cards: adminCards } = useHomeCards()
+  // ต้องใช้ loading แยกจาก cards ด้วย เพราะ cards เป็น null ทั้งตอน "ยังโหลดไม่เสร็จ" และ "แอดมินไม่เคยตั้งค่า"
+  const { cards: adminCards, loading: cardsLoading } = useHomeCards()
+  // การ์ดทางลัดใต้หัวข้อ "สองหนทางแห่งการให้" (config/focusCards) — null = ยังไม่ตั้งค่า ใช้ชุดตั้งต้น
+  const { cards: focusAdminCards, loading: focusLoading } = useFocusCards()
   // ผูกกับการเปิด/ปิดเมนู — ปิดเมนูไหน การ์ดที่ลิงก์ไปหน้านั้นถูกซ่อนตามด้วย
   const { visibility: navVis } = useNavVisibility()
+  const ctaParallaxRef = useParallax(0.15) // ลาย fc-pattern ของแถบ CTA ท้ายหน้าแรก เลื่อนช้ากว่าเนื้อหาตอน scroll
   const navHidden = (link) => { const k = navKeyForPath(link); return !!k && !!navVis && navVis[k] === false }
   const customCards = adminCards ? adminCards.filter((c) => c.enabled !== false && !navHidden(c.link)) : null
+  const heroCards = customCards !== null ? customCards : DEFAULT_HOME_CARDS.filter((c) => !navHidden(c.link))
+  // มือถือ (จอแคบ ≤500px ที่ hf-feed กลายเป็นแถวเลื่อนแนวนอน — ดู pages2.css) เลื่อนเปลี่ยนการ์ดอัตโนมัติทุก 5 วิ
+  // เดสก์ท็อปแสดงเป็นกริดหลายคอลัมน์พร้อมกันอยู่แล้วจึงไม่ต้องเลื่อน — เอฟเฟกต์นี้จะไม่มีผลกับเลย์เอาต์นั้น
+  const hfFeedRef = useRef(null)
+  const [hfActive, setHfActive] = useState(0)
+  useEffect(() => {
+    if (heroCards.length < 2) return
+    const timer = setInterval(() => {
+      setHfActive((i) => {
+        const next = (i + 1) % heroCards.length
+        const el = hfFeedRef.current?.children?.[next]
+        el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+        return next
+      })
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [heroCards.length])
   const [dismissedAt, setDismissedAt] = useState(() => localStorage.getItem('umAnnouncementDismissed') || '')
   // โหลด Firestore แบบ dynamic import — กันไม่ให้ firestore (~500KB) ถูกรวมใน bundle หลัก
   // (Home โหลดทันทีไม่ lazy จึงต้องเลี่ยง static import เหมือนตัวนับผู้เข้าชมใน App.jsx)
@@ -285,13 +320,15 @@ export default function Home() {
   }
 
   return (
-    <main className="page">
+    <main className="page home-page">
       {showAnnouncement && (
         <div className="site-announcement">
           <span className="site-announcement-text">
             {announcement.text}
-            {announcement.linkUrl && (
-              <a href={announcement.linkUrl} className="site-announcement-link">{announcement.linkText || 'ดูเพิ่มเติม'}</a>
+            {/* linkUrl มาจาก config/announcement ที่ isAdmin() เขียนได้ (รวมบัญชี volunteer ที่แชร์กันหลายคน)
+                ต้องกรอง scheme ก่อนใส่ href ไม่งั้นใส่ javascript: แล้วรันสคริปต์ในเบราว์เซอร์ผู้เข้าชมทุกคนได้ */}
+            {isSafeHttpUrl(announcement.linkUrl) && (
+              <a href={announcement.linkUrl} className="site-announcement-link" target="_blank" rel="noopener noreferrer">{announcement.linkText || 'ดูเพิ่มเติม'}</a>
             )}
           </span>
           <button type="button" className="site-announcement-close" onClick={dismissAnnouncement} aria-label="ปิดประกาศ">×</button>
@@ -307,9 +344,21 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="hf-feed">
-          {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website */}
-          {(customCards !== null ? customCards : DEFAULT_HOME_CARDS.filter((c) => !navHidden(c.link))).map((c, i) => {
+        <div className="hf-feed" ref={hfFeedRef}>
+          {/* การ์ด Hero Feed — ใช้ชุดที่แอดมินตั้งค่า ถ้ายังไม่ตั้งใช้การ์ดมาตรฐาน (DEFAULT_HOME_CARDS) จัดการได้จาก /admin/website
+              ระหว่างโหลดต้องโชว์ skeleton ห้าม fallback ไป DEFAULT_HOME_CARDS เพราะจะกลายเป็นการ์ดเก่าที่แอดมิน
+              ลบไปแล้วแวบขึ้นมาทุกครั้งที่รีเฟรช (cards=null ยังแยกไม่ได้ว่า "ยังไม่รู้" หรือ "ไม่เคยตั้งค่า") */}
+          {cardsLoading ? (
+            <div className="hf-card hf-card-skeleton">
+              <div className="hf-poster sk-block" />
+              <div className="hf-card-body">
+                <div className="sk-line" style={{ width: '38%', height: 20 }} />
+                <div className="sk-line" style={{ width: '72%', height: 28 }} />
+                <div className="sk-line" style={{ width: '100%', height: 14 }} />
+                <div className="sk-line" style={{ width: '48%', height: 44, borderRadius: 99 }} />
+              </div>
+            </div>
+          ) : heroCards.map((c, i) => {
             const gradIcon = c.color === 'give' ? faHandHoldingHeart : c.color === 'volunteer' ? faHandSparkles : faMoon
             const cTitle = L(c.title, lang), cDesc = L(c.desc, lang), cBtn = L(c.btnText, lang)
             return (
@@ -324,6 +373,7 @@ export default function Home() {
                   <PosterCarousel
                     images={c.images.map((u) => optImg(u, 900))}
                     alt={cTitle}
+                    href={c.link || '/'}
                     onClick={() => goPath(c.link || '/')}
                   />
                 ) : (
@@ -352,6 +402,23 @@ export default function Home() {
             )
           })}
         </div>
+        {/* จุดบอกตำแหน่งการ์ด — โชว์เฉพาะจอแคบที่ hf-feed เป็นแถวเลื่อนแนวนอน (ดู .hf-dots ใน pages2.css) */}
+        {!cardsLoading && heroCards.length > 1 && (
+          <div className="hf-dots">
+            {heroCards.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`hf-dot ${i === hfActive ? 'active' : ''}`}
+                aria-label={`ไปการ์ดที่ ${i + 1}`}
+                onClick={() => {
+                  setHfActive(i)
+                  hfFeedRef.current?.children?.[i]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+                }}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* แถบตัวเลขสถิติ 4 ช่อง */}
@@ -359,7 +426,7 @@ export default function Home() {
         <div className="stats-inner">
           {t.stats.map((s, i) => (
             <FadeUp className="stat-block" key={i}>
-              <div className="stat-number">{s.n}</div>
+              <CountUpStat value={s.n} />
               <div className="stat-label">{s.l}</div>
             </FadeUp>
           ))}
@@ -401,30 +468,27 @@ export default function Home() {
             <p>{t.waysSub}</p>
             <div className="gold-rule"></div>
           </FadeUp>
-          {/* การ์ดทางลัด 3 ใบ: ลงทะเบียน Iftar / บริจาค / อาสาสมัคร */}
-          <div className="focus-grid focus-grid-3">
-            <FadeUp className="focus-card focus-iftar" onClick={() => go('iftar')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcEventTag}</span>
-              <h3>{t.fcEventTitle}</h3>
-              <p>{t.fcEventP}</p>
-              <span className="fc-link">{t.fcEventLink} <span className="arrow">→</span></span>
-            </FadeUp>
-            <FadeUp className="focus-card focus-donate" onClick={() => go('donation')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcDonTag}</span>
-              <h3>{t.fcDonTitle}</h3>
-              <p>{t.fcDonP}</p>
-              <span className="fc-link">{t.fcDonLink} <span className="arrow">→</span></span>
-            </FadeUp>
-            <FadeUp className="focus-card focus-volunteer" onClick={() => go('volunteer')}>
-              <div className="fc-pattern hero-pattern"></div>
-              <span className="fc-tag">{t.fcVolTag}</span>
-              <h3>{t.fcVolTitle}</h3>
-              <p>{t.fcVolP}</p>
-              <span className="fc-link">{t.fcVolLink} <span className="arrow">→</span></span>
-            </FadeUp>
-          </div>
+          {/* การ์ดทางลัด (เดิม hardcode 3 ใบ) — แอดมินจัดการได้จาก /admin/website (config/focusCards)
+              ระหว่างโหลดไม่เรนเดอร์อะไรเลย ห้าม fallback ไป DEFAULT_FOCUS_CARDS เพราะการ์ดที่แอดมินลบไปแล้ว
+              จะแวบขึ้นมาทุกครั้งที่รีเฟรช (cards=null ยังแยกไม่ได้ว่า "ยังโหลดไม่เสร็จ" หรือ "ไม่เคยตั้งค่า") */}
+          {!focusLoading && (
+            <div className="focus-grid focus-grid-3">
+              {/* กรองด้วยสวิตช์เปิด/ปิดของการ์ดเองเท่านั้น — ไม่ผูกกับการซ่อนเมนู (navHidden) เพราะแอดมิน
+                  ปิดเมนู Iftar/อาสาสมัครไว้ การ์ด 2 ใบจะหายจากหน้าแรกไปเงียบๆ ทั้งที่ยังอยากโชว์อยู่
+                  ตอนนี้มีสวิตช์ต่อการ์ดใน /admin/website ให้สั่งซ่อนตรงๆ ได้แล้ว ชัดเจนกว่า */}
+              {(focusAdminCards !== null ? focusAdminCards : DEFAULT_FOCUS_CARDS)
+                .filter((c) => c.enabled !== false)
+                .map((c, i) => (
+                  <FadeUp className={`focus-card focus-${c.variant || 'iftar'}`} key={i} onClick={() => goPath(c.link || '/')}>
+                    <div className="fc-pattern hero-pattern"></div>
+                    <span className="fc-tag">{L(c.tag, lang)}</span>
+                    <h3>{L(c.title, lang)}</h3>
+                    <p>{L(c.desc, lang)}</p>
+                    <span className="fc-link">{L(c.linkText, lang)} <span className="arrow">→</span></span>
+                  </FadeUp>
+                ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -450,12 +514,10 @@ export default function Home() {
       <section style={{ padding: '0 0 96px' }}>
         <div className="wrap">
           <FadeUp className="cta-strip">
-            <div className="fc-pattern hero-pattern"></div>
+            <div className="fc-pattern hero-pattern" ref={ctaParallaxRef}></div>
             <h2>{t.ctaStripTitle}</h2>
-            <p>{t.ctaStripP}</p>
             <div className="hero-actions">
-              
-              <a href="#" className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><FontAwesomeIcon icon={faHeart} /> {t.ctaStripDonate}</a>
+              <a href={PAGE_TO_PATH['donation'] || '/'} className="btn btn-donate" onClick={(e) => { e.preventDefault(); go('donation') }}><FontAwesomeIcon icon={faHeart} /> {t.ctaStripDonate}</a>
             </div>
           </FadeUp>
         </div>

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import AdminLogin from '../components/AdminLogin.jsx'
-import useAdminAuth from '../useAdminAuth.js'
+import { useAllowlistedAdmin } from '../useAdminRole.js'
 import { db } from '../firebase.js'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { ACCOUNTS } from '../data/accounts.js'
 import { isVolunteerEmail } from '../useAdminRole.js'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
+import { faFlag, faCamera, faCow, faMoneyBill, faCalendar, faBagShopping, faHandshake, faGift, faEye, faChartBar, faGlobe, faComments, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
 
 const ALL_LINKS = [
   { href: '/admin/website', icon: faGlobe, title: 'จัดการเว็บ', desc: 'แบนเนอร์/ประกาศที่แสดงบนหน้าแรกของเว็บฝั่ง public' },
+  { href: '/admin/chat', icon: faComments, title: 'แชท', desc: 'ตอบแชทจากผู้เยี่ยมชมเว็บไซต์ พร้อมแจ้งเตือนทาง LINE เมื่อมีข้อความใหม่' },
   { href: '/admin/event/iftar2026', icon: faFlag, title: 'Iftar For Gaza', desc: 'รายชื่อผู้ลงทะเบียน + กราฟสรุปข้อมูลผู้เข้าร่วมงาน', volunteer: true },
   { href: '/admin/qrcode', icon: faCamera, title: 'เช็คอินหน้างาน', desc: 'เปิดกล้องมือถือสแกน QR รหัส IFG เช็คอินผู้มาร่วมงาน', volunteer: true },
   { href: '/admin/give', icon: faGift, title: 'ส่งต่อของ', desc: 'รายการสิ่งของที่ผู้บริจาคลงทะเบียนมอบในงาน "ให้" ครั้งที่ 6', volunteer: true },
@@ -18,12 +19,12 @@ const ALL_LINKS = [
   { href: '/admin/donations', icon: faMoneyBill, title: 'เงินบริจาค', desc: 'บันทึกและสรุปยอดบริจาคแยกตาม 7 บัญชี ibank' },
   { href: '/admin/calendar', icon: faCalendar, title: 'ปฏิทินคอนเทนต์', desc: 'วางแผนกิจกรรม ตั้งเวลาโพสต์ แนบรูป/วิดีโอ หลายแพลตฟอร์ม' },
   { href: '/admin/photo-frame', icon: faLayerGroup, title: 'ใส่กรอบรูป + พิกัด', desc: 'ซ้อนกรอบ PNG ทับรูป ส่งออก JPG 1:1 พร้อมเก็บพิกัด GPS จากไฟล์' },
-  { href: '/admin/shop', icon: faBagShopping, title: 'Um Shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
+  { href: '/admin/shop', icon: faBagShopping, title: 'um-shop', desc: 'จัดการสินค้า เพิ่ม/แก้ไข/ลบ พร้อมค้นหา กรอง เรียงลำดับ' },
   { href: '/admin/volunteer', icon: faHandshake, title: 'อาสาสมัคร', desc: 'รายชื่อผู้สมัครอาสาสมัคร ค้นหา กรอง และ Export CSV' },
 ]
 
 export default function AdminHome() {
-  const { user, loading } = useAdminAuth()
+  const { user, loading } = useAllowlistedAdmin()
   const [stats, setStats] = useState(null)
   const [siteViews, setSiteViews] = useState(null)
   const [iftarCopies, setIftarCopies] = useState(null)
@@ -128,12 +129,14 @@ export default function AdminHome() {
         )}
 
         {/* ── เมนูแดชบอร์ด ── */}
-        <div className="admin-grid">
+        {/* สไตล์อยู่ใน admin.css (.admin-menu-grid) ไม่ใช่ inline — บนมือถือย่อเป็น 4 คอลัมน์
+            แบบไอคอน+ชื่อ ซึ่งทับ inline style ไม่ได้ถ้าไม่ใส่ !important */}
+        <div className="admin-grid admin-menu-grid">
           {LINKS.map((l) => (
             <a key={l.href} className="admin-card admin-link-card" href={l.href}>
-              <div className="he" style={{ fontSize: '2rem', marginBottom: 10 }}><FontAwesomeIcon icon={l.icon} /></div>
+              <div className="he admin-link-icon"><FontAwesomeIcon icon={l.icon} /></div>
               <h4>{l.title}</h4>
-              <p style={{ color: 'var(--ink-soft)', fontSize: '.9rem', marginTop: 6 }}>{l.desc}</p>
+              <p className="admin-link-desc">{l.desc}</p>
             </a>
           ))}
         </div>

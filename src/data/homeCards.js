@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useConfigCards, saveConfigCards } from './configCards.js'
 
 // การ์ด Hero Feed บนหน้าแรก — แอดมินแก้ได้จาก /admin/website (เก็บที่ config/homeCards)
 // ถ้ายังไม่เคยตั้งค่า (doc ไม่มี/ว่าง) หน้าแรกจะ fallback ไปการ์ด 3 ใบเดิมที่ hardcode ไว้
@@ -77,32 +77,8 @@ export const DEFAULT_HOME_CARDS = [
 
 // live=false → อ่านครั้งเดียว (getDoc) เหมาะกับหน้าแรก public ที่ไม่ต้องอัปเดตกลางทาง — เลี่ยง onSnapshot listener ค้างต่อผู้เข้าชมทุกคน
 // live=true → onSnapshot เรียลไทม์ ใช้ในหน้าแอดมิน (AdminWebsite) ให้เห็นค่าล่าสุดหลังบันทึก/แก้จากที่อื่น
-export function useHomeCards(live = false) {
-  const [cards, setCards] = useState(null) // null = ยังไม่ตั้งค่า (ใช้การ์ดมาตรฐาน), [] = ตั้งค่าแล้วแต่ว่าง
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let unsub = () => {}
-    let cancelled = false
-    Promise.all([import('../firebase.js'), import('firebase/firestore')])
-      .then(([{ db }, fs]) => {
-        if (cancelled) return
-        const ref = fs.doc(db, 'config', 'homeCards')
-        const apply = (snap) => { setCards(snap.exists() ? (snap.data().cards || []) : null); setLoading(false) }
-        if (live) {
-          unsub = fs.onSnapshot(ref, apply, () => setLoading(false))
-        } else {
-          fs.getDoc(ref).then((snap) => { if (!cancelled) apply(snap) }).catch(() => setLoading(false))
-        }
-      })
-      .catch(() => setLoading(false))
-    return () => { cancelled = true; unsub() }
-  }, [live])
-
-  return { cards, loading }
-}
-
-export async function saveHomeCards(cards) {
-  const [{ db }, { doc, setDoc }] = await Promise.all([import('../firebase.js'), import('firebase/firestore')])
-  await setDoc(doc(db, 'config', 'homeCards'), { cards, updatedAt: Date.now() })
-}
+// ตัวอ่าน/เขียนย้ายไปอยู่ configCards.js แล้ว — ตรรกะเหมือน config/homeCards ทุกบรรทัดยกเว้นชื่อเอกสาร
+// คงชื่อ useHomeCards/saveHomeCards ไว้เป็นตัวห่อบางๆ เพื่อไม่ต้องแก้จุดเรียกทุกหน้า และยังอ่านออกว่าหน้าไหนใช้ชุดไหน
+export const useHomeCards = (live = false) => useConfigCards('homeCards', live)
+export const saveHomeCards = (cards) => saveConfigCards('homeCards', cards)

@@ -480,10 +480,10 @@ export default function AdminPhotoFrame() {
                         defaultValue={g ? `${g.lat}, ${g.lng}` : ''}
                         onChange={(e) => setManualLatLng(it.id, e.target.value)}
                       />}
-                      {!convertOnly && <button type="button" className="admin-btn admin-icon-btn" style={{ width: 34, height: 34, fontSize: '.9rem' }} onClick={() => useDeviceLocation(it.id)} title="ใช้ตำแหน่งปัจจุบัน">
+                      {!convertOnly && <button type="button" className="admin-btn admin-icon-btn" style={{ width: 40, height: 40, fontSize: '.9rem' }} onClick={() => useDeviceLocation(it.id)} title="ใช้ตำแหน่งปัจจุบัน">
                         <FontAwesomeIcon icon={faCrosshairs} />
                       </button>}
-                      <button type="button" className="admin-btn admin-icon-btn" style={{ width: 34, height: 34, fontSize: '.9rem' }} onClick={() => downloadOne(it)} disabled={!r?.blob} title="ดาวน์โหลด JPG">
+                      <button type="button" className="admin-btn admin-icon-btn" style={{ width: 40, height: 40, fontSize: '.9rem' }} onClick={() => downloadOne(it)} disabled={!r?.blob} title="ดาวน์โหลด JPG">
                         <FontAwesomeIcon icon={faDownload} />
                       </button>
                     </div>

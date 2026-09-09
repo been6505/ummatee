@@ -132,6 +132,48 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   white-space: nowrap;
 }
 
+/* โปรไฟล์+อีเมลมุมขวาบน — เรนเดอร์ผ่าน portal ไป body (ดูคอมเมนต์ใน AdminNav.jsx)
+   จึงต้องใช้ position:fixed เองตรงนี้ ไม่พึ่ง flow ของ .admin-nav
+   มือถือ: ลอยข้างปุ่มแฮมเบอร์เกอร์ในแถบบน (แถบบนสูง ~52px, ปุ่มแฮมเบอร์เกอร์กว้าง ~48px ชิดขอบขวา) */
+.admin-profile-chip {
+  position: fixed;
+  top: 12px;
+  right: 56px;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  background: rgba(0,0,0,.15);
+  padding: 2px 8px 2px 2px;
+  border-radius: 999px;
+}
+.admin-profile-avatar,
+.admin-profile-avatar-fallback {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.admin-profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: rgba(255,255,255,.85);
+}
+.admin-profile-email {
+  font-size: .72rem;
+  opacity: .9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .admin-profile-email { display: none; }
+}
+
 .admin-nav-logout {
   border: none;
   background: var(--gold);
@@ -304,6 +346,26 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
   }
   .admin-nav-toggle {
     display: none;
+  }
+  /* เดสก์ท็อป: ปักไว้มุมขวาบนของหน้าจอจริง ไม่ชิดปุ่มแฮมเบอร์เกอร์แล้วเพราะปุ่มนั้นซ่อนอยู่ (ดูด้านบน)
+     (.admin-nav-user เดิมในคอลัมน์ sidebar หายไปทันทีที่ย่อรางเหลือ 64px — ดู html.admin-nav-collapsed
+     .admin-nav-user ด้านล่าง จึงต้องมีจุดที่เห็นอีเมลได้เสมอไม่ว่าจะย่อ/กาง sidebar อยู่) */
+  .admin-profile-chip {
+    top: 16px;
+    right: 16px;
+    background: rgba(27,94,54,.92);
+    padding: 4px 12px 4px 4px;
+    box-shadow: 0 6px 18px -8px rgba(27,94,54,.55);
+    max-width: none;
+  }
+  .admin-profile-avatar,
+  .admin-profile-avatar-fallback {
+    width: 30px;
+    height: 30px;
+  }
+  .admin-profile-email {
+    display: inline-block;
+    max-width: 220px;
   }
   /* บนเดสก์ท็อป sidebar เป็นแบบถาวร — ไม่ใช้ drawer/backdrop ของมือถือ */
   .admin-drawer,

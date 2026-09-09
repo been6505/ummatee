@@ -5,7 +5,7 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell, faRightFromBracket, faLayerGroup } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell, faRightFromBracket, faLayerGroup, faCircleUser } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail, isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
@@ -393,6 +393,20 @@ export default function AdminNav() {
           <FontAwesomeIcon icon={faBars} />
         </button>
       </nav>
+
+      {/* โปรไฟล์+อีเมลมุมขวาบน — เรนเดอร์ผ่าน portal ไป body เพราะ .admin-nav มี transform ของตัวเอง
+          (ใช้เลื่อน drawer มือถือ) ทำให้ position:fixed ของลูกในนั้นอ้างอิงกับ .admin-nav แทนวิวพอร์ตจริง
+          บนเดสก์ท็อป sidebar ย่อได้เหลือราง 64px ซึ่งซ่อนอีเมล (.admin-nav-user) ไปเลย จึงต้องมีจุดที่เห็น
+          อีเมลได้เสมอไม่ว่าจะย่อ/กางอยู่ */}
+      {email && createPortal(
+        <span className="admin-profile-chip" title={email}>
+          {authUser?.photoURL
+            ? <img src={authUser.photoURL} alt="" className="admin-profile-avatar" referrerPolicy="no-referrer" />
+            : <FontAwesomeIcon icon={faCircleUser} className="admin-profile-avatar-fallback" />}
+          <span className="admin-profile-email">{email}</span>
+        </span>,
+        document.body
+      )}
 
       {/* ปุ่มลอยเปิด sidebar กลับ — โชว์เฉพาะเดสก์ท็อปตอน sidebar ถูกปิด */}
       <button

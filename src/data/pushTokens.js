@@ -23,7 +23,7 @@ export const currentPermission = () =>
   (typeof Notification !== 'undefined' ? Notification.permission : 'default')
 
 // คืน { ok, error }
-export async function enablePush(lang = 'th') {
+export async function enablePush(lang = 'th', { isAdmin } = {}) {
   const blocked = blockedReason()
   if (blocked) return { ok: false, error: blocked }
 
@@ -48,7 +48,7 @@ export async function enablePush(lang = 'th') {
     const token = await messaging.getToken(m, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg })
     if (!token) return { ok: false, error: 'ขอ token ไม่สำเร็จ' }
 
-    const built = buildTokenDoc({ token, lang, now: Date.now() })
+    const built = buildTokenDoc({ token, lang, now: Date.now(), isAdmin })
     if (!built.ok) return built
 
     // ใช้ token เป็น doc id — เข้าเว็บซ้ำกี่ครั้งก็ทับ doc เดิม ไม่เกิดรายการซ้ำ

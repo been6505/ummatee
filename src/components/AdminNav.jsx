@@ -5,7 +5,7 @@ import { auth } from '../firebase.js'
 import { db } from '../firebase.js'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell, faRightFromBracket, faLayerGroup, faCircleUser } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faFlag, faMoneyBill, faBagShopping, faHandshake, faBars, faXmark, faScrewdriverWrench, faEarthAsia, faChevronDown, faBullhorn, faAnglesLeft, faAnglesRight, faComments, faBell, faRightFromBracket, faLayerGroup, faCircleUser, faMobileScreenButton, faCheck } from '@fortawesome/free-solid-svg-icons'
 
 import { isVolunteerEmail, isFullAdminEmail, isSuperAdminEmail } from '../useAdminRole.js'
 import InstallAdminApp from './InstallAdminApp.jsx'
@@ -295,6 +295,87 @@ function DevButton() {
   )
 }
 
+function ConnectMobileButton() {
+  const [state, setState] = useState('checking') // checking | ready | on | blocked | working
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    import('../data/pushTokens.js')
+      .then(({ blockedReason, currentPermission }) => {
+        if (!alive) return
+        const blocked = blockedReason()
+        if (currentPermission() === 'granted') setState('on')
+        else if (blocked) { setReason(blocked); setState('blocked') }
+        else setState('ready')
+      })
+      .catch(() => alive && setState('blocked'))
+    return () => { alive = false }
+  }, [])
+
+  if (state === 'checking') return null
+
+  const click = async () => {
+    setState('working')
+    const { enablePush } = await import('../data/pushTokens.js')
+    const r = await enablePush('th', { isAdmin: true })
+    if (r.ok) { setState('on'); return }
+    setReason(r.error || 'เชื่อมต่อมือถือไม่สำเร็จ')
+    setState('blocked')
+  }
+
+  if (state === 'on') {
+    return (
+      <a
+        href="/admin/calendar"
+        style={{
+          margin: '4px 0',
+          padding: '8px 14px',
+          borderRadius: 8,
+          fontWeight: 700,
+          fontSize: '.85rem',
+          background: '#16a34a',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          textDecoration: 'none',
+        }}
+      >
+        <FontAwesomeIcon icon={faCheck} /> ลงคอนเทนท์ผ่านมือถือ
+      </a>
+    )
+  }
+
+  return (
+    <>
+      <button
+        onClick={click}
+        disabled={state === 'working'}
+        style={{
+          margin: '4px 0',
+          padding: '8px 14px',
+          borderRadius: 8,
+          border: 'none',
+          cursor: state === 'working' ? 'not-allowed' : 'pointer',
+          fontWeight: 700,
+          fontSize: '.85rem',
+          background: '#2563eb',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+      >
+        <FontAwesomeIcon icon={faMobileScreenButton} /> {state === 'working' ? 'กำลังเชื่อมต่อ...' : 'เชื่อมต่อมือถือ'}
+      </button>
+      {state === 'blocked' && reason && (
+        <p style={{ fontSize: '.75rem', color: '#9ca3af', margin: '0 0 4px' }}>{reason}</p>
+      )}
+    </>
+  )
+}
+
 export default function AdminNav() {
   const path = window.location.pathname
   const [open, setOpen] = useState(false)
@@ -363,6 +444,7 @@ export default function AdminNav() {
       {email && (
         <span className="admin-nav-user">{email}</span>
       )}
+      {email === 'akasitlove@gmail.com' && <ConnectMobileButton />}
       {email === 'akasitlove@gmail.com' && <DevButton />}
       <button className="admin-nav-logout" onClick={() => signOut(auth)} title="ออกจากระบบ">
         <FontAwesomeIcon icon={faRightFromBracket} /> <span className="an-label">ออกจากระบบ</span>

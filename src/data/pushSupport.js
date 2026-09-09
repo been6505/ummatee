@@ -39,7 +39,7 @@ export const isSubscribed = (permission) => permission === 'granted'
 // doc ที่เก็บลง Firestore — key ของ doc คือตัว token เอง (กันซ้ำในตัว ไม่ต้องไปหาว่ามีอยู่แล้วไหม)
 // ตั้งใจไม่เก็บอะไรที่ระบุตัวบุคคลได้ ไม่มี uid/อีเมล/ไอพี — ผู้ใช้ฝั่งนี้ไม่ได้ล็อกอินอยู่แล้ว
 // เก็บ lang ไว้เผื่อส่งข้อความตามภาษา และ updatedAt ไว้ล้าง token ที่ตายแล้วทีหลัง
-export function buildTokenDoc({ token, lang, now }) {
+export function buildTokenDoc({ token, lang, now, isAdmin }) {
   const t = String(token || '').trim()
   if (!t || t.length > 4096) return { ok: false, error: 'token ไม่ถูกต้อง' }
   return {
@@ -47,6 +47,7 @@ export function buildTokenDoc({ token, lang, now }) {
     value: {
       lang: ['th', 'en', 'ar'].includes(lang) ? lang : 'th',
       updatedAt: Number(now) || 0,
+      ...(isAdmin ? { isAdmin: true } : {}),
     },
     id: t,
   }

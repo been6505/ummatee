@@ -14,6 +14,7 @@ const ALLOWED_EMAILS = [
   'akasitlove@gmail.com',
   'ummatee.thailand@gmail.com',
   'ummatee.volunteer@gmail.com',
+  'amalogmuslim@gmail.com',
 ]
 
 export function isAllowedEmail(email) {

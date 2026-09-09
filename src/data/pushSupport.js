@@ -39,7 +39,7 @@ export const isSubscribed = (permission) => permission === 'granted'
 // doc ที่เก็บลง Firestore — key ของ doc คือตัว token เอง (กันซ้ำในตัว ไม่ต้องไปหาว่ามีอยู่แล้วไหม)
 // ตั้งใจไม่เก็บอะไรที่ระบุตัวบุคคลได้ ไม่มี uid/อีเมล/ไอพี — ผู้ใช้ฝั่งนี้ไม่ได้ล็อกอินอยู่แล้ว
 // เก็บ lang ไว้เผื่อส่งข้อความตามภาษา และ updatedAt ไว้ล้าง token ที่ตายแล้วทีหลัง
-export function buildTokenDoc({ token, lang, now, isAdmin }) {
+export function buildTokenDoc({ token, lang, now, isAdmin, deviceLabel }) {
   const t = String(token || '').trim()
   if (!t || t.length > 4096) return { ok: false, error: 'token ไม่ถูกต้อง' }
   return {
@@ -47,8 +47,31 @@ export function buildTokenDoc({ token, lang, now, isAdmin }) {
     value: {
       lang: ['th', 'en', 'ar'].includes(lang) ? lang : 'th',
       updatedAt: Number(now) || 0,
-      ...(isAdmin ? { isAdmin: true } : {}),
+      ...(isAdmin ? { isAdmin: true, deviceLabel: String(deviceLabel || '').slice(0, 80) } : {}),
     },
     id: t,
   }
+}
+
+// เดาชื่อเครื่อง/เบราว์เซอร์แบบคร่าวๆ จาก user agent — แค่พอให้แอดมินแยกออกว่าเป็นเครื่องไหน
+// ไม่ต้องแม่นระดับ library เพราะใช้แสดงผลในรายการเท่านั้น ไม่ได้ใช้ตัดสินใจอะไร
+export function guessDeviceLabel(ua) {
+  const s = String(ua || '')
+  let device = 'อุปกรณ์ไม่ทราบชนิด'
+  if (/iphone/i.test(s)) device = 'iPhone'
+  else if (/ipad/i.test(s)) device = 'iPad'
+  else if (/android/i.test(s)) device = 'Android'
+  else if (/macintosh/i.test(s)) device = 'Mac'
+  else if (/windows/i.test(s)) device = 'Windows PC'
+  else if (/linux/i.test(s)) device = 'Linux'
+
+  let browser = ''
+  if (/crios/i.test(s)) browser = 'Chrome'
+  else if (/fxios/i.test(s)) browser = 'Firefox'
+  else if (/edg\//i.test(s)) browser = 'Edge'
+  else if (/chrome\//i.test(s)) browser = 'Chrome'
+  else if (/safari\//i.test(s) && !/chrome/i.test(s)) browser = 'Safari'
+  else if (/firefox\//i.test(s)) browser = 'Firefox'
+
+  return browser ? `${device} · ${browser}` : device
 }

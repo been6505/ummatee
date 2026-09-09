@@ -2,7 +2,7 @@
 //
 // firebase/messaging ถูก import แบบ dynamic ทั้งหมด — ถ้า import ตรง ๆ จากไฟล์นี้
 // Firebase SDK ทั้งก้อนจะถูกลากเข้า entry chunk ที่ทุกหน้าต้องโหลด (เหตุผลเดียวกับ ChatWidget ใน App.jsx)
-import { VAPID_KEY, pushBlockedReason, buildTokenDoc } from './pushSupport.js'
+import { VAPID_KEY, pushBlockedReason, buildTokenDoc, guessDeviceLabel } from './pushSupport.js'
 
 const COL = 'pushTokens'
 
@@ -48,7 +48,8 @@ export async function enablePush(lang = 'th', { isAdmin } = {}) {
     const token = await messaging.getToken(m, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg })
     if (!token) return { ok: false, error: 'ขอ token ไม่สำเร็จ' }
 
-    const built = buildTokenDoc({ token, lang, now: Date.now(), isAdmin })
+    const deviceLabel = isAdmin ? guessDeviceLabel(navigator.userAgent) : ''
+    const built = buildTokenDoc({ token, lang, now: Date.now(), isAdmin, deviceLabel })
     if (!built.ok) return built
 
     // ใช้ token เป็น doc id — เข้าเว็บซ้ำกี่ครั้งก็ทับ doc เดิม ไม่เกิดรายการซ้ำ
@@ -57,4 +58,17 @@ export async function enablePush(lang = 'th', { isAdmin } = {}) {
   } catch (e) {
     return { ok: false, error: 'เปิดการแจ้งเตือนไม่สำเร็จ: ' + (e?.message || e) }
   }
+}
+
+// สมัคร subscribe รายการเครื่องแอดมินที่เชื่อมต่อ push ไว้ (isAdmin == true) — เรียงล่าสุดขึ้นก่อน
+// รับ setter ธรรมดาแทนการคืน hook เพราะไฟล์นี้ต้องอยู่นอก React (import แบบ dynamic ได้จากที่ไหนก็ได้)
+export async function watchAdminDevices(onChange) {
+  const [{ db }, fs] = await Promise.all([import('../firebase.js'), import('firebase/firestore')])
+  const q = fs.query(fs.collection(db, COL), fs.where('isAdmin', '==', true), fs.orderBy('updatedAt', 'desc'))
+  return fs.onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+}
+
+export async function unlinkDevice(tokenId) {
+  const [{ db }, fs] = await Promise.all([import('../firebase.js'), import('firebase/firestore')])
+  await fs.deleteDoc(fs.doc(db, COL, tokenId))
 }

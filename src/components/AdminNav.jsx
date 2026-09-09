@@ -295,6 +295,64 @@ function DevButton() {
   )
 }
 
+// รายชื่อเครื่องที่เชื่อมต่อไว้แล้ว (isAdmin token) — ยิง onSnapshot ตรงผ่าน watchAdminDevices
+// ไม่ผูกกับ state ปุ่มเชื่อมต่อด้านบน เพราะอยากเห็นรายการแม้เชื่อมจากเครื่องอื่นมาก่อนแล้ว
+function ConnectedDevicesList() {
+  const [devices, setDevices] = useState(null) // null = กำลังโหลด
+  const [removing, setRemoving] = useState('')
+
+  useEffect(() => {
+    let unsub = null
+    let alive = true
+    import('../data/pushTokens.js').then(({ watchAdminDevices }) => {
+      watchAdminDevices((rows) => alive && setDevices(rows)).then((u) => { if (alive) unsub = u; else u() })
+    })
+    return () => { alive = false; unsub?.() }
+  }, [])
+
+  if (!devices || devices.length === 0) return null
+
+  const remove = async (id) => {
+    setRemoving(id)
+    const { unlinkDevice } = await import('../data/pushTokens.js')
+    await unlinkDevice(id).catch(() => {})
+    setRemoving('')
+  }
+
+  return (
+    <div style={{ margin: '0 0 4px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: '.7rem', color: '#9ca3af', fontWeight: 700, padding: '0 2px' }}>
+        เครื่องที่เชื่อมต่อ ({devices.length})
+      </span>
+      {devices.map((d) => (
+        <div
+          key={d.id}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,.06)', fontSize: '.78rem',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <FontAwesomeIcon icon={faMobileScreenButton} style={{ opacity: .8, flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {d.deviceLabel || 'อุปกรณ์ไม่ทราบชนิด'}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => remove(d.id)}
+            disabled={removing === d.id}
+            title="ถอดเครื่องนี้ออก"
+            style={{ border: 'none', background: 'transparent', color: '#9ca3af', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+          >
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ConnectMobileButton() {
   const [state, setState] = useState('checking') // checking | ready | on | blocked | working
   const [reason, setReason] = useState('')
@@ -444,6 +502,7 @@ export default function AdminNav() {
       {email && (
         <span className="admin-nav-user">{email}</span>
       )}
+      {email === 'akasitlove@gmail.com' && <ConnectedDevicesList />}
       {email === 'akasitlove@gmail.com' && <ConnectMobileButton />}
       {email === 'akasitlove@gmail.com' && <DevButton />}
       <button className="admin-nav-logout" onClick={() => signOut(auth)} title="ออกจากระบบ">

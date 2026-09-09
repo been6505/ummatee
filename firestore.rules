@@ -650,9 +650,11 @@ service cloud.firestore {
     // ตั้งใจไม่เก็บ uid/อีเมล/ไอพี — ตัว token อย่างเดียวไม่บอกว่าใครเป็นใคร
     match /pushTokens/{token} {
       allow get, list: if isFullAdmin();
-      allow create, update: if request.resource.data.keys().hasOnly(['lang', 'updatedAt'])
+      allow create, update: if request.resource.data.keys().hasOnly(['lang', 'updatedAt', 'isAdmin', 'deviceLabel'])
         && request.resource.data.lang in ['th', 'en', 'ar']
         && request.resource.data.updatedAt is number
+        && (!('isAdmin' in request.resource.data) || request.resource.data.isAdmin == true)
+        && (!('deviceLabel' in request.resource.data) || (request.resource.data.deviceLabel is string && request.resource.data.deviceLabel.size() <= 80))
         && token.size() > 0 && token.size() <= 4096;
       // ผู้ใช้ปิดแจ้งเตือนเองได้ (token เดิมใช้ไม่ได้แล้ว) และแอดมินล้าง token ที่ตายแล้วได้
       allow delete: if true;

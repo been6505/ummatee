@@ -374,39 +374,36 @@ export default function AdminNav() {
     <>
       <nav className="admin-nav">
         <div className="admin-nav-brand">
-          <span><FontAwesomeIcon icon={faScrewdriverWrench} /> {isVolunteer ? 'Volunteer' : 'Admin'}</span>
-          {/* ปุ่มเดียวสลับย่อ/กาง — รางไอคอนยังอยู่ตอนย่อ ปุ่มนี้จึงกดได้ตลอด ไม่ต้องมีปุ่มลอยข้างนอก
-              ใส่ไอคอนทั้งสองทิศไว้ แล้วให้ CSS สลับกันโชว์ตามคลาส admin-nav-collapsed */}
-          <button
-            type="button"
-            className="admin-nav-collapse-btn"
-            onClick={() => setCollapsed((v) => !v)}
-            aria-label={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
-            title={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
-          >
-            <FontAwesomeIcon icon={faAnglesLeft} />
-            <FontAwesomeIcon icon={faAnglesRight} />
-          </button>
+          <div className="admin-nav-brand-row">
+            <span><FontAwesomeIcon icon={faScrewdriverWrench} /> {isVolunteer ? 'Volunteer' : 'Admin'}</span>
+            {/* ปุ่มเดียวสลับย่อ/กาง — รางไอคอนยังอยู่ตอนย่อ ปุ่มนี้จึงกดได้ตลอด ไม่ต้องมีปุ่มลอยข้างนอก
+                ใส่ไอคอนทั้งสองทิศไว้ แล้วให้ CSS สลับกันโชว์ตามคลาส admin-nav-collapsed */}
+            <button
+              type="button"
+              className="admin-nav-collapse-btn"
+              onClick={() => setCollapsed((v) => !v)}
+              aria-label={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
+              title={collapsed ? 'กาง sidebar' : 'ย่อ sidebar'}
+            >
+              <FontAwesomeIcon icon={faAnglesLeft} />
+              <FontAwesomeIcon icon={faAnglesRight} />
+            </button>
+          </div>
+          {/* โปรไฟล์+อีเมล อยู่ใต้ปุ่ม Admin แทนที่จะลอยมุมขวาบนแบบเดิม */}
+          {email && (
+            <span className="admin-profile-chip" title={email}>
+              {authUser?.photoURL
+                ? <img src={authUser.photoURL} alt="" className="admin-profile-avatar" referrerPolicy="no-referrer" />
+                : <FontAwesomeIcon icon={faCircleUser} className="admin-profile-avatar-fallback" />}
+              <span className="admin-profile-email">{email}</span>
+            </span>
+          )}
         </div>
         <div className="admin-nav-links">{navContent}</div>
         <button className="admin-nav-toggle" onClick={() => setOpen(true)} aria-label="เปิดเมนู">
           <FontAwesomeIcon icon={faBars} />
         </button>
       </nav>
-
-      {/* โปรไฟล์+อีเมลมุมขวาบน — เรนเดอร์ผ่าน portal ไป body เพราะ .admin-nav มี transform ของตัวเอง
-          (ใช้เลื่อน drawer มือถือ) ทำให้ position:fixed ของลูกในนั้นอ้างอิงกับ .admin-nav แทนวิวพอร์ตจริง
-          บนเดสก์ท็อป sidebar ย่อได้เหลือราง 64px ซึ่งซ่อนอีเมล (.admin-nav-user) ไปเลย จึงต้องมีจุดที่เห็น
-          อีเมลได้เสมอไม่ว่าจะย่อ/กางอยู่ */}
-      {email && createPortal(
-        <span className="admin-profile-chip" title={email}>
-          {authUser?.photoURL
-            ? <img src={authUser.photoURL} alt="" className="admin-profile-avatar" referrerPolicy="no-referrer" />
-            : <FontAwesomeIcon icon={faCircleUser} className="admin-profile-avatar-fallback" />}
-          <span className="admin-profile-email">{email}</span>
-        </span>,
-        document.body
-      )}
 
       {/* ปุ่มลอยเปิด sidebar กลับ — โชว์เฉพาะเดสก์ท็อปตอน sidebar ถูกปิด */}
       <button

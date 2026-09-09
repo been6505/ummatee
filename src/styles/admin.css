@@ -22,7 +22,9 @@
 /* padding แยกตามจอ — เดิมประกาศ padding-left รวมกันไว้ที่นี่ (ไม่มี media query) แล้วมาอยู่หลังกฎเดสก์ท็อป
    ใน cascade ทำให้ทับ padding-left:256px ของ sidebar เสมอไม่ว่าจอกว้างแค่ไหน (เนื้อหาไปซ้อนใต้ sidebar) */
 @media (max-width:768px) {
-  .admin-dash { padding: 72px 16px 32px; }
+  /* 92px ไม่ใช่ 72px แล้ว — แถบบนสูงขึ้นเพราะย้ายชิปโปรไฟล์+อีเมลมาอยู่ใต้ปุ่ม Admin (2 แถว) แทนที่จะลอยมุมขวาบน
+     ไม่งั้นเนื้อหาแถวแรกของหน้าจะโผล่ไปซ้อนใต้แถบบน ~14px */
+  .admin-dash { padding: 92px 16px 32px; }
   /* กันการซูมอัตโนมัติของ iOS Safari เวลาแตะ input/select/textarea ที่ font-size < 16px
      ใช้ !important เพราะมี selector เฉพาะเจาะจงกว่า (เช่น .admin-cal-form input, .hk-toolbar input[type=search])
      ประกาศ font-size ของตัวเองไว้อยู่แล้ว ซึ่งจะชนะ element selector ธรรมดาตาม specificity ปกติ */

@@ -135,7 +135,7 @@ const CONTENT_HUB_URL = 'https://content-hub-olive.vercel.app'
 // ภาพรวมเพจ, ตัวเลือกแพลตฟอร์ม + ติ๊กโพสต์จริงอัตโนมัติในฟอร์ม, และปุ่ม "โพสต์จริง" ในรายการโพสต์
 // เปลี่ยนเป็น true เพื่อเปิดกลับทั้งหมดพร้อมกัน — โค้ดยังอยู่ครบ ไม่ได้ลบทิ้ง
 // ข้อมูลเดิม (platforms/realPublish ของโพสต์ที่บันทึกไว้แล้ว) ไม่ถูกแตะ ยังอยู่ใน Firestore เหมือนเดิม
-const SHOW_CONTENT_HUB = false
+const SHOW_CONTENT_HUB = true
 
 // แท็บ "คอมเมนต์" และ "ภาพรวมเพจ" — ดึงข้อมูลจริงจากแพลตฟอร์มต้องใช้ access token ที่เก็บฝั่งเซิร์ฟเวอร์
 // ซึ่งอยู่ในฐานข้อมูลของ Content Hub หน้านี้เข้าถึงไม่ได้ (เดิมเรียก Cloud Functions ที่ไม่เคย deploy
@@ -1159,7 +1159,7 @@ export default function AdminCalendar() {
                   (7 วันของสัปดาห์ แทนที่จะเป็นทั้งเดือน) จึงไม่มีสไตล์คู่ขนานให้หลุดไม่ตรงกัน */}
               {(viewMode === 'week'
                 ? weekKeys.map((k) => { const dt = fromKey(k); return { key: k, d: dt.getDate(), dt } })
-                : cells.map((d, i) => (d === null
+                : cells.map((d) => (d === null
                     ? null
                     : { key: dateKey(year, month, d), d, dt: new Date(year, month, d) }))
               ).map((cell, i) => {

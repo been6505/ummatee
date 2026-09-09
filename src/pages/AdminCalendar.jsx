@@ -20,6 +20,7 @@ import {
   faChevronLeft, faChevronRight, faChevronDown, faCheck, faXmark, faCopy,
   faPlug, faLink, faArrowUpRightFromSquare, faPaperPlane, faTriangleExclamation, faCalendarDays,
   faComments, faGlobe, faComment, faArrowLeft, faChartLine, faMessage, faPenToSquare, faTrash,
+  faMobileScreenButton,
 } from '@fortawesome/free-solid-svg-icons'
 import { faLine, faFacebookMessenger, faInstagram } from '@fortawesome/free-brands-svg-icons'
 
@@ -832,9 +833,13 @@ export default function AdminCalendar() {
         {/* การ์ดหัวเรื่องถูกเอาออก — ชื่อหน้าซ้ำกับเมนูซ้ายที่ไฮไลต์ "ปฏิทินคอนเทนต์" อยู่แล้ว
             เหลือไว้แค่ปุ่มเชื่อมต่อแพลตฟอร์มเมื่อเปิด Content Hub */}
         {SHOW_CONTENT_HUB && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="button" className="admin-btn-primary" onClick={() => setShowHub((v) => !v)}>
               <FontAwesomeIcon icon={faPlug} /> {showHub ? 'ปิดการเชื่อมต่อแพลตฟอร์ม' : 'เชื่อมต่อแพลตฟอร์ม / โพสต์จริง'}
+            </button>
+            {/* ทางลัดสำหรับมือถือ — ข้ามแผงเชื่อมบัญชี พาไปหน้าสร้างโพสต์ของ Content Hub ตรง ๆ */}
+            <button type="button" className="admin-btn" onClick={() => openContentHub('/compose')}>
+              <FontAwesomeIcon icon={faMobileScreenButton} /> โพสต์ผ่านมือถือ
             </button>
           </div>
         )}

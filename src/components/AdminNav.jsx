@@ -44,7 +44,6 @@ const NAV_GROUPS = [
       { href: '/admin/shop/feedback', label: 'รีวิว & แจ้งปัญหา' },
     ]
   },
-  { label: 'ใส่กรอบรูป', icon: faLayerGroup, href: '/admin/photo-frame' },
   {
     label: 'เงินบริจาค', icon: faMoneyBill, children: [
       { href: '/admin/donations', label: 'บันทึกเงินบริจาค' },
@@ -53,6 +52,7 @@ const NAV_GROUPS = [
   },
   { label: 'อาสาสมัคร', icon: faHandshake, href: '/admin/volunteer' },
   { label: 'Email Broadcast', icon: faBullhorn, href: '/admin/dashboard/broadcast' },
+  { label: 'ใส่กรอบรูป', icon: faLayerGroup, href: '/admin/photo-frame' },
 ]
 
 

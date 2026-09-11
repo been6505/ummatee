@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore'
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { db } from '../firebase.js'
@@ -9,6 +9,7 @@ import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
 import ExportButtons from '../components/ExportButtons.jsx'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
+import { readExif, formatLatLng, getCurrentPosition } from '../utils/exifGps.js'
 import ListSkeleton from '../components/ListSkeleton.jsx'
 import { optImg } from '../utils/cloudinaryUrl.js'
 import { withSearchTokens } from '../lib/searchIndex.js'
@@ -63,6 +64,21 @@ function MapFocus({ focus, results }) {
   return null
 }
 
+// คลิก/แตะบนแผนที่ = ปักหมุดตรงนั้นแล้วเติมพิกัดลงฟอร์ม — ทางเลือกสุดท้ายเมื่อรูปไม่มี GPS
+// และค้นชื่อสถานที่ไม่เจอ (พื้นที่ภัยพิบัติหลายที่ไม่มีชื่อใน OpenStreetMap)
+function MapClickPicker({ onPick }) {
+  useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) })
+  return null
+}
+
+// วันที่สำหรับ <input type="date"> — ต้องประกอบจากเวลาท้องถิ่น ไม่ใช่ toISOString()
+// (toISOString แปลงเป็น UTC ก่อน รูปที่ถ่ายเช้าตรู่ในไทย +07:00 จะเพี้ยนไปเป็นวันก่อนหน้า)
+const toDateInput = (ms) => {
+  const d = new Date(ms)
+  if (!Number.isFinite(d.getTime())) return ''
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 // อ่านพิกัดจากฟิลด์ที่อาจเป็นตัวเลขหรือสตริง (จุดเก่า/ที่นำเข้ามาบางอันเก็บเป็นสตริง)
 // คืน null เมื่อว่าง/ไม่ใช่ตัวเลข — ห้ามใช้ Number() ตรงๆ เพราะ Number('') = 0 จะได้หมุดกลางทะเลที่ (0,0)
 const num = (v) => {
@@ -77,7 +93,8 @@ const AidMarkers = memo(function AidMarkers({ items }) {
   return (
     <>
       {items.map((l) => (
-        <Marker key={l.id} position={l.pos}>
+        // กันคลิก/แตะที่หมุดของจุดที่บันทึกไว้แล้ว ไม่ให้ไปปักหมุดใหม่ในฟอร์ม (ดู MapClickPicker)
+        <Marker key={l.id} position={l.pos} eventHandlers={{ click: (e) => L.DomEvent.stopPropagation(e.originalEvent) }}>
           <Popup>
             <strong>{l.villageName}</strong><br />
             {l.where}<br />
@@ -244,7 +261,18 @@ export default function AdminAidMap() {
     setGeoQuery('')
   }
 
-  // กันเคส exifr อ่านไฟล์ RAW ขนาดใหญ่ (CR2/CR3/NEF ฯลฯ อาจใหญ่หลายสิบ MB) แล้วค้างไม่ resolve/reject เลย
+  // ค้นหาให้อัตโนมัติหลังหยุดพิมพ์ — ไม่ต้องกดปุ่มเองก็ได้ผลลัพธ์ (ปุ่มยังอยู่สำหรับกดค้นซ้ำ)
+  // หน่วง 900ms ต่อการพิมพ์ 1 ชุด เพื่อไม่ให้ยิงเกินโควตาของ Nominatim (~1 คำขอ/วินาที)
+  // เก็บฟังก์ชันไว้ใน ref เพราะ searchPlace สร้างใหม่ทุก render — ถ้าใส่ใน deps ตรงๆ จะยิงซ้ำไม่จบ
+  const searchPlaceRef = useRef(searchPlace)
+  useEffect(() => { searchPlaceRef.current = searchPlace })
+  useEffect(() => {
+    if (geoQuery.trim().length < 3) return // คำสั้นเกินไปค้นแล้วไม่มีความหมาย
+    const t = setTimeout(() => searchPlaceRef.current(), 900)
+    return () => clearTimeout(t)
+  }, [geoQuery])
+
+  // กันเคสอ่านไฟล์ RAW ขนาดใหญ่ (CR2/CR3/NEF ฯลฯ อาจใหญ่หลายสิบ MB) แล้วค้างไม่ resolve/reject เลย
   // ถ้าเกินเวลาที่กำหนด ให้ถือว่าไม่พบพิกัด แล้วไปต่อขั้นอัปโหลดเลย ไม่ปล่อยให้ปุ่มค้าง "กำลังอัปโหลด..." ตลอดไป
   const withTimeout = (promise, ms) => Promise.race([
     promise,
@@ -261,37 +289,24 @@ export default function AdminAidMap() {
   }
 
   // อัปโหลดรูปหน้างานขึ้น Cloudinary (ตัวเดียวกับที่หน้าอื่นใช้) เก็บแต่ URL ลง Firestore
-  // ก่อนอัปโหลด: อ่าน EXIF ของรูปแรกที่มี GPS ด้วย exifr — ถ้ามีพิกัดติดมากับรูป (กล้อง/มือถือส่วนใหญ่ฝังไว้อัตโนมัติ)
+  // ก่อนอัปโหลด: อ่าน EXIF ของรูปที่เลือก — ถ้ามีพิกัดติดมากับรูป (กล้อง/มือถือส่วนใหญ่ฝังไว้อัตโนมัติ)
   // ให้เติมพิกัด + reverse-geocode ที่อยู่ + วันที่ถ่ายภาพให้อัตโนมัติ โดยไม่ทับพิกัดที่กรอก/เลือกไว้แล้ว
   const [uploading, setUploading] = useState(false)
   const [geoFromPhoto, setGeoFromPhoto] = useState('') // ข้อความสถานะ: กำลังอ่าน/ผลลัพธ์/ไม่พบพิกัดในรูป
-  // อ่านพิกัด/วันที่จาก EXIF ของรูปที่เลือก — แยกออกมาเพื่อให้รันขนานไปกับการอัปโหลดได้
-  // ลำดับของเดิม: อ่าน EXIF ทีละไฟล์ → reverse geocode → ค่อยเริ่มอัปโหลด (ผู้ใช้ต้องรอทุกขั้นต่อกัน)
-  // ลำดับใหม่: อ่าน EXIF ทุกไฟล์พร้อมกัน → เติมพิกัดให้เห็นทันที → ที่อยู่/วันที่ตามมาทีหลัง
-  const readCoordsFromPhotos = async (files) => {
-    setGeoFromPhoto('กำลังอ่านพิกัดจากรูปภาพ...')
-    // โหลด exifr ตอนใช้จริงเท่านั้น — เป็นไลบรารีก้อนใหญ่ที่คนเปิดหน้ามาดูแผนที่เฉยๆ ไม่ได้ใช้เลย
-    const mod = await import('exifr')
-    const exifr = mod.default || mod
-    // อ่านทุกไฟล์พร้อมกัน แทนการไล่ทีละใบ — รูปที่ไม่มี GPS จะไม่หน่วงคิวของใบถัดไปอีกต่อไป
-    const gpsList = await Promise.all(files.map((f) => withTimeout(exifr.gps(f).catch(() => null), 6000)))
-    const i = gpsList.findIndex((g) => g && Number.isFinite(g.latitude) && Number.isFinite(g.longitude))
-    if (i < 0) {
-      setGeoFromPhoto('ไม่พบพิกัด GPS ในรูปภาพที่เลือก — กรอกพิกัดเองหรือค้นหาด้านบนแทนได้')
-      return
-    }
-    const gps = gpsList[i]
-    // เติมพิกัด + ขยับแผนที่ก่อนเลย ไม่ต้องรอ Nominatim ตอบ (ส่วนที่ช้าที่สุดคือขั้นนี้)
-    setForm((f) => ({ ...f, latitude: f.latitude || String(gps.latitude), longitude: f.longitude || String(gps.longitude) }))
-    setPicked({ lat: gps.latitude, lng: gps.longitude, label: 'พิกัดจากรูปภาพ' })
-    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)} — กำลังค้นที่อยู่...`)
+  const [locBusy, setLocBusy] = useState(false)        // กำลังขอตำแหน่งจากเครื่อง (GPS มือถือ)
 
-    // วันที่ถ่ายภาพ (อ่านไฟล์) กับที่อยู่ (เรียกเน็ต) ไม่เกี่ยวกัน ยิงพร้อมกันได้
-    const [exif, place] = await Promise.all([
-      withTimeout(exifr.parse(files[i], ['DateTimeOriginal', 'CreateDate']).catch(() => null), 6000),
-      withTimeout(reverseGeocode(gps.latitude, gps.longitude).catch(() => null), 6000),
-    ])
-    const shotAt = exif?.DateTimeOriginal || exif?.CreateDate || null
+  // เติมพิกัดลงฟอร์ม + วางหมุดตัวอย่างบนแผนที่ — ใช้ร่วมกันทุกทางที่ได้พิกัดมา
+  // (EXIF จากรูป / ตำแหน่งของเครื่อง / คลิกบนแผนที่) จะได้พฤติกรรมเหมือนกันหมด
+  // keepExisting = true → ไม่ทับพิกัดที่กรอก/เลือกไว้แล้ว (ใช้กับการเติมอัตโนมัติจากรูป)
+  const applyCoords = (lat, lng, label, { keepExisting = false } = {}) => {
+    setForm((f) => ((keepExisting && f.latitude && f.longitude) ? f : { ...f, latitude: String(lat), longitude: String(lng) }))
+    setPicked({ lat, lng, label })
+  }
+
+  // เติมที่อยู่จากพิกัด (reverse geocode) — เติมเฉพาะช่องที่ยังว่าง ไม่ทับที่แอดมินพิมพ์เอง
+  // ชื่อจุด/หมู่บ้านก็เติมให้ด้วยถ้ายังว่าง เพราะเป็นช่องบังคับตอนบันทึก จะได้กดบันทึกได้เลย
+  const fillAddressFromCoords = async (lat, lng) => {
+    const place = await withTimeout(reverseGeocode(lat, lng).catch(() => null), 6000)
     const a = place?.address || {}
     setForm((f) => ({
       ...f,
@@ -302,10 +317,65 @@ export default function AdminAidMap() {
       region: f.region || a.region || a.state_district || '',
       postcode: f.postcode || a.postcode || '',
       country: f.country || a.country || '',
-      visitDate: f.visitDate || (shotAt ? new Date(shotAt).toISOString().slice(0, 10) : ''),
+      villageName: f.villageName.trim() || a.village || a.hamlet || a.town || a.suburb || a.city || '',
     }))
     if (place?.display_name) setPicked((cur) => (cur ? { ...cur, label: place.display_name } : cur))
-    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${gps.latitude.toFixed(5)}, ${gps.longitude.toFixed(5)}${shotAt ? ` (ถ่ายเมื่อ ${new Date(shotAt).toLocaleString('th-TH')})` : ''}`)
+    return place
+  }
+
+  // ขอพิกัดจากเครื่องที่กำลังกรอก (GPS มือถือ) — ใช้เป็นทางถอยอัตโนมัติเมื่อรูปไม่มี EXIF GPS
+  // เพราะส่วนใหญ่แอดมินกรอกข้อมูลตอนอยู่หน้างานพอดี พิกัดเครื่องจึงใกล้เคียงจุดที่ลงพื้นที่
+  // silent = true → เรียกจากขั้นตอนอัตโนมัติ ถ้าผู้ใช้ไม่อนุญาตก็เงียบไว้ ไม่ขึ้น error ทับข้อความเดิม
+  const applyDeviceLocation = async ({ silent = false } = {}) => {
+    setLocBusy(true)
+    try {
+      const pos = await getCurrentPosition()
+      applyCoords(pos.lat, pos.lng, 'ตำแหน่งปัจจุบันของเครื่อง', { keepExisting: silent })
+      setGeoFromPhoto(`ใช้ตำแหน่งปัจจุบันของเครื่อง: ${formatLatLng(pos.lat, pos.lng)} — กำลังค้นที่อยู่...`)
+      await fillAddressFromCoords(pos.lat, pos.lng)
+      setGeoFromPhoto(`ใช้ตำแหน่งปัจจุบันของเครื่อง: ${formatLatLng(pos.lat, pos.lng)} (ถ้าไม่ใช่จุดที่ต้องการ แก้พิกัดเองหรือแตะบนแผนที่ได้)`)
+      return true
+    } catch (e) {
+      if (!silent) setGeoFromPhoto(e.message || 'หาตำแหน่งไม่สำเร็จ')
+      return false
+    } finally {
+      setLocBusy(false)
+    }
+  }
+
+  // แตะบนแผนที่เพื่อปักหมุดเอง — ทับพิกัดเดิมเสมอ เพราะเป็นการสั่งตรงจากผู้ใช้
+  const pickFromMap = async (lat, lng) => {
+    const la = Math.round(lat * 1e7) / 1e7
+    const ln = Math.round(lng * 1e7) / 1e7
+    applyCoords(la, ln, 'จุดที่ปักบนแผนที่')
+    setGeoFromPhoto(`ปักหมุดบนแผนที่: ${formatLatLng(la, ln)} — กำลังค้นที่อยู่...`)
+    await fillAddressFromCoords(la, ln)
+    setGeoFromPhoto(`ปักหมุดบนแผนที่: ${formatLatLng(la, ln)}`)
+  }
+
+  // อ่านพิกัด/วันที่จาก EXIF ของรูปที่เลือก — แยกออกมาเพื่อให้รันขนานไปกับการอัปโหลดได้
+  // ใช้ตัวอ่าน EXIF ของโปรเจกต์เอง (utils/exifGps.js) แทนไลบรารีนอก: รองรับ JPEG / HEIC-HEIF ของ iPhone /
+  // RAW ของกล้อง โดยอ่านแค่หัวไฟล์ ไม่ต้องถอดรหัสรูปจึงไม่พึ่ง WebAssembly ที่ CSP ของโฮสต์บล็อกอยู่
+  // อ่านทุกไฟล์พร้อมกัน แล้วใช้ใบแรกที่มีพิกัด — รูปที่ไม่มี GPS จะไม่หน่วงคิวของใบถัดไป
+  const readCoordsFromPhotos = async (files) => {
+    setGeoFromPhoto('กำลังอ่านพิกัดจากรูปภาพ...')
+    const exifList = await Promise.all(files.map((f) => withTimeout(readExif(f), 8000)))
+    const i = exifList.findIndex((x) => x && x.gps)
+    if (i < 0) {
+      // รูปไม่มีพิกัดติดมา — เจอบ่อยกับรูปที่ส่งผ่าน LINE/Messenger (แอปแชทลบ metadata ทิ้ง)
+      // หรือรูปที่ปิดการบันทึกตำแหน่งตอนถ่าย → ถอยไปใช้ตำแหน่งของเครื่องให้อัตโนมัติแทน
+      setGeoFromPhoto('ไม่พบพิกัด GPS ในรูปภาพ (รูปที่ส่งผ่านแอปแชทจะถูกลบพิกัดทิ้ง) — กำลังขอตำแหน่งจากเครื่องแทน...')
+      const ok = await applyDeviceLocation({ silent: true })
+      if (!ok) setGeoFromPhoto('ไม่พบพิกัด GPS ในรูปภาพ และขอตำแหน่งจากเครื่องไม่ได้ — ค้นหาชื่อสถานที่ แตะบนแผนที่ หรือกรอกพิกัดเองได้')
+      return
+    }
+    const { gps, takenAt } = exifList[i]
+    // เติมพิกัด + ขยับแผนที่ก่อนเลย ไม่ต้องรอ Nominatim ตอบ (ส่วนที่ช้าที่สุดคือขั้นนี้)
+    applyCoords(gps.lat, gps.lng, 'พิกัดจากรูปภาพ', { keepExisting: true })
+    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${formatLatLng(gps.lat, gps.lng)} — กำลังค้นที่อยู่...`)
+    if (takenAt) setForm((f) => ({ ...f, visitDate: f.visitDate || toDateInput(takenAt) }))
+    await fillAddressFromCoords(gps.lat, gps.lng)
+    setGeoFromPhoto(`อ่านพิกัดจากรูปภาพสำเร็จ: ${formatLatLng(gps.lat, gps.lng)}${takenAt ? ` (ถ่ายเมื่อ ${new Date(takenAt).toLocaleString('th-TH')})` : ''}`)
   }
 
   const uploadPhotos = async (e) => {
@@ -418,12 +488,14 @@ export default function AdminAidMap() {
 
                 {/* ผลค้นหา (ยังไม่ได้เลือก) — วงกลมส้ม แยกให้ต่างจากหมุดจุดที่บันทึกไว้แล้วชัดเจน */}
                 {!picked && (geoResults || []).map((r) => (
+                  /* stopPropagation กันไม่ให้คลิกหมุดผลค้นหาไหลต่อไปถึง MapClickPicker
+                     (ไม่งั้นพิกัดที่เพิ่งเลือกจากผลค้นหาจะโดนพิกัดของจุดที่คลิกทับทันที) */
                   <CircleMarker
                     key={r.place_id}
                     center={[Number(r.lat), Number(r.lon)]}
                     radius={9}
                     pathOptions={{ color: '#b45309', fillColor: '#f59e0b', fillOpacity: 0.85, weight: 2 }}
-                    eventHandlers={{ click: () => pickPlace(r) }}
+                    eventHandlers={{ click: (e) => { L.DomEvent.stopPropagation(e.originalEvent); pickPlace(r) } }}
                   >
                     <Popup>
                       <strong>ผลค้นหา</strong><br />
@@ -449,7 +521,11 @@ export default function AdminAidMap() {
                 )}
 
                 <MapFocus focus={picked} results={geoResults} />
+                {/* แตะที่ว่างบนแผนที่ = ปักหมุดตรงนั้น (คลิกที่หมุดถูกกันไว้ไม่ให้ไหลมาถึงตัวนี้) */}
+                <MapClickPicker onPick={pickFromMap} />
               </MapContainer>
+              {/* บอกให้รู้ว่าแผนที่กดเลือกจุดได้ ไม่งั้นไม่มีใครเดาออกว่าแตะได้ (การ์ดใบนี้ padding:0 จึงใส่ระยะเอง) */}
+              <p className="aid-geo-msg" style={{ margin: 0, padding: '10px 14px' }}>แตะจุดไหนบนแผนที่ก็ได้เพื่อปักหมุดตรงนั้น — พิกัดและที่อยู่ในฟอร์มด้านล่างจะถูกเติมให้อัตโนมัติ</p>
             </div>
 
             <div className="admin-card" style={{ marginBottom: 20 }}>
@@ -461,7 +537,7 @@ export default function AdminAidMap() {
                   <span className="aid-fieldset-num">1</span>
                   <div>
                     <h5>พิกัด</h5>
-                    <p>ตำแหน่งที่ลงพื้นที่ — ค้นหาชื่อสถานที่เพื่อเติมพิกัดอัตโนมัติ หรือกรอกเองก็ได้</p>
+                    <p>ตำแหน่งที่ลงพื้นที่ — เติมอัตโนมัติได้ 4 ทาง: อัปโหลดรูปที่มี GPS, ใช้ตำแหน่งปัจจุบันของเครื่อง, ค้นหาชื่อสถานที่ หรือแตะจุดบนแผนที่ (กรอกเองก็ได้)</p>
                   </div>
                 </div>
 
@@ -471,7 +547,7 @@ export default function AdminAidMap() {
                   {uploading ? 'กำลังอัปโหลด...' : '📷 อัปโหลดรูปภาพเพื่อดึงพิกัดอัตโนมัติ'}
                   <input type="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.dng,.orf,.sr2,.raw" multiple hidden onChange={uploadPhotos} />
                 </label>
-                <p className="aid-photos-hint">รูปที่มีพิกัด GPS ฝังอยู่ (ถ่ายจากมือถือ/กล้องส่วนใหญ่) จะเติมพิกัด ที่อยู่ และวันที่ให้อัตโนมัติ</p>
+                <p className="aid-photos-hint">รูปที่มีพิกัด GPS ฝังอยู่ (ถ่ายจากมือถือ/กล้องส่วนใหญ่ รวมถึง HEIC ของ iPhone และ RAW ของกล้อง) จะเติมพิกัด ที่อยู่ ชื่อจุด และวันที่ให้อัตโนมัติ — ถ้ารูปไม่มีพิกัด ระบบจะขอตำแหน่งจากเครื่องนี้ให้แทนอัตโนมัติ</p>
                 {geoFromPhoto && <p className="aid-geo-msg">{geoFromPhoto}</p>}
                 {(form.photoUrls || []).length > 0 && (
                   <div className="aid-photo-thumbs">
@@ -495,6 +571,10 @@ export default function AdminAidMap() {
                 />
                 <button type="button" className="admin-btn-primary" onClick={searchPlace} disabled={geoBusy || !geoQuery.trim()}>
                   {geoBusy ? 'กำลังค้นหา...' : 'ค้นหาพิกัด'}
+                </button>
+                {/* ทางลัดที่ใช้บ่อยที่สุดตอนอยู่หน้างาน — ได้พิกัดจาก GPS ของเครื่องโดยไม่ต้องมีรูป */}
+                <button type="button" className="admin-btn" onClick={() => applyDeviceLocation()} disabled={locBusy}>
+                  {locBusy ? 'กำลังหาตำแหน่ง...' : '📍 ใช้ตำแหน่งปัจจุบัน'}
                 </button>
               </div>
               {geoError && <p className="aid-geo-msg aid-geo-err">{geoError}</p>}

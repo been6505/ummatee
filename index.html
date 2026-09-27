@@ -19,9 +19,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=7">
-  <link rel="stylesheet" href="./emergency.css?v=7">
-  <link rel="stylesheet" href="./mobile.css?v=7">
+  <link rel="stylesheet" href="./styles.css?v=8">
+  <link rel="stylesheet" href="./emergency.css?v=8">
+  <link rel="stylesheet" href="./mobile.css?v=8">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
@@ -31,22 +31,18 @@
     <header class="topbar"><a class="mobile-brand" href="#home" data-view="home"><span class="ummatee-logo"><img src="./assets/ummatee-logo.png" alt="UM+" width="334" height="200"></span><span class="brand-service">UM+<small>ช่วยเหลือฉุกเฉิน</small></span></a></header>
     <main id="main" tabindex="-1">
       <section class="view active" id="view-home" aria-labelledby="home-title">
-        <h1 id="home-title" class="home-title">น้ำท่วม?<br>แจ้งขอความช่วยเหลือ</h1>
-        <p class="home-sub">บอกตำแหน่งและสิ่งที่ต้องการ ทีมงานจะติดต่อกลับ</p>
-        <ul class="need-icons" aria-label="ความช่วยเหลือที่ขอได้">
-          <li><span aria-hidden="true">🍚</span>อาหาร</li><li><span aria-hidden="true">💧</span>น้ำดื่ม</li><li><span aria-hidden="true">💊</span>ยา</li><li><span aria-hidden="true">🍼</span>ของใช้เด็ก</li><li><span aria-hidden="true">🚤</span>อพยพ</li>
-        </ul>
-        <button class="big-sos" id="start-request">ขอความช่วยเหลือ <span aria-hidden="true">→</span></button>
-        <div class="home-row">
-          <button class="home-link" data-view="map"><span aria-hidden="true">♡</span> ฉันพร้อมช่วย</button>
-          <a class="home-link call" href="tel:1669"><span aria-hidden="true">☎</span> เจ็บป่วย โทร 1669</a>
+        <div class="page-heading"><div><h1 id="home-title">แจ้งขอความช่วยเหลือ<br>ผู้ประสบภัยน้ำท่วม</h1><p>แจ้งตำแหน่งและสิ่งที่ต้องการ ทีมงานจะประสานความช่วยเหลือ</p></div></div>
+        <div class="primary-actions">
+          <button class="action-card sos" id="start-request"><span class="action-icon" aria-hidden="true">✚</span><span><strong>ขอความช่วยเหลือ</strong><small>อาหาร น้ำดื่ม ยา อพยพ</small></span><span class="action-arrow" aria-hidden="true">→</span></button>
+          <button class="action-card help" data-view="map"><span class="action-icon" aria-hidden="true">♡</span><span><strong>ฉันพร้อมช่วย</strong><small>ดูเคสที่รอความช่วยเหลือ</small></span><span class="action-arrow" aria-hidden="true">→</span></button>
         </div>
+        <a class="home-emergency" href="tel:1669"><span><strong>เจ็บป่วยฉุกเฉิน</strong><small>โทรหาเจ้าหน้าที่โดยตรง</small></span><b>1669 <span aria-hidden="true">↗</span></b></a>
       </section>
       <section class="view" id="view-request" aria-labelledby="request-title">
         <button class="back-button" data-view="home">← กลับ</button><div class="page-heading"><div><h1 id="request-title">ขอความช่วยเหลือ</h1></div><span class="step-badge">1 / 2</span></div>
         <form id="request-form" class="form-card" novalidate>
           <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
-          <fieldset class="form-section"><legend>ต้องการอะไร</legend><div class="chip-grid" id="needs"><label><input type="checkbox" value="อพยพ"><span><i aria-hidden="true">🚤</i>อพยพ</span></label><label><input type="checkbox" value="ผู้ป่วย / ผู้สูงอายุ"><span><i aria-hidden="true">🧓</i>ผู้ป่วย / ผู้สูงอายุ</span></label><label><input type="checkbox" value="อาหาร / น้ำดื่ม"><span><i aria-hidden="true">🍚</i>อาหาร / น้ำดื่ม</span></label><label><input type="checkbox" value="ยา"><span><i aria-hidden="true">💊</i>ยา</span></label><label><input type="checkbox" value="ของใช้เด็ก"><span><i aria-hidden="true">🍼</i>ของใช้เด็ก</span></label><label><input type="checkbox" value="เรือ / รถสูง"><span><i aria-hidden="true">🛻</i>เรือ / รถสูง</span></label><label><input type="checkbox" value="อื่น ๆ"><span><i aria-hidden="true">➕</i>อื่น ๆ</span></label></div><p id="needs-error" class="field-error" role="alert" hidden>เลือกความช่วยเหลืออย่างน้อย 1 ข้อ</p></fieldset>
+          <fieldset class="form-section"><legend>ต้องการอะไร</legend><div class="chip-grid" id="needs"><label><input type="checkbox" value="อพยพ"><span>อพยพ</span></label><label><input type="checkbox" value="ผู้ป่วย / ผู้สูงอายุ"><span>ผู้ป่วย / ผู้สูงอายุ</span></label><label><input type="checkbox" value="อาหาร / น้ำดื่ม"><span>อาหาร / น้ำดื่ม</span></label><label><input type="checkbox" value="ยา"><span>ยา</span></label><label><input type="checkbox" value="ของใช้เด็ก"><span>ของใช้เด็ก</span></label><label><input type="checkbox" value="เรือ / รถสูง"><span>เรือ / รถสูง</span></label><label><input type="checkbox" value="อื่น ๆ"><span>อื่น ๆ</span></label></div><p id="needs-error" class="field-error" role="alert" hidden>เลือกความช่วยเหลืออย่างน้อย 1 ข้อ</p></fieldset>
           <div class="form-section"><div class="form-row"><label class="field">จำนวนคน<input name="people" type="number" min="1" max="999" inputmode="numeric" value="1" required></label><label class="field">ความเร่งด่วน<select name="urgency" required><option>ทั่วไป</option><option>ต้องการความช่วยเหลือเร็ว</option><option>ด่วนมาก · เสี่ยงต่อชีวิต</option></select></label></div></div>
           <fieldset class="form-section"><legend>อยู่ที่ไหน</legend><button type="button" class="secondary-button location-button" id="locate">◎ ใช้ตำแหน่งปัจจุบัน</button><p id="location-status" class="field-hint" aria-live="polite">หรือแตะแผนที่เพื่อปักหมุด</p><div id="request-map" role="region" aria-label="แผนที่เลือกจุดขอความช่วยเหลือ"><p class="map-loading">กำลังโหลดแผนที่…</p></div><p id="map-error" class="field-error" role="status" hidden></p><div class="pin-controls"><button type="button" id="pin-center" class="secondary-button" disabled>ปักหมุดกลางแผนที่</button><button type="button" id="clear-pin" class="secondary-button" hidden>ลบหมุด</button></div><p id="pin-coordinate" class="pin-coordinate" aria-live="polite"></p><input type="hidden" name="latitude" id="selected-lat"><input type="hidden" name="longitude" id="selected-lng"><details class="manual-location"><summary>กรอกพิกัดเอง</summary><div class="form-row"><label class="field">ละติจูด<input id="manual-lat" type="number" step="any" min="-90" max="90" placeholder="13.756300"></label><label class="field">ลองจิจูด<input id="manual-lng" type="number" step="any" min="-180" max="180" placeholder="100.501800"></label></div><button type="button" id="apply-coordinate" class="secondary-button">ใช้พิกัดนี้</button></details><label class="field">จุดสังเกต<input name="address" autocomplete="street-address" placeholder="เช่น ซอย 5 หลังตลาด เขตบางนา" maxlength="300"></label></fieldset>
           <fieldset class="form-section"><legend>เบอร์โทรติดต่อกลับ</legend><label class="field visually-hidden-label"><span class="sr">เบอร์โทรศัพท์</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" pattern="[0-9+\- ]{9,15}" placeholder="08X XXX XXXX" required></label></fieldset>
@@ -71,6 +67,6 @@
   </div>
 </div>
 <nav class="bottom-nav" aria-label="เมนูมือถือ"><button class="active" data-view="home"><span aria-hidden="true">⌂</span>หน้าหลัก</button><button data-view="map"><span aria-hidden="true">◎</span>ดูเคส</button><button data-view="emergency"><span aria-hidden="true">☎</span>เบอร์ฉุกเฉิน</button></nav>
-<script src="./hotlines.js?v=7"></script><script src="./location.js?v=7"></script><script src="./script.js?v=7"></script>
+<script src="./hotlines.js?v=8"></script><script src="./location.js?v=8"></script><script src="./script.js?v=8"></script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});</script>
 </body></html>

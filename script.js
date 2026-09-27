@@ -204,7 +204,7 @@ $('#request-form').addEventListener('submit',e=>{
     phone,name:String(form.get('name')||'').trim(),details:String(form.get('details')||'').trim(),
     website:String(form.get('website')||'')
   };
-  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['สถานการณ์',pendingRequest.details],['ที่อยู่ / จุดสังเกต',address],['พิกัดที่เลือก',geo?`${geo.lat.toFixed(6)}, ${geo.lng.toFixed(6)}`:'ไม่ได้แนบ'],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
+  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['สถานการณ์',pendingRequest.details],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
   const summary=$('#summary-content');
   summary.replaceChildren(...rows.filter(([,val])=>val).map(([key,val])=>{const row=document.createElement('div');row.className='summary-row';const s=document.createElement('span');s.textContent=key;const v=document.createElement('strong');v.textContent=val;row.append(s,v);return row}));
   $('#send-result').hidden=true;$('#summary-actions').hidden=false;$('#send-request').disabled=false;$('#send-request').textContent='ส่งคำขอความช่วยเหลือ';
@@ -220,7 +220,7 @@ $('#send-request').addEventListener('click',async()=>{
     res.className='notice success';
     res.innerHTML='';
     const s=document.createElement('strong');s.textContent='ส่งคำขอแล้ว · เลขเคส '+r.id;
-    const p=document.createElement('p');p.textContent='ทีมอาสาเห็นเคสนี้แล้วและจะโทรกลับที่ '+pendingRequest.phone+' เปิดเสียงโทรศัพท์ไว้และประหยัดแบตเตอรี่ หากอันตรายเพิ่มขึ้น โทร 1669 หรือ 1784 ทันที';
+    const p=document.createElement('p');p.textContent='ทีมงานจะโทรกลับที่ '+pendingRequest.phone+' · อันตราย โทร 1669';
     const wrap=document.createElement('div');wrap.append(s,p);res.append(wrap);res.hidden=false;
     $('#summary-actions').hidden=true;
     pendingRequest=null;$('#request-form').reset();document.querySelectorAll('#needs input').forEach(i=>i.checked=false);

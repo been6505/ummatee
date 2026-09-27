@@ -25,9 +25,9 @@ function setRequestLocation(lat,lng,pan=true){
   locationRevision++;geo={lat,lng};
   locationElement('selected-lat').value=lat.toFixed(6);locationElement('selected-lng').value=lng.toFixed(6);
   locationElement('manual-lat').value=lat.toFixed(6);locationElement('manual-lng').value=lng.toFixed(6);
-  locationElement('pin-coordinate').textContent=`พิกัดที่เลือก: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  locationElement('pin-coordinate').textContent='✓ ปักหมุดแล้ว';
   locationElement('clear-pin').hidden=false;
-  locationElement('location-status').textContent='เลือกพิกัดแล้ว · แตะจุดใหม่หรือลากหมุดเพื่อปรับได้';
+  locationElement('location-status').textContent='ลากหมุดเพื่อปรับได้';
   drawRequestMarker();
   if(pan&&requestMap)requestMap.setView([lat,lng],Math.max(requestMap.getZoom(),16));
   return true;
@@ -51,7 +51,7 @@ function ensureRequestMap(){
 function clearRequestLocation(){
   locationRevision++;geo=null;if(requestMarker){requestMarker.remove();requestMarker=null}
   ['selected-lat','selected-lng','manual-lat','manual-lng'].forEach(id=>locationElement(id).value='');
-  locationElement('pin-coordinate').textContent='ยังไม่ได้เลือกพิกัด';locationElement('clear-pin').hidden=true;
+  locationElement('pin-coordinate').textContent='';locationElement('clear-pin').hidden=true;
   locationElement('location-status').textContent='แตะบนแผนที่เพื่อเลือกตำแหน่ง';
 }
 locationElement('pin-center').addEventListener('click',()=>{if(requestMap){const p=requestMap.getCenter();setRequestLocation(p.lat,p.lng,false)}});
@@ -68,7 +68,7 @@ locationElement('locate').addEventListener('click',()=>{
   navigator.geolocation.getCurrentPosition(pos=>{
     button.disabled=false;if(requestedAt!==locationRevision)return;
     setRequestLocation(pos.coords.latitude,pos.coords.longitude);
-    status.textContent=`พบตำแหน่งแล้ว (ความคลาดเคลื่อนประมาณ ${Math.round(pos.coords.accuracy)} เมตร) · ลากหมุดปรับได้`;
+    status.textContent='พบตำแหน่งแล้ว · ลากหมุดปรับได้';
     ensureRequestMap();
   },err=>{
     button.disabled=false;if(requestedAt!==locationRevision)return;

@@ -63,6 +63,7 @@ function setView(view,record=true){
   const navView=['request','summary'].includes(view)?'home':view==='detail'?'map':view;
   document.querySelectorAll('nav [data-view]').forEach(el=>{const active=el.dataset.view===navView;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
   if(view==='map'){renderMap();loadCases()}
+  if(view==='home'){renderHomeStats();loadCases()}
   if(view==='request')ensureRequestMap();
   window.scrollTo({top:0,behavior:'instant'});
   $('#main').focus({preventScroll:true});
@@ -107,9 +108,20 @@ async function loadCases(){
     if(selectedCase){selectedCase=cases.find(c=>c.id===selectedCase.id)||selectedCase;if(currentView==='detail')renderDetail()}
   }catch(e){
     $('#sync-status').textContent='โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต แล้วลองใหม่';
-  }finally{loading=false;if(currentView==='map')renderMap()}
+  }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats()}
 }
-setInterval(()=>{if(['map','detail'].includes(currentView)&&!document.hidden)loadCases()},30000);
+setInterval(()=>{if(['map','detail','home'].includes(currentView)&&!document.hidden)loadCases()},30000);
+
+/* ---------------- home stats ---------------- */
+function renderHomeStats(){
+  const el=id=>document.getElementById(id);if(!el('st-total'))return;
+  if(!lastLoaded)return;
+  const n={open:0,going:0,done:0};let people=0;
+  cases.forEach(c=>{n[c.status]=(n[c.status]||0)+1;people+=Number(c.people)||0});
+  const f=x=>x.toLocaleString('th-TH');
+  el('st-total').textContent=f(cases.length);el('st-open').textContent=f(n.open);el('st-going').textContent=f(n.going);el('st-done').textContent=f(n.done);el('st-people').textContent=f(people);
+  el('stats-updated').textContent='อัปเดต '+new Date(lastLoaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+}
 
 /* ---------------- volunteer mode ---------------- */
 function renderVolunteerBar(){

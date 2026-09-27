@@ -70,3 +70,19 @@
 .hotline-card,.hotline-card.priority{align-items:center}
 .hotline-info{align-self:center}
 .summary-row{padding:10px 0}
+
+/* home stats */
+.home-stats{margin-top:26px;background:#fff;border:1px solid #dce6e9;border-radius:16px;padding:18px}
+.stats-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.stats-head h2{font-size:17px;margin:0}
+.stats-head span{font-size:12px;color:#7b919a}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{border-radius:12px;padding:12px 14px;background:#f3f7f8;display:grid;gap:2px}
+.stat-box b{font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums;color:#173746}
+.stat-box span{font-size:13px;color:#5f7c89}
+.stat-box.wait{background:#fff0dc}.stat-box.wait b{color:#a76115}
+.stat-box.enroute{background:#e7f1fc}.stat-box.enroute b{color:#28639a}
+.stat-box.done{background:#e4f4e9}.stat-box.done b{color:#277343}
+.stats-people{margin:12px 0 0;font-size:14px;color:#5f7c89}
+.stats-people b{color:#173746}
+@media(min-width:700px){.stats-grid{grid-template-columns:repeat(4,1fr)}}

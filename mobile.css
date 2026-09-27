@@ -35,3 +35,13 @@
 
 .home-needs{margin:12px 0 0;font-weight:600;color:#c93643!important;font-size:15px!important}
 .home-how{margin:8px 0 0}
+
+/* simplified case list */
+.filter-simple{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+.filter-simple .filter-label{display:grid;gap:6px;font-size:13px}
+.filter-simple select{width:100%!important}
+.case-simple{padding:14px 16px!important}
+.case-simple .case-top{margin-bottom:8px}
+.case-simple h3{margin:0!important;font-size:16px!important}
+.vol-details .volunteer-bar{margin-top:6px}
+.vol-sync{font-size:12px;color:#7b919a;margin:0 0 12px}

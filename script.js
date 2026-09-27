@@ -70,28 +70,22 @@ function setView(view,record=true){
 
 /* ---------------- cases list ---------------- */
 function caseCard(c){
-  const div=document.createElement('button');div.className='case-card';div.type='button';
+  const div=document.createElement('button');div.className='case-card case-simple';div.type='button';
   const top=document.createElement('div');top.className='case-top';
   const st=document.createElement('span');st.className='status '+statusClass(c);st.textContent=statusLabel(c);
-  const id=document.createElement('span');id.className='case-id';id.textContent='#'+c.id;
-  top.append(st,id);
-  const h=document.createElement('h3');h.textContent=caseTitle(c);
-  const p=document.createElement('p');p.textContent=caseArea(c)+(c.volunteer&&c.status!=='open'?' · ทีม: '+c.volunteer:'');
-  const bottom=document.createElement('div');bottom.className='case-bottom';
-  const t=document.createElement('span');t.textContent=ago(c.createdAt);
-  const b=document.createElement('b');b.textContent='ดูรายละเอียด ↗';
-  bottom.append(t,b);
-  div.append(top,h,p,bottom);
+  const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
+  top.append(st,t);
+  const h=document.createElement('h3');h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
+  div.append(top,h);
   div.addEventListener('click',()=>openCase(c.id));
   return div;
 }
 function filteredCases(){
-  const term=$('#case-search').value.trim().toLowerCase(),filter=$('#case-filter').value,st=$('#case-status').value;
+  const filter=$('#case-filter').value,st=$('#case-status').value;
   const rank={open:0,going:1,done:2};
   return cases
     .filter(c=>st==='all'?true:st==='active'?c.status!=='done':c.status===st)
     .filter(c=>filter==='all'||(c.needs||[]).join(' ').includes(filter))
-    .filter(c=>!term||[c.district,c.address,(c.needs||[]).join(' ')].join(' ').toLowerCase().includes(term))
     .sort((a,b)=>(rank[a.status]-rank[b.status])||(Number(b.urgency)-Number(a.urgency))||((a.createdAt||0)-(b.createdAt||0)));
 }
 function renderMap(){
@@ -133,30 +127,7 @@ function renderVolunteerBar(){
   bar.append(s,inp,btn);
 }
 
-/* ---------------- case map (Leaflet) ---------------- */
-let casesMap=null,casesLayer=null;
-$('#case-map-toggle').addEventListener('toggle',e=>{
-  if(!e.target.open)return;
-  loadLeaflet().then(()=>{
-    if(!casesMap){
-      $('#cases-map').replaceChildren();
-      casesMap=L.map('cases-map',{scrollWheelZoom:false}).setView([13.7563,100.5018],11);
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(casesMap);
-      casesLayer=L.layerGroup().addTo(casesMap);
-    }
-    requestAnimationFrame(()=>{casesMap.invalidateSize();drawCaseMarkers(true)});
-  }).catch(()=>{$('#cases-map').textContent='แผนที่โหลดไม่สำเร็จ'});
-});
-function drawCaseMarkers(fit){
-  if(!casesMap)return;casesLayer.clearLayers();const pts=[];
-  filteredCases().filter(hasPin).forEach(c=>{
-    const color=c.status==='done'?'#277343':c.status==='going'?'#28639a':Number(c.urgency)===3?'#d7454a':Number(c.urgency)===2?'#e69b35':'#176f73';
-    pts.push([c.lat,c.lng]);
-    L.circleMarker([c.lat,c.lng],{radius:10,color:'#fff',weight:3,fillColor:color,fillOpacity:1})
-      .on('click',()=>openCase(c.id)).bindTooltip(caseTitle(c)).addTo(casesLayer);
-  });
-  if(fit&&pts.length)casesMap.fitBounds(pts,{padding:[30,30],maxZoom:14});
-}
+function drawCaseMarkers(){}
 
 /* ---------------- case detail ---------------- */
 function openCase(id){selectedCase=cases.find(c=>c.id===id);if(!selectedCase)return;detailOrigin='map';renderDetail();setView('detail')}
@@ -270,7 +241,7 @@ $('#new-request').addEventListener('click',()=>{$('#summary-back').hidden=false;
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn){e.preventDefault();setView(btn.dataset.view);}});
 $('#start-request').addEventListener('click',()=>setView('request'));
 $('#detail-back').addEventListener('click',()=>setView(detailOrigin));
-$('#case-search').addEventListener('input',renderMap);$('#case-filter').addEventListener('change',renderMap);$('#case-status').addEventListener('change',renderMap);
+$('#case-filter').addEventListener('change',renderMap);$('#case-status').addEventListener('change',renderMap);
 $('#refresh-cases').addEventListener('click',loadCases);
 function restoreView(){let target=location.hash.slice(1)||'home';if(target==='volunteer')target='map';if(target==='detail'&&!selectedCase)target='map';if(target==='summary'&&!$('#summary-content').children.length)target='request';if(!['home','map','request','emergency','summary','detail'].includes(target))target='home';setView(target,false)}
 window.addEventListener('popstate',restoreView);

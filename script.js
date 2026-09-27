@@ -8,6 +8,7 @@ let currentView='home', detailOrigin='map', selectedCase=null, geo=null;
 let cases=[], isVolunteer=false, lastLoaded=0, loading=false;
 const STATUS_TH={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',done:'ช่วยเหลือแล้ว'};
 const STATUS_CLASS={open:'wait',going:'enroute',done:'done'};
+const LEVEL_TH={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / ขึ้นหลังคา'};
 
 /* ---------------- storage helpers ---------------- */
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}},set(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}};
@@ -157,6 +158,7 @@ function renderDetail(){
   const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];
   if(c.address&&c.district)rows.push(['ที่อยู่ / จุดสังเกต',c.address]);
   if(c.name)rows.push(['ผู้ติดต่อ',c.name]);
+  if(c.level)rows.push(['ระดับน้ำ',LEVEL_TH[c.level]||c.level]);
   rows.push(['เบอร์โทร',c.phone||'-']);
   if(c.volunteer&&c.status!=='open')rows.push(['ทีมที่รับเคส',c.volunteer]);
   rows.forEach(([key,val])=>{const cell=document.createElement('div');cell.className='fact';const s=document.createElement('span');s.textContent=key;const st=document.createElement('strong');st.textContent=val;cell.append(s,st);facts.append(cell)});
@@ -211,12 +213,13 @@ $('#request-form').addEventListener('submit',e=>{
   if(phone.replace(/\D/g,'').length<9){e.currentTarget.phone.focus();return}
   if(!address&&!geo){e.currentTarget.address.focus();return}
   pendingRequest={
+    level:(document.querySelector('input[name=level]:checked')||{}).value||'',
     needs:checked,urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,
     address,lat:geo?+geo.lat.toFixed(6):'',lng:geo?+geo.lng.toFixed(6):'',
     phone,name:String(form.get('name')||'').trim(),details:String(form.get('details')||'').trim(),
     website:String(form.get('website')||'')
   };
-  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['สถานการณ์',pendingRequest.details],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
+  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ระดับน้ำ',LEVEL_TH[pendingRequest.level]||''],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['สถานการณ์',pendingRequest.details],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
   const summary=$('#summary-content');
   summary.replaceChildren(...rows.filter(([,val])=>val).map(([key,val])=>{const row=document.createElement('div');row.className='summary-row';const s=document.createElement('span');s.textContent=key;const v=document.createElement('strong');v.textContent=val;row.append(s,v);return row}));
   $('#send-result').hidden=true;$('#summary-actions').hidden=false;$('#send-request').disabled=false;$('#send-request').textContent='ส่งคำขอความช่วยเหลือ';

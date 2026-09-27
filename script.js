@@ -1,7 +1,7 @@
 /* ============================================================
    UM+ — เชื่อมกับ Google Sheet ผ่าน Apps Script Web app
    ============================================================ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbxaPHdtB7AqNybPn29rcfzvriKgMQfCNTUIFqqQlVvlNV8wE0w03axIzpy8BL_x0Ar_Rw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
 
 const $ = s => document.querySelector(s);
 let currentView='home', detailOrigin='map', selectedCase=null, geo=null;

@@ -17,11 +17,12 @@ function layerPrefs(){
 function renderLayerChips(){
   const box=document.getElementById('layer-chips');if(!box)return;
   const s=layerPrefs(),count=t=>PL.places.filter(p=>p.type===t).length;
-  const items=[['cases','📍','ขอความช่วยเหลือ',filteredCases().filter(hasPin).length],...Object.entries(PLACE_TYPE).map(([k,v])=>[k,v.icon,v.short,count(k)])];
+  const live=(typeof LIVE!=='undefined'&&LIVE.teams)?LIVE.teams.length:0;
+  const items=[['cases','📍','ขอความช่วยเหลือ',filteredCases().filter(hasPin).length],...Object.entries(PLACE_TYPE).map(([k,v])=>[k,v.icon,v.short,count(k)+(k==='rescue'?live:0)])];
   box.replaceChildren(...items.map(([k,ic,lb,n])=>{
     const b=document.createElement('button');b.type='button';b.className='layer-chip lc-'+k;b.setAttribute('aria-pressed',String(!!s[k]));
     b.innerHTML=`<span aria-hidden="true">${ic}</span>${escH(lb)}${n?` <b>${n}</b>`:''}`;
-    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers2',JSON.stringify(s));renderLayerChips();applyLayerVisibility();if(s[k]&&k!=='cases'&&!PL.loaded)loadPlaces()};
+    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers2',JSON.stringify(s));renderLayerChips();applyLayerVisibility();if(s[k]&&k!=='cases'&&!PL.loaded)loadPlaces();if(k==='rescue'&&typeof loadTeams==='function')loadTeams()};
     return b;
   }));
 }

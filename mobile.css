@@ -208,3 +208,9 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .topbar,.bottom-nav{z-index:1100}
 .flood-map-wrap .layer-chips{margin-top:10px;padding-bottom:4px}
 .layer-chip[aria-pressed="false"]{opacity:1;background:#fff;color:#7a8a90;border-style:dashed}
+/* ตำแหน่งสดของทีมกู้ภัย */
+.team-pin.live span{background:#1f5fbf;font-size:16px;position:relative}
+.team-pin.live span::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid rgba(31,95,191,.55);animation:teamPulse 1.8s ease-out infinite}
+.team-pin.mine span{background:#166d75}
+.team-pin em{position:absolute;top:36px;left:50%;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:11px;font-weight:700;color:#123;background:rgba(255,255,255,.92);border-radius:6px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+@keyframes teamPulse{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.6);opacity:0}}

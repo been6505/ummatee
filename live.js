@@ -8,9 +8,11 @@ const SEND_MIN_MS=25000, SEND_MAX_MS=120000, SEND_MIN_M=60;
 
 /* ---------- API ---------- */
 async function apiTeams(){
-  const k=store.get('uh_vol_key','');
-  const r=await fetch(API_URL+'?action=teams&key='+encodeURIComponent(k)+'&t='+Date.now());return r.json();
+  const k=isVolunteer?store.get('uh_vol_key',''):'';
+  const r=await fetch(API_URL+'?action=teams'+(k?'&key='+encodeURIComponent(k):'')+'&t='+Math.floor(Date.now()/30000));return r.json();
 }
+/* คนทั่วไปเห็นทีมกู้ภัยเมื่อกดชิป 🚑 ทีมกู้ภัย, อาสาเห็นตลอด */
+function wantTeams(){return isVolunteer||(typeof layerPrefs==='function'&&!!layerPrefs().rescue)}
 function apiPing(extra){return apiPost({action:'ping',key:store.get('uh_vol_key',''),team:store.get('uh_team',''),caseId:store.get('uh_cur_case',''),...extra})}
 function apiTrack(m){return apiPost({action:'track',id:m.id||'',clientId:m.cid||'',token:m.token})}
 const mk=m=>m.cid||m.id;
@@ -128,7 +130,7 @@ function refreshLiveControls(){const box=document.getElementById('live-box');if(
 function fillLiveControls(box){
   box.replaceChildren();
   const h=document.createElement('strong');h.textContent='ตำแหน่งทีม (เรียลไทม์)';
-  const p=document.createElement('p');p.className='vol-note';p.textContent='ทีมอาสาด้วยกันเห็นบนแผนที่ ส่วนผู้แจ้งเคสที่ทีมรับไว้จะเห็นแค่พื้นที่และระยะห่าง เปิดหน้านี้ค้างไว้ระหว่างเดินทาง';
+  const p=document.createElement('p');p.className='vol-note';p.textContent='ตำแหน่งทีมจะแสดงบนแผนที่ (ชิป 🚑 ทีมกู้ภัย) ให้ทุกคนเห็น ละเอียดประมาณ 100 ม. ทีมอาสาด้วยกันเห็นตำแหน่งจริง · เปิดหน้านี้ค้างไว้ระหว่างเดินทาง กดหยุดเมื่อเลิกงาน';
   const team=document.createElement('input');team.className='team-input';team.placeholder='ชื่อทีม / อาสา';team.value=store.get('uh_team','');team.setAttribute('aria-label','ชื่อทีม');
   team.onchange=()=>store.set('uh_team',team.value.trim());
   const btn=document.createElement('button');btn.type='button';
@@ -140,20 +142,20 @@ function fillLiveControls(box){
 
 /* ตำแหน่งทีมบนแผนที่ (เฉพาะอาสา) */
 async function loadTeams(){
-  if(!isVolunteer){LIVE.teams=[];drawTeamMarkers();return}
-  try{const r=await apiTeams();if(r.ok){LIVE.teams=r.teams||[];drawTeamMarkers()}}catch(e){}
+  if(!wantTeams()){drawTeamMarkers();return}
+  try{const r=await apiTeams();if(r.ok){LIVE.teams=r.teams||[];LIVE.teamsLoaded=Date.now();drawTeamMarkers();if(typeof renderLayerChips==='function')renderLayerChips()}}catch(e){}
 }
 function drawTeamMarkers(){
   if(typeof fmap==='undefined'||!fmap||!window.L)return;
   if(!LIVE.teamLayer)LIVE.teamLayer=L.layerGroup().addTo(fmap);
   LIVE.teamLayer.clearLayers();
-  if(!isVolunteer)return;
-  const me=store.get('uh_team','');
+  if(!wantTeams())return;
+  const me=isVolunteer?store.get('uh_team',''):'';
   LIVE.teams.forEach(t=>{
     const mine=t.team===me;
-    const icon=L.divIcon({className:'team-pin'+(mine?' mine':''),html:`<span>${escH((t.team||'?').slice(0,2))}</span>`,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-16]});
+    const icon=L.divIcon({className:'team-pin live'+(mine?' mine':''),html:`<span>🚑</span><em>${escH(String(t.team||'').slice(0,14))}</em>`,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-16]});
     L.marker([t.lat,t.lng],{icon,zIndexOffset:2000,title:'ทีม '+t.team})
-      .bindPopup(`<b>ทีม ${escH(t.team)}</b>${mine?' (ทีมของคุณ)':''}<br>อัปเดต ${escH(ago(t.updatedAt))}${t.caseId?`<br>กำลังไปเคส <a href="#" data-open-case="${escH(t.caseId)}">#${escH(t.caseId)}</a>`:''}`)
+      .bindPopup(`<span class="pp-type" style="color:#1f5fbf">🚑 อาสากู้ภัย · ตำแหน่งสด</span><br><b>ทีม ${escH(t.team)}</b>${mine?' (ทีมของคุณ)':''}<br>อัปเดต ${escH(ago(t.updatedAt))}${isVolunteer&&t.caseId?`<br>กำลังไปเคส <a href="#" data-open-case="${escH(t.caseId)}">#${escH(t.caseId)}</a>`:t.busy?'<br>กำลังออกช่วยเหลือ':''}`)
       .addTo(LIVE.teamLayer);
   });
 }
@@ -274,7 +276,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMyCase
 function onCasesLoaded(){
   checkNewCases();
   if(isVolunteer){loadTeams();if(store.get('uh_sharing','')&&!isSharing()&&store.get('uh_team',''))startSharing()}
-  else{if(isSharing())stopSharing(true);drawTeamMarkers()}
+  else{if(isSharing())stopSharing(true);if(wantTeams()&&currentView==='map')loadTeams();else drawTeamMarkers()}
 }
 function onStatusChanged(c,status){
   if(status==='going'){

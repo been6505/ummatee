@@ -3,9 +3,7 @@
    ข้อมูลอยู่แท็บ Places ใน Google Sheet (ทีมพิมพ์ใน Sheet เอง หรือเพิ่มจากแผนที่ในโหมดอาสา)
    ============================================================ */
 const PLACE_TYPE={
-  rescue:{label:'ทีมกู้ภัยอาสา',short:'ทีมกู้ภัย',icon:'🚑',color:'#1f5fbf'},
-  halal:{label:'โรงครัวฮาลาล',short:'ครัวฮาลาล',icon:'🍲',color:'#1b7f3b'},
-  kitchen:{label:'โรงครัวทั่วไป',short:'โรงครัว',icon:'🍳',color:'#d97706'}
+  rescue:{label:'ทีมกู้ภัยอาสา',short:'ทีมกู้ภัย',icon:'🚑',color:'#1f5fbf'}
 };
 const PL={places:[],layer:null,loaded:0,show:null,picking:false,draft:null,tmp:null};
 
@@ -74,15 +72,15 @@ function placeControls(){
 }
 function fillPlaceBox(box){
   box=box||document.getElementById('place-box');if(!box)return;box.replaceChildren();
-  const h=document.createElement('strong');h.textContent='จุดบริการบนแผนที่';
-  const p=document.createElement('p');p.className='vol-note';p.textContent='ทีมกู้ภัย โรงครัวฮาลาล โรงครัวทั่วไป ทุกคนเห็นบนแผนที่ (แก้ใน Sheet แท็บ Places ได้ด้วย)';
+  const h=document.createElement('strong');h.textContent='จุดทีมกู้ภัยบนแผนที่';
+  const p=document.createElement('p');p.className='vol-note';p.textContent='จุดตั้งทีมกู้ภัยอาสา ทุกคนเห็นบนแผนที่ (แก้ใน Sheet แท็บ Places ได้ด้วย)';
   box.append(h,p);
-  if(!PL.draft){const b=document.createElement('button');b.type='button';b.className='secondary-button';b.textContent='＋ เพิ่มจุดบริการ';b.onclick=()=>openPlaceForm(null);box.append(b);return}
+  if(!PL.draft){const b=document.createElement('button');b.type='button';b.className='secondary-button';b.textContent='＋ เพิ่มจุดทีมกู้ภัย';b.onclick=()=>openPlaceForm(null);box.append(b);return}
   const d=PL.draft;
   const type=document.createElement('div');type.className='place-types';
   Object.entries(PLACE_TYPE).forEach(([k,v])=>{const b=document.createElement('button');b.type='button';b.className='layer-chip';b.setAttribute('aria-pressed',String(d.type===k));b.innerHTML=`<span aria-hidden="true">${v.icon}</span>${v.label}`;b.onclick=()=>{d.type=k;fillPlaceBox()};type.append(b)});
   const mk=(ph,key,max,mode)=>{const i=document.createElement('input');i.className='team-input';i.placeholder=ph;i.value=d[key]||'';i.maxLength=max;if(mode)i.inputMode=mode;i.oninput=()=>{d[key]=i.value};return i};
-  const name=mk('ชื่อ เช่น โรงครัวมัสยิด…',  'name',80),phone=mk('เบอร์ติดต่อ (ถ้ามี)','phone',30,'tel'),note=mk('รายละเอียด เช่น เวลาแจก จำนวนชุด ประเภทเรือ','note',300);
+  const name=mk('ชื่อทีม เช่น กู้ภัยอาสา…',  'name',80),phone=mk('เบอร์ติดต่อ (ถ้ามี)','phone',30,'tel'),note=mk('รายละเอียด เช่น เวลาแจก จำนวนชุด ประเภทเรือ','note',300);
   const loc=document.createElement('div');loc.className='place-loc';
   const st=document.createElement('span');st.textContent=d.lat?`✓ ปักหมุดแล้ว (${(+d.lat).toFixed(4)}, ${(+d.lng).toFixed(4)})`:'ยังไม่ได้ปักหมุด';
   const pick=document.createElement('button');pick.type='button';pick.className='secondary-button';pick.textContent=PL.picking?'แตะบนแผนที่…':'📍 แตะเลือกบนแผนที่';pick.onclick=startPick;
@@ -101,14 +99,15 @@ function fillPlaceBox(box){
     }catch(e){save.disabled=false;save.textContent='ลองบันทึกอีกครั้ง';err.textContent='บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต หรือระบบหลังบ้านยังไม่อัปเดต';err.hidden=false}
   };
   row.append(save,cancel);
-  box.append(type,name,phone,note,loc,err,row);
+  if(Object.keys(PLACE_TYPE).length>1)box.append(type);
+  box.append(name,phone,note,loc,err,row);
   if(d.id){const hide=document.createElement('button');hide.type='button';hide.className='text-button danger-text';hide.textContent='ซ่อนจุดนี้จากแผนที่';
     hide.onclick=async()=>{if(!hide.dataset.sure){hide.dataset.sure='1';hide.textContent='กดอีกครั้งเพื่อยืนยันการซ่อน';return}
       hide.disabled=true;try{const r=await apiPost({action:'place',key:store.get('uh_vol_key',''),id:d.id,active:false});if(!r.ok)throw 0;closePlaceForm();loadPlaces()}catch(e){hide.disabled=false;hide.textContent='ซ่อนไม่สำเร็จ ลองอีกครั้ง'}};
     box.append(hide)}
 }
 function openPlaceForm(p){
-  PL.draft=p?{id:p.id,type:p.type,name:p.name,phone:p.phone,note:p.note,lat:p.lat,lng:p.lng}:{type:'',name:'',phone:'',note:'',lat:'',lng:''};
+  PL.draft=p?{id:p.id,type:'rescue',name:p.name,phone:p.phone,note:p.note,lat:p.lat,lng:p.lng}:{type:'rescue',name:'',phone:'',note:'',lat:'',lng:''};
   if(p)showTmp(p.lat,p.lng);
   if(!isVolunteer)return;
   volPanelOpen=true;renderVolunteerBar();fillPlaceBox();

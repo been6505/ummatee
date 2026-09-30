@@ -118,6 +118,7 @@ function renderMap(){
   if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';el.append(empty)}
   renderVolunteerBar();
   drawCaseMarkers();
+  if(typeof renderLayerChips==='function')renderLayerChips();
 }
 async function loadCases(){
   if(loading)return;loading=true;
@@ -147,12 +148,14 @@ function renderHomeStats(){
 
 /* ---------------- volunteer mode ---------------- */
 function renderVolunteerBar(){
-  const bar=$('#volunteer-bar');bar.replaceChildren();
+  const bar=$('#volunteer-bar');
   const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on);sw.classList.toggle('pending',on&&!isVolunteer);sw.classList.toggle('active',isVolunteer)}
   const panel=$('#vol-panel');if(panel)panel.hidden=!(isVolunteer||volPanelOpen);
+  const mode=isVolunteer?'vol':'pub';if(bar.dataset.mode===mode&&bar.children.length)return; // ไม่สร้างใหม่ทุกครั้ง (กันช่องที่กำลังพิมพ์หาย)
+  bar.dataset.mode=mode;bar.replaceChildren();
   if(isVolunteer){
     const s=document.createElement('span');s.className='vol-on';s.textContent='● โหมดอาสา · เห็นเบอร์และรับเคสได้';
-    bar.append(s);if(typeof liveControls==='function')bar.append(liveControls());return;
+    bar.append(s);if(typeof liveControls==='function')bar.append(liveControls());if(typeof placeControls==='function')bar.append(placeControls());return;
   }
   const s=document.createElement('span');s.className='vol-note';s.textContent='ชื่อและเบอร์ถูกซ่อนเพื่อความเป็นส่วนตัว ทีมอาสาใส่รหัสเพื่อรับเคส';
   const inp=document.createElement('input');inp.type='password';inp.id='vol-key';inp.placeholder='รหัสอาสา';inp.setAttribute('aria-label','รหัสอาสา');inp.autocomplete='off';
@@ -187,7 +190,7 @@ function initFloodMap(){
     fmap=L.map('flood-map',{scrollWheelZoom:false}).setView([13.7563,100.5018],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard.org'}).addTo(fmap);
     floodLayer=L.layerGroup().addTo(fmap);pinLayer=L.layerGroup().addTo(fmap);
-    loadFlood();drawCaseMarkers();requestAnimationFrame(()=>fmap.invalidateSize());
+    loadFlood();drawCaseMarkers();if(typeof onFloodMapReady==='function')onFloodMapReady();requestAnimationFrame(()=>fmap.invalidateSize());
   }).catch(()=>{el.textContent='โหลดแผนที่ไม่สำเร็จ'});
 }
 async function loadFlood(){

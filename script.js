@@ -109,7 +109,7 @@ async function loadCases(){
     if(selectedCase){selectedCase=cases.find(c=>c.id===selectedCase.id)||selectedCase;if(currentView==='detail')renderDetail()}
   }catch(e){
     $('#sync-status').textContent='โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต แล้วลองใหม่';
-  }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats()}
+  }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats();if(typeof onCasesLoaded==='function')onCasesLoaded()}
 }
 setInterval(()=>{if(['map','detail','home'].includes(currentView)&&!document.hidden)loadCases()},30000);
 
@@ -131,7 +131,7 @@ function renderVolunteerBar(){
     const s=document.createElement('span');s.className='vol-on';s.textContent='● โหมดอาสา · เห็นเบอร์และรับเคสได้';
     const out=document.createElement('button');out.type='button';out.className='text-button';out.textContent='ออกจากโหมดอาสา';
     out.onclick=()=>{store.set('uh_vol_key','');isVolunteer=false;loadCases()};
-    bar.append(s,out);return;
+    bar.append(s,out);if(typeof liveControls==='function')bar.append(liveControls());return;
   }
   const s=document.createElement('span');s.className='vol-note';s.textContent='ชื่อและเบอร์ถูกซ่อนเพื่อความเป็นส่วนตัว ทีมอาสาใส่รหัสเพื่อรับเคส';
   const inp=document.createElement('input');inp.type='password';inp.id='vol-key';inp.placeholder='รหัสอาสา';inp.setAttribute('aria-label','รหัสอาสา');inp.autocomplete='off';
@@ -185,6 +185,7 @@ function drawCaseMarkers(){
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}
+  if(typeof drawTeamMarkers==='function')drawTeamMarkers();
 }
 document.addEventListener('click',e=>{const a=e.target.closest('[data-open-case]');if(a){e.preventDefault();openCase(a.getAttribute('data-open-case'))}});
 setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},5*60*1000);
@@ -261,6 +262,7 @@ async function changeStatus(c,status,team,btn){
     if(!r.ok){if(r.error==='not_volunteer'){store.set('uh_vol_key','');isVolunteer=false}throw new Error(r.error)}
     c.status=status;if(team)c.volunteer=team;if(status==='open')c.volunteer='';
     renderDetail();loadCases();
+    if(typeof onStatusChanged==='function')onStatusChanged(c,status);
   }catch(e){btn.disabled=false;alertInline(btn,'อัปเดตไม่สำเร็จ ลองอีกครั้ง')}
 }
 function alertInline(anchor,msg){const p=document.createElement('p');p.className='field-error';p.textContent=msg;anchor.after(p);setTimeout(()=>p.remove(),5000)}
@@ -296,11 +298,13 @@ $('#send-request').addEventListener('click',async()=>{
   try{
     const r=await apiCreate(pendingRequest);
     if(!r.ok)throw new Error(r.error||'error');
+    if(r.token&&typeof rememberMyCase==='function')rememberMyCase(r.id,r.token);
     res.className='notice success';
     res.innerHTML='';
     const s=document.createElement('strong');s.textContent='ส่งคำขอแล้ว · เลขเคส '+r.id;
     const p=document.createElement('p');p.textContent='ทีมงานจะโทรกลับที่ '+pendingRequest.phone+' · อันตราย โทร 1669';
-    const wrap=document.createElement('div');wrap.append(s,p);res.append(wrap);res.hidden=false;
+    const p2=document.createElement('p');p2.textContent='เปิดหน้านี้ไว้ ระบบจะเด้งแจ้งเตือนเมื่อทีมรับเคส และบอกว่าทีมอยู่พื้นที่ไหน';
+    const wrap=document.createElement('div');wrap.append(s,p,p2);const nb=typeof notifyButton==='function'&&notifyButton();if(nb)wrap.append(nb);res.append(wrap);res.hidden=false;
     $('#summary-actions').hidden=true;
     pendingRequest=null;$('#request-form').reset();document.querySelectorAll('#needs input').forEach(i=>i.checked=false);
     if(typeof clearRequestLocation==='function')clearRequestLocation();

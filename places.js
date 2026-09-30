@@ -74,8 +74,7 @@ function placeControls(){
 function fillPlaceBox(box){
   box=box||document.getElementById('place-box');if(!box)return;box.replaceChildren();
   const h=document.createElement('strong');h.textContent='จุดทีมกู้ภัยบนแผนที่';
-  const p=document.createElement('p');p.className='vol-note';p.textContent='จุดตั้งทีมกู้ภัยอาสา ทุกคนเห็นบนแผนที่ (แก้ใน Sheet แท็บ Places ได้ด้วย)';
-  box.append(h,p);
+  box.append(h);
   if(!PL.draft){const b=document.createElement('button');b.type='button';b.className='secondary-button';b.textContent='＋ เพิ่มจุดทีมกู้ภัย';b.onclick=()=>openPlaceForm(null);box.append(b);return}
   const d=PL.draft;
   const type=document.createElement('div');type.className='place-types';

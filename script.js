@@ -188,7 +188,7 @@ function renderVolunteerBar(){
     const s=document.createElement('span');s.className='vol-on';s.textContent='● โหมดอาสา · เห็นเบอร์และรับเคสได้';
     bar.append(s);if(typeof liveControls==='function')bar.append(liveControls());if(typeof placeControls==='function')bar.append(placeControls());return;
   }
-  const s=document.createElement('span');s.className='vol-note';s.textContent='ชื่อและเบอร์ถูกซ่อนเพื่อความเป็นส่วนตัว ทีมอาสาใส่รหัสเพื่อรับเคส';
+  const s=document.createElement('span');s.className='vol-note';s.textContent='ใส่รหัสอาสา';
   const inp=document.createElement('input');inp.type='password';inp.id='vol-key';inp.placeholder='รหัสอาสา';inp.setAttribute('aria-label','รหัสอาสา');inp.autocomplete='off';
   const btn=document.createElement('button');btn.type='button';btn.className='secondary-button';btn.textContent='เข้าโหมดอาสา';
   btn.onclick=async()=>{const k=inp.value.trim();if(!k){inp.focus();return}store.set('uh_vol_key',k);store.set('uh_vol_ok','');btn.disabled=true;btn.textContent='กำลังตรวจรหัส…';const before=lastLoaded;await loadCases();btn.disabled=false;btn.textContent='เข้าโหมดอาสา';

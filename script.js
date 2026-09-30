@@ -18,12 +18,33 @@ async function apiPost(body){
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
   return r.json();
 }
+/* Firebase = ฐานข้อมูลสำรอง: ถ้าส่งเข้า Google Sheet ไม่ได้ จะส่งเข้า Firebase แทน (ค่าเหล่านี้เป็นค่าสาธารณะ ใส่ในเว็บได้) */
+const FIREBASE={projectId:'',apiKey:''};
+function randHex(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return [...a].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function fsValue(v){
+  if(Array.isArray(v))return {arrayValue:{values:v.map(fsValue)}};
+  if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
+  if(v instanceof Date)return {timestampValue:v.toISOString()};
+  return {stringValue:String(v??'')};
+}
+async function fbInboxCreate(data,clientId,token){
+  const keep=['level','needs','urgencyLabel','people','address','lat','lng','phone','name','details','website'];
+  const fields={clientId:fsValue(clientId),token:fsValue(token),sentAt:fsValue(new Date())};
+  keep.forEach(k=>{const v=data[k];if(v===''&&(k==='lat'||k==='lng'))return;if(v!=null)fields[k]=fsValue(v)});
+  const url=`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE.projectId)}/databases/(default)/documents/inbox?documentId=${encodeURIComponent(clientId)}&key=${encodeURIComponent(FIREBASE.apiKey)}`;
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields})});
+  if(!r.ok&&r.status!==409)throw new Error('firebase '+r.status);
+  return {ok:true,id:'',queued:true,clientId,token};
+}
 async function apiCreate(data){
-  const clientId=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const clientId=Date.now().toString(36)+randHex(4);
   let last;
   for(let i=0;i<3;i++){
-    try{return await apiPost({action:'create',clientId,...data})}
-    catch(e){last=e;await new Promise(r=>setTimeout(r,1000*(i+1)))}
+    try{const r=await apiPost({action:'create',clientId,...data});r.clientId=clientId;return r}
+    catch(e){last=e;if(i<2)await new Promise(r=>setTimeout(r,1000*(i+1)))}
+  }
+  if(FIREBASE.projectId&&FIREBASE.apiKey){
+    try{return await fbInboxCreate(data,clientId,randHex(16))}catch(e){last=e}
   }
   throw last;
 }
@@ -298,10 +319,10 @@ $('#send-request').addEventListener('click',async()=>{
   try{
     const r=await apiCreate(pendingRequest);
     if(!r.ok)throw new Error(r.error||'error');
-    if(r.token&&typeof rememberMyCase==='function')rememberMyCase(r.id,r.token);
+    if(r.token&&typeof rememberMyCase==='function')rememberMyCase(r.id,r.token,r.clientId);
     res.className='notice success';
     res.innerHTML='';
-    const s=document.createElement('strong');s.textContent='ส่งคำขอแล้ว · เลขเคส '+r.id;
+    const s=document.createElement('strong');s.textContent=r.queued?'ส่งคำขอแล้ว (ผ่านระบบสำรอง) · รหัสอ้างอิง '+r.clientId.slice(-6).toUpperCase():'ส่งคำขอแล้ว · เลขเคส '+r.id;
     const p=document.createElement('p');p.textContent='ทีมงานจะโทรกลับที่ '+pendingRequest.phone+' · อันตราย โทร 1669';
     const p2=document.createElement('p');p2.textContent='สถานะ: รอทีมอาสารับเคส · ดูสถานะได้ที่ "ติดตามเคสของฉัน" หน้าหลัก เปิดหน้านี้ไว้ ระบบจะเด้งแจ้งเตือนเมื่อสถานะเปลี่ยน';
     const wrap=document.createElement('div');wrap.append(s,p,p2);if(typeof caseSteps==='function')wrap.append(caseSteps('open'));const nb=typeof notifyButton==='function'&&notifyButton();if(nb)wrap.append(nb);res.append(wrap);res.hidden=false;

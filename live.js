@@ -12,7 +12,8 @@ async function apiTeams(){
   const r=await fetch(API_URL+'?action=teams&key='+encodeURIComponent(k)+'&t='+Date.now());return r.json();
 }
 function apiPing(extra){return apiPost({action:'ping',key:store.get('uh_vol_key',''),team:store.get('uh_team',''),caseId:store.get('uh_cur_case',''),...extra})}
-function apiTrack(id,token){return apiPost({action:'track',id,token})}
+function apiTrack(m){return apiPost({action:'track',id:m.id||'',clientId:m.cid||'',token:m.token})}
+const mk=m=>m.cid||m.id;
 
 /* ---------- pop up (toast) ---------- */
 function toastRoot(){
@@ -189,22 +190,23 @@ function saveSeen(){store.set('uh_seen',JSON.stringify([...LIVE.seen].slice(-800
    ============================================================ */
 function myCases(){try{return JSON.parse(store.get('uh_my_cases','[]'))||[]}catch(e){return []}}
 function saveMyCases(a){store.set('uh_my_cases',a.length?JSON.stringify(a.slice(-5)):'')}
-function rememberMyCase(id,token){
-  if(!id||!token||id==='ignored')return;
-  const a=myCases().filter(x=>x.id!==id);a.push({id,token,t:Date.now(),status:'open'});saveMyCases(a);
+function rememberMyCase(id,token,cid){
+  if((!id&&!cid)||!token||id==='ignored')return;
+  const a=myCases().filter(x=>!((cid&&x.cid===cid)||(id&&x.id===id)));a.push({id:id||'',cid:cid||'',token,t:Date.now(),status:'open'});saveMyCases(a);
   renderMyCase();setTimeout(pollMyCases,3000);
 }
-function forgetMyCase(id){saveMyCases(myCases().filter(x=>x.id!==id));delete LIVE.track[id];renderMyCase()}
+function forgetMyCase(k){saveMyCases(myCases().filter(x=>mk(x)!==k));delete LIVE.track[k];renderMyCase()}
 function kmText(km){if(km==null)return '';if(km<1)return 'ใกล้ถึงแล้ว (ไม่ถึง 1 กม.)';return 'ห่างประมาณ '+km.toLocaleString('th-TH',{maximumFractionDigits:1})+' กม.'}
 async function pollMyCases(){
   const list=myCases().filter(x=>x.status!=='done'&&Date.now()-x.t<7*864e5);
   if(!list.length)return;
   let changed=false;
   for(const m of list){
-    let r;try{r=await apiTrack(m.id,m.token)}catch(e){continue}
-    if(!r||!r.ok){if(r&&(r.error==='forbidden'||r.error==='not_found')){forgetMyCase(m.id)}continue}
-    const prev=LIVE.track[m.id]||{status:m.status,volunteer:m.volunteer||'',area:m.area||'',km:m.km};
-    LIVE.track[m.id]=r;
+    let r;try{r=await apiTrack(m)}catch(e){continue}
+    if(!r||!r.ok){if(r&&(r.error==='forbidden'||(r.error==='not_found'&&m.id))){forgetMyCase(mk(m))}continue}
+    if(r.status==='queued')r.status='open';if(r.id&&!m.id){m.id=r.id;changed=true}
+    const prev=LIVE.track[mk(m)]||{status:m.status,volunteer:m.volunteer||'',area:m.area||'',km:m.km};
+    LIVE.track[mk(m)]=r;
     const team=r.volunteer||'ทีมอาสา';
     if(r.status!==prev.status){
       if(r.status==='going')alertUser({key:'my-'+m.id,status:'going',caseId:m.id,tone:'ok',title:`✅ ${team} รับเคสของคุณแล้ว`,body:'ทีมกำลังเดินทางไปหาคุณ เปิดหน้านี้ไว้เพื่อดูว่าทีมอยู่ที่ไหน',hash:'home'});
@@ -221,7 +223,7 @@ async function pollMyCases(){
     }
     m.status=r.status;m.volunteer=r.volunteer;m.area=r.team?r.team.area:'';m.km=r.team?r.team.km:null;changed=true;
   }
-  if(changed){const all=myCases().map(x=>list.find(y=>y.id===x.id)||x);saveMyCases(all)}
+  if(changed){const all=myCases().map(x=>list.find(y=>mk(y)===mk(x))||x);saveMyCases(all)}
   renderMyCase();
 }
 function caseSteps(status){
@@ -243,11 +245,11 @@ function renderMyCase(){
   const head=document.createElement('div');head.className='stats-head';
   const h=document.createElement('h2');h.textContent='ติดตามเคสของฉัน';head.append(h);el.append(head);
   list.slice().reverse().forEach(m=>{
-    const r=LIVE.track[m.id]||{status:m.status,volunteer:m.volunteer,team:m.area||m.km!=null?{area:m.area,km:m.km}:null};
+    const r=LIVE.track[mk(m)]||{status:m.status,volunteer:m.volunteer,team:m.area||m.km!=null?{area:m.area,km:m.km}:null};
     const card=document.createElement('div');card.className='my-case-card';
     const top=document.createElement('div');top.className='case-top';
     const st=document.createElement('span');st.className='status '+(STATUS_CLASS[r.status]||'wait');st.textContent=STATUS_TH[r.status]||'รอความช่วยเหลือ';
-    const id=document.createElement('span');id.className='case-id';id.textContent='#'+m.id;
+    const id=document.createElement('span');id.className='case-id';id.textContent=m.id?'#'+m.id:'รอเลขเคส';
     top.append(st,id);card.append(top);
     card.append(caseSteps(r.status));
     const p=document.createElement('p');
@@ -259,7 +261,7 @@ function renderMyCase(){
     card.append(p);
     const row=document.createElement('div');row.className='my-case-actions';
     const nb=r.status!=='done'&&notifyButton();if(nb)row.append(nb);
-    const x=document.createElement('button');x.type='button';x.className='text-button';x.textContent=r.status==='done'?'ลบออก':'เลิกติดตาม';x.onclick=()=>forgetMyCase(m.id);row.append(x);
+    const x=document.createElement('button');x.type='button';x.className='text-button';x.textContent=r.status==='done'?'ลบออก':'เลิกติดตาม';x.onclick=()=>forgetMyCase(mk(m));row.append(x);
     card.append(row);el.append(card);
   });
 }

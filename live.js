@@ -131,7 +131,7 @@ function fillLiveControls(box){
   box.replaceChildren();
   const h=document.createElement('strong');h.textContent='ตำแหน่งทีม (เรียลไทม์)';
   const team=document.createElement('input');team.className='team-input';team.placeholder='ชื่อทีม / อาสา';team.value=store.get('uh_team','');team.setAttribute('aria-label','ชื่อทีม');
-  team.onchange=()=>store.set('uh_team',team.value.trim());
+  team.onchange=()=>{store.set('uh_team',team.value.trim());renderVolunteerBar();if(typeof ME!=='undefined'&&ME.marker&&ME.marker.setIcon)ME.marker.setIcon(meIcon())};
   const btn=document.createElement('button');btn.type='button';
   if(isSharing()){btn.className='secondary-button';btn.textContent='หยุดแชร์ตำแหน่ง';btn.onclick=()=>stopSharing()}
   else{btn.className='solid-button';btn.textContent='📍 เริ่มแชร์ตำแหน่งทีม';btn.onclick=()=>{const t=team.value.trim();if(!t){team.focus();team.placeholder='ใส่ชื่อทีมก่อน';return}store.set('uh_team',t);startSharing()}}

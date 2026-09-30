@@ -180,7 +180,7 @@ function renderHomeStats(){
 /* ---------------- volunteer mode ---------------- */
 function renderVolunteerBar(){
   const bar=$('#volunteer-bar');
-  const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on);sw.classList.toggle('pending',on&&!isVolunteer);sw.classList.toggle('active',isVolunteer)}
+  const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on);sw.classList.toggle('pending',on&&!isVolunteer);sw.classList.toggle('active',isVolunteer);const t=store.get('uh_team','');sw.querySelector('span').textContent=isVolunteer&&t?t:'ทีมอาสา'}
   const panel=$('#vol-panel');if(panel)panel.hidden=!(isVolunteer||volPanelOpen);
   const mode=isVolunteer?'vol':'pub';if(bar.dataset.mode===mode&&bar.children.length)return; // ไม่สร้างใหม่ทุกครั้ง (กันช่องที่กำลังพิมพ์หาย)
   bar.dataset.mode=mode;bar.replaceChildren();
@@ -409,7 +409,14 @@ function meStop(){
 function meBtn(on,busy){const b=document.getElementById('map-me-btn');if(!b)return;b.setAttribute('aria-pressed',String(on));b.classList.toggle('on',on);b.classList.toggle('busy',!!busy);b.querySelector('span').textContent=busy?'กำลังหา…':on?'ตำแหน่งฉัน ✓':'ตำแหน่งฉัน'}
 function mePopup(){
   const p=ME.pos;if(!p)return '';
+  if(isVolunteer){const t=store.get('uh_team','')||'ทีมอาสา';return `<div class="place-pop"><b>🚑 ${escH(t)}</b><small>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</small></div>`}
   return `<div class="place-pop"><span class="pp-type" style="color:#1a73e8">● คุณอยู่ที่นี่</span><b>ความแม่นยำ ±${Math.round(p.acc)} ม.</b><small>ตำแหน่งนี้แสดงในเครื่องคุณเท่านั้น</small><div class="pp-actions"><button type="button" data-me-request>🆘 ขอความช่วยเหลือที่จุดนี้</button></div></div>`;
+}
+/* โหมดอาสา: จุดของเรา = ชื่อทีม + ตำแหน่ง เท่านั้น */
+function meIcon(){
+  ME.vol=isVolunteer;
+  if(isVolunteer){const t=store.get('uh_team','')||'ทีมอาสา';return L.divIcon({className:'me-pin vol',html:`<span></span><em>${escH(t.slice(0,16))}</em>`,iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-10]})}
+  return L.divIcon({className:'me-pin',html:'<span></span>',iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-10]});
 }
 function meUpdate(pos){
   if(!fmap||!window.L)return;
@@ -417,9 +424,9 @@ function meUpdate(pos){
   const ll=[p.lat,p.lng];meBtn(true);
   if(!ME.marker){
     ME.ring=L.circle(ll,{radius:p.acc,color:'#1a73e8',weight:1,fillColor:'#1a73e8',fillOpacity:.12,interactive:false}).addTo(fmap);
-    ME.marker=L.marker(ll,{icon:L.divIcon({className:'me-pin',html:'<span></span>',iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-10]}),zIndexOffset:4000,title:'ตำแหน่งของฉัน'}).bindPopup(mePopup).addTo(fmap);
-  }else{ME.marker.setLatLng(ll);ME.ring.setLatLng(ll);ME.ring.setRadius(p.acc)}
-  if(!ME.centered){ME.centered=true;fmap.setView(ll,Math.max(fmap.getZoom(),15));ME.marker.openPopup&&ME.marker.openPopup()}
+    ME.marker=L.marker(ll,{icon:meIcon(),zIndexOffset:4000,title:'ตำแหน่งของฉัน'}).bindPopup(mePopup).addTo(fmap);
+  }else{ME.marker.setLatLng(ll);ME.ring.setLatLng(ll);ME.ring.setRadius(p.acc);if(ME.marker.setIcon&&ME.vol!==isVolunteer)ME.marker.setIcon(meIcon())}
+  if(!ME.centered){ME.centered=true;fmap.setView(ll,Math.max(fmap.getZoom(),15));if(!isVolunteer&&ME.marker.openPopup)ME.marker.openPopup()}
 }
 document.getElementById('map-me-btn')&&document.getElementById('map-me-btn').addEventListener('click',()=>{
   if(!navigator.geolocation){typeof toast==='function'&&toast({title:'อุปกรณ์นี้ไม่รองรับการหาตำแหน่ง',tone:'warn'});return}

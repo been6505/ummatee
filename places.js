@@ -139,3 +139,6 @@ function wantPlaces(){const s=layerPrefs();return Object.keys(PLACE_TYPE).some(k
 function onFloodMapReady(){applyLayerVisibility();if(!PL.loaded&&wantPlaces())loadPlaces();else drawPlaces()} // โหลดจุดเมื่อกดชิปเท่านั้น
 setInterval(()=>{if(currentView==='map'&&!document.hidden&&wantPlaces())loadPlaces()},5*60*1000);
 if(typeof fmap!=='undefined'&&fmap)onFloodMapReady();
+
+/* live.js + places.js โหลดทีหลัง script.js: สร้างแผงอาสาใหม่ให้มีปุ่มครบ (กันกรณีเข้าโหมดอาสาไว้ตั้งแต่เปิดแอป) */
+(function(){const bar=document.getElementById('volunteer-bar');if(bar){bar.dataset.mode='';renderVolunteerBar()}})();

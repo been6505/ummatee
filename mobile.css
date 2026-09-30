@@ -206,3 +206,5 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .place-box input.team-input{flex:none;height:46px;min-height:0;width:100%;box-sizing:border-box}
 .layer-chips{flex-wrap:wrap;overflow:visible}
 .topbar,.bottom-nav{z-index:1100}
+.flood-map-wrap .layer-chips{margin-top:10px;padding-bottom:4px}
+.layer-chip[aria-pressed="false"]{opacity:1;background:#fff;color:#7a8a90;border-style:dashed}

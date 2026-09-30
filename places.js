@@ -12,8 +12,8 @@ const PL={places:[],layer:null,loaded:0,show:null,picking:false,draft:null,tmp:n
 /* ---------- ตัวกรองบนแผนที่ ---------- */
 function layerPrefs(){
   if(PL.show)return PL.show;
-  let o={cases:true,rescue:true,halal:true,kitchen:true};
-  try{Object.assign(o,JSON.parse(store.get('uh_layers','{}')))}catch(e){}
+  let o={cases:true,rescue:false,halal:false,kitchen:false}; // จุดบริการ: กดชิปก่อนถึงจะแสดง
+  try{Object.assign(o,JSON.parse(store.get('uh_layers2','{}')))}catch(e){}
   return PL.show=o;
 }
 function renderLayerChips(){
@@ -23,7 +23,7 @@ function renderLayerChips(){
   box.replaceChildren(...items.map(([k,ic,lb,n])=>{
     const b=document.createElement('button');b.type='button';b.className='layer-chip lc-'+k;b.setAttribute('aria-pressed',String(!!s[k]));
     b.innerHTML=`<span aria-hidden="true">${ic}</span>${escH(lb)}${n?` <b>${n}</b>`:''}`;
-    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers',JSON.stringify(s));renderLayerChips();applyLayerVisibility()};
+    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers2',JSON.stringify(s));renderLayerChips();applyLayerVisibility()};
     return b;
   }));
 }

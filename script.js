@@ -63,7 +63,7 @@ function setView(view,record=true){
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id===`view-${view}`));
   const navView=['request','summary'].includes(view)?'home':view==='detail'?'map':view;
   document.querySelectorAll('nav [data-view]').forEach(el=>{const active=el.dataset.view===navView;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
-  if(view==='map'){renderMap();loadCases()}
+  if(view==='map'){renderMap();loadCases();initFloodMap()}
   if(view==='home'){renderHomeStats();loadCases()}
   if(view==='request')ensureRequestMap();
   window.scrollTo({top:0,behavior:'instant'});
@@ -140,7 +140,54 @@ function renderVolunteerBar(){
   bar.append(s,inp,btn);
 }
 
-function drawCaseMarkers(){}
+/* ---------------- flood map: Floodboard roads + UM+ case pins ---------------- */
+const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';
+const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
+let fmap=null,floodLayer=null,pinLayer=null,floodFitted=false;
+const escH=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function floodVerdict(p){const v=p.verdict;return typeof v==='string'?v:(v&&(v.sedan||v.pickup||v.motorbike))||''}
+function floodColor(p){const v=floodVerdict(p),d=Number(p.depthCm)||0;
+  if(v==='blocked'||d>=50)return '#c62828';if(v==='risky'||d>=30)return '#ef6c00';if(v==='caution'||d>=10)return '#f9a825';return '#1e88e5'}
+function initFloodMap(){
+  if(fmap){requestAnimationFrame(()=>fmap.invalidateSize());return}
+  const el=document.getElementById('flood-map');if(!el||typeof loadLeaflet!=='function')return;
+  loadLeaflet().then(()=>{
+    el.replaceChildren();
+    fmap=L.map('flood-map',{scrollWheelZoom:false}).setView([13.7563,100.5018],11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard.org'}).addTo(fmap);
+    floodLayer=L.layerGroup().addTo(fmap);pinLayer=L.layerGroup().addTo(fmap);
+    loadFlood();drawCaseMarkers();requestAnimationFrame(()=>fmap.invalidateSize());
+  }).catch(()=>{el.textContent='โหลดแผนที่ไม่สำเร็จ'});
+}
+async function loadFlood(){
+  if(!fmap)return;const info=document.getElementById('flood-updated');
+  try{
+    const r=await fetch(FLOOD_URL,{cache:'no-store'});if(!r.ok)throw new Error(r.status);
+    const g=await r.json();floodLayer.clearLayers();
+    L.geoJSON(g,{
+      style:f=>({color:floodColor(f.properties||{}),weight:5,opacity:.8}),
+      pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:6,color:floodColor(f.properties||{}),fillOpacity:.8,weight:2}),
+      onEachFeature:(f,l)=>{const p=f.properties||{};const v=floodVerdict(p);
+        l.bindPopup(`<b>${escH(p.name||'ถนน')}</b><br>น้ำลึกประมาณ ${p.depthCm!=null?escH(p.depthCm)+' ซม.':'-'}${v?'<br>รถเก๋ง: '+escH(VERDICT_TH[v]||v):''}`)}
+    }).addTo(floodLayer);
+    pinLayer.bringToFront&&pinLayer.eachLayer(x=>x.bringToFront&&x.bringToFront());
+    if(info)info.textContent='· อัปเดต '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){if(info)info.textContent='· โหลดข้อมูลน้ำท่วมไม่สำเร็จ'}
+}
+function drawCaseMarkers(){
+  if(!fmap||!pinLayer)return;pinLayer.clearLayers();const pts=[];
+  filteredCases().filter(hasPin).forEach(c=>{
+    const col=c.status==='done'?'#277343':c.status==='going'?'#28639a':'#c93643';
+    const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
+    pts.push([c.lat,c.lng]);
+    L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
+      .bindPopup(`<b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
+      .addTo(pinLayer);
+  });
+  if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}
+}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-open-case]');if(a){e.preventDefault();openCase(a.getAttribute('data-open-case'))}});
+setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},5*60*1000);
 
 /* ---------------- case detail ---------------- */
 function openCase(id){selectedCase=cases.find(c=>c.id===id);if(!selectedCase)return;detailOrigin='map';renderDetail();setView('detail')}

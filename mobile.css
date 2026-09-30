@@ -97,3 +97,19 @@
 .level-grid input:checked+span svg{color:#173746}
 .level-grid .deep input:checked+span{border-color:#c93643;background:#fff0ef;color:#a72c38}
 .level-grid input:focus-visible+span{outline:3px solid #6bb6a9;outline-offset:2px}
+
+/* outline nav icons */
+.bottom-nav button svg{width:24px;height:24px;display:block}
+
+/* flood map */
+.flood-map-wrap{margin:4px 0 16px}
+#flood-map{height:340px;width:100%;border:1px solid #cfdee3;border-radius:12px;background:#edf2f4;overflow:hidden;position:relative;z-index:0}
+@media(min-width:700px){#flood-map{height:420px}}
+.map-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 4px;font-size:12.5px;color:#4b6875}
+.map-legend span{display:inline-flex;align-items:center;gap:6px}
+.map-legend i{display:inline-block;width:18px;height:5px;border-radius:3px}
+.map-legend i.lg-pin{width:12px;height:12px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#c93643}
+.map-source{font-size:12px;color:#7b919a;margin:2px 0 0}
+.map-source a{color:#146b61}
+.case-pin span{display:block;width:26px;height:26px;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px #17374666;margin:2px}
+.case-pin span:after{content:'';position:absolute;width:8px;height:8px;background:#fff;border-radius:50%;left:6px;top:6px}

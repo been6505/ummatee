@@ -113,3 +113,15 @@
 .map-source a{color:#146b61}
 .case-pin span{display:block;width:26px;height:26px;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px #17374666;margin:2px}
 .case-pin span:after{content:'';position:absolute;width:8px;height:8px;background:#fff;border-radius:50%;left:6px;top:6px}
+
+/* map fullscreen */
+.flood-map-box{position:relative}
+.map-full-btn{position:absolute;top:10px;right:10px;z-index:500;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border:1px solid #cfdee3;border-radius:10px;background:#fff;color:#173746;font-size:14px;font-weight:600;box-shadow:0 2px 8px #17374626}
+.map-full-btn svg{width:18px;height:18px}
+.flood-map-wrap.is-full{position:fixed;inset:0;z-index:3000;margin:0;background:#fff;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.flood-map-wrap.is-full .flood-map-box{flex:1;min-height:0}
+.flood-map-wrap.is-full #flood-map{height:100%;border:0;border-radius:0}
+.flood-map-wrap.is-full .map-legend,.flood-map-wrap.is-full .map-source{padding:0 14px}
+.flood-map-wrap.is-full .map-source{padding-bottom:10px}
+body.map-full-open{overflow:hidden}
+body.map-full-open .bottom-nav,body.map-full-open .topbar{display:none}

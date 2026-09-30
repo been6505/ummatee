@@ -188,6 +188,23 @@ function drawCaseMarkers(){
 }
 document.addEventListener('click',e=>{const a=e.target.closest('[data-open-case]');if(a){e.preventDefault();openCase(a.getAttribute('data-open-case'))}});
 setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},5*60*1000);
+/* fullscreen map toggle (CSS overlay: works on iPhone too) */
+(function(){
+  const btn=document.getElementById('map-full-btn');if(!btn)return;
+  const wrap=btn.closest('.flood-map-wrap');
+  const setFull=on=>{
+    wrap.classList.toggle('is-full',on);document.body.classList.toggle('map-full-open',on);
+    btn.querySelector('span').textContent=on?'ปิด':'เต็มจอ';btn.setAttribute('aria-label',on?'ปิดแผนที่เต็มจอ':'ขยายแผนที่เต็มจอ');
+    btn.innerHTML=on?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg><span>ปิด</span>'
+                    :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>เต็มจอ</span>';
+    setTimeout(()=>fmap&&fmap.invalidateSize(),60);
+  };
+  btn.addEventListener('click',()=>setFull(!wrap.classList.contains('is-full')));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&wrap.classList.contains('is-full'))setFull(false)});
+  document.addEventListener('click',e=>{if(e.target.closest('[data-open-case]')&&wrap.classList.contains('is-full'))setFull(false)},true);
+  window.addEventListener('hashchange',()=>{if(wrap.classList.contains('is-full'))setFull(false)});
+})();
+
 
 /* ---------------- case detail ---------------- */
 function openCase(id){selectedCase=cases.find(c=>c.id===id);if(!selectedCase)return;detailOrigin='map';renderDetail();setView('detail')}

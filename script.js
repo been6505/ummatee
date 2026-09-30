@@ -148,18 +148,28 @@ function renderHomeStats(){
 /* ---------------- volunteer mode ---------------- */
 function renderVolunteerBar(){
   const bar=$('#volunteer-bar');bar.replaceChildren();
+  const sw=$('#vol-switch');if(sw){sw.setAttribute('aria-checked',String(isVolunteer));sw.classList.toggle('on',isVolunteer)}
+  const panel=$('#vol-panel');if(panel)panel.hidden=!(isVolunteer||volPanelOpen);
   if(isVolunteer){
     const s=document.createElement('span');s.className='vol-on';s.textContent='● โหมดอาสา · เห็นเบอร์และรับเคสได้';
-    const out=document.createElement('button');out.type='button';out.className='text-button';out.textContent='ออกจากโหมดอาสา';
-    out.onclick=()=>{store.set('uh_vol_key','');isVolunteer=false;loadCases()};
-    bar.append(s,out);if(typeof liveControls==='function')bar.append(liveControls());return;
+    bar.append(s);if(typeof liveControls==='function')bar.append(liveControls());return;
   }
   const s=document.createElement('span');s.className='vol-note';s.textContent='ชื่อและเบอร์ถูกซ่อนเพื่อความเป็นส่วนตัว ทีมอาสาใส่รหัสเพื่อรับเคส';
   const inp=document.createElement('input');inp.type='password';inp.id='vol-key';inp.placeholder='รหัสอาสา';inp.setAttribute('aria-label','รหัสอาสา');inp.autocomplete='off';
   const btn=document.createElement('button');btn.type='button';btn.className='secondary-button';btn.textContent='เข้าโหมดอาสา';
-  btn.onclick=async()=>{const k=inp.value.trim();if(!k){inp.focus();return}store.set('uh_vol_key',k);await loadCases();if(!isVolunteer){store.set('uh_vol_key','');$('#sync-status').textContent='รหัสอาสาไม่ถูกต้อง'}};
+  btn.onclick=async()=>{const k=inp.value.trim();if(!k){inp.focus();return}store.set('uh_vol_key',k);btn.disabled=true;await loadCases();btn.disabled=false;if(!isVolunteer){store.set('uh_vol_key','');$('#sync-status').textContent='รหัสอาสาไม่ถูกต้อง'}else volPanelOpen=false};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')btn.click()});
   bar.append(s,inp,btn);
+  if(volPanelOpen)setTimeout(()=>inp.focus(),50);
 }
+let volPanelOpen=false;
+$('#vol-switch').addEventListener('click',async()=>{
+  if(isVolunteer){
+    if(typeof isSharing==='function'&&isSharing())await stopSharing();
+    store.set('uh_vol_key','');isVolunteer=false;volPanelOpen=false;renderMap();loadCases();return;
+  }
+  volPanelOpen=!volPanelOpen;renderVolunteerBar();
+});
 
 /* ---------------- flood map: Floodboard roads + UM+ case pins ---------------- */
 const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';

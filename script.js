@@ -148,7 +148,7 @@ function renderHomeStats(){
 /* ---------------- volunteer mode ---------------- */
 function renderVolunteerBar(){
   const bar=$('#volunteer-bar');bar.replaceChildren();
-  const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on)}
+  const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on);sw.classList.toggle('pending',on&&!isVolunteer);sw.classList.toggle('active',isVolunteer)}
   const panel=$('#vol-panel');if(panel)panel.hidden=!(isVolunteer||volPanelOpen);
   if(isVolunteer){
     const s=document.createElement('span');s.className='vol-on';s.textContent='● โหมดอาสา · เห็นเบอร์และรับเคสได้';

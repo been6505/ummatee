@@ -265,7 +265,7 @@ function renderMyCase(){
     card.append(row);el.append(card);
   });
 }
-setInterval(()=>{if(!document.hidden||myCases().some(x=>x.status==='going'))pollMyCases()},30000);
+setInterval(()=>{const going=myCases().some(x=>x.status==='going');if(going||(!document.hidden&&myCases().some(x=>x.status!=='done')))pollMyCases()},45000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollMyCases()});
 
 /* ============================================================
@@ -284,5 +284,5 @@ function onStatusChanged(c,status){
   }else if(store.get('uh_cur_case','')===c.id){store.set('uh_cur_case','')}
 }
 /* อาสา: ดึงเคสเป็นระยะแม้อยู่หน้าอื่น เพื่อเด้งเตือนเคสใหม่ */
-setInterval(()=>{if(isVolunteer&&(document.hidden||!['map','detail','home'].includes(currentView)))loadCases()},30000);
+setInterval(()=>{if(isVolunteer&&(document.hidden||!['map','detail','home'].includes(currentView))&&Date.now()-lastLoaded>55000)loadCases()},60000);
 renderMyCase();pollMyCases();

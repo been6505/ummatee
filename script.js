@@ -50,8 +50,9 @@ async function apiCreate(data){
 }
 async function apiList(){
   const k=store.get('uh_vol_key','');
-  const r=await fetch(API_URL+'?action=list'+(k?'&key='+encodeURIComponent(k):'')+'&t='+Date.now());
-  return r.json();
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000); // ไม่ค้างถ้าเซิร์ฟเวอร์ช้า
+  try{const r=await fetch(API_URL+'?action=list'+(k?'&key='+encodeURIComponent(k):'')+'&t='+Math.floor(Date.now()/15000),{signal:ctl.signal});return await r.json()}
+  finally{clearTimeout(tm)}
 }
 function apiUpdate(id,status,volunteer){
   return apiPost({action:'update',key:store.get('uh_vol_key',''),id,status,volunteer:volunteer||''});
@@ -113,7 +114,7 @@ function filteredCases(){
 }
 function renderMap(){
   const matching=filteredCases();
-  $('#case-count').textContent=loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
+  $('#case-count').textContent=!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
   const el=$('#map-cases');el.replaceChildren(...matching.map(caseCard));
   if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';el.append(empty)}
   renderVolunteerBar();
@@ -127,13 +128,18 @@ async function loadCases(){
     if(!r.ok)throw new Error(r.error||'error');
     cases=(r.cases||[]).map(c=>({...c,lat:c.lat===''?'':+c.lat,lng:c.lng===''?'':+c.lng}));
     isVolunteer=!!r.volunteer;lastLoaded=Date.now();
+    if(!isVolunteer)store.set('uh_cases_cache',JSON.stringify({t:lastLoaded,cases})); // เก็บเฉพาะข้อมูลสาธารณะ (ปิดเบอร์แล้ว) ไว้เปิดครั้งหน้าได้ทันที
     $('#sync-status').textContent='อัปเดตล่าสุด '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
     if(selectedCase){selectedCase=cases.find(c=>c.id===selectedCase.id)||selectedCase;if(currentView==='detail')renderDetail()}
   }catch(e){
     $('#sync-status').textContent='โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต แล้วลองใหม่';
+    const cc=$('#case-count');if(cc&&!lastLoaded)cc.textContent=cases.length?`${cases.length} เคส · ข้อมูลที่บันทึกไว้ล่าสุด (เชื่อมต่อไม่ได้)`:'โหลดข้อมูลเคสไม่สำเร็จ · ลองใหม่อีกครั้ง';
   }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats();if(typeof onCasesLoaded==='function')onCasesLoaded()}
 }
-setInterval(()=>{if(['map','detail','home'].includes(currentView)&&!document.hidden)loadCases()},30000);
+/* โหลดซ้ำ: หน้าดูเคส/รายละเอียดทุก 60 วิ, หน้าหลักทุก 2 นาที (ลดภาระเซิร์ฟเวอร์) */
+setInterval(()=>{if(document.hidden)return;const age=Date.now()-lastLoaded;if(['map','detail'].includes(currentView)&&age>55000||currentView==='home'&&age>115000)loadCases()},15000);
+/* แสดงข้อมูลล่าสุดที่เคยโหลดไว้ทันที ระหว่างรอข้อมูลใหม่ */
+(function(){if(store.get('uh_vol_key',''))return;try{const c=JSON.parse(store.get('uh_cases_cache','null'));if(c&&Date.now()-c.t<6*3600e3&&Array.isArray(c.cases)){cases=c.cases}}catch(e){}})();
 
 /* ---------------- home stats ---------------- */
 function renderHomeStats(){
@@ -177,7 +183,7 @@ $('#vol-switch').addEventListener('click',async()=>{
 /* ---------------- flood map: Floodboard roads + UM+ case pins ---------------- */
 const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';
 const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
-let fmap=null,floodLayer=null,pinLayer=null,floodFitted=false;
+let fmap=null,floodLayer=null,pinLayer=null,floodFitted=false,floodRenderer=null;
 const escH=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function floodVerdict(p){const v=p.verdict;return typeof v==='string'?v:(v&&(v.sedan||v.pickup||v.motorbike))||''}
 function floodColor(p){const v=floodVerdict(p),d=Number(p.depthCm)||0;
@@ -187,18 +193,18 @@ function initFloodMap(){
   const el=document.getElementById('flood-map');if(!el||typeof loadLeaflet!=='function')return;
   loadLeaflet().then(()=>{
     el.replaceChildren();
-    fmap=L.map('flood-map',{scrollWheelZoom:false}).setView([13.7563,100.5018],11);
+    fmap=L.map('flood-map',{scrollWheelZoom:false,preferCanvas:true}).setView([13.7563,100.5018],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard.org'}).addTo(fmap);
     floodLayer=L.layerGroup().addTo(fmap);pinLayer=L.layerGroup().addTo(fmap);
-    loadFlood();drawCaseMarkers();if(typeof onFloodMapReady==='function')onFloodMapReady();requestAnimationFrame(()=>fmap.invalidateSize());
+    drawCaseMarkers();setTimeout(loadFlood,150); // หมุดเคสขึ้นก่อน แล้วค่อยวาดชั้นน้ำท่วมif(typeof onFloodMapReady==='function')onFloodMapReady();requestAnimationFrame(()=>fmap.invalidateSize());
   }).catch(()=>{el.textContent='โหลดแผนที่ไม่สำเร็จ'});
 }
 async function loadFlood(){
   if(!fmap)return;const info=document.getElementById('flood-updated');
   try{
-    const r=await fetch(FLOOD_URL,{cache:'no-store'});if(!r.ok)throw new Error(r.status);
+    const r=await fetch(FLOOD_URL);if(!r.ok)throw new Error(r.status);
     const g=await r.json();floodLayer.clearLayers();
-    L.geoJSON(g,{
+    L.geoJSON(g,{renderer:floodRenderer||(floodRenderer=L.canvas({padding:.3,tolerance:6})),smoothFactor:1.5,
       style:f=>({color:floodColor(f.properties||{}),weight:5,opacity:.8}),
       pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:6,color:floodColor(f.properties||{}),fillOpacity:.8,weight:2}),
       onEachFeature:(f,l)=>{const p=f.properties||{};const v=floodVerdict(p);
@@ -222,7 +228,7 @@ function drawCaseMarkers(){
   if(typeof drawTeamMarkers==='function')drawTeamMarkers();
 }
 document.addEventListener('click',e=>{const a=e.target.closest('[data-open-case]');if(a){e.preventDefault();openCase(a.getAttribute('data-open-case'))}});
-setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},5*60*1000);
+setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},10*60*1000);
 /* fullscreen map toggle (CSS overlay: works on iPhone too) */
 (function(){
   const btn=document.getElementById('map-full-btn');if(!btn)return;

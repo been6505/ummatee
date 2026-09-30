@@ -21,7 +21,7 @@ function renderLayerChips(){
   box.replaceChildren(...items.map(([k,ic,lb,n])=>{
     const b=document.createElement('button');b.type='button';b.className='layer-chip lc-'+k;b.setAttribute('aria-pressed',String(!!s[k]));
     b.innerHTML=`<span aria-hidden="true">${ic}</span>${escH(lb)}${n?` <b>${n}</b>`:''}`;
-    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers2',JSON.stringify(s));renderLayerChips();applyLayerVisibility()};
+    b.onclick=()=>{s[k]=!s[k];store.set('uh_layers2',JSON.stringify(s));renderLayerChips();applyLayerVisibility();if(s[k]&&k!=='cases'&&!PL.loaded)loadPlaces()};
     return b;
   }));
 }
@@ -135,6 +135,7 @@ function startPick(){
 }
 
 /* ---------- hooks ---------- */
-function onFloodMapReady(){applyLayerVisibility();if(!PL.loaded)loadPlaces();else drawPlaces()}
-setInterval(()=>{if(currentView==='map'&&!document.hidden)loadPlaces()},3*60*1000);
+function wantPlaces(){const s=layerPrefs();return Object.keys(PLACE_TYPE).some(k=>s[k])}
+function onFloodMapReady(){applyLayerVisibility();if(!PL.loaded&&wantPlaces())loadPlaces();else drawPlaces()} // โหลดจุดเมื่อกดชิปเท่านั้น
+setInterval(()=>{if(currentView==='map'&&!document.hidden&&wantPlaces())loadPlaces()},5*60*1000);
 if(typeof fmap!=='undefined'&&fmap)onFloodMapReady();

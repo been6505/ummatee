@@ -128,6 +128,9 @@ async function loadCases(){
     if(!r.ok)throw new Error(r.error||'error');
     cases=(r.cases||[]).map(c=>({...c,lat:c.lat===''?'':+c.lat,lng:c.lng===''?'':+c.lng}));
     isVolunteer=!!r.volunteer;lastLoaded=Date.now();
+    // จำโหมดอาสาไว้ในเครื่อง: รหัสถูก = จำไว้, เซิร์ฟเวอร์ปฏิเสธรหัสจริงๆ เท่านั้นถึงลบ (เน็ตหลุดไม่ลบ)
+    if(isVolunteer)store.set('uh_vol_ok','1');
+    else if(store.get('uh_vol_key','')){store.set('uh_vol_key','');store.set('uh_vol_ok','')}
     if(!isVolunteer)store.set('uh_cases_cache',JSON.stringify({t:lastLoaded,cases})); // เก็บเฉพาะข้อมูลสาธารณะ (ปิดเบอร์แล้ว) ไว้เปิดครั้งหน้าได้ทันที
     $('#sync-status').textContent='อัปเดตล่าสุด '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
     if(selectedCase){selectedCase=cases.find(c=>c.id===selectedCase.id)||selectedCase;if(currentView==='detail')renderDetail()}
@@ -136,6 +139,8 @@ async function loadCases(){
     const cc=$('#case-count');if(cc&&!lastLoaded)cc.textContent=cases.length?`${cases.length} เคส · ข้อมูลที่บันทึกไว้ล่าสุด (เชื่อมต่อไม่ได้)`:'โหลดข้อมูลเคสไม่สำเร็จ · ลองใหม่อีกครั้ง';
   }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats();if(typeof onCasesLoaded==='function')onCasesLoaded()}
 }
+/* เปิดแอปมา: ถ้าเคยเข้าโหมดอาสาไว้ ให้อยู่ในโหมดอาสาเลย ไม่ต้องใส่รหัสใหม่ */
+if(store.get('uh_vol_key','')&&store.get('uh_vol_ok',''))isVolunteer=true;
 /* ---------- อัปเดตแบบเรียลไทม์ ----------
    เช็ก "เลขเวอร์ชันข้อมูล" ทุก 12 วิ (เบามาก ไม่อ่าน Sheet) → มีอะไรเปลี่ยนค่อยโหลดรายการเคสใหม่
    สำรอง: โหลดเต็มทุก 2 นาที เผื่อระบบหลังบ้านยังไม่รองรับ */
@@ -186,7 +191,10 @@ function renderVolunteerBar(){
   const s=document.createElement('span');s.className='vol-note';s.textContent='ชื่อและเบอร์ถูกซ่อนเพื่อความเป็นส่วนตัว ทีมอาสาใส่รหัสเพื่อรับเคส';
   const inp=document.createElement('input');inp.type='password';inp.id='vol-key';inp.placeholder='รหัสอาสา';inp.setAttribute('aria-label','รหัสอาสา');inp.autocomplete='off';
   const btn=document.createElement('button');btn.type='button';btn.className='secondary-button';btn.textContent='เข้าโหมดอาสา';
-  btn.onclick=async()=>{const k=inp.value.trim();if(!k){inp.focus();return}store.set('uh_vol_key',k);btn.disabled=true;await loadCases();btn.disabled=false;if(!isVolunteer){store.set('uh_vol_key','');$('#sync-status').textContent='รหัสอาสาไม่ถูกต้อง'}else volPanelOpen=false};
+  btn.onclick=async()=>{const k=inp.value.trim();if(!k){inp.focus();return}store.set('uh_vol_key',k);store.set('uh_vol_ok','');btn.disabled=true;btn.textContent='กำลังตรวจรหัส…';const before=lastLoaded;await loadCases();btn.disabled=false;btn.textContent='เข้าโหมดอาสา';
+    if(isVolunteer){volPanelOpen=false;return}
+    if(lastLoaded===before){$('#sync-status').textContent='ยังเชื่อมต่อระบบไม่ได้ · บันทึกรหัสไว้ในเครื่องแล้ว จะเข้าโหมดอาสาให้เองเมื่อเชื่อมต่อได้';return}
+    store.set('uh_vol_key','');$('#sync-status').textContent='รหัสอาสาไม่ถูกต้อง'};
   inp.addEventListener('keydown',e=>{if(e.key==='Enter')btn.click()});
   bar.append(s,inp,btn);
   if(volPanelOpen)setTimeout(()=>inp.focus(),50);
@@ -195,7 +203,7 @@ let volPanelOpen=false;
 $('#vol-switch').addEventListener('click',async()=>{
   if(isVolunteer){
     if(typeof isSharing==='function'&&isSharing())await stopSharing();
-    store.set('uh_vol_key','');isVolunteer=false;volPanelOpen=false;renderMap();loadCases();return;
+    store.set('uh_vol_key','');store.set('uh_vol_ok','');isVolunteer=false;volPanelOpen=false;renderMap();loadCases();return;
   }
   volPanelOpen=!volPanelOpen;renderVolunteerBar();
 });

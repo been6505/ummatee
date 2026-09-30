@@ -390,3 +390,46 @@ function restoreView(){let target=location.hash.slice(1)||'home';if(target==='vo
 window.addEventListener('popstate',restoreView);
 document.querySelectorAll('#needs input').forEach(el=>el.addEventListener('change',()=>{$('#needs-error').hidden=[...document.querySelectorAll('#needs input')].some(i=>i.checked)}));
 restoreView();
+
+/* ---------- ตำแหน่งของฉันบนแผนที่ (อยู่ในเครื่องเท่านั้น ไม่ส่งไปที่ไหน) ---------- */
+const ME={watch:null,marker:null,ring:null,pos:null,centered:false};
+function meStop(){
+  if(ME.watch!=null){navigator.geolocation.clearWatch(ME.watch);ME.watch=null}
+  if(ME.marker){ME.marker.remove();ME.marker=null}if(ME.ring){ME.ring.remove();ME.ring=null}
+  ME.pos=null;ME.centered=false;meBtn(false);
+}
+function meBtn(on,busy){const b=document.getElementById('map-me-btn');if(!b)return;b.setAttribute('aria-pressed',String(on));b.classList.toggle('on',on);b.classList.toggle('busy',!!busy);b.querySelector('span').textContent=busy?'กำลังหา…':on?'ตำแหน่งฉัน ✓':'ตำแหน่งฉัน'}
+function mePopup(){
+  const p=ME.pos;if(!p)return '';
+  return `<div class="place-pop"><span class="pp-type" style="color:#1a73e8">● คุณอยู่ที่นี่</span><b>ความแม่นยำ ±${Math.round(p.acc)} ม.</b><small>ตำแหน่งนี้แสดงในเครื่องคุณเท่านั้น</small><div class="pp-actions"><button type="button" data-me-request>🆘 ขอความช่วยเหลือที่จุดนี้</button></div></div>`;
+}
+function meUpdate(pos){
+  if(!fmap||!window.L)return;
+  const p=ME.pos={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy||0};
+  const ll=[p.lat,p.lng];meBtn(true);
+  if(!ME.marker){
+    ME.ring=L.circle(ll,{radius:p.acc,color:'#1a73e8',weight:1,fillColor:'#1a73e8',fillOpacity:.12,interactive:false}).addTo(fmap);
+    ME.marker=L.marker(ll,{icon:L.divIcon({className:'me-pin',html:'<span></span>',iconSize:[22,22],iconAnchor:[11,11],popupAnchor:[0,-10]}),zIndexOffset:4000,title:'ตำแหน่งของฉัน'}).bindPopup(mePopup).addTo(fmap);
+  }else{ME.marker.setLatLng(ll);ME.ring.setLatLng(ll);ME.ring.setRadius(p.acc)}
+  if(!ME.centered){ME.centered=true;fmap.setView(ll,Math.max(fmap.getZoom(),15));ME.marker.openPopup&&ME.marker.openPopup()}
+}
+document.getElementById('map-me-btn')&&document.getElementById('map-me-btn').addEventListener('click',()=>{
+  if(!navigator.geolocation){typeof toast==='function'&&toast({title:'อุปกรณ์นี้ไม่รองรับการหาตำแหน่ง',tone:'warn'});return}
+  if(ME.watch!=null){ // กดซ้ำ: ถ้ายังไม่อยู่กลางจอ ให้เลื่อนไปหา / ถ้าอยู่แล้วให้ปิด
+    if(ME.pos&&fmap&&fmap.getCenter&&fmap.getCenter().distanceTo&&fmap.getCenter().distanceTo([ME.pos.lat,ME.pos.lng])>150){fmap.setView([ME.pos.lat,ME.pos.lng],Math.max(fmap.getZoom(),15));return}
+    meStop();return;
+  }
+  meBtn(false,true);
+  ME.watch=navigator.geolocation.watchPosition(meUpdate,err=>{
+    meStop();
+    typeof toast==='function'&&toast({title:err.code===1?'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง':'หาตำแหน่งไม่สำเร็จ',body:err.code===1?'เปิดสิทธิ์ตำแหน่งของเบราว์เซอร์ในการตั้งค่า แล้วลองอีกครั้ง':'ลองออกไปที่โล่ง หรือเปิด GPS แล้วลองใหม่',tone:'warn'});
+  },{enableHighAccuracy:true,maximumAge:10000,timeout:20000});
+});
+document.addEventListener('click',async e=>{
+  if(!e.target.closest('[data-me-request]'))return;e.preventDefault();
+  const p=ME.pos;if(!p)return;
+  document.querySelector('.flood-map-wrap.is-full')&&document.getElementById('map-full-btn').click();
+  setView('request');
+  const m=await ensureRequestMap();if(typeof setRequestLocation==='function')setRequestLocation(p.lat,p.lng,true);
+  const st=document.getElementById('location-status');if(st)st.textContent='ใช้ตำแหน่งปัจจุบันจากแผนที่แล้ว · ลากหมุดปรับได้';
+});

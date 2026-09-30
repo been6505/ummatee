@@ -136,8 +136,28 @@ async function loadCases(){
     const cc=$('#case-count');if(cc&&!lastLoaded)cc.textContent=cases.length?`${cases.length} เคส · ข้อมูลที่บันทึกไว้ล่าสุด (เชื่อมต่อไม่ได้)`:'โหลดข้อมูลเคสไม่สำเร็จ · ลองใหม่อีกครั้ง';
   }finally{loading=false;if(currentView==='map')renderMap();renderHomeStats();if(typeof onCasesLoaded==='function')onCasesLoaded()}
 }
-/* โหลดซ้ำ: หน้าดูเคส/รายละเอียดทุก 60 วิ, หน้าหลักทุก 2 นาที (ลดภาระเซิร์ฟเวอร์) */
-setInterval(()=>{if(document.hidden)return;const age=Date.now()-lastLoaded;if(['map','detail'].includes(currentView)&&age>55000||currentView==='home'&&age>115000)loadCases()},15000);
+/* ---------- อัปเดตแบบเรียลไทม์ ----------
+   เช็ก "เลขเวอร์ชันข้อมูล" ทุก 12 วิ (เบามาก ไม่อ่าน Sheet) → มีอะไรเปลี่ยนค่อยโหลดรายการเคสใหม่
+   สำรอง: โหลดเต็มทุก 2 นาที เผื่อระบบหลังบ้านยังไม่รองรับ */
+let dataRev=null,revFails=0;
+async function checkRev(){
+  if(document.hidden||loading)return;
+  try{
+    const r=await fetch(API_URL+'?action=rev&t='+Date.now()).then(x=>x.json());
+    if(!r||!r.ok||r.rev==null){revFails++;return}
+    revFails=0;
+    if(dataRev!==null&&r.rev!==dataRev){dataRev=r.rev;await loadCases();markLive(true);return}
+    dataRev=r.rev;markLive(false);
+  }catch(e){revFails++}
+}
+function markLive(changed){
+  const el=document.getElementById('live-dot');if(!el)return;
+  el.hidden=false;el.textContent='● สด · '+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(changed){el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse')}
+}
+setInterval(()=>{if(['map','detail','home'].includes(currentView)&&revFails<5)checkRev()},12000);
+setInterval(()=>{if(document.hidden)return;const age=Date.now()-lastLoaded;if(['map','detail','home'].includes(currentView)&&age>115000)loadCases()},20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoaded>20000)loadCases()});
 /* แสดงข้อมูลล่าสุดที่เคยโหลดไว้ทันที ระหว่างรอข้อมูลใหม่ */
 (function(){if(store.get('uh_vol_key',''))return;try{const c=JSON.parse(store.get('uh_cases_cache','null'));if(c&&Date.now()-c.t<6*3600e3&&Array.isArray(c.cases)){cases=c.cases}}catch(e){}})();
 

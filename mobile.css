@@ -214,3 +214,9 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .team-pin.mine span{background:#166d75}
 .team-pin em{position:absolute;top:36px;left:50%;transform:translateX(-50%);white-space:nowrap;font-style:normal;font-size:11px;font-weight:700;color:#123;background:rgba(255,255,255,.92);border-radius:6px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 @keyframes teamPulse{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.6);opacity:0}}
+/* สถานะเรียลไทม์ + แถบอัปเดตเวอร์ชัน */
+.count-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.live-dot{font-size:12px;color:#1f9d55;font-weight:600;white-space:nowrap;border-radius:999px;padding:2px 8px;background:#e8f6ee}
+.live-dot.pulse{animation:liveFlash 1.2s ease-out}
+@keyframes liveFlash{0%{background:#1f9d55;color:#fff}100%{background:#e8f6ee;color:#1f9d55}}
+.update-bar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 72px);z-index:5000;border:0;border-radius:999px;background:#123f45;color:#fff;font:inherit;font-size:14px;font-weight:700;padding:10px 18px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}

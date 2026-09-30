@@ -174,3 +174,8 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .vol-switch.on{border-color:#166d75;color:#166d75;background:#e9f4f1}
 .vol-switch.on i{background:#166d75}.vol-switch.on i::after{transform:translateX(18px)}
 .vol-panel{margin:-8px 0 16px}.vol-panel .volunteer-bar{margin:0 0 6px}
+/* สวิตช์อาสา: สีเด่นขึ้น */
+.vol-switch{background:#166d75;border-color:#166d75;color:#fff;box-shadow:0 3px 10px rgba(22,109,117,.25)}
+.vol-switch i{background:rgba(255,255,255,.35)}
+.vol-switch.on{background:#1f9d55;border-color:#1f9d55;color:#fff;box-shadow:0 3px 10px rgba(31,157,85,.3)}
+.vol-switch.on i{background:rgba(255,255,255,.45)}

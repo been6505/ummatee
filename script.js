@@ -303,8 +303,8 @@ $('#send-request').addEventListener('click',async()=>{
     res.innerHTML='';
     const s=document.createElement('strong');s.textContent='ส่งคำขอแล้ว · เลขเคส '+r.id;
     const p=document.createElement('p');p.textContent='ทีมงานจะโทรกลับที่ '+pendingRequest.phone+' · อันตราย โทร 1669';
-    const p2=document.createElement('p');p2.textContent='เปิดหน้านี้ไว้ ระบบจะเด้งแจ้งเตือนเมื่อทีมรับเคส และบอกว่าทีมอยู่พื้นที่ไหน';
-    const wrap=document.createElement('div');wrap.append(s,p,p2);const nb=typeof notifyButton==='function'&&notifyButton();if(nb)wrap.append(nb);res.append(wrap);res.hidden=false;
+    const p2=document.createElement('p');p2.textContent='สถานะ: รอทีมอาสารับเคส · ดูสถานะได้ที่ "ติดตามเคสของฉัน" หน้าหลัก เปิดหน้านี้ไว้ ระบบจะเด้งแจ้งเตือนเมื่อสถานะเปลี่ยน';
+    const wrap=document.createElement('div');wrap.append(s,p,p2);if(typeof caseSteps==='function')wrap.append(caseSteps('open'));const nb=typeof notifyButton==='function'&&notifyButton();if(nb)wrap.append(nb);res.append(wrap);res.hidden=false;
     $('#summary-actions').hidden=true;
     pendingRequest=null;$('#request-form').reset();document.querySelectorAll('#needs input').forEach(i=>i.checked=false);
     if(typeof clearRequestLocation==='function')clearRequestLocation();

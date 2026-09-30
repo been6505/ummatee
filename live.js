@@ -20,11 +20,12 @@ function toastRoot(){
   if(!el){el=document.createElement('div');el.id='toasts';el.className='toasts';el.setAttribute('aria-live','polite');document.body.append(el)}
   return el;
 }
-function toast({title,body='',tone='info',actionText,onAction,timeout=15000,key}){
+function toast({title,body='',tone='info',actionText,onAction,timeout=15000,key,status,caseId}){
   const root=toastRoot();
   if(key){const old=root.querySelector(`[data-key="${CSS.escape(key)}"]`);if(old)old.remove()}
   const t=document.createElement('div');t.className='toast '+tone;t.setAttribute('role','status');if(key)t.dataset.key=key;
   const txt=document.createElement('div');txt.className='toast-text';
+  if(status){const row=document.createElement('div');row.className='toast-status';const st=document.createElement('span');st.className='status '+(status==='sos'?'':STATUS_CLASS[status]||'wait');st.textContent=status==='sos'?'SOS · รอความช่วยเหลือ':STATUS_TH[status]||status;row.append(st);if(caseId){const i=document.createElement('small');i.textContent='#'+caseId;row.append(i)}txt.append(row)}
   const h=document.createElement('strong');h.textContent=title;txt.append(h);
   if(body){const p=document.createElement('p');p.textContent=body;txt.append(p)}
   t.append(txt);
@@ -177,6 +178,7 @@ function checkNewCases(){
     key:'newcase',tone:sos?'danger':'info',
     title:(sos?'🚨 เคสด่วนมาก':'🆕 มีเคสผู้ประสบภัยเข้ามา')+(open.length>1?` (+${open.length-1})`:''),
     body:`${(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${area?' · '+area:''}`,
+    status:sos?'sos':'open',caseId:c.id,
     actionText:'ดูเคส',onAction:()=>openCase(c.id),hash:'map',timeout:30000
   });
 }
@@ -205,22 +207,33 @@ async function pollMyCases(){
     LIVE.track[m.id]=r;
     const team=r.volunteer||'ทีมอาสา';
     if(r.status!==prev.status){
-      if(r.status==='going')alertUser({key:'my-'+m.id,tone:'ok',title:`✅ ${team} รับเคสของคุณแล้ว`,body:'ทีมกำลังเดินทางไปหาคุณ เปิดหน้านี้ไว้เพื่อดูว่าทีมอยู่ที่ไหน',hash:'home'});
-      else if(r.status==='done')alertUser({key:'my-'+m.id,tone:'ok',title:'💚 เคสของคุณช่วยเหลือเสร็จแล้ว',body:'เลขเคส '+m.id,hash:'home'});
-      else if(r.status==='open'&&prev.status==='going')alertUser({key:'my-'+m.id,tone:'warn',title:'ทีมยกเลิกการรับเคส',body:'ระบบกำลังรอทีมใหม่ หากอันตราย โทร 1669 / 1784',hash:'home'});
+      if(r.status==='going')alertUser({key:'my-'+m.id,status:'going',caseId:m.id,tone:'ok',title:`✅ ${team} รับเคสของคุณแล้ว`,body:'ทีมกำลังเดินทางไปหาคุณ เปิดหน้านี้ไว้เพื่อดูว่าทีมอยู่ที่ไหน',hash:'home'});
+      else if(r.status==='done')alertUser({key:'my-'+m.id,status:'done',caseId:m.id,tone:'ok',title:'💚 เคสของคุณช่วยเหลือเสร็จแล้ว',body:'เลขเคส '+m.id,hash:'home'});
+      else if(r.status==='open'&&prev.status==='going')alertUser({key:'my-'+m.id,status:'open',caseId:m.id,tone:'warn',title:'ทีมยกเลิกการรับเคส',body:'ระบบกำลังรอทีมใหม่ หากอันตราย โทร 1669 / 1784',hash:'home'});
     }
     if(r.status==='going'&&r.team){
       const a=r.team.area||'',km=r.team.km;
       const kmMoved=prev.km==null||km==null?a!==prev.area:Math.abs(km-prev.km)>=0.5;
       const near=km!=null&&km<1&&!(prev.km!=null&&prev.km<1);
       if(prev.status==='going'&&(a!==prev.area||kmMoved||near)){
-        alertUser({key:'loc-'+m.id,tone:'info',title:near?`🚤 ${team} ใกล้ถึงแล้ว`:`📍 ${team} อยู่ที่ ${a||'กำลังเดินทาง'}`,body:near?(a?'อยู่ที่ '+a+' · ':'')+'ไม่ถึง 1 กม.':kmText(km),hash:'home'});
+        alertUser({key:'loc-'+m.id,status:'going',caseId:m.id,tone:'info',title:near?`🚤 ${team} ใกล้ถึงแล้ว`:`📍 ${team} อยู่ที่ ${a||'กำลังเดินทาง'}`,body:near?(a?'อยู่ที่ '+a+' · ':'')+'ไม่ถึง 1 กม.':kmText(km),hash:'home'});
       }
     }
     m.status=r.status;m.volunteer=r.volunteer;m.area=r.team?r.team.area:'';m.km=r.team?r.team.km:null;changed=true;
   }
   if(changed){const all=myCases().map(x=>list.find(y=>y.id===x.id)||x);saveMyCases(all)}
   renderMyCase();
+}
+function caseSteps(status){
+  const steps=[['open','แจ้งแล้ว','รอทีมรับเคส'],['going','ทีมรับเคส','กำลังเดินทาง'],['done','ช่วยเหลือแล้ว','เสร็จสิ้น']];
+  const cur=Math.max(0,steps.findIndex(x=>x[0]===status));
+  const ol=document.createElement('ol');ol.className='case-steps';ol.setAttribute('aria-label','สถานะเคส: '+(STATUS_TH[status]||''));
+  steps.forEach(([k,a,b],i)=>{const li=document.createElement('li');li.className=i<cur?'past':i===cur?'now':'';
+    if(i===cur)li.setAttribute('aria-current','step');
+    const dot=document.createElement('i');dot.textContent=i<cur||(i===cur&&k==='done')?'✓':String(i+1);
+    const t=document.createElement('b');t.textContent=a;const sm=document.createElement('small');sm.textContent=b;
+    li.append(dot,t,sm);ol.append(li)});
+  return ol;
 }
 function renderMyCase(){
   const el=document.getElementById('my-case');if(!el)return;
@@ -236,6 +249,7 @@ function renderMyCase(){
     const st=document.createElement('span');st.className='status '+(STATUS_CLASS[r.status]||'wait');st.textContent=STATUS_TH[r.status]||'รอความช่วยเหลือ';
     const id=document.createElement('span');id.className='case-id';id.textContent='#'+m.id;
     top.append(st,id);card.append(top);
+    card.append(caseSteps(r.status));
     const p=document.createElement('p');
     if(r.status==='going'){
       const t=r.team;

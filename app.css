@@ -424,3 +424,22 @@ a{color:var(--primary)}
 .urg-1{background:#FFF8D6;color:#7A5F00}.urg-1 i{background:#F2C200}
 .case.u2{box-shadow:inset 4px 0 0 #F07B14,0 1px 3px rgba(22,27,61,.06)}
 .case.u1{box-shadow:inset 4px 0 0 #F2C200,0 1px 3px rgba(22,27,61,.06)}
+/* การ์ดเคสแบบอ่านง่าย: ป้าย → หัวข้อความต้องการ → ตัวเลขสำคัญ → ที่อยู่/ผู้ติดต่อ */
+.case{padding:14px 40px 14px 18px}
+.case-top{margin-bottom:8px}
+.case-top .st{font-size:12.5px;padding:3px 10px}
+.case-title{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
+.case-title b{font-size:17px;line-height:1.35;font-weight:800;color:var(--ink)}
+.case-ics{display:inline-flex;flex:none;gap:2px;background:var(--tint);border-radius:12px;padding:6px}
+.case-ics .ic{width:20px;height:20px;color:var(--primary)}
+.case.u3 .case-ics{background:#FDECEC}.case.u3 .case-ics .ic{color:#B3261E}
+.case-facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:15px;font-weight:700;color:var(--ink)}
+.case-facts span{display:inline-flex;align-items:center;gap:6px}
+.case-facts .ic{width:18px;height:18px;color:var(--muted)}
+.case-foot{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;gap:4px}
+.case-foot .case-line{margin:0;font-size:14px}
+.case-foot .case-line span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.case-go{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--b-40)}
+.case-go .ic{width:20px;height:20px}
+.case.is-done{opacity:.72}
+.case.is-done .case-title b{font-weight:700}

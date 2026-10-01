@@ -327,13 +327,16 @@ function filteredCases(){
     return true}).sort((a,b)=>((a.status==='done')-(b.status==='done'))||(sevOf(b)-sevOf(a))||(rank[a.status]-rank[b.status])||((Number(b.createdAt)||0)-(Number(a.createdAt)||0)));
 }
 function caseCard(c){
-  const b=document.createElement('button');b.type='button';b.className='case'+(c.status!=='done'?' u'+sevOf(c):'')+(isDanger(c)?' danger':'');b.dataset.id=c.id;
+  const b=document.createElement('button');b.type='button';b.className='case'+(c.status!=='done'?' u'+sevOf(c):' is-done')+(isDanger(c)?' danger':'');b.dataset.id=c.id;
   const addr=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
+  const needs=c.needs&&c.needs.length?c.needs:['ขอความช่วยเหลือ'];
+  const facts=[[ 'users',(c.people||1)+' คน'],c.level&&LEVEL_TH[c.level]?['wave','น้ำ'+LEVEL_TH[c.level]]:null].filter(Boolean);
   b.innerHTML=`<div class="case-top"><span class="case-chips">${c.status!=='done'?urgChip(c):''}${statusChip(c)}</span><span class="case-time">${esc(ago(c.createdAt))}</span></div>
-    <div class="case-ppl">${ic('users')}${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL_TH[c.level]||''):''}</div>
-    <div class="case-needs">${(c.needs||[]).map(n=>`<span class="need-tag">${ic(needIcon(n))}${esc(n)}</span>`).join('')||'<span class="need-tag">ขอความช่วยเหลือ</span>'}</div>
-    <div class="case-line">${ic('pin')}<span>${esc(addr||'ไม่ระบุที่อยู่')}</span></div>`+
-    ((c.name||c.phone)?`<div class="case-line contact">${ic('phone')}<span>${esc([c.name,c.phone].filter(Boolean).join(' · '))}</span></div>`:'');
+    <div class="case-title"><span class="case-ics">${needs.slice(0,3).map(n=>ic(needIcon(n))).join('')}</span><b>${esc(needs.join(' · '))}</b></div>
+    <div class="case-facts">${facts.map(([i,t])=>`<span>${ic(i)}${esc(t)}</span>`).join('')}</div>
+    <div class="case-foot"><div class="case-line">${ic('pin')}<span>${esc(addr||'ไม่ระบุที่อยู่')}</span></div>`+
+    ((c.name||c.phone)?`<div class="case-line contact">${ic('phone')}<span>${esc([c.name,c.phone].filter(Boolean).join(' · '))}</span></div>`:'')+
+    `</div><span class="case-go" aria-hidden="true">${ic('next')}</span>`;
   b.addEventListener('click',()=>openCase(c.id));return b;
 }
 function renderList(){

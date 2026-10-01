@@ -119,22 +119,66 @@ function normDigits(x){let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66
 function caseMatches(c,q){const hay=caseHay(c),nm=String(c.name||'').toLowerCase().replace(/\s+/g,''),digits=normDigits(c.phone);
   const qq=q.replace(/(\+?\d[\d\s-]{6,}\d)/g,m=>m.replace(/[\s-]/g,''));
   return qq.split(/\s+/).every(t=>{if(hay.includes(t)||(nm&&t.length>=2&&nm.includes(t)))return true;if(!/^\+?[\d-]+$/.test(t))return false;const d=normDigits(t);return d.length>=3&&digits.includes(d)})}
+/* ตัวกรองแบบติ๊กเลือก: ในกลุ่มเดียวกัน = อย่างใดอย่างหนึ่ง, ข้ามกลุ่ม = ต้องตรงทุกกลุ่ม, ไม่ติ๊กเลย = ทั้งหมด */
+const CF_GROUPS=[
+  {key:'status',title:'สถานะ',opts:[['open','รอความช่วยเหลือ'],['going','ทีมกำลังไป'],['done','ช่วยเหลือแล้ว']]},
+  {key:'crit',title:'สีความวิกฤต',opts:[['red','วิกฤต','#d32f2f'],['orange','เร่งด่วน','#f57c00'],['yellow','ทั่วไป','#f2b705']]},
+  {key:'need',title:'ความต้องการ',opts:[['อพยพ','อพยพ'],['ผู้ป่วย','ผู้ป่วย / ผู้สูงอายุ'],['อาหาร','อาหาร / น้ำดื่ม'],['ยา','ยา'],['ของใช้เด็ก','ของใช้เด็ก'],['เรือ','เรือ / รถสูง'],['อื่น','อื่น ๆ']]},
+  {key:'level',title:'ระดับน้ำ',opts:[['ankle','ข้อเท้า'],['knee','เข่า'],['waist','เอว'],['chest','อก'],['roof','มิดหัว / หลังคา'],['none','ไม่ระบุ']]}
+];
+const CF_DEFAULT={status:['open','going'],crit:[],need:[],level:[]};
+let cf=(()=>{try{const v=JSON.parse(localStorage.getItem('uh_filters')||'null');if(v&&typeof v==='object')return Object.assign({},CF_DEFAULT,v)}catch(e){}return JSON.parse(JSON.stringify(CF_DEFAULT))})();
+function cfSave(){try{localStorage.setItem('uh_filters',JSON.stringify(cf))}catch(e){}}
+function cfStatusDefault(){return cf.status.length===2&&cf.status.includes('open')&&cf.status.includes('going')}
+function cfMatch(c,skipStatus){
+  if(!skipStatus&&cf.status.length&&!cf.status.includes(c.status))return false;
+  if(cf.crit.length&&!cf.crit.includes(critLevel(c)))return false;
+  if(cf.need.length){const n=(c.needs||[]).join(' ');if(!cf.need.some(k=>n.includes(k)))return false}
+  if(cf.level.length&&!cf.level.includes(c.level||'none'))return false;
+  return true}
 function filteredCases(){
-  const filter=$('#case-filter').value,st=$('#case-status').value,q=searchQuery();
+  const q=searchQuery(),skipStatus=!!q&&cfStatusDefault();
   const rank={open:0,going:1,done:2};
   return cases
-    .filter(c=>q?true:st==='all'?true:st==='active'?c.status!=='done':c.status===st)
+    .filter(c=>cfMatch(c,skipStatus))
     .filter(c=>!q||caseMatches(c,q))
-    .filter(c=>filter==='all'||(c.needs||[]).join(' ').includes(filter))
     .sort((a,b)=>(rank[a.status]-rank[b.status])||(Number(b.urgency)-Number(a.urgency))||((a.createdAt||0)-(b.createdAt||0)));
 }
+function cfLabel(g,v){const o=g.opts.find(x=>x[0]===v);return o?o[1]:v}
+function cfActiveCount(){return CF_GROUPS.reduce((n,g)=>n+(g.key==='status'&&cfStatusDefault()?0:cf[g.key].length),0)}
+function renderCfBar(){
+  const n=cfActiveCount(),b=$('#cf-count');if(b){b.hidden=!n;b.textContent=n}
+  const box=$('#cf-active');if(!box)return;box.replaceChildren();
+  CF_GROUPS.forEach(g=>{if(g.key==='status'&&cfStatusDefault())return;cf[g.key].forEach(v=>{const t=document.createElement('button');t.type='button';t.className='cf-tag';
+    const o=g.opts.find(x=>x[0]===v);if(o&&o[2]){const d=document.createElement('i');d.className='cf-dot';d.style.background=o[2];t.append(d)}
+    t.append(cfLabel(g,v)+' ✕');t.title='เอาออก';t.addEventListener('click',()=>{cf[g.key]=cf[g.key].filter(x=>x!==v);cfSave();cfApply()});box.append(t)})});
+  if(n){const r=document.createElement('button');r.type='button';r.className='cf-tag cf-reset';r.textContent='ล้างทั้งหมด';r.addEventListener('click',()=>{cf=JSON.parse(JSON.stringify(CF_DEFAULT));cfSave();cfApply()});box.append(r)}
+}
+function cfCounts(){const base=cases.filter(c=>!searchQuery()||caseMatches(c,searchQuery()));const out={};
+  CF_GROUPS.forEach(g=>{out[g.key]={};g.opts.forEach(([v])=>{const saved=cf[g.key];cf[g.key]=[v];out[g.key][v]=base.filter(c=>cfMatch(c,false)).length;cf[g.key]=saved})});return out}
+function renderCfPanel(){
+  const p=$('#cf-panel');if(!p||p.hidden)return;const counts=cfCounts();p.replaceChildren();
+  CF_GROUPS.forEach(g=>{const fs=document.createElement('fieldset');fs.className='cf-group';const lg=document.createElement('legend');lg.textContent=g.title;fs.append(lg);
+    const grid=document.createElement('div');grid.className='cf-opts';
+    g.opts.forEach(([v,label,col])=>{const l=document.createElement('label');l.className='cf-opt';const i=document.createElement('input');i.type='checkbox';i.value=v;i.checked=cf[g.key].includes(v);
+      i.addEventListener('change',()=>{cf[g.key]=i.checked?[...new Set([...cf[g.key],v])]:cf[g.key].filter(x=>x!==v);cfSave();cfApply()});
+      const sp=document.createElement('span');if(col){const d=document.createElement('i');d.className='cf-dot';d.style.background=col;sp.append(d)}
+      sp.append(label);const n=document.createElement('small');n.textContent=counts[g.key][v];sp.append(n);l.append(i,sp);grid.append(l)});
+    fs.append(grid);p.append(fs)});
+  const ft=document.createElement('div');ft.className='cf-foot';
+  const clr=document.createElement('button');clr.type='button';clr.className='cf-clear';clr.textContent='ล้างตัวกรอง';clr.addEventListener('click',()=>{cf=JSON.parse(JSON.stringify(CF_DEFAULT));cfSave();cfApply()});
+  const ok=document.createElement('button');ok.type='button';ok.className='solid-button cf-ok';ok.textContent=`ดูผล ${filteredCases().length} เคส`;ok.addEventListener('click',()=>cfToggle(false));
+  ft.append(clr,ok);p.append(ft)}
+function cfToggle(open){const p=$('#cf-panel'),b=$('#cf-btn');if(!p)return;p.hidden=!open;b.setAttribute('aria-expanded',String(open));b.classList.toggle('on',open);if(open)renderCfPanel();else{const pts=filteredCases().filter(hasPin).map(c=>[c.lat,c.lng]);if(fmap&&pts.length&&cfActiveCount())fmap.fitBounds(pts,{padding:[40,40],maxZoom:15})}}
+function cfApply(){renderMap()}
 function renderMap(){
   const matching=filteredCases();
-  const q=searchQuery();$('#case-count').textContent=q&&cases.length?`พบ ${matching.length} เคส (ทุกสถานะ)`:!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
+  const q=searchQuery();$('#case-count').textContent=q&&cases.length?`พบ ${matching.length} เคส${cfStatusDefault()?' (ทุกสถานะ)':''}`:!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
   const el=$('#map-cases');el.replaceChildren(...matching.map(caseCard));
   if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';if(q&&cases.length&&!isVolunteer){const h=document.createElement('small');h.className='search-hint';h.textContent='ค้นด้วยชื่อ-นามสกุล หรือเบอร์โทรเต็ม ได้ในโหมดทีมอาสา';empty.append(h)}el.append(empty)}
   const si=$('#case-search');if(si)si.placeholder=isVolunteer?'ค้นหา: ชื่อ นามสกุล เบอร์โทร เขต เลขเคส':'ค้นหาเคส: เขต ที่อยู่ ความต้องการ เลขเคส';
   renderVolunteerBar();
+  renderCfBar();renderCfPanel();
   drawCaseMarkers();
   if(typeof renderLayerChips==='function')renderLayerChips();
 }
@@ -409,14 +453,14 @@ $('#new-request').addEventListener('click',()=>{$('#summary-back').hidden=false;
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn){e.preventDefault();setView(btn.dataset.view);}});
 $('#start-request').addEventListener('click',()=>setView('request'));
 $('#detail-back').addEventListener('click',()=>setView(detailOrigin));
-$('#case-filter').addEventListener('change',renderMap);
+$('#cf-btn').addEventListener('click',()=>cfToggle($('#cf-panel').hidden));
 (function(){const i=$('#case-search'),x=$('#case-search-clear');if(!i)return;let tm;
   const fitResults=()=>{if(!fmap||!searchQuery())return;const pts=filteredCases().filter(hasPin).map(c=>[c.lat,c.lng]);if(pts.length)fmap.fitBounds(pts,{padding:[40,40],maxZoom:15})};
   const run=()=>{x.hidden=!i.value;clearTimeout(tm);tm=setTimeout(()=>{renderMap();fitResults()},200)};
   i.addEventListener('input',run);
   i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();i.blur();clearTimeout(tm);renderMap();fitResults()}});
   x.addEventListener('click',()=>{i.value='';x.hidden=true;renderMap();i.focus()});
-})();$('#case-status').addEventListener('change',renderMap);
+})();
 $('#refresh-cases').addEventListener('click',loadCases);
 function restoreView(){let target=location.hash.slice(1)||'home';if(target==='volunteer')target='map';if(target==='detail'&&!selectedCase)target='map';if(target==='summary'&&!$('#summary-content').children.length)target='request';if(!['home','map','request','emergency','summary','detail'].includes(target))target='home';setView(target,false)}
 window.addEventListener('popstate',restoreView);

@@ -298,3 +298,16 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .addr-results{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:6px}
 .addr-item{width:100%;text-align:left;border:1px solid #d5e1e5;background:#fff;border-radius:9px;padding:10px 12px;font-size:13px;line-height:1.5;color:#2c4f5c}
 .addr-item.on{border-color:#177b73;background:#e8f5f2;color:#0a5b51;font-weight:600}
+.status-pick{border:1px solid #d5e1e5;border-radius:12px;padding:12px;margin:4px 0 12px;background:#fbfdfd;width:100%;min-width:0}
+.status-pick legend{font-size:14px;font-weight:700;color:#244b58;padding:0 4px}
+.status-opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.status-opt{position:relative;cursor:pointer;min-width:0}
+.status-opt input{position:absolute;opacity:0;width:1px;height:1px}
+.status-opt span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:8px 4px;border:2px solid #d5e1e5;border-radius:11px;background:#fff;font-size:13px;font-weight:600;text-align:center;line-height:1.3;color:#3e5f6b}
+.status-opt span::before{content:"";width:20px;height:20px;border-radius:50%;border:2px solid #9fb6bd;background:#fff;box-sizing:border-box}
+.status-opt input:checked+span{border-color:var(--sc);background:color-mix(in srgb,var(--sc) 10%,#fff);color:var(--sc)}
+.status-opt input:checked+span::before{border-color:var(--sc);background:var(--sc);box-shadow:inset 0 0 0 3px #fff}
+.status-opt input:focus-visible+span{outline:3px solid #6bb6a9;outline-offset:2px}
+.status-pick[disabled]{opacity:.6}
+.status-pick .team-input{width:100%;margin:0}
+.detail-actions .status-pick{flex:1 1 100%}@media(min-width:700px){.status-pick .team-input{width:100%}}

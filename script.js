@@ -365,19 +365,19 @@ function renderDetail(){
   if(isVolunteer){
     const tel=String(c.phone||'').replace(/[^\d+]/g,'');
     if(tel){const call=document.createElement('a');call.className='secondary-button';call.href='tel:'+tel;call.textContent='☎ โทรหาผู้แจ้ง';actions.append(call)}
-    if(c.status==='open'){
-      const team=document.createElement('input');team.className='team-input';team.placeholder='ชื่อทีม / อาสา';team.value=store.get('uh_team','');team.setAttribute('aria-label','ชื่อทีม');
-      const accept=document.createElement('button');accept.className='solid-button';accept.textContent='รับเคสนี้';
-      accept.onclick=()=>{const t=team.value.trim();if(!t){team.focus();team.placeholder='ใส่ชื่อทีมก่อนรับเคส';return}store.set('uh_team',t);changeStatus(c,'going',t,accept)};
-      actions.append(team,accept);
-    }else if(c.status==='going'){
-      const done=document.createElement('button');done.className='solid-button';done.textContent='ช่วยเหลือเสร็จแล้ว';done.onclick=()=>changeStatus(c,'done','',done);
-      const release=document.createElement('button');release.className='secondary-button';release.textContent='ปล่อยเคส';release.onclick=()=>changeStatus(c,'open','',release);
-      actions.append(done,release);
-    }else{
-      const reopen=document.createElement('button');reopen.className='secondary-button';reopen.textContent='เปิดเคสอีกครั้ง';reopen.onclick=()=>changeStatus(c,'open','',reopen);
-      actions.append(reopen);
-    }
+    /* ติ๊กเปลี่ยนสถานะ */
+    const pick=document.createElement('fieldset');pick.className='status-pick';
+    const lg=document.createElement('legend');lg.textContent='สถานะเคส (ติ๊กเพื่อเปลี่ยน)';pick.append(lg);
+    const team=document.createElement('input');team.className='team-input';team.placeholder='ชื่อทีม / อาสา';team.value=c.volunteer||store.get('uh_team','');team.setAttribute('aria-label','ชื่อทีม');
+    const opts=document.createElement('div');opts.className='status-opts';
+    [['open','รอความช่วยเหลือ','#c93643'],['going','ทีมกำลังไป','#28639a'],['done','ช่วยเหลือแล้ว','#277343']].forEach(([v,label,col])=>{
+      const l=document.createElement('label');l.className='status-opt';const i=document.createElement('input');i.type='radio';i.name='case-status-'+c.id;i.value=v;i.checked=c.status===v;
+      const sp=document.createElement('span');sp.style.setProperty('--sc',col);sp.textContent=label;l.append(i,sp);opts.append(l);
+      i.addEventListener('change',()=>{if(!i.checked||v===c.status)return;
+        let t=v==='done'?team.value.trim():'';if(v==='going'){t=team.value.trim();if(!t){team.focus();team.placeholder='ใส่ชื่อทีมก่อน แล้วติ๊กอีกครั้ง';i.checked=false;opts.querySelector(`input[value="${c.status}"]`).checked=true;return}store.set('uh_team',t)}
+        changeStatus(c,v,t,pick)});
+    });
+    pick.append(opts,team);actions.append(pick);
   }else{
     const note=document.createElement('div');note.className='detail-disclaimer';
     note.textContent='ทีมอาสาที่มีรหัสจะเห็นเบอร์โทรและรับเคสได้ในหน้า "ดูเคส" หากพบผู้ประสบภัยอยู่ในอันตราย โทร 1669 หรือ 1784';

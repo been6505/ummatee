@@ -108,17 +108,22 @@ function caseCard(c){
   div.addEventListener('click',()=>openCase(c.id));
   return div;
 }
+/* ค้นหาเคส: ทุกคำต้องตรง (เลขเคส ความต้องการ เขต ที่อยู่ ชื่อ เบอร์ หมายเหตุ ทีม สถานะ ความวิกฤต) */
+function searchQuery(){const i=$('#case-search');return i?i.value.trim().toLowerCase():''}
+function caseHay(c){const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.notes,c.volunteer,Array.isArray(c.vulnerable)?c.vulnerable.join(' '):c.vulnerable,statusLabel(c),critLabel(c),c.people?c.people+' คน':''];return parts.filter(Boolean).join(' ').toLowerCase()}
+function caseMatches(c,q){const hay=caseHay(c),digits=String(c.phone||'').replace(/\D/g,'');return q.split(/\s+/).every(t=>{if(hay.includes(t))return true;const d=t.replace(/\D/g,'');return d.length>=3&&d===t.replace(/[-\s]/g,'')&&digits.includes(d)})}
 function filteredCases(){
-  const filter=$('#case-filter').value,st=$('#case-status').value;
+  const filter=$('#case-filter').value,st=$('#case-status').value,q=searchQuery();
   const rank={open:0,going:1,done:2};
   return cases
-    .filter(c=>st==='all'?true:st==='active'?c.status!=='done':c.status===st)
+    .filter(c=>q?true:st==='all'?true:st==='active'?c.status!=='done':c.status===st)
+    .filter(c=>!q||caseMatches(c,q))
     .filter(c=>filter==='all'||(c.needs||[]).join(' ').includes(filter))
     .sort((a,b)=>(rank[a.status]-rank[b.status])||(Number(b.urgency)-Number(a.urgency))||((a.createdAt||0)-(b.createdAt||0)));
 }
 function renderMap(){
   const matching=filteredCases();
-  $('#case-count').textContent=!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
+  const q=searchQuery();$('#case-count').textContent=q&&cases.length?`พบ ${matching.length} เคส (ทุกสถานะ)`:!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
   const el=$('#map-cases');el.replaceChildren(...matching.map(caseCard));
   if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';el.append(empty)}
   renderVolunteerBar();
@@ -396,7 +401,14 @@ $('#new-request').addEventListener('click',()=>{$('#summary-back').hidden=false;
 document.addEventListener('click',e=>{const btn=e.target.closest('[data-view]');if(btn){e.preventDefault();setView(btn.dataset.view);}});
 $('#start-request').addEventListener('click',()=>setView('request'));
 $('#detail-back').addEventListener('click',()=>setView(detailOrigin));
-$('#case-filter').addEventListener('change',renderMap);$('#case-status').addEventListener('change',renderMap);
+$('#case-filter').addEventListener('change',renderMap);
+(function(){const i=$('#case-search'),x=$('#case-search-clear');if(!i)return;let tm;
+  const fitResults=()=>{if(!fmap||!searchQuery())return;const pts=filteredCases().filter(hasPin).map(c=>[c.lat,c.lng]);if(pts.length)fmap.fitBounds(pts,{padding:[40,40],maxZoom:15})};
+  const run=()=>{x.hidden=!i.value;clearTimeout(tm);tm=setTimeout(()=>{renderMap();fitResults()},200)};
+  i.addEventListener('input',run);
+  i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();i.blur();clearTimeout(tm);renderMap();fitResults()}});
+  x.addEventListener('click',()=>{i.value='';x.hidden=true;renderMap();i.focus()});
+})();$('#case-status').addEventListener('change',renderMap);
 $('#refresh-cases').addEventListener('click',loadCases);
 function restoreView(){let target=location.hash.slice(1)||'home';if(target==='volunteer')target='map';if(target==='detail'&&!selectedCase)target='map';if(target==='summary'&&!$('#summary-content').children.length)target='request';if(!['home','map','request','emergency','summary','detail'].includes(target))target='home';setView(target,false)}
 window.addEventListener('popstate',restoreView);

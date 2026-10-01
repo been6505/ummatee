@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="./app.css?v=3">
+<link rel="stylesheet" href="./app.css?v=4">
 </head>
 <body>
 <!-- ===== หน้าแรก ===== -->
@@ -23,6 +23,7 @@
   </header>
   <button type="button" class="search-card" id="search-card"><i class="dot"></i><span>ต้องการความช่วยเหลือที่ไหน?</span></button>
   <span class="live-badge" id="live-badge" hidden><i></i>LIVE</span>
+  <div class="flood-legend glass home-fl" hidden></div>
   <div class="map-fabs" id="home-fabs">
     <button type="button" class="fab glass" data-act="layers" aria-label="เปลี่ยนแบบแผนที่" data-icon="layers"></button>
     <button type="button" class="fab glass" data-act="locate" aria-label="ตำแหน่งของฉัน" data-icon="locate"></button>
@@ -142,6 +143,7 @@
         <button type="button" class="fab glass" data-act="locate" aria-label="ตำแหน่งของฉัน" data-icon="locate"></button>
       </div>
       <div class="legend glass" id="legend"></div>
+      <div class="flood-legend glass" hidden></div>
     </div>
     <section class="list-sheet" id="list-sheet" aria-label="รายการเคส">
       <button type="button" class="sheet-handle" id="sheet-handle" aria-expanded="false" aria-controls="list-body"><i></i><span id="sheet-count">เคส</span></button>
@@ -195,17 +197,19 @@
   <button type="button" role="menuitemradio" data-base="sat" data-icon="sat">ดาวเทียม</button>
   <button type="button" role="menuitemradio" data-base="dark" data-icon="moon">มืด</button>
   <hr>
-  <label class="tg"><input type="checkbox" id="lay-flood"><span>น้ำท่วมถนน (Floodboard)</span></label>
+  <label class="tg"><input type="checkbox" id="lay-flood" checked><span>น้ำท่วมถนน (Floodboard)</span></label>
   <label class="tg"><input type="checkbox" id="lay-teams"><span>ทีมกู้ภัย</span></label>
+  <hr>
+  <button type="button" id="open-gmaps" data-icon="nav">เปิดใน Google Maps</button>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden></div>
 
-<script src="./icons.js?v=3"></script>
-<script src="./geocode.js?v=3"></script>
-<script src="./location.js?v=3"></script>
-<script src="./hotlines.js?v=3"></script>
-<script src="./script.js?v=3"></script>
+<script src="./icons.js?v=4"></script>
+<script src="./geocode.js?v=4"></script>
+<script src="./location.js?v=4"></script>
+<script src="./hotlines.js?v=4"></script>
+<script src="./script.js?v=4"></script>
 <script>
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>

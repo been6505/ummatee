@@ -415,3 +415,9 @@ a{color:var(--primary)}
 .team-pin span{color:var(--navy);border-color:var(--navy)}.team-pin em{background:var(--navy)}
 .leaflet-container{background:#ECEEF3}
 .review .rv .ic,.case-line .ic,.coord-row .ic,.req-item .ic{color:var(--primary)}
+/* คำอธิบายสีน้ำท่วมแบบ Floodboard */
+.flood-legend{position:absolute;z-index:500;left:12px;display:flex;flex-wrap:wrap;gap:4px 10px;max-width:calc(100% - 90px);background:rgba(255,255,255,.88);border:0;border-radius:12px;padding:6px 10px;font-size:11.5px;font-weight:600;color:var(--ink)}
+.flood-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}.flood-legend b{width:16px;height:4px;border-radius:2px}
+#view-map .flood-legend{top:calc(var(--safe-t) + 128px)}
+.home-fl{top:calc(var(--safe-t) + 184px)}
+@media(min-width:1024px){.home-fl{left:460px;top:64px}}

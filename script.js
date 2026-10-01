@@ -83,7 +83,7 @@ async function ensureMap(which){
   if(S.maps[which])return S.maps[which];
   const m=makeMap(el,{zoom:11});S.maps[which]=m;PIN_LAYER[which]=L.layerGroup().addTo(m);
   m.on('baselayerchange',()=>{});
-  drawPins(which);if(store.get('uh_lay_flood',''))toggleFlood(true);if(store.get('uh_lay_teams',''))toggleTeams(true);
+  drawPins(which);if(floodOn()){fetchFlood().then(()=>drawFlood(m)).catch(()=>{});renderFloodLegend(true)}else $('#lay-flood').checked=false;if(store.get('uh_lay_teams',''))toggleTeams(true);
   if(which==='map'&&typeof drawTrip==='function')drawTrip();
   return m;
 }
@@ -128,13 +128,26 @@ async function locateMe(which,btn){
     m.setView([p.lat,p.lng],Math.max(m.getZoom(),15));
   }catch(e){toast(e.code===1?'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง':'หาตำแหน่งไม่สำเร็จ');btn&&btn.classList.remove('on')}
 }
-/* ชั้นน้ำท่วมถนนจาก Floodboard */
-const FLOOD_COL={blocked:'#D32F2F',risky:'#0F2188',caution:'#6F7AB8',ok:'#9FA6CF'};
-async function toggleFlood(on){store.set('uh_lay_flood',on?'1':'');$('#lay-flood').checked=on;
-  Object.values(S.maps).forEach(m=>{if(m&&m._flood){m._flood.remove();m._flood=null}});if(!on)return;
-  try{if(!S.flood){const r=await fetch('https://www.floodboard.org/api/export/roads.geojson');S.flood=await r.json()}
-    Object.values(S.maps).forEach(m=>{if(!m)return;m._flood=L.geoJSON(S.flood,{interactive:false,style:f=>{const v=(f.properties||{}).verdict||(f.properties||{}).status;return {color:FLOOD_COL[v]||'#6F7AB8',weight:4,opacity:.75}},pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:4,color:FLOOD_COL[(f.properties||{}).verdict]||'#6F7AB8',weight:2})}).addTo(m)});
-  }catch(e){toast('โหลดข้อมูลน้ำท่วมไม่สำเร็จ')}}
+/* ชั้นน้ำท่วมถนนจาก Floodboard (ข้อมูลเปิด roads.geojson) — เปิดเป็นค่าเริ่มต้น สีตามความลึก */
+const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';
+const FLOOD_LEG=[['blocked','#C62828','น้ำลึก ผ่านไม่ได้'],['risky','#EF6C00','เสี่ยง'],['caution','#F9A825','เปียก ผ่านได้'],['ok','#1E88E5','น้ำลด / น้ำน้อย']];
+const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
+function floodVerdict(p){const v=p.verdict;return typeof v==='string'?v:(v&&(v.sedan||v.pickup||v.motorbike))||''}
+function floodColor(p){const v=floodVerdict(p),d=Number(p.depthCm)||0;if(v==='blocked'||d>=50)return '#C62828';if(v==='risky'||d>=30)return '#EF6C00';if(v==='caution'||d>=10)return '#F9A825';return '#1E88E5'}
+async function fetchFlood(force){if(S.flood&&!force&&Date.now()-S.floodAt<10*60e3)return S.flood;const r=await fetch(FLOOD_URL);if(!r.ok)throw new Error(r.status);S.flood=await r.json();S.floodAt=Date.now();return S.flood}
+function drawFlood(m){if(!m||!S.flood)return;if(m._flood)m._flood.remove();
+  m._floodR=m._floodR||L.canvas({padding:.3,tolerance:6});
+  m._flood=L.geoJSON(S.flood,{renderer:m._floodR,smoothFactor:1.5,style:f=>({color:floodColor(f.properties||{}),weight:5,opacity:.85}),
+    pointToLayer:(f,ll)=>L.circleMarker(ll,{renderer:m._floodR,radius:6,color:floodColor(f.properties||{}),fillOpacity:.85,weight:2}),
+    onEachFeature:(f,l)=>{const p=f.properties||{},v=floodVerdict(p);l.bindPopup(`<div class="pop"><b>${esc(p.name||'ถนน')}</b><br>น้ำลึกประมาณ ${p.depthCm!=null?esc(p.depthCm)+' ซม.':'-'}${v?'<br>รถเก๋ง: '+esc(VERDICT_TH[v]||v):''}<br><small>ที่มา: Floodboard.org</small></div>`)}}).addTo(m);
+  if(m.attributionControl&&!m._floodAttr){m.attributionControl.addAttribution('น้ำท่วม: <a href="https://www.floodboard.org/" target="_blank" rel="noopener">Floodboard.org</a>');m._floodAttr=true}}
+async function toggleFlood(on){store.set('uh_lay_flood',on?'1':'0');$('#lay-flood').checked=on;
+  Object.values(S.maps).forEach(m=>{if(m&&m._flood){m._flood.remove();m._flood=null}});renderFloodLegend(on);if(!on)return;
+  try{await fetchFlood();Object.values(S.maps).forEach(drawFlood)}catch(e){toast('โหลดข้อมูลน้ำท่วมจาก Floodboard ไม่สำเร็จ')}}
+const floodOn=()=>store.get('uh_lay_flood','1')!=='0';
+function renderFloodLegend(on){$$('.flood-legend').forEach(el=>{el.hidden=!on;el.innerHTML=FLOOD_LEG.map(([,c,t])=>`<span><b style="background:${c}"></b>${t}</span>`).join('')})}
+setInterval(async()=>{if(!document.hidden&&floodOn()){try{await fetchFlood(true);Object.values(S.maps).forEach(drawFlood)}catch(e){}}},10*60e3);
+$('#open-gmaps').addEventListener('click',()=>{const m=S.maps[S.view==='map'?'map':'home'];const c=m&&m.getCenter?m.getCenter():{lat:13.7563,lng:100.5018};window.open(`https://www.google.com/maps/@${c.lat},${c.lng},${m&&m.getZoom?m.getZoom():12}z`,'_blank','noopener');$('#layer-menu').hidden=true});
 $('#lay-flood').addEventListener('change',e=>toggleFlood(e.target.checked));
 /* ชั้นทีมกู้ภัย (ตำแหน่งปัดเศษสำหรับคนทั่วไป) */
 async function toggleTeams(on){store.set('uh_lay_teams',on?'1':'');$('#lay-teams').checked=on;

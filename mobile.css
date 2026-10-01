@@ -326,3 +326,5 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .case-card .case-people{margin:2px 0 4px!important;font-size:15px!important;font-weight:700;color:#1d3f4b!important;line-height:1.5}.case-card h3.case-needs{margin:0}
 .case-card .case-addr{margin:6px 0 0!important;font-size:14px!important;line-height:1.55;color:#4a6874!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.case-card .case-addr.none{color:#9aaeb6!important}
 .case-card .case-contact{margin:4px 0 0!important;font-size:14px!important;line-height:1.55;color:#1d3f4b!important;font-weight:600;white-space:pre-wrap;font-variant-numeric:tabular-nums}
+.vol-tools-btn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:46px;margin:0 0 12px;padding:0 14px;border:1px solid #d5e1e5;border-radius:11px;background:#fff;color:#1f4f5c;font-size:15px;font-weight:600}
+.vol-tools-btn b{transition:transform .2s;font-size:14px;color:#6b818c}.vol-tools-btn.open{border-color:#177b73;background:#e8f5f2;color:#0a5b51}.vol-tools-btn.open b{transform:rotate(180deg)}

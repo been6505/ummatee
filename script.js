@@ -248,7 +248,8 @@ function renderHomeStats(){
 function renderVolunteerBar(){
   const bar=$('#volunteer-bar');
   const sw=$('#vol-switch');if(sw){const on=isVolunteer||volPanelOpen;sw.setAttribute('aria-checked',String(on));sw.classList.toggle('on',on);sw.classList.toggle('pending',on&&!isVolunteer);sw.classList.toggle('active',isVolunteer);const t=store.get('uh_team','');sw.querySelector('span').textContent=isVolunteer&&t?t:'ทีมอาสา'}
-  const panel=$('#vol-panel');if(panel)panel.hidden=!(isVolunteer||volPanelOpen);
+  const panel=$('#vol-panel');if(panel)panel.hidden=!volPanelOpen;
+  const tb=$('#vol-tools-btn');if(tb){tb.hidden=!isVolunteer;tb.setAttribute('aria-expanded',String(volPanelOpen));tb.classList.toggle('open',volPanelOpen)}
   const mode=isVolunteer?'vol':'pub';if(bar.dataset.mode===mode&&bar.children.length)return; // ไม่สร้างใหม่ทุกครั้ง (กันช่องที่กำลังพิมพ์หาย)
   bar.dataset.mode=mode;bar.replaceChildren();
   if(isVolunteer){
@@ -274,6 +275,7 @@ $('#vol-switch').addEventListener('click',async()=>{
   }
   volPanelOpen=!volPanelOpen;renderVolunteerBar();
 });
+$('#vol-tools-btn').addEventListener('click',()=>{volPanelOpen=!volPanelOpen;renderVolunteerBar()});
 
 /* ---------------- flood map: Floodboard roads + UM+ case pins ---------------- */
 const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';
@@ -316,7 +318,7 @@ function drawCaseMarkers(){
     const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
     pts.push([c.lat,c.lng]);
     L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
-      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
+      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}${(c.name||c.phone)?'<br>'+(c.name?'👤 '+escH(c.name)+' ':'')+(c.phone?(isVolunteer&&String(c.phone).replace(/[^\d+]/g,'').length>=9?'☎ <a href="tel:'+escH(String(c.phone).replace(/[^\d+]/g,''))+'">'+escH(c.phone)+'</a>':'☎ '+escH(c.phone)):''):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}

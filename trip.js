@@ -12,10 +12,10 @@ const tripDist=(a,b)=>{const R=6371,t=Math.PI/180,dl=(b.lat-a.lat)*t,dn=(b.lng-a
 /* เรียงใกล้สุดก่อน: เริ่มจากตำแหน่งเรา (ถ้ามี) ไม่งั้นเริ่มจากจุดแรก; เคสวิกฤตยังคงลำดับตามระยะ */
 /* หาตำแหน่งเรา (ใช้ของที่มีอยู่ก่อน) แล้วเรียก cb(pos|null) */
 function tripWithOrigin(cb){
-  const me=typeof ME!=='undefined'&&ME.pos?{lat:ME.pos.lat,lng:ME.pos.lng}:null;if(me)return cb(me);
-  if(!navigator.geolocation)return cb(null);
-  const st=document.getElementById('trip-note');if(st)st.textContent='กำลังหาตำแหน่งของคุณ…';
-  navigator.geolocation.getCurrentPosition(p=>cb({lat:p.coords.latitude,lng:p.coords.longitude}),()=>cb(null),{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+  /* ทำทันที: ใช้ตำแหน่งที่รู้อยู่แล้ว (ไม่รอ GPS) แล้วขอ GPS เบื้องหลังเก็บไว้ใช้ครั้งต่อไป */
+  const me=typeof ME!=='undefined'&&ME.pos?{lat:ME.pos.lat,lng:ME.pos.lng}:TRIP.lastPos||null;
+  cb(me);
+  if(navigator.geolocation&&!(typeof ME!=='undefined'&&ME.pos))navigator.geolocation.getCurrentPosition(p=>{TRIP.lastPos={lat:p.coords.latitude,lng:p.coords.longitude}},()=>{},{enableHighAccuracy:false,timeout:10000,maximumAge:120000});
 }
 /* ความหนักของเคส: แดง 3 / ส้ม 2 / เหลือง 1 */
 function tripSev(c){return critLevel(c)==='red'?3:critLevel(c)==='orange'?2:1}
@@ -25,7 +25,7 @@ function tripNN(pts,start){const left=pts.slice(),out=[];let cur=start;if(!cur&&
 /* เคสหนักก่อน: ไปเคสแดงทั้งหมดก่อน (เรียงตามระยะ) แล้วส้ม แล้วเหลือง */
 function tripPriorityOrder(pts,start){let cur=start,out=[];[3,2,1].forEach(sv=>{const tier=pts.filter(p=>p.sev===sv);if(!tier.length)return;const o=tripNN(tier,cur);out=out.concat(o);cur=o[o.length-1]});return out}
 function tripPts(list){return list.filter(c=>!c.missing&&hasPin(c)).map(c=>({id:String(c.id),lat:+c.lat,lng:+c.lng,sev:tripSev(c),people:Number(c.people)||1}))}
-function tripApply(order,rest,msg){TRIP.ids=[...order.map(p=>p.id),...rest];tripSave();tripRefresh();const st=document.getElementById('trip-note');if(st&&msg)st.textContent=msg}
+function tripApply(order,rest,msg){TRIP.ids=[...order.map(p=>p.id),...rest];tripSave();tripRefresh();const st=document.getElementById('trip-note');if(st&&msg){st.textContent='✓ '+msg;st.classList.add('flash')}}
 function tripSort(){const list=tripCases(),pts=tripPts(list),rest=list.filter(c=>c.missing||!hasPin(c)).map(c=>String(c.id));if(pts.length<2)return;
   tripWithOrigin(me=>tripApply(tripNN(pts,me),rest,'เรียงใกล้สุดก่อนแล้ว'))}
 function tripHeavyFirst(){const list=tripCases(),pts=tripPts(list),rest=list.filter(c=>c.missing||!hasPin(c)).map(c=>String(c.id));if(pts.length<2)return;

@@ -108,17 +108,10 @@ async function onPos(pos){
 /* ส่งซ้ำเป็นระยะแม้ไม่ได้ขยับ (ให้ผู้แจ้งเห็นว่ายังออนไลน์) */
 setInterval(()=>{if(isSharing()&&LIVE.lastPos&&Date.now()-LIVE.lastSent>=SEND_MAX_MS)onPos({coords:{latitude:LIVE.lastPos.lat,longitude:LIVE.lastPos.lng,accuracy:LIVE.lastPos.accuracy}})},30000);
 
+/* ไม่แสดงแถบลอย "แชร์ตำแหน่งทีม" แล้ว (ควบคุมการแชร์ได้ในแผงทีมอาสา) — แสดงแค่จุดเขียวเล็ก ๆ ที่สวิตช์ทีมอาสา */
 function renderShareChip(){
-  let chip=document.getElementById('share-chip');
-  if(!isSharing()){chip&&chip.remove();return}
-  if(!chip){chip=document.createElement('div');chip.id='share-chip';chip.className='share-chip';document.body.append(chip)}
-  chip.replaceChildren();
-  const s=document.createElement('span');s.innerHTML='<i></i>';
-  const t=document.createElement('b');t.textContent='แชร์ตำแหน่งทีม '+store.get('uh_team','');
-  const u=document.createElement('small');u.textContent=LIVE.lastSent?'ส่งล่าสุด '+new Date(LIVE.lastSent).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'กำลังหาตำแหน่ง…';
-  const txt=document.createElement('span');txt.className='share-txt';txt.append(t,u);
-  const b=document.createElement('button');b.type='button';b.textContent='หยุด';b.onclick=()=>stopSharing();
-  chip.append(s,txt,b);
+  const chip=document.getElementById('share-chip');if(chip)chip.remove();
+  const sw=document.getElementById('vol-switch');if(sw)sw.classList.toggle('sharing',isSharing());
 }
 
 /* ปุ่มในแผง "สำหรับทีมอาสา" */

@@ -312,3 +312,6 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .status-pick .team-input{width:100%;margin:0}
 .detail-actions .status-pick{flex:1 1 100%}@media(min-width:700px){.status-pick .team-input{width:100%}}
 .addr-item.exact::before{content:'✓ ';color:#177b73;font-weight:700}
+.addr-ok{width:100%;margin:2px 0 10px;min-height:50px}
+.addr-ok.done{background:#277343;opacity:1}
+.addr-saved{display:block;width:100%;text-align:left;border:1px dashed #9cc7bf;background:#f2faf8;color:#145f57;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5;margin:0 0 10px}

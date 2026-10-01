@@ -18,7 +18,7 @@ function drawRequestMarker(){
   if(requestMarker){requestMarker.setLatLng(position);return}
   const icon=L.divIcon({className:'request-pin',html:'<span aria-hidden="true"></span>',iconSize:[36,46],iconAnchor:[18,44]});
   requestMarker=L.marker(position,{draggable:true,icon,title:'ลากเพื่อย้ายจุดขอความช่วยเหลือ',alt:'จุดขอความช่วยเหลือที่เลือก'}).addTo(requestMap);
-  requestMarker.on('dragend',()=>{const p=requestMarker.getLatLng();setRequestLocation(p.lat,p.lng,false)});
+  requestMarker.on('dragend',()=>{const p=requestMarker.getLatLng();setRequestLocation(p.lat,p.lng,false);const b=document.getElementById('addr-ok');if(b&&!b.hidden)addrOkShow()});
 }
 function setRequestLocation(lat,lng,pan=true){
   if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat < -90||lat > 90||lng < -180||lng > 180)return false;
@@ -52,6 +52,7 @@ function clearRequestLocation(){
   ['selected-lat','selected-lng'].forEach(id=>locationElement(id).value='');
   locationElement('pin-coordinate').textContent='';locationElement('clear-pin').hidden=true;
   locationElement('location-status').textContent='แตะบนแผนที่เพื่อเลือกตำแหน่ง';
+  const ok=locationElement('addr-ok');if(ok)ok.hidden=true;
 }
 locationElement('pin-center').addEventListener('click',()=>{if(requestMap){const p=requestMap.getCenter();setRequestLocation(p.lat,p.lng,false)}});
 locationElement('clear-pin').addEventListener('click',clearRequestLocation);
@@ -91,11 +92,29 @@ function addrScore(r,P,w){const title=addrSquash(r.title),all=addrSquash(r.name)
   P.area.forEach(a=>{if(all.includes(addrSquash(a)))s+=6});
   if(/กรุงเทพ/.test(r.name))s+=1;
   return s}
-let addrSeq=0,addrTimer=null,addrLastQ='';
+let addrSeq=0,addrTimer=null,addrLastQ='',addrPending=null;
+function addrOkShow(){const b=locationElement('addr-ok');b.hidden=false;b.disabled=false;b.textContent='✓ ยืนยันตำแหน่งนี้';b.classList.remove('done')}
+function addrConfirm(){
+  if(!geo){locationElement('addr-status').textContent='ยังไม่มีหมุด ค้นหาที่อยู่หรือแตะแผนที่ก่อน';return}
+  const q=locationElement('addr-q').value.trim(),label=addrPending&&addrPending.r?addrShort(addrPending.r):'';
+  const landmark=document.querySelector('input[name="address"]');if(landmark&&q)landmark.value=q;
+  try{localStorage.setItem('uh_addr_saved',JSON.stringify({q,lat:geo.lat,lng:geo.lng,label,t:Date.now()}))}catch(e){}
+  locationElement('addr-results').hidden=true;
+  const b=locationElement('addr-ok');b.textContent='✓ ยืนยันและบันทึกที่อยู่แล้ว';b.disabled=true;b.classList.add('done');
+  locationElement('addr-status').textContent='✓ ยืนยันแล้ว'+(label?': '+label:'')+' · ที่อยู่ถูกใส่ในช่อง "จุดสังเกต" และจำไว้ใช้ครั้งหน้า';
+  addrSavedChip();
+}
+function addrSavedChip(){const c=locationElement('addr-saved');let v=null;try{v=JSON.parse(localStorage.getItem('uh_addr_saved')||'null')}catch(e){}
+  if(!v||!v.q||!Number.isFinite(v.lat)||locationElement('addr-q').value.trim()){c.hidden=true;return}
+  c.hidden=false;c.textContent='📍 ใช้ที่อยู่ที่บันทึกไว้: '+v.q;
+  c.onclick=()=>{locationElement('addr-q').value=v.q;addrLastQ=v.q;setRequestLocation(v.lat,v.lng);ensureRequestMap().then(m=>m&&m.setView([v.lat,v.lng],17));addrPending={q:v.q,r:null};
+    const landmark=document.querySelector('input[name="address"]');if(landmark&&!landmark.value.trim())landmark.value=v.q;
+    c.hidden=true;const b=locationElement('addr-ok');b.hidden=false;b.textContent='✓ ยืนยันและบันทึกที่อยู่แล้ว';b.disabled=true;b.classList.add('done');
+    locationElement('addr-status').textContent='✓ ใช้ที่อยู่ที่บันทึกไว้ · ลากหมุดปรับได้'}}
 function addrShort(r){return String(r.name).split(',').slice(0,3).join(',')}
 function addrRender(list,chosen){const ul=locationElement('addr-results');ul.replaceChildren();ul.hidden=list.length<2;
   list.forEach((r,i)=>{const li=document.createElement('li');const b=document.createElement('button');b.type='button';b.className='addr-item'+(i===chosen?' on':'')+(r.exact?' exact':'');b.textContent=addrShort(r);
-    b.addEventListener('click',()=>{setRequestLocation(r.lat,r.lng);ensureRequestMap().then(m=>m&&m.setView([r.lat,r.lng],17));addrRender(list,i);locationElement('addr-status').textContent='✓ ปักหมุดที่: '+addrShort(r)+' · ลากหมุดปรับให้ตรงได้'});li.append(b);ul.append(li)})}
+    b.addEventListener('click',()=>{setRequestLocation(r.lat,r.lng);addrPending={q:locationElement('addr-q').value.trim(),r};addrOkShow();ensureRequestMap().then(m=>m&&m.setView([r.lat,r.lng],17));addrRender(list,i);locationElement('addr-status').textContent='✓ ปักหมุดที่: '+addrShort(r)+' · ลากหมุดปรับให้ตรงได้'});li.append(b);ul.append(li)})}
 async function addrSearch(force){
   const input=locationElement('addr-q'),st=locationElement('addr-status'),q=input.value.trim();
   if(q.length<4){if(force)st.textContent='พิมพ์ที่อยู่อย่างน้อย 4 ตัวอักษร';return}
@@ -117,7 +136,7 @@ async function addrSearch(force){
   const r=top[0],key=r.lat+','+r.lng;if(!final&&shown===key)return;const userMoved=shown&&locationRevision!==myRev;
   if(!userMoved&&shown!==key){setRequestLocation(r.lat,r.lng);myRev=locationRevision;ensureRequestMap().then(mp=>mp&&mp.setView([r.lat,r.lng],r.exact?17:15))}shown=key;if(userMoved){addrRender(top,-1);st.textContent='เลือกจากรายการได้ หรือใช้หมุดที่ปรับไว้';return}
   st.textContent=(r.exact?'✓ ปักหมุดที่: ':'≈ ใกล้เคียงที่สุด: ')+addrShort(r)+(r.exact?'':' (ไม่พบเลขซอย/แยกตรงกัน)')+(top.length>1?' · เลือกจากรายการได้':'')+(final?' · ลากหมุดปรับให้ตรงได้':' · กำลังหาให้ตรงขึ้น…');
-  addrRender(top,0);
+  addrRender(top,0);addrPending={q,r};addrOkShow();
   };
   /* รอบแรก: Photon ทุกแบบพร้อมกัน + Nominatim แบบแรก */
   await Promise.all([...vars.map(v=>addrPhoton(v.q).then(l=>add(l,v.w)).catch(()=>{err=true})),addrNominatim(vars[0].q).then(l=>add(l,vars[0].w)).catch(()=>{err=true})]);
@@ -132,6 +151,9 @@ async function addrSearch(force){
 locationElement('addr-q').addEventListener('input',()=>{clearTimeout(addrTimer);addrTimer=setTimeout(()=>addrSearch(false),1200)});
 locationElement('addr-q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(addrTimer);addrSearch(true)}});
 locationElement('addr-go').addEventListener('click',()=>{clearTimeout(addrTimer);addrSearch(true)});
+locationElement('addr-ok').addEventListener('click',addrConfirm);
+locationElement('addr-q').addEventListener('input',()=>{const b=locationElement('addr-ok');if(b.classList.contains('done'))b.hidden=true;addrSavedChip()});
+addrSavedChip();
 locationElement('addr-q').addEventListener('change',()=>{clearTimeout(addrTimer);addrSearch(false)});
 locationElement('locate').addEventListener('click',()=>{
   const button=locationElement('locate'),status=locationElement('location-status');

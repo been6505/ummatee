@@ -110,8 +110,15 @@ function caseCard(c){
 }
 /* ค้นหาเคส: ทุกคำต้องตรง (เลขเคส ความต้องการ เขต ที่อยู่ ชื่อ เบอร์ หมายเหตุ ทีม สถานะ ความวิกฤต) */
 function searchQuery(){const i=$('#case-search');return i?i.value.trim().toLowerCase():''}
-function caseHay(c){const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.notes,c.volunteer,Array.isArray(c.vulnerable)?c.vulnerable.join(' '):c.vulnerable,statusLabel(c),critLabel(c),c.people?c.people+' คน':''];return parts.filter(Boolean).join(' ').toLowerCase()}
-function caseMatches(c,q){const hay=caseHay(c),digits=String(c.phone||'').replace(/\D/g,'');return q.split(/\s+/).every(t=>{if(hay.includes(t))return true;const d=t.replace(/\D/g,'');return d.length>=3&&d===t.replace(/[-\s]/g,'')&&digits.includes(d)})}
+function caseHay(c){
+  const d=c.createdAt?new Date(Number(c.createdAt)||c.createdAt):null,dt=d&&!isNaN(d)?d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long'})+' '+d.getDate()+'/'+(d.getMonth()+1):'';
+  const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,Array.isArray(c.vulnerable)?c.vulnerable.join(' '):c.vulnerable,
+    statusLabel(c),STATUS_TH[c.status],critLabel(c),c.level,c.level?'น้ำ'+(LEVEL_TH[c.level]||c.level)+' ระดับ'+(LEVEL_TH[c.level]||''):'',c.people?c.people+' คน':'',dt,ago(c.createdAt)];
+  return parts.filter(Boolean).join(' ').toLowerCase()}
+function normDigits(x){let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d='0'+d.slice(2);return d}
+function caseMatches(c,q){const hay=caseHay(c),nm=String(c.name||'').toLowerCase().replace(/\s+/g,''),digits=normDigits(c.phone);
+  const qq=q.replace(/(\+?\d[\d\s-]{6,}\d)/g,m=>m.replace(/[\s-]/g,''));
+  return qq.split(/\s+/).every(t=>{if(hay.includes(t)||(nm&&t.length>=2&&nm.includes(t)))return true;if(!/^\+?[\d-]+$/.test(t))return false;const d=normDigits(t);return d.length>=3&&digits.includes(d)})}
 function filteredCases(){
   const filter=$('#case-filter').value,st=$('#case-status').value,q=searchQuery();
   const rank={open:0,going:1,done:2};
@@ -125,7 +132,8 @@ function renderMap(){
   const matching=filteredCases();
   const q=searchQuery();$('#case-count').textContent=q&&cases.length?`พบ ${matching.length} เคส (ทุกสถานะ)`:!lastLoaded&&cases.length?`${matching.length} เคส · ${loading?'กำลังอัปเดต…':'ข้อมูลที่บันทึกไว้ (ยังเชื่อมต่อไม่ได้)'}`:loading&&!lastLoaded?'กำลังโหลด…':`${matching.length} เคส`;
   const el=$('#map-cases');el.replaceChildren(...matching.map(caseCard));
-  if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';el.append(empty)}
+  if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';if(q&&cases.length&&!isVolunteer){const h=document.createElement('small');h.className='search-hint';h.textContent='ค้นด้วยชื่อ-นามสกุล หรือเบอร์โทรเต็ม ได้ในโหมดทีมอาสา';empty.append(h)}el.append(empty)}
+  const si=$('#case-search');if(si)si.placeholder=isVolunteer?'ค้นหา: ชื่อ นามสกุล เบอร์โทร เขต เลขเคส':'ค้นหาเคส: เขต ที่อยู่ ความต้องการ เลขเคส';
   renderVolunteerBar();
   drawCaseMarkers();
   if(typeof renderLayerChips==='function')renderLayerChips();

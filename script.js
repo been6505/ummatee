@@ -74,12 +74,12 @@ function caseTitle(c){
 }
 function caseArea(c){return c.district?('เขต'+c.district):(c.address||'ไม่ระบุที่อยู่')}
 function isSOS(c){return Number(c.urgency)===3&&c.status==='open'}
-function statusLabel(c){return STATUS_TH[c.status]}
+function statusLabel(c){return (isSOS(c)?'SOS · ':'')+STATUS_TH[c.status]}
 function statusClass(c){return STATUS_CLASS[c.status]}
 /* ความวิกฤต: แดง = วิกฤต/เสี่ยงต่อชีวิต (urgency 3), เหลือง = เร่งด่วน / ทั่วไป */
 function critLevel(c){return Number(c.urgency)===3?'red':'yellow'}
 function critLabel(c){const u=Number(c.urgency);return u===3?'วิกฤต':u===2?'เร่งด่วน':'ทั่วไป'}
-function critBadge(c){const b=document.createElement('span');b.className='crit crit-'+critLevel(c);b.textContent=critLabel(c);return b}
+function statusEl(c){const s=document.createElement('span');s.className='status '+statusClass(c);s.append(statusLabel(c));if(c.status!=='done'){const d=document.createElement('i');d.className='sdot sdot-'+critLevel(c);d.title=critLabel(c);s.append(d)}return s}
 
 /* ---------------- views ---------------- */
 function setView(view,record=true){
@@ -100,10 +100,9 @@ function setView(view,record=true){
 function caseCard(c){
   const div=document.createElement('button');div.className='case-card case-simple'+(c.status!=='done'?' crit-card-'+critLevel(c):'');div.type='button';
   const top=document.createElement('div');top.className='case-top';
-  const st=document.createElement('span');st.className='status '+statusClass(c);st.textContent=statusLabel(c);
+  const st=statusEl(c);
   const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
-  const badges=document.createElement('span');badges.className='case-badges';badges.append(critBadge(c),st);
-  top.append(badges,t);
+  top.append(st,t);
   const h=document.createElement('h3');h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
   div.append(top,h);
   div.addEventListener('click',()=>openCase(c.id));
@@ -287,10 +286,10 @@ function renderDetail(){
   const wrap=document.createElement('div');wrap.className='detail-shell';
   const head=document.createElement('div');head.className='detail-heading';
   const title=document.createElement('div');
-  const status=document.createElement('span');status.className='status '+statusClass(c);status.textContent=statusLabel(c);
+  const status=statusEl(c);
   const h=document.createElement('h1');h.id='detail-title';h.textContent=caseTitle(c);
   const muted=document.createElement('p');muted.className='case-meta';muted.textContent=`#${c.id} · แจ้งเมื่อ ${ago(c.createdAt)}`;
-  const bw=document.createElement('div');bw.className='case-badges';bw.append(critBadge(c),status);title.append(bw,h,muted);head.append(title);
+  title.append(status,h,muted);head.append(title);
   const card=document.createElement('div');card.className='detail-card';
   const facts=document.createElement('div');facts.className='detail-facts';
   const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];

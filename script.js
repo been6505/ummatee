@@ -17,8 +17,12 @@ function ago(ts){const t=Number(ts)||Date.parse(ts);if(!t)return '';const m=Math
 const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&!isNaN(+c.lat)&&!isNaN(+c.lng);
 const isDanger=c=>Number(c.urgency)===3&&c.status!=='done';
 const pinKind=c=>c.status==='done'?'done':c.status==='going'?'going':isDanger(c)?'danger':'open';
-const sevOf=c=>Number(c.urgency)||1;
-function statusChip(c){const k=pinKind(c);const txt=k==='danger'?'อันตราย · รอช่วย':STATUS_TH[c.status]||'รอช่วย';return `<span class="st st-${k}">${esc(txt)}</span>`}
+const sevOf=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+/* ความเร่งด่วน 3 ระดับ: ทั่วไป · ปานกลาง · ด่วน (ค่าที่ส่งเข้าชีตยังเป็นข้อความเดิม เพื่อให้ Code.gs ใช้ได้เหมือนเดิม) */
+const URG_TH={1:'ทั่วไป',2:'ปานกลาง',3:'ด่วน'};
+const URG_BY_LABEL={'รอได้':1,'ด่วน ต้องการเร็ว':2,'อันตรายถึงชีวิต ด่วนมาก':3};
+function urgChip(c){const v=sevOf(c);return `<span class="urg urg-${v}"><i></i>${URG_TH[v]}</span>`}
+function statusChip(c){const k=pinKind(c);const txt=STATUS_TH[c.status]||'รอช่วย';return `<span class="st st-${k}">${esc(txt)}</span>`}
 
 /* ---------- API (POST แบบ text/plain JSON) ---------- */
 async function apiPost(body,timeout=20000){const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),timeout);
@@ -99,7 +103,7 @@ function drawPins(which){
 function popupHtml(c){
   const addr=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
   const tel=String(c.phone||'').replace(/[^\d+]/g,'');
-  return `<div class="pop">${statusChip(c)}<br><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b> · ${esc(c.people||1)} คน`+
+  return `<div class="pop">${c.status!=='done'?urgChip(c)+' ':''}${statusChip(c)}<br><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b> · ${esc(c.people||1)} คน`+
     (c.level?`<br>ระดับน้ำ: ${esc(LEVEL_TH[c.level]||c.level)}`:'')+(addr?`<br>${esc(addr)}`:'')+
     ((c.name||c.phone)?`<br>${c.name?esc(c.name)+' ':''}${c.phone?(S.volunteer&&tel.length>=9?`<a href="tel:${esc(tel)}">${esc(c.phone)}</a>`:esc(c.phone)):''}`:'')+
     `<div class="pop-act"><a href="#" data-open="${esc(c.id)}">ดูรายละเอียด</a>`+
@@ -261,7 +265,7 @@ function showStep(n){F.step=n;$('#step1').hidden=n!==1;$('#step2').hidden=n!==2;
   const b=$('#form-next');b.className='btn '+(n===1?'btn-blue':'btn-green');b.textContent=n===1?'ถัดไป':'ส่งคำขอ';b.disabled=false;window.scrollTo(0,0)}
 function renderReview(d){
   const rows=[['list','ต้องการ',d.needs.join(', ')],['pin','ที่อยู่',[d.address,d.lat!==''?`(${d.lat}, ${d.lng})`:''].filter(Boolean).join(' ')],['phone','เบอร์โทร',d.phone],
-    ['alert','ด่วนแค่ไหน',d.urgencyLabel.split(' ')[0]],['users','จำนวนคน',d.people+' คน'],['wave','ระดับน้ำ',LEVEL_TH[d.level]||'ไม่ระบุ'],['user','ชื่อ',d.name||'-'],['note','รายละเอียด',d.details||'-']];
+    ['alert','ความเร่งด่วน',URG_TH[URG_BY_LABEL[d.urgencyLabel]||1]],['users','จำนวนคน',d.people+' คน'],['wave','ระดับน้ำ',LEVEL_TH[d.level]||'ไม่ระบุ'],['user','ชื่อ',d.name||'-'],['note','รายละเอียด',d.details||'-']];
   $('#review').innerHTML=rows.map(([i,k,v])=>`<div class="rv">${ic(i)}<span><small>${k}</small><b>${esc(v)}</b></span></div>`).join('');
 }
 $('#req-form').addEventListener('submit',async e=>{
@@ -286,7 +290,7 @@ $('#form-back').addEventListener('click',()=>{if(F.step===2)showStep(1);else go(
 /* ---------- แผนที่/รายการ ---------- */
 const FL=Object.assign({status:'active',types:[],people:[],level:[],q:''},store.json('uh_filters2',{}),{q:''});
 const saveFL=()=>store.put('uh_filters2',{status:FL.status,types:FL.types,people:FL.people,level:FL.level});
-const STATUS_TABS=[['active','ยังไม่เสร็จ'],['danger','อันตราย'],['open','รอช่วย'],['going','กำลังไป'],['done','ช่วยแล้ว'],['all','ทั้งหมด']];
+const STATUS_TABS=[['active','ยังไม่เสร็จ'],['danger','ด่วน'],['open','รอช่วย'],['going','กำลังไป'],['done','ช่วยแล้ว'],['all','ทั้งหมด']];
 const PEOPLE_R=[['1-5','1–5 คน'],['6-20','6–20 คน'],['21-99999','มากกว่า 20 คน']];
 function renderFilters(){
   $('#status-tabs').innerHTML=STATUS_TABS.map(([k,t])=>`<button type="button" role="tab" data-st="${k}" aria-selected="${FL.status===k}">${t}</button>`).join('');
@@ -307,7 +311,7 @@ function applyFilters(fit){renderList();drawPins('map');if(fit&&FL.q&&S.maps.map
 function srchNorm(s){s=String(s==null?'':s);try{s=s.normalize('NFC')}catch(e){}return s.replace(/[​-‍﻿]/g,'').replace(/ํ([่-๋]?)า/g,'$1ำ').replace(/^'+/,'').toLowerCase()}
 const normDigits=x=>{let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d=d.slice(2);return d.replace(/^0+/,'')};
 function caseHay(c){const d=Number(c.createdAt)?new Date(Number(c.createdAt)):null;
-  return srchNorm([c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,STATUS_TH[c.status],isDanger(c)?'อันตราย':'',LEVEL_TH[c.level]||'',c.people?c.people+' คน':'',d?d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''].filter(Boolean).join(' '))}
+  return srchNorm([c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,STATUS_TH[c.status],c.status!=='done'?URG_TH[sevOf(c)]:'',LEVEL_TH[c.level]||'',c.people?c.people+' คน':'',d?d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''].filter(Boolean).join(' '))}
 function caseMatches(c,q){const hay=caseHay(c);if(q.length>=3&&hay.replace(/\s+/g,'').includes(q.replace(/\s+/g,'')))return true;const digits=normDigits(c.phone);
   return q.split(/\s+/).every(t=>{if(hay.includes(t))return true;if(!/^\+?[\d-]+$/.test(t))return false;const raw=t.replace(/\D/g,''),d=normDigits(t);if(raw.length<3||!d)return false;return /^(0|\+?66)/.test(t)?digits.startsWith(d):digits.includes(d)})}
 function filteredCases(){
@@ -320,12 +324,12 @@ function filteredCases(){
     if(FL.types.length){const n=(c.needs||[]).join(' ');if(!FL.types.some(k=>{const t=NEED_TYPES.find(x=>x.key===k);return n.includes(t.value)||n.includes(t.label)}))return false}
     if(FL.people.length){const p=Number(c.people)||1;if(!FL.people.some(r=>{const [a,b]=r.split('-').map(Number);return p>=a&&p<=b}))return false}
     if(FL.level.length&&!FL.level.includes(c.level||'none'))return false;
-    return true}).sort((a,b)=>(rank[a.status]-rank[b.status])||(sevOf(b)-sevOf(a))||((Number(b.createdAt)||0)-(Number(a.createdAt)||0)));
+    return true}).sort((a,b)=>((a.status==='done')-(b.status==='done'))||(sevOf(b)-sevOf(a))||(rank[a.status]-rank[b.status])||((Number(b.createdAt)||0)-(Number(a.createdAt)||0)));
 }
 function caseCard(c){
-  const b=document.createElement('button');b.type='button';b.className='case'+(isDanger(c)?' danger':'');b.dataset.id=c.id;
+  const b=document.createElement('button');b.type='button';b.className='case'+(c.status!=='done'?' u'+sevOf(c):'')+(isDanger(c)?' danger':'');b.dataset.id=c.id;
   const addr=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
-  b.innerHTML=`<div class="case-top">${statusChip(c)}<span class="case-time">${esc(ago(c.createdAt))}</span></div>
+  b.innerHTML=`<div class="case-top"><span class="case-chips">${c.status!=='done'?urgChip(c):''}${statusChip(c)}</span><span class="case-time">${esc(ago(c.createdAt))}</span></div>
     <div class="case-ppl">${ic('users')}${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL_TH[c.level]||''):''}</div>
     <div class="case-needs">${(c.needs||[]).map(n=>`<span class="need-tag">${ic(needIcon(n))}${esc(n)}</span>`).join('')||'<span class="need-tag">ขอความช่วยเหลือ</span>'}</div>
     <div class="case-line">${ic('pin')}<span>${esc(addr||'ไม่ระบุที่อยู่')}</span></div>`+
@@ -338,7 +342,7 @@ function renderList(){
   const txt=FL.q?`พบ ${list.length} เคส (ค้นจากทุกเคส)`:`${list.length} เคส`;$('#case-count').textContent=txt;$('#sheet-count').textContent=txt;
   if(typeof tripBadges==='function')tripBadges();
 }
-function renderLegend(){$('#legend').innerHTML=`<span><i style="background:var(--red)"></i>อันตราย</span><span><i style="background:var(--blue)"></i>รอช่วย</span><span><i style="background:var(--b-60)"></i>กำลังไป</span><span><i style="background:var(--ok)"></i>ช่วยแล้ว</span>`}
+function renderLegend(){$('#legend').innerHTML=`<span><i style="background:var(--red)"></i>ด่วน</span><span><i style="background:var(--blue)"></i>รอช่วย</span><span><i style="background:var(--b-60)"></i>กำลังไป</span><span><i style="background:var(--ok)"></i>ช่วยแล้ว</span>`}
 function setSheet(open){const s=$('#list-sheet');s.classList.toggle('open',open);$('#sheet-handle').setAttribute('aria-expanded',String(open))}
 $('#sheet-handle').addEventListener('click',()=>setSheet(!$('#list-sheet').classList.contains('open')));
 (function(){let y0=null;const h=$('#sheet-handle');h.addEventListener('touchstart',e=>{y0=e.touches[0].clientY},{passive:true});h.addEventListener('touchend',e=>{if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;if(dy<-30)setSheet(true);else if(dy>30)setSheet(false);y0=null},{passive:true})})();
@@ -386,7 +390,7 @@ function renderDetail(full){
   el.dataset.id=S.detailId;el.dataset.sig=JSON.stringify([c.status,c.volunteer]);
   const addr=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
   const tel=String(c.phone||'').replace(/[^\d+]/g,'');
-  const facts=[['จำนวนคน',(c.people||1)+' คน'],['ระดับน้ำ',LEVEL_TH[c.level]||'ไม่ระบุ'],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['แจ้งเมื่อ',ago(c.createdAt)]];
+  const facts=[['ความเร่งด่วน',URG_TH[sevOf(c)]],['จำนวนคน',(c.people||1)+' คน'],['ระดับน้ำ',LEVEL_TH[c.level]||'ไม่ระบุ'],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['แจ้งเมื่อ',ago(c.createdAt)]];
   if(c.name)facts.push(['ผู้ติดต่อ',c.name]);if(c.phone)facts.push(['เบอร์โทร',c.phone]);if(c.volunteer&&c.status!=='open')facts.push(['ทีมที่รับเคส',c.volunteer]);
   el.innerHTML=`<div class="d-map-col">${hasPin(c)?`<div id="detail-map" class="detail-map"></div><div class="coord-row"><span>${ic('pin')} ${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}</span><button type="button" class="pill pill-ghost small" id="copy-coord" data-icon="copy">คัดลอก</button></div>`:'<p class="hint">ผู้แจ้งไม่ได้ปักหมุด</p>'}</div>
     <div><div class="detail-head">${statusChip(c)}<h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><span class="case-time">#${esc(c.id)}</span></div>
@@ -429,7 +433,7 @@ function tripPriority(pts,start){let cur=start,out=[];[3,2,1].forEach(s=>{const 
 const tripPts=list=>list.filter(c=>!c.missing&&hasPin(c)).map(c=>({id:String(c.id),lat:+c.lat,lng:+c.lng,sev:sevOf(c),people:Number(c.people)||1}));
 function tripApply(order,rest,msg){TRIP.ids=[...order.map(p=>p.id),...rest];tripSave();tripRefresh();const n=$('#trip-note');if(n&&msg){n.textContent='✓ '+msg;n.classList.add('flash')}}
 function tripSort(heavy){const list=tripCases(),pts=tripPts(list),rest=list.filter(c=>c.missing||!hasPin(c)).map(c=>String(c.id));if(pts.length<2)return;const me=tripOrigin();
-  tripApply(heavy?tripPriority(pts,me):tripNN(pts,me),rest,heavy?'จัดเคสหนักก่อนแล้ว · อันตราย → ด่วน → รอได้':'เรียงใกล้สุดก่อนแล้ว')}
+  tripApply(heavy?tripPriority(pts,me):tripNN(pts,me),rest,heavy?'จัดเคสหนักก่อนแล้ว · ด่วน → ปานกลาง → ทั่วไป':'เรียงใกล้สุดก่อนแล้ว')}
 function tripAuto(){const me=tripOrigin();let pool=S.cases.filter(c=>c.status==='open'&&hasPin(c)).map(c=>({id:String(c.id),lat:+c.lat,lng:+c.lng,sev:sevOf(c),people:Number(c.people)||1}));
   if(!pool.length)return toast('ไม่มีเคสที่รอช่วยและมีพิกัด');
   if(me){pool.forEach(p=>p.km=tripDist(me,p));const near=pool.filter(p=>p.km<=15);if(near.length>=3)pool=near}

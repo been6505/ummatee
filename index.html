@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="./app.css?v=6">
+<link rel="stylesheet" href="./app.css?v=7">
 </head>
 <body>
 <!-- ===== หน้าแรก ===== -->
@@ -88,11 +88,11 @@
         <p class="err" id="err-phone" hidden>ใส่เบอร์โทร 9–10 หลัก</p>
       </section>
       <section class="card">
-        <h2>ด่วนแค่ไหน</h2>
+        <h2>ความเร่งด่วน</h2>
         <div class="seg" id="urg-seg" role="radiogroup" aria-label="ความด่วน">
-          <label><input type="radio" name="urg" value="รอได้" checked><span data-icon="clock">รอได้</span></label>
-          <label><input type="radio" name="urg" value="ด่วน ต้องการเร็ว"><span data-icon="alert">ด่วน</span></label>
-          <label class="danger"><input type="radio" name="urg" value="อันตรายถึงชีวิต ด่วนมาก"><span data-icon="alert">อันตราย</span></label>
+          <label><input type="radio" name="urg" value="รอได้" checked><span data-icon="clock">ทั่วไป</span></label>
+          <label><input type="radio" name="urg" value="ด่วน ต้องการเร็ว"><span data-icon="alert">ปานกลาง</span></label>
+          <label class="danger"><input type="radio" name="urg" value="อันตรายถึงชีวิต ด่วนมาก"><span data-icon="alert">ด่วน</span></label>
         </div>
         <h2 class="mt">จำนวนคน</h2>
         <div class="stepper"><button type="button" id="ppl-minus" aria-label="ลดจำนวนคน" data-icon="minus"></button><output id="ppl-out" aria-live="polite">1</output><button type="button" id="ppl-plus" aria-label="เพิ่มจำนวนคน" data-icon="plus"></button></div>
@@ -201,11 +201,11 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden></div>
 
-<script src="./icons.js?v=6"></script>
-<script src="./geocode.js?v=6"></script>
-<script src="./location.js?v=6"></script>
-<script src="./hotlines.js?v=6"></script>
-<script src="./script.js?v=6"></script>
+<script src="./icons.js?v=7"></script>
+<script src="./geocode.js?v=7"></script>
+<script src="./location.js?v=7"></script>
+<script src="./hotlines.js?v=7"></script>
+<script src="./script.js?v=7"></script>
 <script>
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>

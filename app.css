@@ -415,3 +415,12 @@ a{color:var(--primary)}
 .team-pin span{color:var(--navy);border-color:var(--navy)}.team-pin em{background:var(--navy)}
 .leaflet-container{background:#ECEEF3}
 .review .rv .ic,.case-line .ic,.coord-row .ic,.req-item .ic{color:var(--primary)}
+/* ความเร่งด่วน 3 ระดับ: ด่วน (แดง) · ปานกลาง (ส้ม) · ทั่วไป (เหลือง) — ป้ายเล็ก ไม่กระพริบ */
+.case-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.urg{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.urg i{width:8px;height:8px;border-radius:50%;flex:none}
+.urg-3{background:#FDECEC;color:#B3261E}.urg-3 i{background:#E5383B}
+.urg-2{background:#FEF0E2;color:#A84F00}.urg-2 i{background:#F07B14}
+.urg-1{background:#FFF8D6;color:#7A5F00}.urg-1 i{background:#F2C200}
+.case.u2{box-shadow:inset 4px 0 0 #F07B14,0 1px 3px rgba(22,27,61,.06)}
+.case.u1{box-shadow:inset 4px 0 0 #F2C200,0 1px 3px rgba(22,27,61,.06)}

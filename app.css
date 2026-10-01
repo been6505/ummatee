@@ -443,3 +443,8 @@ a{color:var(--primary)}
 .case-go .ic{width:20px;height:20px}
 .case.is-done{opacity:.72}
 .case.is-done .case-title b{font-weight:700}
+/* ปุ่มดูเคสทั้งหมด (หน้าแรก) */
+.sheet-actions .all-cases{grid-column:1/-1;background:rgba(255,255,255,.1);color:#fff;justify-content:space-between}
+.sheet-actions .all-cases span{flex:1;text-align:left}
+.sheet-actions .all-cases b{background:#fff;color:var(--primary);border-radius:999px;padding:2px 10px;font-size:13px}
+.sheet-actions .all-cases b:empty{display:none}

@@ -55,7 +55,7 @@ async function loadCases(){
 }
 function renderAll(){
   $('#live-badge').hidden=!(S.loaded&&Date.now()-S.loaded<REFRESH_MS*3);
-  drawPins('home');drawPins('map');renderList();renderMyReq();renderVol();
+  drawPins('home');drawPins('map');renderList();$('#all-count').textContent=S.loaded?S.cases.length+' เคส':'';renderMyReq();renderVol();
   if(S.view==='detail'&&S.detailId)renderDetail(false);
   if(typeof tripRefresh==='function')tripRefresh();
 }
@@ -153,6 +153,7 @@ $('#lay-teams').addEventListener('change',e=>toggleTeams(e.target.checked));
 $('#type-grid').innerHTML=NEED_TYPES.map(t=>`<button type="button" class="type-btn" data-type="${t.key}">${ic(t.icon)}<span>${t.label}</span></button>`).join('');
 $('#type-grid').addEventListener('click',e=>{const b=e.target.closest('[data-type]');if(b)startForm({type:b.dataset.type,gps:true})});
 $('#btn-use-gps').addEventListener('click',()=>startForm({gps:true}));
+$('#btn-all-cases').addEventListener('click',()=>{FL.status='all';FL.types=[];FL.people=[];FL.level=[];FL.q='';$('#case-search').value='';saveFL();renderFilters();go('map');setSheet(true);applyFilters()});
 $('#btn-help').addEventListener('click',()=>{go('map');setSheet(true);if(!S.volunteer){$('#vol-panel').hidden=false;renderVol(true)}});
 const openSearch=()=>{$('#search-overlay').hidden=false;$('#search-input').value='';$('#search-list').hidden=true;$('#search-status').textContent='';setTimeout(()=>$('#search-input').focus(),50)};
 $('#search-card').addEventListener('click',openSearch);$('#home-search-btn').addEventListener('click',openSearch);

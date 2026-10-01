@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="./app.css?v=8">
+<link rel="stylesheet" href="./app.css?v=9">
 </head>
 <body>
 <!-- ===== หน้าแรก ===== -->
@@ -34,6 +34,7 @@
       <div class="sheet-actions">
         <button type="button" class="pill pill-green" id="btn-use-gps" data-icon="gps">ใช้ตำแหน่งตอนนี้</button>
         <button type="button" class="pill pill-ghost" id="btn-help" data-icon="heart">อยากช่วย</button>
+        <button type="button" class="pill all-cases" id="btn-all-cases" data-icon="list"><span>ดูเคสทั้งหมด</span><b id="all-count"></b></button>
       </div>
       <div class="my-req" id="my-req" hidden>
         <h3>คำขอของฉัน</h3>
@@ -201,11 +202,11 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden></div>
 
-<script src="./icons.js?v=8"></script>
-<script src="./geocode.js?v=8"></script>
-<script src="./location.js?v=8"></script>
-<script src="./hotlines.js?v=8"></script>
-<script src="./script.js?v=8"></script>
+<script src="./icons.js?v=9"></script>
+<script src="./geocode.js?v=9"></script>
+<script src="./location.js?v=9"></script>
+<script src="./hotlines.js?v=9"></script>
+<script src="./script.js?v=9"></script>
 <script>
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>

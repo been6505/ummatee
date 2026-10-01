@@ -338,7 +338,7 @@ function renderList(){
   const txt=FL.q?`พบ ${list.length} เคส (ค้นจากทุกเคส)`:`${list.length} เคส`;$('#case-count').textContent=txt;$('#sheet-count').textContent=txt;
   if(typeof tripBadges==='function')tripBadges();
 }
-function renderLegend(){$('#legend').innerHTML=`<span><i style="background:var(--red)"></i>อันตราย</span><span><i style="background:var(--blue)"></i>รอช่วย</span><span><i style="background:var(--b-60)"></i>กำลังไป</span><span><i style="background:var(--green)"></i>ช่วยแล้ว</span>`}
+function renderLegend(){$('#legend').innerHTML=`<span><i style="background:var(--red)"></i>อันตราย</span><span><i style="background:var(--blue)"></i>รอช่วย</span><span><i style="background:var(--b-60)"></i>กำลังไป</span><span><i style="background:var(--ok)"></i>ช่วยแล้ว</span>`}
 function setSheet(open){const s=$('#list-sheet');s.classList.toggle('open',open);$('#sheet-handle').setAttribute('aria-expanded',String(open))}
 $('#sheet-handle').addEventListener('click',()=>setSheet(!$('#list-sheet').classList.contains('open')));
 (function(){let y0=null;const h=$('#sheet-handle');h.addEventListener('touchstart',e=>{y0=e.touches[0].clientY},{passive:true});h.addEventListener('touchend',e=>{if(y0==null)return;const dy=e.changedTouches[0].clientY-y0;if(dy<-30)setSheet(true);else if(dy>30)setSheet(false);y0=null},{passive:true})})();

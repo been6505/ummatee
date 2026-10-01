@@ -21,17 +21,20 @@ function makeMap(el,opt={}){
   if(isDesktop()||opt.zoom===true)L.control.zoom({position:'topleft'}).addTo(map);
   L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);
   map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
-  let base=null,fellBack=false;
+  let base=null,fellBack=0;
   const layer=(u,a,o={})=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true,...o});
   map.setBase=name=>{
     if(base)base.remove();
     if(name==='sat')base=L.layerGroup([layer(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}',ESRI_ATTR),layer(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),layer(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
     else if(name==='dark')base=L.layerGroup([layer(ESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',ESRI_ATTR,{maxZoom:16,maxNativeZoom:16}),layer(ESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
     else{
-      /* ถนน: OpenStreetMap ถ้าโหลดไม่ได้สลับเป็น Esri World Street Map อัตโนมัติ */
-      if(fellBack)base=layer(ESRI+'World_Street_Map/MapServer/tile/{z}/{y}/{x}',ESRI_ATTR);
-      else{base=layer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',OSM_ATTR);let bad=0,good=0;
-        base.on('tileload',()=>good++);base.on('tileerror',()=>{bad++;if(!good&&bad>=4&&!fellBack){fellBack=true;map.setBase('road')}})}
+      /* ถนน: แผนที่โทนเทาอ่อน (CARTO จากข้อมูล OpenStreetMap) ถ้าโหลดไม่ได้ → OpenStreetMap → Esri World Street Map อัตโนมัติ */
+      const chain=[['https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',OSM_ATTR+' &copy; CARTO',true],
+        ['https://tile.openstreetmap.org/{z}/{x}/{y}.png',OSM_ATTR,false],[ESRI+'World_Street_Map/MapServer/tile/{z}/{y}/{x}',ESRI_ATTR,false]];
+      const step=Math.min(fellBack,chain.length-1),[u,a,labels]=chain[step];
+      const t=layer(u,a,{subdomains:'abcd'});
+      base=labels?L.layerGroup([t,layer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png','',{subdomains:'abcd',pane:'shadowPane'})]):t;
+      let bad=0,good=0;t.on('tileload',()=>good++);t.on('tileerror',()=>{bad++;if(!good&&bad>=4&&fellBack===step&&step<chain.length-1){fellBack=step+1;map.setBase('road')}});
     }
     base.addTo(map);if(base.bringToBack)base.bringToBack();map.currentBase=name;
     el.classList.toggle('base-dark',name==='dark'||name==='sat');

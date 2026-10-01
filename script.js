@@ -359,6 +359,25 @@ function renderDetail(){
   rows.forEach(([key,val])=>{const cell=document.createElement('div');cell.className='fact';const s=document.createElement('span');s.textContent=key;const st=document.createElement('strong');st.textContent=val;cell.append(s,st);facts.append(cell)});
   card.append(facts);
   if(c.address&&!c.district){const h2=document.createElement('h2');h2.textContent='ที่อยู่ / จุดสังเกต';const p=document.createElement('p');p.textContent=c.address;card.prepend(h2,p)}
+  /* แผนที่ + พิกัดของเคส */
+  if(hasPin(c)){
+    const lat=+c.lat,lng=+c.lng,box=document.createElement('div');box.className='detail-loc';
+    const mp=document.createElement('div');mp.className='detail-map';mp.setAttribute('role','region');mp.setAttribute('aria-label','แผนที่ตำแหน่งเคส');mp.textContent='กำลังโหลดแผนที่…';
+    const row=document.createElement('div');row.className='detail-coord';
+    const ct=document.createElement('span');ct.textContent='📍 '+lat.toFixed(6)+', '+lng.toFixed(6);
+    const cp=document.createElement('button');cp.type='button';cp.className='coord-copy';cp.textContent='คัดลอกพิกัด';
+    cp.onclick=()=>{const t=lat.toFixed(6)+','+lng.toFixed(6);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{cp.textContent='✓ คัดลอกแล้ว';setTimeout(()=>cp.textContent='คัดลอกพิกัด',2000)}).catch(()=>{window.prompt('คัดลอกพิกัด',t)})};
+    row.append(ct,cp);box.append(mp,row);
+    const addrP=card.querySelector(':scope > p');if(addrP)addrP.after(box);else card.prepend(box);
+    if(window.__detailMap){try{window.__detailMap.remove()}catch(e){}window.__detailMap=null}
+    loadLeaflet().then(()=>{if(!mp.isConnected)return;mp.textContent='';
+      const m=L.map(mp,{scrollWheelZoom:false,zoomControl:true,attributionControl:true}).setView([lat,lng],16);window.__detailMap=m;
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);
+      const col=c.status==='done'?'#277343':c.status==='going'?'#28639a':critLevel(c)==='red'?'#d32f2f':critLevel(c)==='orange'?'#f57c00':'#f2b705';
+      L.marker([lat,lng],{icon:L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36]})}).addTo(m);
+      requestAnimationFrame(()=>m.invalidateSize());setTimeout(()=>m.invalidateSize(),300);
+    }).catch(()=>{mp.textContent='โหลดแผนที่ไม่สำเร็จ'});
+  }else{const np=document.createElement('p');np.className='detail-nopin';np.textContent='ผู้แจ้งไม่ได้ปักหมุดตำแหน่ง';const addrP=card.querySelector(':scope > p');if(addrP)addrP.after(np);else card.prepend(np)}
   if(isVolunteer&&c.notes){const h2=document.createElement('h2');h2.textContent='สถานการณ์';const p=document.createElement('p');p.textContent=c.notes;card.append(h2,p)}
   const actions=document.createElement('div');actions.className='detail-actions';
   if(hasPin(c)){const a=document.createElement('a');a.className='secondary-button';a.textContent='นำทางด้วย Google Maps ↗';a.href=`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;a.target='_blank';a.rel='noopener';actions.append(a)}

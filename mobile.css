@@ -315,3 +315,10 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .addr-ok{width:100%;margin:2px 0 10px;min-height:50px}
 .addr-ok.done{background:#277343;opacity:1}
 .addr-saved{display:block;width:100%;text-align:left;border:1px dashed #9cc7bf;background:#f2faf8;color:#145f57;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5;margin:0 0 10px}
+.detail-loc{margin:6px 0 16px}
+.detail-map{height:230px;width:100%;border:1px solid #cfdee3;border-radius:12px;overflow:hidden;background:#edf2f4;position:relative;z-index:0;display:grid;place-items:center;color:#7d949d;font-size:13px}
+.detail-map.leaflet-container{display:block}
+.detail-coord{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font-size:14px;color:#3e5f6b;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.coord-copy{border:1px solid #bfd7d8;background:#f5fbfa;color:#14756e;border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600}
+.detail-nopin{font-size:14px;color:#8a6a2a;background:#fff6e5;border-radius:9px;padding:9px 12px}
+@media(min-width:1100px){.detail-map{height:320px}}

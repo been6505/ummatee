@@ -26,31 +26,28 @@ const hotlines = [
   {number:'1155',name:'ตำรวจท่องเที่ยว',agency:'กองบัญชาการตำรวจท่องเที่ยว',note:'ประสานเหตุที่เกี่ยวข้องกับนักท่องเที่ยว',group:'other',source:prdSource,sourceName:'กรมประชาสัมพันธ์'},
   {number:'1192',name:'ศูนย์รับแจ้งรถหาย',agency:'สำนักงานตำรวจแห่งชาติ',note:'แจ้งกรณีรถถูกโจรกรรม',group:'other',source:prdSource,sourceName:'กรมประชาสัมพันธ์'}
 ];
-function renderHotlines(){
-  const term=document.querySelector('#hotline-search').value.trim().toLowerCase();
-  const filter=document.querySelector('#hotline-filter').value;
-  const matches=hotlines.filter(h=>(filter==='all'||h.group===filter)&&(!term||`${h.number} ${h.name} ${h.agency} ${h.note}`.toLowerCase().includes(term)));
-  const root=document.querySelector('#hotline-directory');root.replaceChildren();
-  document.querySelector('#hotline-count').textContent=`${matches.length} หมายเลข`;
-  hotlineGroups.forEach(group=>{
-    const contacts=matches.filter(h=>h.group===group.id);if(!contacts.length)return;
-    const section=document.createElement('section');section.className='hotline-section';
-    const heading=document.createElement('h2');heading.textContent=group.title;section.append(heading);
-    const grid=document.createElement('div');grid.className='hotline-grid';
-    contacts.forEach(h=>{
-      const card=document.createElement('article');card.className='hotline-card'+(h.group==='urgent'?' priority':'');
-      const link=document.createElement('a');link.className='hotline-call';link.href=`tel:${h.number}`;link.setAttribute('aria-label',`โทร ${h.number} ${h.name}`);
-      const number=document.createElement('strong');number.className='hotline-number';number.textContent=h.number;
-      const label=document.createElement('span');label.className='call-label';label.textContent='☎ กดโทร';link.append(number,label);
-      const name=document.createElement('h3');name.textContent=h.name;
-      const agency=document.createElement('p');agency.className='hotline-agency';agency.textContent=h.agency;
-      const note=document.createElement('p');note.className='hotline-note';note.textContent=h.note;
-      const source=document.createElement('a');source.className='hotline-source';source.href=h.source;source.target='_blank';source.rel='noopener noreferrer';source.textContent=`ที่มา: ${h.sourceName} ↗`;
-      const info=document.createElement('div');info.className='hotline-info';info.append(name,note);const more=document.createElement('details');more.className='hotline-more';const summary=document.createElement('summary');summary.textContent='ข้อมูลหน่วยงาน';more.append(summary);if(h.agency!==h.name)more.append(agency);more.append(source);card.append(info,link,more);grid.append(card);
-    });section.append(grid);root.append(section);
-  });
-  if(!matches.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='ไม่พบหมายเลข ลองค้นหาด้วยชื่อหน่วยงานหรือเลือกประเภททั้งหมด';root.append(empty)}
+/* แท็บ "ฉุกเฉิน": ที่เดียวที่แสดงเบอร์ · ค้นหา + กรองหมวด · ปุ่มโทร + ⓘ แหล่งที่มา */
+const HL_ICON={urgent:'alert',rescue:'ambulance',power:'info',travel:'road',other:'heart'};
+let hlCat='all';
+function renderHotlineCats(){
+  const el=document.getElementById('hotline-cats');
+  el.innerHTML=[['all','ทั้งหมด'],...hotlineGroups.map(g=>[g.id,g.title])].map(([k,t])=>`<button type="button" role="tab" data-cat="${k}" aria-selected="${hlCat===k}">${t}</button>`).join('');
 }
-document.querySelector('#hotline-search').addEventListener('input',renderHotlines);
-document.querySelector('#hotline-filter').addEventListener('change',renderHotlines);
-renderHotlines();
+function renderHotlines(){
+  const term=document.getElementById('hotline-search').value.trim().toLowerCase();
+  const matches=hotlines.filter(h=>(hlCat==='all'||h.group===hlCat)&&(!term||`${h.number} ${h.name} ${h.agency} ${h.note}`.toLowerCase().includes(term)));
+  const root=document.getElementById('hotline-directory');root.replaceChildren();
+  hotlineGroups.forEach(g=>{const list=matches.filter(h=>h.group===g.id);if(!list.length)return;
+    const h2=document.createElement('h2');h2.textContent=g.title;root.append(h2);
+    list.forEach(h=>{const row=document.createElement('article');row.className='hl';
+      row.innerHTML=`<span class="hl-ic">${ic(HL_ICON[h.group]||'phone')}</span><div class="hl-txt"><b><span class="hl-num"></span><button type="button" class="hl-info" aria-label="แหล่งที่มา" aria-expanded="false">${ic('info')}</button></b><small class="hl-name"></small><div class="hl-src" hidden></div></div><a class="hl-call">${ic('phone')}โทร</a>`;
+      row.querySelector('.hl-num').textContent=h.number;row.querySelector('.hl-name').textContent=h.name+' · '+h.agency;
+      const call=row.querySelector('.hl-call');call.href='tel:'+h.number;call.setAttribute('aria-label','โทร '+h.number+' '+h.name);
+      const src=row.querySelector('.hl-src');src.innerHTML='ที่มา: <a target="_blank" rel="noopener noreferrer"></a>';const a=src.querySelector('a');a.href=h.source;a.textContent=(h.sourceName||'แหล่งข้อมูล')+' ↗';
+      const info=row.querySelector('.hl-info');info.onclick=()=>{src.hidden=!src.hidden;info.setAttribute('aria-expanded',String(!src.hidden))};
+      root.append(row)})});
+  if(!matches.length)root.innerHTML='<p class="empty">ไม่พบหมายเลข ลองค้นหาด้วยชื่อหน่วยงาน</p>';
+}
+document.getElementById('hotline-search').addEventListener('input',renderHotlines);
+document.getElementById('hotline-cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;hlCat=b.dataset.cat;renderHotlineCats();renderHotlines()});
+renderHotlineCats();renderHotlines();

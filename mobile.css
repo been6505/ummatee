@@ -291,3 +291,10 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 }
 @media(min-width:1500px){.cases-layout{grid-template-columns:360px minmax(0,1fr)}}
 @media(min-width:700px) and (max-width:1099px){.cf-opts{grid-template-columns:repeat(3,1fr)}}
+.addr-search{margin:14px 0 4px}.addr-search .field{margin-bottom:8px}
+.addr-box{display:flex;gap:8px}.addr-box input{flex:1;min-width:0;font-size:16px;min-height:50px;border:1px solid #cfdee3;border-radius:10px;padding:12px;background:#fff}
+.addr-box button{flex:none;min-height:50px;padding:0 16px}
+.addr-search .field-hint{margin:6px 0 8px}
+.addr-results{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:6px}
+.addr-item{width:100%;text-align:left;border:1px solid #d5e1e5;background:#fff;border-radius:9px;padding:10px 12px;font-size:13px;line-height:1.5;color:#2c4f5c}
+.addr-item.on{border-color:#177b73;background:#e8f5f2;color:#0a5b51;font-weight:600}

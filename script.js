@@ -77,7 +77,7 @@ function isSOS(c){return Number(c.urgency)===3&&c.status==='open'}
 function statusLabel(c){return (isSOS(c)?'SOS · ':'')+STATUS_TH[c.status]}
 function statusClass(c){return STATUS_CLASS[c.status]}
 /* ความวิกฤต: แดง = วิกฤต/เสี่ยงต่อชีวิต (urgency 3), เหลือง = เร่งด่วน / ทั่วไป */
-function critLevel(c){return Number(c.urgency)===3?'red':'yellow'}
+function critLevel(c){const u=Number(c.urgency);return u===3?'red':u===2?'orange':'yellow'}
 function critLabel(c){const u=Number(c.urgency);return u===3?'วิกฤต':u===2?'เร่งด่วน':'ทั่วไป'}
 function statusEl(c){const s=document.createElement('span');s.className='status '+statusClass(c);s.append(statusLabel(c));if(c.status!=='done'){const d=document.createElement('i');d.className='sdot sdot-'+critLevel(c);d.title=critLabel(c);s.append(d)}return s}
 
@@ -249,11 +249,11 @@ async function loadFlood(){
 function drawCaseMarkers(){
   if(!fmap||!pinLayer)return;pinLayer.clearLayers();const pts=[];
   filteredCases().filter(hasPin).forEach(c=>{
-    const col=c.status==='done'?'#277343':c.status==='going'?'#28639a':critLevel(c)==='red'?'#d32f2f':'#f2b705';
+    const col=c.status==='done'?'#277343':c.status==='going'?'#28639a':critLevel(c)==='red'?'#d32f2f':critLevel(c)==='orange'?'#f57c00':'#f2b705';
     const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
     pts.push([c.lat,c.lng]);
     L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
-      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
+      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}

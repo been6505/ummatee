@@ -103,8 +103,9 @@ function caseCard(c){
   const st=statusEl(c);
   const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
   top.append(st,t);
-  const h=document.createElement('h3');h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
-  div.append(top,h);
+  const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน';
+  const h=document.createElement('h3');h.className='case-needs';h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
+  div.append(top,ppl,h);
   div.addEventListener('click',()=>openCase(c.id));
   return div;
 }

@@ -328,3 +328,16 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .case-card .case-contact{margin:4px 0 0!important;font-size:14px!important;line-height:1.55;color:#1d3f4b!important;font-weight:600;white-space:pre-wrap;font-variant-numeric:tabular-nums}
 .vol-tools-btn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:46px;margin:0 0 12px;padding:0 14px;border:1px solid #d5e1e5;border-radius:11px;background:#fff;color:#1f4f5c;font-size:15px;font-weight:600}
 .vol-tools-btn b{transition:transform .2s;font-size:14px;color:#6b818c}.vol-tools-btn.open{border-color:#177b73;background:#e8f5f2;color:#0a5b51}.vol-tools-btn.open b{transform:rotate(180deg)}
+.leaflet-div-icon.case-pin{background:none;border:0}
+/* คอมพิวเตอร์: หน้ารายละเอียดเคสเต็มจอ — แผนที่ซ้าย ข้อมูลขวา */
+@media(min-width:1100px){
+  main:has(#view-detail.active){max-width:1560px;padding:28px 32px 60px}
+  #view-detail .detail-shell{max-width:none}
+  #view-detail .detail-card{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,1fr);column-gap:28px;align-items:start;padding:24px}
+  #view-detail .detail-card>*{grid-column:2;min-width:0}
+  #view-detail .detail-card>.detail-loc,#view-detail .detail-card>.detail-nopin{grid-column:1;grid-row:1/span 30;margin:0;position:sticky;top:20px}
+  #view-detail .detail-map{height:calc(100vh - 230px);min-height:420px;max-height:820px}
+  #view-detail .detail-facts{grid-template-columns:1fr 1fr}
+  #view-detail .detail-actions{flex-direction:row;flex-wrap:wrap}
+  #view-detail .detail-heading h1{font-size:30px}
+}

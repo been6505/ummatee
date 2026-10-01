@@ -316,7 +316,7 @@ function drawCaseMarkers(){
     const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
     pts.push([c.lat,c.lng]);
     L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
-      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
+      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}

@@ -341,3 +341,15 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
   #view-detail .detail-actions{flex-direction:row;flex-wrap:wrap}
   #view-detail .detail-heading h1{font-size:30px}
 }
+/* คอมพิวเตอร์: แถบเมนูซ้ายแบบไอคอน (แคบ) */
+@media(min-width:1050px){
+  .sidebar{width:76px;padding:14px 10px;align-items:center}
+  .main-column{margin-left:76px;width:calc(100% - 76px)}
+  .sidebar .brand{padding:6px;border-radius:10px;gap:0;align-items:center}
+  .sidebar .ummatee-logo{width:52px;height:32px}
+  .sidebar .brand-service,.sidebar .side-foot,.sidebar .nav-label{display:none}
+  .sidebar .side-nav{margin-top:22px;gap:8px;width:100%}
+  .sidebar .nav-item{display:grid;place-items:center;width:56px;height:52px;min-height:0;padding:0;margin:0 auto;border-radius:12px}
+  .sidebar .nav-item span{display:none}
+  .sidebar .nav-item svg{width:24px;height:24px}
+}

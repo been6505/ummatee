@@ -105,7 +105,9 @@ function caseCard(c){
   top.append(st,t);
   const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน';
   const h=document.createElement('h3');h.className='case-needs';h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
-  div.append(top,ppl,h);
+  const ad=document.createElement('p');ad.className='case-addr';const at=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');ad.textContent='📍 '+(at||'ไม่ระบุที่อยู่');if(!at)ad.classList.add('none');
+  const ct=document.createElement('p');ct.className='case-contact';const ctt=[c.name?'👤 '+c.name:'',c.phone?'☎ '+c.phone:''].filter(Boolean).join('   ');ct.textContent=ctt;
+  div.append(top,ppl,h,ad);if(ctt)div.append(ct);
   div.addEventListener('click',()=>openCase(c.id));
   return div;
 }
@@ -125,9 +127,10 @@ const CF_GROUPS=[
   {key:'status',title:'สถานะ',opts:[['open','รอความช่วยเหลือ'],['going','ทีมกำลังไป'],['done','ช่วยเหลือแล้ว']]},
   {key:'crit',title:'สีความวิกฤต',opts:[['red','วิกฤต','#d32f2f'],['orange','เร่งด่วน','#f57c00'],['yellow','ทั่วไป','#f2b705']]},
   {key:'need',title:'ความต้องการ',opts:[['อพยพ','อพยพ'],['ผู้ป่วย','ผู้ป่วย / ผู้สูงอายุ'],['อาหาร','อาหาร / น้ำดื่ม'],['ยา','ยา'],['ของใช้เด็ก','ของใช้เด็ก'],['เรือ','เรือ / รถสูง'],['อื่น','อื่น ๆ']]},
+  {key:'people',title:'จำนวนคน',opts:[['1-5','1–5 คน'],['6-10','6–10 คน'],['11-50','11–50 คน'],['51-99999','มากกว่า 50 คน']]},
   {key:'level',title:'ระดับน้ำ',opts:[['ankle','ข้อเท้า'],['knee','เข่า'],['waist','เอว'],['chest','อก'],['roof','มิดหัว / หลังคา'],['none','ไม่ระบุ']]}
 ];
-const CF_DEFAULT={status:['open','going'],crit:[],need:[],level:[]};
+const CF_DEFAULT={status:['open','going'],crit:[],need:[],people:[],level:[]};
 let cf=(()=>{try{const v=JSON.parse(localStorage.getItem('uh_filters')||'null');if(v&&typeof v==='object')return Object.assign({},CF_DEFAULT,v)}catch(e){}return JSON.parse(JSON.stringify(CF_DEFAULT))})();
 function cfSave(){try{localStorage.setItem('uh_filters',JSON.stringify(cf))}catch(e){}}
 function cfStatusDefault(){return cf.status.length===2&&cf.status.includes('open')&&cf.status.includes('going')}
@@ -135,6 +138,7 @@ function cfMatch(c,skipStatus){
   if(!skipStatus&&cf.status.length&&!cf.status.includes(c.status))return false;
   if(cf.crit.length&&!cf.crit.includes(critLevel(c)))return false;
   if(cf.need.length){const n=(c.needs||[]).join(' ');if(!cf.need.some(k=>n.includes(k)))return false}
+  if(cf.people.length){const n=Number(c.people)||1;if(!cf.people.some(r=>{const [a,b]=r.split('-').map(Number);return n>=a&&n<=b}))return false}
   if(cf.level.length&&!cf.level.includes(c.level||'none'))return false;
   return true}
 function filteredCases(){

@@ -156,8 +156,9 @@ function renderCfBar(){
 }
 function cfCounts(){const base=cases.filter(c=>!searchQuery()||caseMatches(c,searchQuery()));const out={};
   CF_GROUPS.forEach(g=>{out[g.key]={};g.opts.forEach(([v])=>{const saved=cf[g.key];cf[g.key]=[v];out[g.key][v]=base.filter(c=>cfMatch(c,false)).length;cf[g.key]=saved})});return out}
+const cfWide=window.matchMedia?matchMedia('(min-width:1100px)'):{matches:false,addEventListener(){}};
 function renderCfPanel(){
-  const p=$('#cf-panel');if(!p||p.hidden)return;const counts=cfCounts();p.replaceChildren();
+  const p=$('#cf-panel');if(!p)return;if(cfWide.matches)p.hidden=false;if(p.hidden)return;const counts=cfCounts();p.replaceChildren();
   CF_GROUPS.forEach(g=>{const fs=document.createElement('fieldset');fs.className='cf-group';const lg=document.createElement('legend');lg.textContent=g.title;fs.append(lg);
     const grid=document.createElement('div');grid.className='cf-opts';
     g.opts.forEach(([v,label,col])=>{const l=document.createElement('label');l.className='cf-opt';const i=document.createElement('input');i.type='checkbox';i.value=v;i.checked=cf[g.key].includes(v);
@@ -454,6 +455,7 @@ document.addEventListener('click',e=>{const btn=e.target.closest('[data-view]');
 $('#start-request').addEventListener('click',()=>setView('request'));
 $('#detail-back').addEventListener('click',()=>setView(detailOrigin));
 $('#cf-btn').addEventListener('click',()=>cfToggle($('#cf-panel').hidden));
+try{cfWide.addEventListener('change',()=>{if(!cfWide.matches)cfToggle(false);renderCfPanel()})}catch(e){}
 (function(){const i=$('#case-search'),x=$('#case-search-clear');if(!i)return;let tm;
   const fitResults=()=>{if(!fmap||!searchQuery())return;const pts=filteredCases().filter(hasPin).map(c=>[c.lat,c.lng]);if(pts.length)fmap.fitBounds(pts,{padding:[40,40],maxZoom:15})};
   const run=()=>{x.hidden=!i.value;clearTimeout(tm);tm=setTimeout(()=>{renderMap();fitResults()},200)};

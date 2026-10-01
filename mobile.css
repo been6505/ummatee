@@ -270,3 +270,24 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .cf-foot{display:flex;gap:10px;margin-top:14px}
 .cf-clear{flex:0 0 auto;min-height:48px;padding:0 14px;border:1px solid #d5e1e5;border-radius:11px;background:#fff;color:#4d6874;font-size:15px}
 .cf-ok{flex:1}
+/* คอมพิวเตอร์: ตัวกรองด้านซ้ายแสดงตลอด / แผนที่ + รายการเคสด้านขวา */
+@media(min-width:1100px){
+  main:has(#view-map.active){max-width:1560px;padding:28px 32px 60px}
+  .cases-layout{display:grid;grid-template-columns:330px minmax(0,1fr);gap:24px;align-items:start}
+  .cases-side{position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:auto;padding-right:4px;scrollbar-width:thin}
+  .cases-side #cf-panel{margin:0;box-shadow:none}
+  .cases-side .cf-btn,.cases-side .cf-ok{display:none}
+  .cases-side .cf-bar{margin-bottom:10px}
+  .cases-side .cf-bar:not(:has(.cf-tag)){display:none}
+  .cases-side .cf-opts{grid-template-columns:1fr 1fr;gap:6px}
+  .cases-side .cf-opt span{min-height:38px;padding:6px 8px 6px 30px;font-size:13px}
+  .cases-side .cf-opt span::before{left:8px;width:14px;height:14px}
+  .cases-side .cf-foot{margin-top:10px}.cases-side .cf-clear{width:100%;min-height:40px;font-size:14px}
+  .cases-side .case-search input{min-height:46px;font-size:15px}
+  #flood-map{height:calc(100vh - 260px);min-height:460px;max-height:760px}
+  .cases-main .case-list{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .cases-main .case-card{cursor:pointer}
+  .cases-main .case-card:hover{border-color:#91b8b5;box-shadow:0 4px 14px rgba(21,51,70,.08)}
+}
+@media(min-width:1500px){.cases-layout{grid-template-columns:360px minmax(0,1fr)}}
+@media(min-width:700px) and (max-width:1099px){.cf-opts{grid-template-columns:repeat(3,1fr)}}

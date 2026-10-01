@@ -358,3 +358,19 @@ body.map-full-open .share-chip{bottom:calc(env(safe-area-inset-bottom,0px) + 16p
 .legend-scroll .map-legend{display:flex!important;flex-wrap:nowrap!important;gap:14px;margin:0!important;flex:none}
 .legend-scroll .map-legend span{white-space:nowrap;flex:none}
 .legend-scroll .map-source{flex:none;margin:0;font-size:12px;color:#7d949d;padding-right:24px}
+.trip-panel{background:#fff;border:2px solid #126b63;border-radius:14px;padding:12px 14px;margin:12px 0}
+.trip-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}.trip-head b{font-size:16px;color:#0f4f49}.trip-head small{font-size:12px;color:#6b818c}
+.trip-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.trip-item{display:flex;align-items:center;gap:8px;border:1px solid #e1eaed;border-radius:10px;padding:6px 6px 6px 8px;background:#fbfdfd}
+.trip-item.done{opacity:.55}.trip-item.nopin .trip-no{background:#9aaeb6!important}
+.trip-no{flex:none;width:26px;height:26px;border-radius:50%;background:#126b63;color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+.trip-txt{flex:1;min-width:0;text-align:left;border:0;background:none;padding:2px 0;color:#1d3f4b;font-size:14px;font-weight:600;line-height:1.4}
+.trip-txt span,.trip-txt small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trip-txt small{font-size:12px;font-weight:400;color:#6b818c}
+.trip-ctl{flex:none;display:flex;gap:4px}.trip-ctl button{width:32px;height:32px;border:1px solid #d5e1e5;border-radius:8px;background:#fff;color:#3e5f6b;font-size:14px}.trip-ctl button:disabled{opacity:.35}
+.trip-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.trip-actions .trip-go{flex:1 1 100%;text-align:center}.trip-actions .trip-go.disabled{opacity:.5;pointer-events:none}.trip-actions .secondary-button{flex:1 1 0;min-height:44px}
+.trip-warn{font-size:12px;color:#8a6a2a;margin:8px 0 0}
+.trip-pin span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#126b63;color:#fff;font:800 12px/1 system-ui,sans-serif;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.leaflet-div-icon.trip-pin{background:none;border:0}
+.case-card{position:relative}.trip-badge{position:absolute;top:-8px;right:12px;background:#126b63;color:#fff;font-size:12px;font-weight:800;border-radius:10px;padding:2px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.trip-add.on{border-color:#126b63;background:#e8f5f2;color:#0a5b51}
+.pop-trip{font-weight:700}

@@ -98,7 +98,7 @@ function setView(view,record=true){
 
 /* ---------------- cases list ---------------- */
 function caseCard(c){
-  const div=document.createElement('button');div.className='case-card case-simple'+(c.status!=='done'?' crit-card-'+critLevel(c):'');div.type='button';
+  const div=document.createElement('button');div.className='case-card case-simple'+(c.status!=='done'?' crit-card-'+critLevel(c):'');div.type='button';div.dataset.id=c.id;
   const top=document.createElement('div');top.className='case-top';
   const st=statusEl(c);
   const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
@@ -190,6 +190,7 @@ function renderMap(){
   renderVolunteerBar();
   renderCfBar();renderCfPanel();
   drawCaseMarkers();
+  if(typeof tripRefresh==='function')tripRefresh();
   if(typeof renderLayerChips==='function')renderLayerChips();
 }
 async function loadCases(){
@@ -322,11 +323,12 @@ function drawCaseMarkers(){
     const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
     pts.push([c.lat,c.lng]);
     L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
-      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}${(c.name||c.phone)?'<br>'+(c.name?'👤 '+escH(c.name)+' ':'')+(c.phone?(isVolunteer&&String(c.phone).replace(/[^\d+]/g,'').length>=9?'☎ <a href="tel:'+escH(String(c.phone).replace(/[^\d+]/g,''))+'">'+escH(c.phone)+'</a>':'☎ '+escH(c.phone)):''):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>`)
+      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}${(c.name||c.phone)?'<br>'+(c.name?'👤 '+escH(c.name)+' ':'')+(c.phone?(isVolunteer&&String(c.phone).replace(/[^\d+]/g,'').length>=9?'☎ <a href="tel:'+escH(String(c.phone).replace(/[^\d+]/g,''))+'">'+escH(c.phone)+'</a>':'☎ '+escH(c.phone)):''):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>${c.status!=='done'?`<br><a href="#" class="pop-trip" data-trip-add="${escH(c.id)}">${typeof tripIndex==='function'&&tripIndex(c.id)>=0?'✓ อยู่ในแผนเดินทาง (แตะเพื่อเอาออก)':'➕ เพิ่มในแผนเดินทาง'}</a>`:''}`)
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}
   if(typeof drawTeamMarkers==='function')drawTeamMarkers();
+  if(typeof drawTrip==='function')drawTrip();
 }
 document.addEventListener('click',e=>{const a=e.target.closest('[data-open-case]');if(a){e.preventDefault();openCase(a.getAttribute('data-open-case'))}});
 setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},10*60*1000);
@@ -392,6 +394,7 @@ function renderDetail(){
   if(isVolunteer&&c.notes){const h2=document.createElement('h2');h2.textContent='สถานการณ์';const p=document.createElement('p');p.textContent=c.notes;card.append(h2,p)}
   const actions=document.createElement('div');actions.className='detail-actions';
   if(hasPin(c)){const a=document.createElement('a');a.className='secondary-button';a.textContent='นำทางด้วย Google Maps ↗';a.href=`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;a.target='_blank';a.rel='noopener';actions.append(a)}
+  if(typeof tripButton==='function'&&hasPin(c)&&c.status!=='done')actions.append(tripButton(c));
   if(isVolunteer){
     const tel=String(c.phone||'').replace(/[^\d+]/g,'');
     if(tel){const call=document.createElement('a');call.className='secondary-button';call.href='tel:'+tel;call.textContent='☎ โทรหาผู้แจ้ง';actions.append(call)}

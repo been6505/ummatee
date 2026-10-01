@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="./assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="./app.css?v=4">
+<link rel="stylesheet" href="./app.css?v=5">
 </head>
 <body>
 <!-- ===== หน้าแรก ===== -->
@@ -23,6 +23,7 @@
   </header>
   <button type="button" class="search-card" id="search-card"><i class="dot"></i><span>ต้องการความช่วยเหลือที่ไหน?</span></button>
   <span class="live-badge" id="live-badge" hidden><i></i>LIVE</span>
+  <button type="button" class="home-urg" id="home-urg" hidden><i></i>อันตรายถึงชีวิต <b>0</b> เคส</button>
   <div class="flood-legend glass home-fl" hidden></div>
   <div class="map-fabs" id="home-fabs">
     <button type="button" class="fab glass" data-act="layers" aria-label="เปลี่ยนแบบแผนที่" data-icon="layers"></button>
@@ -154,6 +155,7 @@
         </div>
         <div class="vol-panel card" id="vol-panel" hidden></div>
         <label class="search-field"><span data-icon="search"></span><input id="case-search" type="search" autocomplete="off" placeholder="ค้นหาเคส: เขต ที่อยู่ ความต้องการ เลขเคส" aria-label="ค้นหาเคส"></label>
+        <div class="urg-bar" id="urg-bar" role="group" aria-label="กรองตามความเร่งด่วน"></div>
         <div class="status-tabs" id="status-tabs" role="tablist" aria-label="กรองตามสถานะ"></div>
         <div class="type-chips" id="type-chips" aria-label="กรองตามประเภท"></div>
         <button type="button" class="pill pill-ghost small" id="more-filter" data-icon="filter" aria-expanded="false">ตัวกรองเพิ่ม</button>
@@ -205,11 +207,11 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="netbar" id="netbar" hidden></div>
 
-<script src="./icons.js?v=4"></script>
-<script src="./geocode.js?v=4"></script>
-<script src="./location.js?v=4"></script>
-<script src="./hotlines.js?v=4"></script>
-<script src="./script.js?v=4"></script>
+<script src="./icons.js?v=5"></script>
+<script src="./geocode.js?v=5"></script>
+<script src="./location.js?v=5"></script>
+<script src="./hotlines.js?v=5"></script>
+<script src="./script.js?v=5"></script>
 <script>
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>

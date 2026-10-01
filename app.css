@@ -421,3 +421,46 @@ a{color:var(--primary)}
 #view-map .flood-legend{top:calc(var(--safe-t) + 128px)}
 .home-fl{top:calc(var(--safe-t) + 184px)}
 @media(min-width:1024px){.home-fl{left:460px;top:64px}}
+
+/* ===== เน้นระดับความเร่งด่วน: แดง / ส้ม / เหลือง ===== */
+:root{--orange:#F07B14;--yellow:#F2C200;--u3-tint:#FDECEC;--u3-ink:#B3261E;--u2-tint:#FEF0E2;--u2-ink:#A84F00;--u1-tint:#FFF8D6;--u1-ink:#7A5F00}
+.urg{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800;white-space:nowrap}
+.urg i{width:9px;height:9px;border-radius:50%;flex:none}
+.urg-3{--uc:var(--red);--ut:var(--u3-tint);--ui:var(--u3-ink)}.urg-2{--uc:var(--orange);--ut:var(--u2-tint);--ui:var(--u2-ink)}.urg-1{--uc:var(--yellow);--ut:var(--u1-tint);--ui:var(--u1-ink)}
+.urg{background:var(--ut);color:var(--ui)}.urg i{background:var(--uc)}
+.urg.urg-3{background:var(--red);color:#fff}.urg.urg-3 i{background:#fff;animation:blink 1s infinite}
+.case-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.case.u3{box-shadow:inset 5px 0 0 var(--red),0 0 0 1.5px rgba(229,56,59,.35),0 4px 14px rgba(229,56,59,.15);background:#FFF9F9}
+.case.u2{box-shadow:inset 5px 0 0 var(--orange),0 1px 3px rgba(22,27,61,.06)}
+.case.u1{box-shadow:inset 5px 0 0 var(--yellow),0 1px 3px rgba(22,27,61,.06)}
+.urg-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.urg-btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:64px;border:0;border-radius:16px;padding:8px 10px;background:var(--ut);color:var(--ui);text-align:left;box-shadow:inset 0 0 0 1.5px transparent;font-weight:700;font-size:12.5px;line-height:1.25}
+.urg-btn i{width:10px;height:10px;border-radius:50%;background:var(--uc)}
+.urg-btn b{font-size:22px;line-height:1;font-weight:800}
+.urg-btn[aria-pressed=true]{background:var(--uc);color:#fff;box-shadow:0 4px 12px rgba(22,27,61,.18)}
+.urg-btn.urg-1[aria-pressed=true]{color:#3D2F00}
+.urg-btn[aria-pressed=true] i{background:#fff}
+.urg-banner{display:flex;align-items:center;gap:12px;border-radius:18px;padding:12px 16px;margin-bottom:12px;background:var(--ut);color:var(--ui)}
+.urg-banner .ic{width:28px;height:28px;color:var(--uc);flex:none}
+.urg-banner small{display:block;font-size:12.5px;font-weight:600;opacity:.85}.urg-banner b{font-size:20px;font-weight:800}
+.urg-banner.urg-3{background:var(--red);color:#fff;animation:urgglow 1.6s ease-in-out infinite}.urg-banner.urg-3 .ic{color:#fff}
+@keyframes urgglow{50%{box-shadow:0 0 0 6px rgba(229,56,59,.25)}}
+.home-urg{position:absolute;z-index:500;left:86px;right:auto;top:calc(var(--safe-t) + 146px);display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:4px 12px;background:var(--red);color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(229,56,59,.4)}
+.home-urg i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+.home-urg b{font-size:15px}
+.home-urg[hidden]{display:none}
+@media(min-width:1024px){.home-urg{left:560px;right:auto;top:24px}}
+/* หมุด: รอช่วย = สีตามความเร่งด่วน, กำลังไป = ฟ้า + จุดกลางสีตามความเร่งด่วน */
+.um-pin.open.u3 span,.um-pin.danger span{background:var(--red)}
+.um-pin.open.u2 span{background:var(--orange)}
+.um-pin.open.u1 span{background:var(--yellow)}
+.um-pin.u3 span{width:32px;height:32px}
+.um-pin.u3 span::after{left:9px;top:9px}
+.um-pin.going.u3 span::after{background:var(--red)}.um-pin.going.u2 span::after{background:var(--orange)}.um-pin.going.u1 span::after{background:var(--yellow)}
+.um-pin.u2 span{animation:none}
+@media (prefers-reduced-motion:reduce){.urg.urg-3 i,.urg-banner.urg-3,.home-urg i{animation:none}}
+/* คำอธิบายสีหมุด: แถวเดียว เลื่อนด้านข้าง · ชั้นน้ำท่วมอยู่ถัดลงมา */
+.legend{display:flex;flex-wrap:nowrap;gap:12px;overflow-x:auto;scrollbar-width:none;max-width:calc(100% - 90px);white-space:nowrap;padding:8px 12px}
+.legend::-webkit-scrollbar{display:none}
+#view-map .flood-legend{top:calc(var(--safe-t) + 56px)}
+@media(min-width:1024px){.legend{max-width:calc(100% - 560px)}}

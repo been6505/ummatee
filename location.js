@@ -58,7 +58,7 @@ locationElement('clear-pin').addEventListener('click',clearRequestLocation);
 /* ค้นหาตำแหน่งจากที่อยู่ (OpenStreetMap Nominatim, สำรองด้วย Photon) แล้วปักหมุดอัตโนมัติ */
 const ADDR_ABBR=[[/(^|\s)ถ\.\s*/g,'$1ถนน'],[/(^|\s)ซ\.\s*/g,'$1ซอย'],[/(^|\s)ต\.\s*/g,'$1ตำบล'],[/(^|\s)อ\.\s*/g,'$1อำเภอ'],[/(^|\s)จ\.\s*/g,'$1จังหวัด'],[/กทม\.?/g,'กรุงเทพมหานคร'],[/(\d)\s*\/\s*(\d)/g,'$1 แยก $2']];
 const ADDR_STOP=new Set(['ถนน','ซอย','แยก','แขวง','เขต','ตำบล','อำเภอ','จังหวัด','กรุงเทพมหานคร','กรุงเทพ','หมู่','หมู่ที่','ม','เลขที่','บ้านเลขที่','ใกล้','ตรงข้าม','หน้า','หลัง']);
-function addrNorm(q){let s=' '+q.trim();ADDR_ABBR.forEach(([r,t])=>s=s.replace(r,t));return s.replace(/(ถนน|ซอย|แยก|แขวง|เขต)(?=\S)/g,'$1 ').replace(/\s+/g,' ').trim()}
+function addrNorm(q){let s=' '+q.trim().replace(/(บ้านเลขที่|เลขที่)\s*\d+(\s*\/\s*\d+)?/g,' ').replace(/^\s*\d+\s*\/\s*\d+\s+/,' ').replace(/(^|\s)\d+\s*\/\s*\d+(?=\s+(ถ\.|ถนน|ซ\.|ซอย|หมู่|ม\.))/g,' ').replace(/(หมู่ที่|หมู่|ม\.)\s*\d+/g,' ').replace(/\b\d{5}\b/g,' ');ADDR_ABBR.forEach(([r,t])=>s=s.replace(r,t));return s.replace(/(ถนน|ซอย|แยก|แขวง|เขต)(?=\S)/g,'$1 ').replace(/\s+/g,' ').trim()}
 const addrSquash=t=>String(t||'').toLowerCase().replace(/^(ถนน|ซอย|ถ\.|ซ\.)/,'').replace(/[\s.\-,()]/g,'');
 /* แยกคำค้นเป็น ชื่อถนน/ซอย, เลข (ซอย, แยก), และชื่อย่าน/เขต */
 function addrParse(q){const n=addrNorm(q),toks=n.split(' ');const words=[],nums=[];let area=[];

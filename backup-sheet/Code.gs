@@ -8,7 +8,8 @@ const TABS = {
   roster: ['Roster', 'id'],
   stock: ['Stock', 'id'],
   places: ['Places', 'id'],
-  stock_log: ['StockLog', 'n']
+  stock_log: ['StockLog', 'n'],
+  zones: ['Zones', 'id']
 };
 const TIME_COLS = ['createdAt', 'updatedAt', 'time'];
 const TZ = 'Asia/Bangkok';

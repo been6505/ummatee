@@ -31,9 +31,10 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS stock (id TEXT PRIMARY KEY, name TEXT, unit TEXT, category TEXT, qty INTEGER, min INTEGER, needed INTEGER, note TEXT, updatedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`,
   // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
+  `CREATE TABLE IF NOT EXISTS zones (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`
 ];
-const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n' };
+const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
 for (const [t, k] of Object.entries(BACKUP_TABLES)) {
   SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_ins AFTER INSERT ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
@@ -44,7 +45,8 @@ async function init(db) {
   if (!ready) ready = (async () => {
     await db.batch(SCHEMA.map(s => db.prepare(s)));
     for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
-    try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {} // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
+    try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {}
+    try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {} // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
       const now = Date.now();
@@ -217,20 +219,39 @@ async function listRoster(db) {
   const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt FROM roster WHERE active=1 ORDER BY name').all();
   return { ok: true, roster: results.map(r => ({ ...r, members: r.members == null ? '' : r.members })), live: await readTeams(db) };
 }
+/* โซน: วงกลม (จุดศูนย์กลาง + รัศมี) ใช้จัดกลุ่มเคสและมอบหมายทีมรับผิดชอบ (roster.zone = ชื่อโซน) */
+async function listZones(db) {
+  const { results } = await db.prepare('SELECT id,name,color,lat,lng,radius,note,updatedAt FROM zones WHERE active=1 ORDER BY name').all();
+  return { ok: true, zones: results };
+}
+async function saveZone(db, b) {
+  const z = b.zone || {}, id = clean(z.id, 20).replace(/[^\w-]/g, '') || ('Z' + rand(3));
+  if (z.active === false) { await db.prepare('UPDATE zones SET active=0, updatedAt=? WHERE id=?').bind(Date.now(), id).run(); return { ok: true, id }; }
+  const name = clean(z.name, 60), lat = num(z.lat, -90, 90), lng = num(z.lng, -180, 180);
+  if (!name || lat == null || lng == null) return { ok: false, error: 'missing' };
+  const color = /^#[0-9a-f]{6}$/i.test(String(z.color || '')) ? z.color : '#2a78d6';
+  await db.prepare(`INSERT INTO zones (id,name,color,lat,lng,radius,note,active,updatedAt,by_) VALUES (?,?,?,?,?,?,?,1,?,?)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name,color=excluded.color,lat=excluded.lat,lng=excluded.lng,radius=excluded.radius,note=excluded.note,active=1,updatedAt=excluded.updatedAt,by_=excluded.by_`)
+    .bind(id, name, color, lat, lng, clampInt(z.radius, 100, 30000, 1500), clean(z.note, 200), Date.now(), clean(b.by, 60)).run();
+  return { ok: true, id };
+}
 async function listStock(db) {
   const { results: items } = await db.prepare('SELECT * FROM stock ORDER BY id').all();
   const { results: log } = await db.prepare('SELECT time,itemId,item,type,delta,after,note,caseId,by_ AS "by",team FROM stock_log ORDER BY n DESC LIMIT 1000').all();
-  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '' })), log: log.map(l => ({ ...l, team: l.team || '' })) };
+  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '', kit: parseKit(i.kit) })), log: log.map(l => ({ ...l, team: l.team || '' })) };
 }
+function parseKit(v) { try { const a = typeof v === 'string' ? JSON.parse(v || '[]') : v; return (Array.isArray(a) ? a : []).map(x => ({ id: clean(x.id, 20), qty: clampInt(x.qty, 1, 9999, 1) })).filter(x => x.id).slice(0, 30); } catch (e) { return []; } }
 async function saveStockItem(db, b) {
   const t = b.item || {}, name = clean(t.name, 80);
   if (!name) return { ok: false, error: 'missing_name' };
   const id = t.id && await db.prepare('SELECT id FROM stock WHERE id=?').bind(String(t.id)).first() ? String(t.id) : 'S' + rand(3);
   const min = t.min === '' || t.min == null ? null : clampInt(t.min, 0, 1e7, null);
   const expiry = /^\d{4}-\d{2}-\d{2}$/.test(String(t.expiry || '')) ? t.expiry : '';
-  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location) VALUES (?,?,?,?,0,?,?,?,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location`)
-    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now(), expiry, clean(t.location, 60)).run();
+  // ไม่ส่ง kit มา (เช่นแก้ชื่อ/หน่วยจากฟอร์มทั่วไป) = คงรายการในถุงเดิมไว้
+  const kit = t.kit === undefined ? ((await db.prepare('SELECT kit FROM stock WHERE id=?').bind(id).first()) || {}).kit || '[]' : JSON.stringify(parseKit(t.kit).filter(x => x.id !== id));
+  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location,kit) VALUES (?,?,?,?,0,?,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location,kit=excluded.kit`)
+    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now(), expiry, clean(t.location, 60), kit).run();
   return { ok: true, id };
 }
 async function moveStock(db, b) {
@@ -246,6 +267,29 @@ async function moveStock(db, b) {
   await db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)')
     .bind(Date.now(), it.id, it.name, type, after - before, after, clean(b.note, 200), clean(b.caseId, 30), clean(b.by, 60), clean(b.team, MAX.volunteer)).run();
   return { ok: true, qty: after };
+}
+/* แพ็คถุงยังชีพ: ตัดของในคลังตามรายการในถุง × จำนวนถุง แล้วรับถุงเข้า (ทำใน batch เดียว = สำเร็จหรือไม่สำเร็จทั้งหมด) */
+async function packBags(db, b) {
+  const n = clampInt(b.amount, 1, 100000, 0);
+  const bag = await db.prepare('SELECT * FROM stock WHERE id=?').bind(String(b.itemId)).first();
+  if (!bag || !n) return { ok: false, error: 'not_found' };
+  const kit = parseKit(bag.kit);
+  if (!kit.length) return { ok: false, error: 'no_kit' };
+  const ids = kit.map(k => k.id), { results } = await db.prepare(`SELECT * FROM stock WHERE id IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
+  const short = [];
+  const parts = kit.map(k => { const it = results.find(r => r.id === k.id); const need = k.qty * n, have = it ? Number(it.qty) || 0 : 0; if (!it || have < need) short.push({ id: k.id, name: it ? it.name : k.id, need, have }); return { it, need, have }; });
+  if (short.length) return { ok: false, error: 'not_enough', short, canPack: Math.min(...parts.map(p => Math.floor(p.have / (p.need / n)))) };
+  const now = Date.now(), by = clean(b.by, 60), note = clean(b.note, 200), tag = `แพ็คถุงยังชีพ ${n} ถุง`;
+  const st = [];
+  for (const p of parts) {
+    st.push(db.prepare('UPDATE stock SET qty=?, updatedAt=? WHERE id=?').bind(p.have - p.need, now, p.it.id));
+    st.push(db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(now, p.it.id, p.it.name, 'out', -p.need, p.have - p.need, tag + (note ? ' · ' + note : ''), '', by, ''));
+  }
+  const after = (Number(bag.qty) || 0) + n;
+  st.push(db.prepare('UPDATE stock SET qty=?, updatedAt=? WHERE id=?').bind(after, now, bag.id));
+  st.push(db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(now, bag.id, bag.name, 'in', n, after, 'แพ็คจากของในคลัง' + (note ? ' · ' + note : ''), '', by, ''));
+  await db.batch(st);
+  return { ok: true, qty: after, used: parts.map(p => ({ id: p.it.id, name: p.it.name, qty: p.need })) };
 }
 async function importCases(db, b) {
   const rows = Array.isArray(b.cases) ? b.cases.slice(0, 200) : [];
@@ -326,6 +370,7 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }
@@ -335,7 +380,7 @@ async function api(request, env) {
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
-    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, import_cases: importCases };
+    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });

@@ -16,6 +16,14 @@ function expTag(i){if(!i.expiry)return '';const d=Math.ceil((Date.parse(i.expiry
 const received=i=>S.log.filter(l=>l.itemId===i.id).reduce((s,l)=>s+Math.max(0,Number(l.delta)||0),0);
 // ใกล้หมด: ถ้าตั้งขั้นต่ำไว้ใช้ขั้นต่ำ ไม่งั้นเหลือไม่เกิน 20% ของที่เคยรับเข้า
 const low=i=>{const q=Number(i.qty)||0;if(q<=0)return false;if(i.min!==''&&i.min!=null)return q<=Number(i.min);const b=Math.max(received(i),q);return b>0&&q/b<=.2};
+const kitOf=b=>(Array.isArray(b&&b.kit)?b.kit:[]).map(k=>({...k,it:S.items.find(i=>i.id===k.id)})).filter(k=>k.it);
+const canPack=b=>{const K=kitOf(b);return K.length?Math.min(...K.map(k=>Math.floor((Number(k.it.qty)||0)/k.qty))):null};
+function kitBox(b,n){const K=kitOf(b),cp=canPack(b);
+  if(!K.length)return `<section class="kit-box"><div class="kit-h"><h3>ของใน 1 ถุง</h3><button type="button" class="btn ghost sm" data-kit="${esc(b.id)}">+ กำหนดของในถุง</button></div><p class="muted small">ยังไม่ได้กำหนดว่าใน 1 ถุงมีอะไรบ้าง กำหนดไว้แล้วระบบจะตัดของในคลังให้เองตอนแพ็คถุง และบอกได้ว่าแพ็คได้อีกกี่ถุง</p></section>`;
+  return `<section class="kit-box"><div class="kit-h"><h3>ของใน 1 ถุง <small>${K.length} รายการ</small></h3><button type="button" class="btn ghost sm" data-kit="${esc(b.id)}">✎ แก้ไขของในถุง</button></div>
+    <table class="kit-t"><thead><tr><th>รายการ</th><th class="r">ต่อ 1 ถุง</th><th class="r">คลังมี</th>${n?`<th class="r">ใช้ ${nf(n)} ถุง</th>`:''}<th class="r">พอแพ็ค</th></tr></thead><tbody>${K.map(k=>{const have=Number(k.it.qty)||0,need=k.qty*(n||0),enough=Math.floor(have/k.qty);
+      return `<tr class="${n&&need>have?'short':''}"><td>${esc(k.it.name)}</td><td class="r">${nf(k.qty)} ${esc(k.it.unit||'')}</td><td class="r">${nf(have)}</td>${n?`<td class="r"><b>${nf(need)}</b>${need>have?' <span class="schip zero">ไม่พอ</span>':''}</td>`:''}<td class="r">${nf(enough)} ถุง</td></tr>`}).join('')}</tbody></table>
+    <p class="kit-cap">ของในคลังตอนนี้แพ็คได้อีก <b>${nf(cp)} ถุง</b>${cp<=0?' · ต้องเติมของก่อน':''}</p></section>`}
 const stChip=i=>Number(i.qty)<=0?'<span class="schip zero">หมด</span>':low(i)?'<span class="schip low">ใกล้หมด</span>':'';
 function filtered(){const q=$('#q').value.trim().toLowerCase();
   return S.items.filter(i=>{if(isBag(i))return false;if(q&&!(i.name+' '+i.category+' '+i.note+' '+(i.location||'')).toLowerCase().includes(q))return false;
@@ -48,6 +56,7 @@ $('#q').addEventListener('input',render);
 document.addEventListener('click',e=>{
   const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;history.replaceState(null,'',S.view==='bags'?'#bags':location.pathname);render();scrollTo(0,0);return}
   const c=e.target.closest('[data-cat]');if(c){S.cat=c.dataset.cat;render();return}
+  const kb=e.target.closest('[data-kit]');if(kb){openKit(S.items.find(i=>i.id===kb.dataset.kit));return}
   const ld=e.target.closest('[data-load]');if(ld){openLoad(S.roster.find(t=>t.id===ld.dataset.load),ld.dataset.mode||'out');return}
   const m=e.target.closest('[data-mv]');if(m){openMove(S.items.find(i=>i.id===m.dataset.item),m.dataset.mv);return}
   const ed=e.target.closest('[data-ed]');if(ed){openItem(S.items.find(i=>i.id===ed.dataset.ed));return}
@@ -74,7 +83,8 @@ function renderBags(){
       <div class="team-f"><button class="btn primary sm" data-load="${esc(t.id)}" data-mode="out" ${total<=0?'disabled':''}>+ ส่งถุงขึ้นรถ</button><button class="btn ghost sm" data-load="${esc(t.id)}" data-mode="in" ${all<=0?'disabled':''}>คืนถุง</button></div></article>`}).join('')
     :`<p class="empty">ยังไม่มีทีมรถ กด "+ เพิ่มทีมรถ" หรือเพิ่มที่หน้า <a href="../teams/">จัดทีม</a></p>`;
   $('#bag-items').innerHTML=B.length?B.map(i=>`<div class="bag-it${Number(i.qty)<=0?' zero':low(i)?' low':''}"><div><b>${esc(i.name)}</b> ${stChip(i)}<small class="muted">${i.location?'📍 '+esc(i.location):''}${expTag(i)}</small></div><div class="bag-q">${nf(i.qty)} <span class="unit">${esc(i.unit||'ถุง')}</span></div>
-      <div class="bag-a"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}">✎</button></div></div>`).join(''):'<p class="muted small">ยังไม่มี</p>';
+      <div class="bag-kit">${kitOf(i).length?`<span class="muted">ในถุง:</span> ${kitOf(i).map(k=>`${esc(k.it.name)} ${nf(k.qty)} ${esc(k.it.unit||'')}`).join(' · ')}<br><span class="muted">แพ็คได้อีก</span> <b>${nf(canPack(i))} ถุง</b>`:'<span class="muted">ยังไม่ได้กำหนดของในถุง</span>'}</div>
+      <div class="bag-a"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า / แพ็ค</button><button class="btn ghost sm" data-kit="${esc(i.id)}">ของในถุง</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}">✎</button></div></div>`).join(''):'<p class="muted small">ยังไม่มี</p>';
   $('#bag-log').innerHTML=L.length?L.slice(0,60).map(l=>{const n=sent(l);return `<div class="lg lg-${n>0?'out':'in'}"><span class="lg-d">${n>0?'−':'+'}${nf(Math.abs(n))}</span><div><b>🚚 ${esc(l.team)}</b> <small>${n>0?'ขึ้นรถ':'คืนเข้าคลัง'} · ${esc(l.item)} · คลังเหลือ ${nf(l.after)}${l.caseId?' · เคส #'+esc(l.caseId):''}${l.note?' · '+esc(l.note):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`}).join(''):'<p class="muted small">ยังไม่มีการส่งถุงขึ้นรถ</p>';
 }
 function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.length){toast('ยังไม่มีรายการถุงยังชีพ');return}
@@ -99,6 +109,23 @@ function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.lengt
       if(!r.ok){toast(r.error==='not_enough'?`ถุงไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));return}
       toast(`${out?'ส่ง':'คืน'} ${nf(a)} ถุง ${out?'ขึ้นรถ':'จาก'} ${t.name} · คลังเหลือ ${nf(r.qty)}`,true);closeD();loadAll()}
     catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const b=$('#l-go');if(b)b.disabled=false}};
+}
+function openKit(b){if(!b)return;const opts=S.items.filter(i=>!isBag(i)).sort((x,y)=>String(x.category).localeCompare(String(y.category),'th')||String(x.name).localeCompare(String(y.name),'th'));
+  let rows=(Array.isArray(b.kit)?b.kit:[]).map(k=>({...k}));if(!rows.length)rows=[{id:'',qty:1}];
+  drawer(`<div class="d-head"><div><small class="muted">ถุงยังชีพ</small><h2>ของใน 1 ถุง · ${esc(b.name)}</h2><small>เลือกของจากคลังและจำนวนที่ใส่ใน 1 ถุง</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  <form id="kform" class="form-grid"><div class="wide kit-rows" id="kit-rows"></div><div class="wide"><button type="button" class="btn ghost sm" id="kit-add">+ เพิ่มของ</button></div>
+    <div class="form-act"><button class="btn primary" type="submit" id="k-go">บันทึกของในถุง</button></div></form>`);
+  const draw=()=>{$('#kit-rows').innerHTML=rows.map((r,n)=>`<div class="kit-row"><select data-r="${n}" aria-label="ของชิ้นที่ ${n+1}"><option value="">เลือกของ…</option>${opts.map(i=>`<option value="${esc(i.id)}" ${i.id===r.id?'selected':''}>${esc(i.name)} (${esc(i.unit||'')})</option>`).join('')}</select><input type="number" min="1" inputmode="numeric" data-q="${n}" value="${esc(r.qty)}" aria-label="จำนวนต่อถุง"><button type="button" class="ib" data-del="${n}" aria-label="ลบ">✕</button></div>`).join('')};
+  draw();const box=$('#kit-rows');
+  box.onchange=e=>{const r=e.target.dataset.r,q=e.target.dataset.q;if(r!=null)rows[r].id=e.target.value;if(q!=null)rows[q].qty=Math.max(1,Math.round(Number(e.target.value)||1))};
+  box.oninput=box.onchange;
+  box.onclick=e=>{const d=e.target.closest('[data-del]');if(d){rows.splice(+d.dataset.del,1);if(!rows.length)rows=[{id:'',qty:1}];draw()}};
+  $('#kit-add').onclick=()=>{rows.push({id:'',qty:1});draw()};
+  $('#kform').onsubmit=async e=>{e.preventDefault();const kit=[];rows.forEach(r=>{if(!r.id)return;const x=kit.find(k=>k.id===r.id);x?x.qty+=r.qty:kit.push({id:r.id,qty:r.qty})});
+    $('#k-go').disabled=true;
+    try{const r=await apiPost({action:'stock_item',item:{id:b.id,name:b.name,unit:b.unit,category:b.category,min:b.min,needed:b.needed,note:b.note,expiry:b.expiry,location:b.location,kit}});
+      if(!r.ok){toast('บันทึกไม่สำเร็จ: '+(r.error||''));return}toast(`บันทึกของในถุงแล้ว (${kit.length} รายการ)`,true);closeD();loadAll()}
+    catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const x=$('#k-go');if(x)x.disabled=false}};
 }
 function openTeam(){
   drawer(`<div class="d-head"><div><h2>เพิ่มทีมรถ</h2><small class="muted">ทีมจะขึ้นที่หน้าจัดทีมด้วย</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
@@ -127,15 +154,25 @@ function openMove(it,type){if(!it)return;
     <p class="muted small" id="preview"></p>
     <label class="fld"><span>หมายเหตุ</span><input name="note" maxlength="200" placeholder="เช่น รับบริจาคจาก… / แจกชุมชน…"></label>
     <label class="fld" id="case-f"><span>เลขเคส (ถ้าจ่ายให้เคส)</span><input name="caseId" maxlength="30" placeholder="เช่น C10011527-M3WZ"></label>
+    ${isBag(it)&&kitOf(it).length?`<label class="chk wide" id="pack-f"><input name="pack" type="checkbox" checked><span>แพ็คเองที่ศูนย์: ตัดของในคลังตามรายการในถุงให้อัตโนมัติ</span></label>`:''}
     <div class="form-act"><button class="btn primary" type="submit" id="m-go">บันทึก</button></div>
-  </form>`);
+  </form>${isBag(it)?`<div id="kit-area">${kitBox(it)}</div>`:''}`);
   let t=type;const f=$('#mform'),amt=f.elements.amount;
   const upd=()=>{$$('.mv-seg [data-t]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.t===t)));$('#case-f').hidden=t!=='out';const a=Number(amt.value)||0,q=Number(it.qty)||0,after=t==='in'?q+a:t==='out'?q-a:a;
-    $('#preview').textContent=amt.value===''?'':`หลังบันทึก: ${nf(after)} ${it.unit||''}${after<0?' — ของไม่พอ':''}`;$('#preview').className='small '+(after<0?'warn':'muted');$('#m-go').textContent=TYPE[t]};
+    $('#preview').textContent=amt.value===''?'':`หลังบันทึก: ${nf(after)} ${it.unit||''}${after<0?' — ของไม่พอ':''}`;$('#preview').className='small '+(after<0?'warn':'muted');
+    const pk=f.elements.pack,packing=pk&&t==='in'&&pk.checked;if($('#pack-f'))$('#pack-f').hidden=t!=='in';$('#m-go').textContent=packing?'แพ็คถุง':TYPE[t];
+    if($('#kit-area'))$('#kit-area').innerHTML=kitBox(it,packing?a:0)};
+  if(f.elements.pack)f.elements.pack.onchange=upd;
   $$('.mv-seg [data-t]').forEach(b=>b.onclick=()=>{t=b.dataset.t;upd()});amt.oninput=upd;upd();
   f.onsubmit=async e=>{e.preventDefault();const a=Math.round(Number(amt.value));if(!(a>=0)||amt.value===''){amt.focus();return}
     const q=Number(it.qty)||0;if(t==='out'&&a>q){toast(`ของไม่พอ เหลือ ${nf(q)} ${it.unit||''}`);return}
     $('#m-go').disabled=true;
+    if(t==='in'&&f.elements.pack&&f.elements.pack.checked){
+      try{const r=await apiPost({action:'bag_pack',itemId:it.id,amount:a,note:f.elements.note.value,by:staffName()});
+        if(!r.ok){toast(r.error==='not_enough'?`ของไม่พอ: ${(r.short||[]).map(x=>x.name+' ขาด '+nf(x.need-x.have)).join(', ')} · แพ็คได้สูงสุด ${nf(r.canPack)} ถุง`:'แพ็คไม่สำเร็จ: '+(r.error||''));return}
+        toast(`แพ็ค ${it.name} ${nf(a)} ถุง · ตัดของในคลัง ${r.used.length} รายการ`,true);closeD();loadAll()}
+      catch(err){if(err.message!=='auth')toast('แพ็คไม่สำเร็จ ลองใหม่')}finally{const b=$('#m-go');if(b)b.disabled=false}
+      return}
     try{const r=await apiPost({action:'stock_move',itemId:it.id,type:t,amount:a,note:f.elements.note.value,caseId:t==='out'?f.elements.caseId.value:'',by:staffName()});
       if(!r.ok){toast(r.error==='not_enough'?`ของไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));return}
       it.qty=r.qty;toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);closeD();render();loadAll()}

@@ -111,3 +111,14 @@
 #view-stock .cols-stock>.panel:last-child>#log{grid-column:2;grid-row:2;max-height:360px}
 #view-stock .cols-stock>.panel:last-child>#need-list{grid-column:1;grid-row:2}
 @media(max-width:800px){#view-stock .cols-stock>.panel:last-child{display:block}#view-stock .cols-stock>.panel:last-child>.panel-h.mt{margin-top:18px}}
+/* ของในถุงยังชีพ */
+.kit-box{max-width:860px;margin:0 auto 40px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 24px}
+.kit-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}.kit-h h3{margin:0;font-size:17px}.kit-h small{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+.kit-t{width:100%;border-collapse:collapse;font-size:14px}.kit-t th{text-align:left;font-size:12.5px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.kit-t td{padding:7px 8px;border-bottom:1px solid var(--line)}.kit-t .r{text-align:right;font-variant-numeric:tabular-nums}.kit-t tr.short td{background:#fdecec}
+.kit-cap{margin:10px 0 0;font-size:14.5px}.kit-cap b{color:var(--teal);font-size:17px}
+.bag-kit{grid-column:1/-1;font-size:13.5px;line-height:1.6;background:#f6f9fa;border-radius:8px;padding:6px 10px}
+.kit-rows{display:grid;gap:8px}.kit-row{display:grid;grid-template-columns:1fr 100px 40px;gap:8px;align-items:center}
+.kit-row select,.kit-row input{border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;font-size:15px;background:#fff;width:100%}
+#pack-f[hidden]{display:none}
+@media(max-width:700px){.kit-box{margin:0 10px 30px;padding:12px}.kit-t th:nth-child(3),.kit-t td:nth-child(3){display:none}}

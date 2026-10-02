@@ -373,8 +373,8 @@ async function listCovered(db) {
   if (!r.ok) return { ok: false, error: 'sheet_' + r.status };
   const rows = parseCSV(await r.text()).slice(1).filter(x => x[1] && String(x[1]).trim());
   const items = [];
-  for (const x of rows) { const [org, area, date, link] = x.map(v => String(v || '').trim()); const ll = link ? await resolveMapLink(db, link) : null;
-    items.push({ org, area, date, link, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
+  for (const x of rows) { const [org, area, date, link, district, sets, note] = x.map(v => String(v || '').trim()); const ll = link ? await resolveMapLink(db, link) : null;
+    items.push({ org, area, date, link, district, sets, note, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
   await setMeta(db, 'covered_cache', JSON.stringify({ t: Date.now(), items }));
   return { ok: true, items };
 }

@@ -1,0 +1,31 @@
+.cv-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.cv-h1{margin:0;font-size:22px}.cv-head p{margin:2px 0 0}
+.btn.ghost-d{background:transparent;color:#166d75;box-shadow:inset 0 0 0 1px #c9d9dc;text-decoration:none}
+.cv-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.cv-stat{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:inset 0 0 0 1px #e1e9eb}
+.cv-stat b{display:block;font-size:26px;line-height:1.15;font-variant-numeric:tabular-nums}.cv-stat span{font-size:13px;color:#5e7279}
+.cv-stat.alert{background:#f6f0fd;box-shadow:inset 0 0 0 1px #dccbf3}.cv-stat.alert b{color:#5b2d91}
+.cv-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.cv-tools input{flex:1 1 240px;min-width:0;border:1px solid #dce6e9;border-radius:10px;min-height:44px;padding:8px 12px;font:inherit;font-size:15px;background:#fff}
+.cv-tools .seg{overflow-x:auto;min-width:0;max-width:100%}.cv-tools .seg button{white-space:nowrap}.cv-tools .seg small{opacity:.7}
+.cv-tw{overflow-x:auto;background:#fff;border-radius:14px;box-shadow:inset 0 0 0 1px #e1e9eb}
+.cv-tbl{width:100%;border-collapse:collapse;font-size:14.5px}
+.cv-tbl th{font-size:12.5px;color:#68838f;font-weight:600;text-align:left;padding:10px 12px;border-bottom:1px solid #e1e9eb;white-space:nowrap}
+.cv-tbl td{padding:10px 12px;border-bottom:1px solid #eef3f4;vertical-align:top}.cv-tbl tr:last-child td{border-bottom:0}
+.cv-tbl .n{text-align:right;font-variant-numeric:tabular-nums}.cv-tbl .d{white-space:nowrap;font-variant-numeric:tabular-nums}
+.cv-tbl a{color:#166d75;font-weight:600;text-decoration:none;white-space:nowrap}
+.cv-note{display:block;margin-top:2px}
+.cv-warn{display:inline-block;background:#fff4d6;color:#7a5600;border-radius:6px;padding:1px 8px;font-size:12.5px;white-space:nowrap}
+.cv-ok{color:#0c7a3a}
+.cv-dup{display:inline-block;background:#f6f0fd;color:#5b2d91!important;border-radius:6px;padding:2px 8px}
+.small{font-size:13px}
+@media(max-width:900px){.cv-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){
+  .cv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.cv-stat b{font-size:22px}
+  .cv-tw{background:none;box-shadow:none}.cv-tbl thead{display:none}.cv-tbl,.cv-tbl tbody,.cv-tbl tr,.cv-tbl td{display:block}
+  .cv-tbl tr{background:#fff;border-radius:14px;box-shadow:inset 0 0 0 1px #e1e9eb;padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px}
+  .cv-tbl td{border:0;padding:0;min-width:0}.cv-tbl td::before{content:attr(data-l);display:block;font-size:11.5px;color:#68838f}
+  .cv-tbl td[data-l="พื้นที่"]{grid-column:1/-1;order:-1}.cv-tbl td[data-l="องค์กร"]{grid-column:1/-1;order:-2}.cv-tbl td[data-l="องค์กร"]::before,.cv-tbl td[data-l="พื้นที่"]::before{display:none}
+  .cv-tbl .n{text-align:left}.cv-tbl td:empty{display:none}
+}
+@media(max-width:700px){.cv-stat.alert{grid-column:1/-1}}

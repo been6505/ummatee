@@ -7,6 +7,10 @@ const stripHH=t=>String(t||'').replace(/^\[ครัวเรือน \d+\]\s*/
 const API_URL = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
 
 const $ = s => document.querySelector(s);
+/* หน้าสาธารณะไม่มี "ดูเคส" แล้ว: รายการเคส แผนที่เคส และหน้ารายละเอียดเคส อยู่ในหน้าหลังบ้านเท่านั้น
+   (admin.html → ./?admin) และในหน้าหลังบ้านต้องใส่รหัสอาสาก่อนถึงจะเห็นเคส */
+const ADMIN=document.documentElement.classList.contains('is-admin');
+const ADMIN_VIEWS=['map','detail'];
 let currentView='home', detailOrigin='map', selectedCase=null, geo=null;
 let cases=[], isVolunteer=false, lastLoaded=0, loading=false;
 const STATUS_TH={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',done:'ช่วยเหลือแล้ว'};
@@ -86,6 +90,7 @@ function statusEl(c){const s=document.createElement('span');s.className='status 
 
 /* ---------------- views ---------------- */
 function setView(view,record=true){
+  if(!ADMIN&&ADMIN_VIEWS.includes(view)){view='home';record=false;history.replaceState(null,'','#home')}
   if(!document.querySelector(`#view-${view}`))return;
   currentView=view;
   if(record&&location.hash!==`#${view}`)history.pushState(null,'',`#${view}`);
@@ -190,7 +195,7 @@ function renderMap(){
   const el=$('#map-cases');el.replaceChildren(...matching.map(caseCard));
   if(!matching.length&&lastLoaded){const empty=document.createElement('div');empty.className='empty';empty.textContent=cases.length?'ไม่พบเคสที่ตรงกับการค้นหา':'ยังไม่มีเคสขอความช่วยเหลือ';if(q&&cases.length&&!isVolunteer){const h=document.createElement('small');h.className='search-hint';h.textContent='ค้นด้วยชื่อ-นามสกุล หรือเบอร์โทรเต็ม ได้ในโหมดทีมอาสา';empty.append(h)}el.append(empty)}
   const si=$('#case-search');if(si)si.placeholder=isVolunteer?'ค้นหา: ชื่อ นามสกุล เบอร์โทร เขต เลขเคส':'ค้นหาเคส: เขต ที่อยู่ ความต้องการ เลขเคส';
-  renderVolunteerBar();
+  renderVolunteerBar();renderAdminGate();
   renderCfBar();renderCfPanel();
   drawCaseMarkers();
   if(typeof tripRefresh==='function')tripRefresh();
@@ -285,6 +290,31 @@ $('#vol-switch').addEventListener('click',async()=>{
 });
 $('#vol-tools-btn').addEventListener('click',()=>{volPanelOpen=!volPanelOpen;renderVolunteerBar()});
 
+/* ---------------- หน้าหลังบ้าน: ต้องมีรหัสอาสาก่อนเห็นเคส ---------------- */
+function renderAdminGate(){
+  const gate=$('#admin-gate');if(!gate)return;
+  const locked=ADMIN&&!isVolunteer;
+  gate.hidden=!locked;
+  const layout=document.querySelector('#view-map .cases-layout');if(layout)layout.hidden=locked;
+  const sw=$('#vol-switch');if(sw)sw.hidden=locked;
+  if(locked){const p=$('#vol-panel');if(p)p.hidden=true;const t=$('#vol-tools-btn');if(t)t.hidden=true}
+}
+if(ADMIN){
+  document.querySelectorAll('.brand-service small').forEach(el=>{el.textContent='หลังบ้าน'});
+  $('#admin-gate-form').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const inp=$('#admin-key'),btn=$('#admin-gate-btn'),msg=$('#admin-gate-msg');
+    const k=inp.value.trim();if(!k){inp.focus();return}
+    store.set('uh_vol_key',k);store.set('uh_vol_ok','');
+    btn.disabled=true;btn.textContent='กำลังตรวจรหัส…';msg.textContent='';
+    const before=lastLoaded;await loadCases();
+    btn.disabled=false;btn.textContent='เข้าสู่ระบบ';
+    if(isVolunteer){inp.value='';renderMap();return}
+    if(lastLoaded===before){msg.textContent='เชื่อมต่อระบบไม่ได้ ลองใหม่อีกครั้ง';store.set('uh_vol_key','');return}
+    store.set('uh_vol_key','');msg.textContent='รหัสไม่ถูกต้อง';inp.select();
+  });
+}
+
 /* ---------------- flood map: Floodboard roads + UM+ case pins ---------------- */
 const FLOOD_URL='https://www.floodboard.org/api/export/roads.geojson';
 const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
@@ -354,7 +384,7 @@ setInterval(()=>{if(currentView==='map'&&!document.hidden)loadFlood()},10*60*100
 
 
 /* ---------------- case detail ---------------- */
-function openCase(id){selectedCase=cases.find(c=>c.id===id);if(!selectedCase)return;detailOrigin='map';renderDetail();setView('detail')}
+function openCase(id){if(!ADMIN)return;selectedCase=cases.find(c=>c.id===id);if(!selectedCase)return;detailOrigin='map';renderDetail();setView('detail')}
 function renderDetail(){
   const c=selectedCase,el=$('#detail-content');el.replaceChildren();
   const wrap=document.createElement('div');wrap.className='detail-shell';

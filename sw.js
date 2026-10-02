@@ -1,5 +1,5 @@
 // UM+: เก็บหน้าเว็บไว้ในเครื่อง ให้เปิดเบอร์ฉุกเฉินได้แม้สัญญาณแย่
-const CACHE='umplus-v57';
+const CACHE='umplus-v58';
 const SHELL=['./','./index.html','./styles.css','./emergency.css','./mobile.css','./hotlines.js','./location.js','./script.js','./live.js','./places.js','./trip.js','./assets/ummatee-logo.png','./assets/icon-192.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.allSettled(SHELL.map(u=>c.add(u)))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==CACHE+'-ext').map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
@@ -25,9 +25,11 @@ self.addEventListener('fetch',e=>{
 });
 self.addEventListener('notificationclick',e=>{
   e.notification.close();const h=(e.notification.data&&e.notification.data.hash)||'';
+  /* '?admin#map' = เคสใหม่ของทีมอาสา เปิดในหน้าหลังบ้าน, อย่างอื่นเป็น #hash ของหน้าสาธารณะ */
+  const tail=h?(h.charAt(0)==='?'?h:'#'+h):'';
   e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
     const c=cs.find(x=>x.url.startsWith(self.registration.scope));
-    if(c){if(h)c.navigate(self.registration.scope+'#'+h).catch(()=>{});return c.focus()}
-    return self.clients.openWindow(self.registration.scope+(h?'#'+h:''));
+    if(c){if(tail)c.navigate(self.registration.scope+tail).catch(()=>{});return c.focus()}
+    return self.clients.openWindow(self.registration.scope+tail);
   }));
 });

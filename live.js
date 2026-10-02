@@ -174,7 +174,7 @@ function checkNewCases(){
     title:(sos?'🚨 เคสด่วนมาก':'🆕 มีเคสผู้ประสบภัยเข้ามา')+(open.length>1?` (+${open.length-1})`:''),
     body:`${(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${area?' · '+area:''}`,
     status:sos?'sos':'open',caseId:c.id,
-    actionText:'ดูเคส',onAction:()=>openCase(c.id),hash:'map',timeout:30000
+    actionText:'ดูเคส',onAction:()=>openCase(c.id),hash:ADMIN?'?admin#map':'map',timeout:30000
   });
 }
 function saveSeen(){store.set('uh_seen',JSON.stringify([...LIVE.seen].slice(-800)))}

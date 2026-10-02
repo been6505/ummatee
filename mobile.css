@@ -392,3 +392,16 @@ html,body{overflow-x:hidden}.case-list,.cases-main,.cases-side{min-width:0;max-w
 .trip-head small.flash{color:#0a5b51;font-weight:700}
 .form-row.form-row-even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .form-row-even+.field-hint{margin:8px 0 16px}
+/* หน้าสาธารณะไม่มี "ดูเคส": ซ่อนเมนูและปุ่มที่พาไปรายการเคส (เปิดได้ในหน้าหลังบ้าน admin.html เท่านั้น) */
+html:not(.is-admin) .admin-only{display:none!important}
+html:not(.is-admin) .bottom-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+html:not(.is-admin) .primary-actions{grid-template-columns:1fr}
+/* หน้าหลังบ้าน: ช่องใส่รหัสก่อนเห็นเคส */
+.admin-gate{max-width:440px;margin:8px 0 24px;padding:22px;background:#fff;border:1px solid #dce6e9;border-radius:14px}
+.admin-gate h2{font-size:19px;margin:0 0 6px}
+.admin-gate p{font-size:14px;line-height:1.7;color:#647f8b;margin:0 0 16px}
+.admin-gate-form{display:grid;gap:12px}
+.admin-gate-form .field{margin:0}
+.admin-gate-form .solid-button{width:100%}
+.admin-gate .admin-gate-msg{margin:12px 0 0;color:#b62532;font-weight:500}
+.admin-gate .admin-gate-msg:empty{display:none}

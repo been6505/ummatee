@@ -69,3 +69,8 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* แท็บหลังบ้าน 4 หน้า: มือถือเลื่อนด้านข้างได้ */
 .tabs{overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 auto}.tabs::-webkit-scrollbar{display:none}.tabs a{flex:none}
+
+/* สต็อก */
+.stock-sec{grid-column:1/-1;margin-top:10px}
+.sec-h{margin:4px 0 10px;font-size:20px}.sec-h small{font-size:13px;font-weight:400;color:var(--muted);margin-left:8px}
+.tlist .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}

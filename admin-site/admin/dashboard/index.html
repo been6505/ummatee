@@ -9,7 +9,7 @@
 <link rel="icon" href="../../assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=3">
+<link rel="stylesheet" href="./dashboard.css?v=4">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -49,6 +49,16 @@
       <article class="card"><h2>บุคคลที่ต้องดูแลเป็นพิเศษ</h2><p class="sub">จำนวนเคสที่มีแต่ละกลุ่ม</p><div class="chart" id="c-vul"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-vul"></div></details></article>
       <article class="card"><h2>ระดับน้ำ</h2><p class="sub">ตามที่ผู้แจ้งเลือก</p><div class="chart" id="c-level"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-level"></div></details></article>
       <article class="card"><h2>พื้นที่ที่แจ้งมากที่สุด</h2><p class="sub">10 เขตแรก (เคสที่ระบุเขต)</p><div class="chart" id="c-district"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-district"></div></details></article>
+      <section class="stock-sec span2" id="stock-sec" hidden aria-label="สต็อก">
+        <h2 class="sec-h">สต็อก <small>ยอดปัจจุบัน ไม่ขึ้นกับช่วงเวลา</small></h2>
+        <div class="kpis" id="stock-kpis"></div>
+        <div class="grid">
+          <article class="card span2"><h2>คงเหลือเทียบกับที่รับเข้า</h2><p class="sub">แต่ละรายการใช้หน่วยต่างกัน จึงเทียบเป็น % ของที่เคยรับเข้า เรียงจากเหลือน้อยสุด</p><div class="chart" id="c-left"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-left"></div></details></article>
+          <article class="card"><h2>สถานะสต็อก</h2><p class="sub">จำนวนรายการในแต่ละสถานะ</p><div class="chart" id="c-skst"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-skst"></div></details></article>
+          <article class="card"><h2>จ่ายออกมากที่สุด</h2><p class="sub">% ที่จ่ายไปแล้วของที่รับเข้า · 10 รายการแรก</p><div class="chart" id="c-used"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-used"></div></details></article>
+          <article class="card span2"><h2>ของที่ต้องเติม</h2><p class="sub">หมด ใกล้หมด หรือติ๊กว่าต้องการ</p><div id="restock"></div></article>
+        </div>
+      </section>
       <article class="card span2"><h2>ทีมอาสา</h2><p class="sub">เคสที่แต่ละทีมรับไว้</p><div id="teams"></div></article>
       <article class="card span2"><h2>เคสวิกฤตที่ยังรอนานที่สุด</h2><p class="sub">ยังไม่มีทีมรับ เรียงจากรอนานสุด</p><div id="waiting"></div></article>
     </div>
@@ -56,6 +66,6 @@
 </div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="../verify.js?v=2"></script>
-<script src="./dashboard.js?v=3"></script>
+<script src="./dashboard.js?v=6"></script>
 </body>
 </html>

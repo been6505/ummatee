@@ -1,4 +1,4 @@
-/* แดชบอร์ด UM+: ภาพรวมเคสจาก Google Sheet (ใช้รหัสทีมเดียวกับหน้าจัดการเคส · ไม่เก็บข้อมูลเคสไว้ในเครื่อง) */
+/* แดชบอร์ด UM+: ภาพรวมเคสและสต็อกจากฐานข้อมูล D1 (ใช้รหัสทีมเดียวกับหน้าจัดการเคส · ไม่เก็บข้อมูลเคสไว้ในเครื่อง) */
 const API_URL='/api';
 const $=s=>document.querySelector(s);
 const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',done:'ช่วยเหลือแล้ว'};
@@ -24,14 +24,15 @@ async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}
 function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;$('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
-  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();render();poll();VERIFY.load().then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
+  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();load();poll();VERIFY.load().then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
   catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
 $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';D.cases=[];showLogin('ออกจากระบบแล้ว')});
 
 /* ---------- data ---------- */
 function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean),createdAt:Number(c.createdAt)||0,updatedAt:Number(c.updatedAt)||0}));D.loaded=Date.now()}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';
-  try{const r=await api({action:'list',key:D.key});if(!r||!r.ok)throw 0;
+  try{const [r,sk]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
+    D.stock=sk&&sk.ok?sk:null;
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}finally{D.loading=false;$('#main').classList.remove('loading')}}
 let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key)return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
@@ -55,10 +56,10 @@ function table(id,head,rows){const t=el('table','dt'),tr=el('tr');head.forEach((
 
 /* ---------- horizontal bars (HTML, one hue; label carries identity) ---------- */
 function hbars(id,rows,opt={}){const box=$(id);if(!rows.length||!rows.some(r=>r[1])){box.replaceChildren(el('p','empty','ยังไม่มีข้อมูลในช่วงนี้'));return}
-  const max=Math.max(...rows.map(r=>r[1]),1),total=opt.total||0,wrap=el('div','hb');
-  rows.forEach(([lab,v,col])=>{const row=el('div','hb-row'),l=el('div','hb-lab');if(col){const i=el('i');i.style.background=col;l.append(i)}l.append(el('span',null,lab));
-    const tr=el('div','hb-track'),bar=el('div','hb-bar');bar.style.width=`calc(${(v/max*100).toFixed(1)}% - ${v?48:0}px)`;if(col)bar.style.background=col;
-    const pct=total?` · ${Math.round(v/total*100)}%`:'';tr.append(bar,el('span','hb-val',nf(v)+pct));row.append(l,tr);hover(row,nf(v)+' เคส'+pct,lab);wrap.append(row)});
+  const max=opt.max||Math.max(...rows.map(r=>r[1]),1),total=opt.total||0,wrap=el('div','hb');
+  rows.forEach(([lab,v,col,txt])=>{const row=el('div','hb-row'),l=el('div','hb-lab');if(col){const i=el('i');i.style.background=col;l.append(i)}l.append(el('span',null,lab));
+    const tr=el('div','hb-track'),bar=el('div','hb-bar');bar.style.width=`calc((100% - ${v?(opt.reserve||48):0}px) * ${(v/max).toFixed(4)})`;if(col)bar.style.background=col;
+    const pct=total?` · ${Math.round(v/total*100)}%`:'',shown=txt||nf(v)+pct;tr.append(bar,el('span','hb-val',shown));row.append(l,tr);hover(row,txt||nf(v)+' '+(opt.unit||'เคส')+pct,lab);wrap.append(row)});
   box.replaceChildren(wrap)}
 
 /* ---------- column chart (SVG) ---------- */
@@ -122,6 +123,35 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
   else{const t=el('table','tlist');t.innerHTML='<thead><tr><th>รอมาแล้ว</th><th>ความต้องการ</th><th class="hide-s">ที่อยู่</th><th class="n">คน</th></tr></thead>';const tb=el('tbody');
     w.forEach(c=>{const r=el('tr'),m=Math.round((Date.now()-c.createdAt)/60000);r.append(el('td',null,m<60?m+' นาที':m<1440?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':Math.floor(m/1440)+' วัน'),el('td',null,[...new Set(c.needs)].join(', ')||'-'),el('td','hide-s',[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'-'),el('td','n',nf(c.people||1)));tb.append(r)});
     t.append(tb);const a=el('a',null,'ไปที่หน้าจัดการเคส →');a.href='../../admin.html';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
+  renderStock();
+}
+
+/* ---------- สต็อก (ยอดปัจจุบัน ไม่ขึ้นกับช่วงเวลา) ---------- */
+// หน่วยของแต่ละรายการไม่เหมือนกัน (ห่อ แผง ขวด) จึงเทียบกันด้วย % ของที่เคยรับเข้า ไม่ใช่จำนวนดิบ
+const SK={out:['หมด','var(--crit)'],low:['ใกล้หมด','var(--serious)'],ok:['พอใช้','var(--s1)'],none:['ยังไม่มีของ','#9aa5aa']};
+function stockRows(){const items=(D.stock&&D.stock.items)||[],log=(D.stock&&D.stock.log)||[];
+  return items.map(i=>{const L=log.filter(x=>x.itemId===i.id),got=L.reduce((s,x)=>s+Math.max(0,Number(x.delta)||0),0),used=L.filter(x=>x.type==='out').reduce((s,x)=>s-(Number(x.delta)||0),0);
+    const qty=Number(i.qty)||0,base=Math.max(got,qty),min=i.min===''||i.min==null?null:Number(i.min),left=base?qty/base:0;
+    const st=!base?'none':qty<=0?'out':(min!=null?qty<=min:left<=.2)?'low':'ok';
+    return {...i,qty,base,used,left,st}})}
+function renderStock(){
+  const sec=$('#stock-sec');if(!D.stock){sec.hidden=true;return}sec.hidden=false;
+  const R=stockRows(),n=k=>R.filter(r=>r.st===k).length,need=R.filter(r=>r.needed),moves=(D.stock.log||[]).length;
+  $('#stock-kpis').replaceChildren(...[[nf(R.length),'รายการในสต็อก',`บันทึกรับ/จ่าย ${nf(moves)} ครั้ง`],[nf(n('out')),'หมดแล้ว','ต้องเติมด่วน',SK.out[1]],[nf(n('low')),'ใกล้หมด','เหลือไม่ถึง 20% หรือต่ำกว่าขั้นต่ำ',SK.low[1]],[nf(need.length),'ติ๊กว่าต้องการ','ของที่ขอรับบริจาค']]
+    .map(([v,t,s,col])=>{const d=el('div','kpi');d.append(el('b',null,v),el('span',null,t));const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm);return d}));
+  const has=R.filter(r=>r.base).sort((a,b)=>a.left-b.left),narrow=($('#c-left').clientWidth||800)<560;
+  hbars('#c-left',has.map(r=>[r.name,Math.round(r.left*100),r.st==='ok'?null:SK[r.st][1],narrow?`${nf(r.qty)} · ${Math.round(r.left*100)}%`:`${nf(r.qty)} ${r.unit} · เหลือ ${Math.round(r.left*100)}%${r.st==='ok'?'':' · '+SK[r.st][0]}`]),{max:100,reserve:narrow?90:170});
+  table('#tb-left',['รายการ','คงเหลือ','รับเข้ารวม','เหลือ (%)','สถานะ'],has.map(r=>[r.name,`${nf(r.qty)} ${r.unit}`,`${nf(r.base)} ${r.unit}`,Math.round(r.left*100)+'%',SK[r.st][0]]));
+  const sts=['out','low','ok','none'].map(k=>[SK[k][0],n(k),SK[k][1]]);hbars('#c-skst',sts,{total:R.length,unit:'รายการ'});table('#tb-skst',['สถานะ','รายการ'],sts.map(r=>[r[0],r[1]]));
+  const us=R.filter(r=>r.used>0&&r.base).sort((a,b)=>b.used/b.base-a.used/a.base).slice(0,10);
+  hbars('#c-used',us.map(r=>[r.name,Math.round(r.used/r.base*100),null,narrow?Math.round(r.used/r.base*100)+'%':`จ่ายไป ${nf(r.used)} ${r.unit} · ${Math.round(r.used/r.base*100)}%`]),{max:100,reserve:narrow?48:150});
+  table('#tb-used',['รายการ','จ่ายออก','รับเข้ารวม','จ่ายไป (%)'],us.map(r=>[r.name,`${nf(r.used)} ${r.unit}`,`${nf(r.base)} ${r.unit}`,Math.round(r.used/r.base*100)+'%']));
+  const todo=R.filter(r=>r.st==='out'||r.st==='low'||r.needed).sort((a,b)=>({out:0,low:1}[a.st]??2)-({out:0,low:1}[b.st]??2));
+  if(!todo.length)$('#restock').replaceChildren(el('p','empty','ยังไม่มีของที่ต้องเติม 👍'));
+  else{const t=el('table','tlist');t.innerHTML='<thead><tr><th>รายการ</th><th class="n">คงเหลือ</th><th>สถานะ</th><th class="hide-s">หมวด</th></tr></thead>';const tb=el('tbody');
+    todo.forEach(r=>{const tr=el('tr'),s=el('td'),i=el('i','dot');const k=r.st==='out'||r.st==='low'?r.st:'none';i.style.background=SK[k][1];s.append(i,(r.st==='out'||r.st==='low'?SK[r.st][0]:'')+(r.needed?(r.st==='out'||r.st==='low'?' · ':'')+'ต้องการ':''));
+      tr.append(el('td',null,r.name),el('td','n',`${nf(r.qty)} ${r.unit}`),s,el('td','hide-s',r.category||'-'));tb.append(tr)});
+    const a=el('a',null,'ไปที่หน้าสต็อก →');a.href='../stock/';const p=el('p');p.style.margin='10px 0 0';p.append(a);t.append(tb);$('#restock').replaceChildren(t,p)}
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
 if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render)}})}else showLogin();

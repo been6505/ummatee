@@ -15,7 +15,7 @@ const COVERED=(()=>{
     if(cur||row.length){row.push(cur);rows.push(row)}return rows}
   function fromCells(r){const [org,area,date,link]=r.map(x=>String(x||'').trim());return {org,area,date,link,lat:null,lng:null,approx:false}}
   /* วันที่ในชีตเขียนหลายแบบ (2/10/69, 1/10/2569, 1/10/26) → แสดงตามที่กรอก แต่แปลงเป็นเวลาไว้เรียง */
-  function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=60?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
+  function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=50?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
   const geoCache=(()=>{try{return JSON.parse(localStorage.getItem('uh_cov_geo')||'{}')}catch(e){return {}}})();
   function saveGeo(){try{localStorage.setItem('uh_cov_geo',JSON.stringify(geoCache))}catch(e){}}
   async function geocode(r){const k=norm(r.area);if(geoCache[k]!==undefined){const g=geoCache[k];if(g){r.lat=g[0];r.lng=g[1];r.approx=true}return false}
@@ -40,18 +40,23 @@ const COVERED=(()=>{
   function distM(a,b,c,d){const R=6371e3,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
   /* คำสำคัญจากชื่อพื้นที่: ชื่อซอย/ถนน/ชุมชน + เลขซอย (เช่น "บึงขวาง 3", "อ่อนนุช 61", "หลวงแพ่ง") */
   const STOP=/^(ชุมชน|หมู่บ้าน|มัสยิด|สุเหร่า|โรงเรียน|ซอย|ถนน|เขต|แขวง|แยก|พื้นที่|และ|ชุด|ศูนย์พักพิงชั่วคราว|ร้านข้าวเช้า|มูลนิธิ)$/;
-  function keys(n){const out=new Set();const t=n.replace(/[(),]/g,' ');
-    (t.match(/[ก-๙a-z]{3,}\s*\d+(\s*แยก\s*\d+)?/g)||[]).forEach(x=>out.add(x.replace(/ชุมชน|หมู่บ้าน|ซอย|ถนน/g,' ').replace(/\s+/g,' ').trim()));
+  const GENERIC=/^(โซน|แฟลต|แยก|หมู่|หมู่ที่|เลขที่|คลอง|เขต|พื้นที่|อาคาร|ตึก|ชั้น|บ้าน|ห้อง)$/;
+  function keys(n){const out=new Set();const t=n.replace(/\d+\s*ชุด/g,' ').replace(/[(),]/g,' ').replace(/พื้นที่\s*\d+/g,' ').replace(/ชุมชน|หมู่บ้าน|ซอย|ถนน|และแยก|และ/g,' ');
+    (t.match(/[ก-๙a-z]{3,}\s*\d+(\s*แยก\s*\d+)?/g)||[]).forEach(x=>{const k=x.replace(/\s+/g,' ').trim();if(!GENERIC.test(k.replace(/\s*\d.*$/,'')))out.add(k)});
     return [...out].filter(k=>k.length>=4&&!STOP.test(k))}
+  /* ที่อยู่มีคำสำคัญนี้ไหม (เลขต้องไม่ติดเลขอื่น เช่น "บึงขวาง 8" ไม่ตรงกับ "บึงขวาง 81") */
+  function hasKey(addr,k){const a=addr.replace(/\s+/g,''),m=k.replace(/\s+/g,'').match(/^([^\d]+)(\d.*)$/);if(!m)return '';
+    /* ภาษาไทยไม่เว้นวรรค: ชื่อในชีตอาจมีคำนำหน้าติดมา ("อาปาเช่อ่อนนุช 46") จึงลองตัดหน้าทีละตัว เหลืออย่างน้อย 6 ตัวอักษร */
+    for(let L=m[1].length;L>=Math.min(6,m[1].length);L--){const kk=m[1].slice(-L)+m[2];let i=a.indexOf(kk);while(i>=0){if(!/\d/.test(a.charAt(i+kk.length)))return (m[1].slice(-L)+' '+m[2]).replace(/(\d)แยก(\d)/,'$1 แยก $2');i=a.indexOf(kk,i+1)}}return ''}
   function match(c){
     if(!C.rows.length)return null;const hits=[];
     const has=c.lat!==''&&c.lat!=null&&isFinite(+c.lat);
     if(has)C.rows.forEach(r=>{if(r.lat==null)return;const d=distM(+c.lat,+c.lng,r.lat,r.lng);if(d<=(r.approx?NEAR_M*1.5:NEAR_M))hits.push({r,d,how:r.approx?'ใกล้ (พิกัดโดยประมาณ)':'ใกล้'})});
     const addr=norm([c.address,c.district].filter(Boolean).join(' ')).replace(/ซอย|ถนน/g,' ');
-    if(addr.length>=4)C.rows.forEach(r=>{if(hits.some(h=>h.r===r))return;const k=keys(r.n).find(k=>addr.replace(/\s+/g,'').includes(k.replace(/\s+/g,'')));if(k)hits.push({r,d:null,how:'ชื่อพื้นที่คล้ายกัน "'+k+'" (อาจเป็นที่เดียวกัน)'})});
+    if(addr.length>=4)C.rows.forEach(r=>{if(hits.some(h=>h.r===r))return;let k='';keys(r.n).forEach(x=>{const h=hasKey(addr,x);if(h.length>k.length)k=h});if(k)hits.push({r,d:null,len:k.length,how:'ชื่อพื้นที่คล้ายกัน "'+k+'" (อาจเป็นที่เดียวกัน)'})});
     if(!hits.length)return null;
-    hits.sort((a,b)=>(a.d==null?1e9:a.d)-(b.d==null?1e9:b.d)||b.r.t-a.r.t);
+    hits.sort((a,b)=>(a.d==null?1e9:a.d)-(b.d==null?1e9:b.d)||(b.len||0)-(a.len||0)||b.r.t-a.r.t);
     return {best:hits[0],all:hits};
   }
-  return {C,load,match,SHEET_URL,distM};
+  return {C,load,match,SHEET_URL,distM,keys};
 })();

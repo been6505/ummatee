@@ -348,6 +348,37 @@ async function backupStatus(env) {
     lastBackupAt: Number(await getMeta(db, 'backup_at')) || null, lastError: await getMeta(db, 'backup_error') };
 }
 
+/* พื้นที่ที่องค์กรอื่นรับแล้ว: อ่านจาก Google Sheet ที่แชร์แบบ "ทุกคนที่มีลิงก์" แล้วแปลงลิงก์ Google Maps (maps.app.goo.gl) เป็นพิกัด
+   แคชผลรวม 5 นาที และแคชพิกัดของแต่ละลิงก์ถาวรใน meta (ลิงก์เดิมไม่ต้อง resolve ซ้ำ) */
+const COVERED_SHEET = '1QwVsFfWqNBP8qJMBBk_PrvbSm6gNFOF0CGwJl5BNaFc';
+function parseCSV(t) { const rows = []; let row = [], cur = '', q = false; for (let i = 0; i < t.length; i++) { const ch = t[i];
+  if (q) { if (ch === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; } else if (ch === '"') q = true; else if (ch === ',') { row.push(cur); cur = ''; }
+  else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; row.push(cur); cur = ''; rows.push(row); row = []; } else cur += ch; }
+  if (cur || row.length) { row.push(cur); rows.push(row); } return rows; }
+function coordsFromUrl(u) { u = decodeURIComponent(String(u || ''));
+  const pats = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/, /\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/];
+  for (const re of pats) { const m = u.match(re); if (m) { const a = +m[1], b = +m[2]; if (a > 5 && a < 21 && b > 97 && b < 106) return [a, b]; } } return null; }
+async function resolveMapLink(db, link) {
+  if (!/^https?:\/\//.test(link)) return null; const k = 'covlink:' + link; const c = await getMeta(db, k);
+  if (c) return c === '-' ? null : JSON.parse(c);
+  let u = link, ll = coordsFromUrl(u);
+  for (let i = 0; i < 4 && !ll; i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (UMPlus relief map)' } });
+    const loc = r.headers.get('location'); if (loc) { u = new URL(loc, u).toString(); ll = coordsFromUrl(u); continue; }
+    if (r.ok) { const t = (await r.text()).slice(0, 200000); ll = coordsFromUrl(t.match(/https:\/\/www\.google\.[^"' ]*@-?\d+\.\d+,-?\d+\.\d+[^"' ]*/)?.[0] || t.match(/center=-?\d+\.\d+%2C-?\d+\.\d+/)?.[0]?.replace('%2C', ',') || ''); }
+    break; } catch (e) { return null; } }
+  await setMeta(db, k, ll ? JSON.stringify(ll) : '-'); return ll; }
+async function listCovered(db) {
+  const c = await getMeta(db, 'covered_cache'); if (c) { try { const o = JSON.parse(c); if (Date.now() - o.t < 5 * 60e3) return { ok: true, items: o.items, cached: true }; } catch (e) {} }
+  const r = await fetch('https://docs.google.com/spreadsheets/d/' + COVERED_SHEET + '/gviz/tq?tqx=out:csv');
+  if (!r.ok) return { ok: false, error: 'sheet_' + r.status };
+  const rows = parseCSV(await r.text()).slice(1).filter(x => x[1] && String(x[1]).trim());
+  const items = [];
+  for (const x of rows) { const [org, area, date, link] = x.map(v => String(v || '').trim()); const ll = link ? await resolveMapLink(db, link) : null;
+    items.push({ org, area, date, link, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
+  await setMeta(db, 'covered_cache', JSON.stringify({ t: Date.now(), items }));
+  return { ok: true, items };
+}
+
 async function api(request, env) {
   const db = env.DB;
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -371,6 +402,7 @@ async function api(request, env) {
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
+      case 'covered': return json(vol ? await listCovered(db) : { ok: false, error: 'not_volunteer' });
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }

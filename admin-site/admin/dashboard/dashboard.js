@@ -24,7 +24,7 @@ async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}
 function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;$('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
-  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();load();poll();VERIFY.load().then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
+  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();load();poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
   catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
 $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';D.cases=[];showLogin('ออกจากระบบแล้ว')});
 
@@ -101,9 +101,13 @@ async function drawMap(L0){
   if(F&&M.floodAt!==F.loaded){M.floodAt=F.loaded;M.flood.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#c62828':v==='risky'||d>=30?'#ef6c00':v==='caution'||d>=10?'#f9a825':'#1e88e5';
     r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.8}).bindTooltip(`${escT(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(M.flood))})}
   if($('#mt-flood').checked)M.flood.addTo(M.map);else M.flood.remove();
+  if(typeof COVERED!=='undefined'){if(!M.cov)M.cov=L.layerGroup();if(M.covAt!==COVERED.C.loaded){M.covAt=COVERED.C.loaded;M.cov.clearLayers();
+    COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>{L.circle([r.lat,r.lng],{radius:r.approx?900:600,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.12,dashArray:r.approx?'4 4':null}).addTo(M.cov);
+      L.circleMarker([r.lat,r.lng],{radius:6,color:'#fff',weight:2,fillColor:'#7b3fc4',fillOpacity:1}).bindPopup(`<b>🤝 ${escT(r.org)}</b><br>${escT(r.area)}<br>วันที่ ${escT(r.date)}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${escT(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov)})}
+    if($('#mt-cov').checked)M.cov.addTo(M.map);else M.cov.remove()}
   setTimeout(()=>M.map.invalidateSize(),60);
 }
-['#mt-done','#mt-flood'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
+['#mt-done','#mt-flood','#mt-cov'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
 /* ---------- render ---------- */
 function render(){
@@ -183,4 +187,4 @@ function renderStock(){
     const a=el('a',null,'ไปที่หน้าสต็อก →');a.href='../stock/';const p=el('p');p.style.margin='10px 0 0';p.append(a);t.append(tb);$('#restock').replaceChildren(t,p)}
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
-if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render)}})}else showLogin();
+if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}})}else showLogin();

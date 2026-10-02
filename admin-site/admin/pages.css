@@ -122,3 +122,5 @@
 .kit-row select,.kit-row input{border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;font-size:15px;background:#fff;width:100%}
 #pack-f[hidden]{display:none}
 @media(max-width:700px){.kit-box{margin:0 10px 30px;padding:12px}.kit-t th:nth-child(3),.kit-t td:nth-child(3){display:none}}
+
+.cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}

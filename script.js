@@ -1,3 +1,6 @@
+/* จำนวนครัวเรือน: คอลัมน์ households (Code.gs ใหม่) หรืออ่านจาก [ครัวเรือน N] ในรายละเอียด (Code.gs เดิม) */
+function hhOf(c){const n=Number(c&&c.households);if(n>0)return n;const m=String(c&&c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?Number(m[1]):0}
+const stripHH=t=>String(t||'').replace(/^\[ครัวเรือน \d+\]\s*/,'');
 /* ============================================================
    UM+ — เชื่อมกับ Google Sheet ผ่าน Apps Script Web app
    ============================================================ */
@@ -28,7 +31,7 @@ function fsValue(v){
   return {stringValue:String(v??'')};
 }
 async function fbInboxCreate(data,clientId,token){
-  const keep=['level','needs','urgencyLabel','people','address','lat','lng','phone','name','details','website'];
+const keep=['level','needs','urgencyLabel','people','households','address','lat','lng','phone','name','details','website'];
   const fields={clientId:fsValue(clientId),token:fsValue(token),sentAt:fsValue(new Date())};
   keep.forEach(k=>{const v=data[k];if(v===''&&(k==='lat'||k==='lng'))return;if(v!=null)fields[k]=fsValue(v)});
   const url=`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE.projectId)}/databases/(default)/documents/inbox?documentId=${encodeURIComponent(clientId)}&key=${encodeURIComponent(FIREBASE.apiKey)}`;
@@ -103,7 +106,7 @@ function caseCard(c){
   const st=statusEl(c);
   const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
   top.append(st,t);
-  const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน';
+  const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน'+(hhOf(c)?' · 🏠 '+hhOf(c)+' ครัวเรือน':'');
   const h=document.createElement('h3');h.className='case-needs';h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
   const ad=document.createElement('p');ad.className='case-addr';const at=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');ad.textContent='📍 '+(at||'ไม่ระบุที่อยู่');if(!at)ad.classList.add('none');
   const ct=document.createElement('p');ct.className='case-contact';const ctt=[c.name?'👤 '+c.name:'',c.phone?'☎ '+c.phone:''].filter(Boolean).join('   ');ct.textContent=ctt;
@@ -119,7 +122,7 @@ function searchQuery(){const i=$('#case-search');return i?srchNorm(i.value.trim(
 function caseHay(c){
   const d=c.createdAt?new Date(Number(c.createdAt)||c.createdAt):null,dt=d&&!isNaN(d)?d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long'})+' '+d.getDate()+'/'+(d.getMonth()+1):'';
   const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,Array.isArray(c.vulnerable)?c.vulnerable.join(' '):c.vulnerable,
-    statusLabel(c),STATUS_TH[c.status],critLabel(c),c.level,c.level?'น้ำ'+(LEVEL_TH[c.level]||c.level)+' ระดับ'+(LEVEL_TH[c.level]||''):'',c.people?c.people+' คน':'',dt,c.lat&&c.lng?(+c.lat).toFixed(4)+','+(+c.lng).toFixed(4):'',c.createdBy,c.contact,c.reporter];
+    statusLabel(c),STATUS_TH[c.status],critLabel(c),c.level,c.level?'น้ำ'+(LEVEL_TH[c.level]||c.level)+' ระดับ'+(LEVEL_TH[c.level]||''):'',c.people?c.people+' คน':'',hhOf(c)?hhOf(c)+' ครัวเรือน':'',dt,c.lat&&c.lng?(+c.lat).toFixed(4)+','+(+c.lng).toFixed(4):'',c.createdBy,c.contact,c.reporter];
   return srchNorm(parts.filter(Boolean).join(' '))}
 function normDigits(x){let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d=d.slice(2);return d.replace(/^0+/,'')}
 function caseMatches(c,q){const hay=caseHay(c),hayS=hay.replace(/\s+/g,''),nm=srchNorm(c.name).replace(/\s+/g,''),digits=normDigits(c.phone);
@@ -323,7 +326,7 @@ function drawCaseMarkers(){
     const icon=L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36],popupAnchor:[0,-32]});
     pts.push([c.lat,c.lng]);
     L.marker([c.lat,c.lng],{icon,zIndexOffset:1000,title:caseTitle(c)})
-      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}${(c.name||c.phone)?'<br>'+(c.name?'👤 '+escH(c.name)+' ':'')+(c.phone?(isVolunteer&&String(c.phone).replace(/[^\d+]/g,'').length>=9?'☎ <a href="tel:'+escH(String(c.phone).replace(/[^\d+]/g,''))+'">'+escH(c.phone)+'</a>':'☎ '+escH(c.phone)):''):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>${c.status!=='done'?`<br><a href="#" class="pop-trip" data-trip-add="${escH(c.id)}">${typeof tripIndex==='function'&&tripIndex(c.id)>=0?'✓ อยู่ในแผนเดินทาง (แตะเพื่อเอาออก)':'➕ เพิ่มในแผนเดินทาง'}</a>`:''}`)
+      .bindPopup(`<b style="color:${critLevel(c)==='red'?'#c62828':critLevel(c)==='orange'?'#c25e00':'#a67c00'}">${escH(critLabel(c))}</b> · <b>${escH(statusLabel(c))}</b><br>${escH((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${escH(c.people||1)} คน${hhOf(c)?' · '+hhOf(c)+' ครัวเรือน':''}${c.level&&typeof LEVEL_TH!=='undefined'?'<br>ระดับน้ำ: '+escH(LEVEL_TH[c.level]||c.level):''}${(c.address||c.district)?'<br>📍 '+escH([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')):''}${(c.name||c.phone)?'<br>'+(c.name?'👤 '+escH(c.name)+' ':'')+(c.phone?(isVolunteer&&String(c.phone).replace(/[^\d+]/g,'').length>=9?'☎ <a href="tel:'+escH(String(c.phone).replace(/[^\d+]/g,''))+'">'+escH(c.phone)+'</a>':'☎ '+escH(c.phone)):''):''}<br><a href="#" data-open-case="${escH(c.id)}">ดูรายละเอียด →</a>${c.status!=='done'?`<br><a href="#" class="pop-trip" data-trip-add="${escH(c.id)}">${typeof tripIndex==='function'&&tripIndex(c.id)>=0?'✓ อยู่ในแผนเดินทาง (แตะเพื่อเอาออก)':'➕ เพิ่มในแผนเดินทาง'}</a>`:''}`)
       .addTo(pinLayer);
   });
   if(!floodFitted&&pts.length){fmap.fitBounds(pts,{padding:[40,40],maxZoom:14});floodFitted=true}
@@ -363,7 +366,7 @@ function renderDetail(){
   title.append(status,h,muted);head.append(title);
   const card=document.createElement('div');card.className='detail-card';
   const facts=document.createElement('div');facts.className='detail-facts';
-  const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];
+  const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],...(hhOf(c)?[['ครัวเรือน / ครอบครัว',hhOf(c)+' ครัวเรือน']]:[]),['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];
   if(c.address&&c.district)rows.push(['ที่อยู่ / จุดสังเกต',c.address]);
   if(c.name)rows.push(['ผู้ติดต่อ',c.name]);
   if(c.level)rows.push(['ระดับน้ำ',LEVEL_TH[c.level]||c.level]);
@@ -391,7 +394,7 @@ function renderDetail(){
       requestAnimationFrame(()=>m.invalidateSize());setTimeout(()=>m.invalidateSize(),300);
     }).catch(()=>{mp.textContent='โหลดแผนที่ไม่สำเร็จ'});
   }else{const np=document.createElement('p');np.className='detail-nopin';np.textContent='ผู้แจ้งไม่ได้ปักหมุดตำแหน่ง';const addrP=card.querySelector(':scope > p');if(addrP)addrP.after(np);else card.prepend(np)}
-  if(isVolunteer&&c.notes){const h2=document.createElement('h2');h2.textContent='สถานการณ์';const p=document.createElement('p');p.textContent=c.notes;card.append(h2,p)}
+  if(isVolunteer&&stripHH(c.notes)){const h2=document.createElement('h2');h2.textContent='สถานการณ์';const p=document.createElement('p');p.textContent=stripHH(c.notes);card.append(h2,p)}
   const actions=document.createElement('div');actions.className='detail-actions';
   if(hasPin(c)){const a=document.createElement('a');a.className='secondary-button';a.textContent='นำทางด้วย Google Maps ↗';a.href=`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`;a.target='_blank';a.rel='noopener';actions.append(a)}
   if(typeof tripButton==='function'&&hasPin(c)&&c.status!=='done')actions.append(tripButton(c));
@@ -443,12 +446,12 @@ $('#request-form').addEventListener('submit',e=>{
   if(!address&&!geo){e.currentTarget.address.focus();return}
   pendingRequest={
     level:(document.querySelector('input[name=level]:checked')||{}).value||'',
-    needs:checked,urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,
+    needs:checked,urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,households:Math.max(1,Math.min(999,Number(form.get('households'))||1)),
     address,lat:geo?+geo.lat.toFixed(6):'',lng:geo?+geo.lng.toFixed(6):'',
-    phone,name:String(form.get('name')||'').trim(),details:String(form.get('details')||'').trim(),
+    phone,name:String(form.get('name')||'').trim(),details:[`[ครัวเรือน ${Math.max(1,Math.min(999,Number(form.get('households'))||1))}]`,String(form.get('details')||'').trim()].filter(Boolean).join(' '),
     website:String(form.get('website')||'')
   };
-  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ระดับน้ำ',LEVEL_TH[pendingRequest.level]||''],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['สถานการณ์',pendingRequest.details],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
+  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ระดับน้ำ',LEVEL_TH[pendingRequest.level]||''],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['ครัวเรือน / ครอบครัว',`${pendingRequest.households} ครัวเรือน`],['สถานการณ์',pendingRequest.details.replace(/^\[ครัวเรือน \d+\]\s*/,'')],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
   const summary=$('#summary-content');
   summary.replaceChildren(...rows.filter(([,val])=>val).map(([key,val])=>{const row=document.createElement('div');row.className='summary-row';const s=document.createElement('span');s.textContent=key;const v=document.createElement('strong');v.textContent=val;row.append(s,v);return row}));
   $('#send-result').hidden=true;$('#summary-actions').hidden=false;$('#send-request').disabled=false;$('#send-request').textContent='ส่งคำขอความช่วยเหลือ';

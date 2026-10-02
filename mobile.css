@@ -390,3 +390,5 @@ html,body{overflow-x:hidden}.case-list,.cases-main,.cases-side{min-width:0;max-w
 .trip-auto-big small{font-size:12px;color:#4d6f69}.trip-empty-note{display:block;font-size:12px;color:#6b818c;margin:6px 4px 0}
 .trip-btns{flex:1 1 100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}.trip-btns .secondary-button{min-height:44px;font-size:14px}
 .trip-head small.flash{color:#0a5b51;font-weight:700}
+.form-row.form-row-even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.form-row-even+.field-hint{margin:8px 0 16px}

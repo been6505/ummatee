@@ -1,5 +1,6 @@
-/* UM+ บน Cloudflare Pages (โหมด _worker.js) — API แทน Google Apps Script + ฐานข้อมูล D1
-   ต้องตั้งค่าในโปรเจกต์ Pages: D1 binding ชื่อ DB และ Secret ชื่อ VOLUNTEER_KEY
+/* UM+ บน Cloudflare Workers — API แทน Google Apps Script + ฐานข้อมูล D1
+   ใช้ร่วมกัน 2 Worker: ummatee-help (หน้าประชาชน) และ admin-um-help (หลังบ้าน) ผูก D1 ตัวเดียวกันชื่อ DB
+   Secret: VOLUNTEER_KEY (รหัสทีม), SHEET_BACKUP_URL + SHEET_BACKUP_KEY (สำรองลง Google Sheet ทุก 1 นาที)
    รูปแบบคำขอเหมือน Code.gs เดิมทุกอย่าง: GET /api?action=... และ POST /api (JSON) */
 
 const STATUSES = ['open', 'going', 'done'];
@@ -28,8 +29,16 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS places (id TEXT PRIMARY KEY, type TEXT, name TEXT, lat REAL, lng REAL, phone TEXT, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS roster (id TEXT PRIMARY KEY, name TEXT, leader TEXT, phone TEXT, members INTEGER, vehicle TEXT, zone TEXT, status TEXT, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS stock (id TEXT PRIMARY KEY, name TEXT, unit TEXT, category TEXT, qty INTEGER, min INTEGER, needed INTEGER, note TEXT, updatedAt INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`
+  `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`,
+  // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
+  `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`
 ];
+const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n' };
+const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
+for (const [t, k] of Object.entries(BACKUP_TABLES)) {
+  SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_ins AFTER INSERT ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
+  if (t !== 'stock_log') SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_upd AFTER UPDATE ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
+}
 let ready = null;
 async function init(db) {
   if (!ready) ready = (async () => {
@@ -40,6 +49,11 @@ async function init(db) {
       const now = Date.now();
       await db.batch(STOCK_SEED.map((x, i) => db.prepare('INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt) VALUES (?,?,?,?,0,NULL,?,?,?)')
         .bind('S' + String(i + 1).padStart(2, '0'), x[0], x[1], x[2], x[0] === 'รองเท้าบูท' ? 1 : 0, '', now)));
+    }
+    // ครั้งแรกที่เปิดระบบสำรอง: ใส่ทุกแถวที่มีอยู่แล้วเข้าคิว จะได้สำรองครบ
+    if (!await getMeta(db, 'backup_seeded')) {
+      await db.batch(Object.entries(BACKUP_TABLES).map(([t, k]) => db.prepare(`INSERT INTO sync_queue (tbl,rid) SELECT '${t}', ${k} FROM ${t}`)));
+      await setMeta(db, 'backup_seeded', String(Date.now()));
     }
   })().catch(e => { ready = null; throw e; });
   return ready;
@@ -71,6 +85,8 @@ function caseId() {
   const g = t => (p.find(x => x.type === t) || {}).value || '00';
   return 'C' + g('month') + g('day') + g('hour').replace('24', '00') + g('minute') + '-' + rand(2).toUpperCase();
 }
+async function getMeta(db, k) { const r = await db.prepare('SELECT v FROM meta WHERE k=?').bind(k).first(); return r ? r.v : ''; }
+async function setMeta(db, k, v) { await db.prepare('INSERT INTO meta (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, String(v)).run(); }
 async function bumpRev(db) { await db.prepare("INSERT INTO meta (k,v) VALUES ('rev',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v").bind(String(Date.now())).run(); }
 const km = (a, b, c, d) => { const R = 6371, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -247,6 +263,46 @@ async function importCases(db, b) {
   return { ok: true, added, total: rows.length };
 }
 
+/* ---------- สำรองลง Google Sheet ---------- */
+async function backupToSheet(env) {
+  const db = env.DB;
+  if (!db) return { ok: false, error: 'no_database' };
+  if (!env.SHEET_BACKUP_URL || !env.SHEET_BACKUP_KEY) return { ok: false, error: 'backup_not_configured' };
+  await init(db);
+  const { results: q } = await db.prepare('SELECT n,tbl,rid FROM sync_queue ORDER BY n LIMIT 1000').all();
+  if (!q.length) return { ok: true, sent: 0 };
+  const byTable = {};
+  for (const r of q) if (BACKUP_TABLES[r.tbl]) (byTable[r.tbl] = byTable[r.tbl] || new Set()).add(r.tbl === 'stock_log' ? Number(r.rid) : String(r.rid));
+  const tables = {};
+  let sent = 0;
+  for (const [t, ids] of Object.entries(byTable)) {
+    const k = BACKUP_TABLES[t], all = [...ids], rows = [];
+    for (let i = 0; i < all.length; i += 90) {
+      const part = all.slice(i, i + 90);
+      const { results } = await db.prepare(`SELECT * FROM ${t} WHERE ${k} IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+      rows.push(...results);
+    }
+    tables[t] = rows.map(r => { const o = { ...r }; for (const c of BACKUP_OMIT[t] || []) delete o[c]; return o; });
+    sent += rows.length;
+  }
+  let res;
+  try {
+    const r = await fetch(env.SHEET_BACKUP_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ key: env.SHEET_BACKUP_KEY, tables }) });
+    try { res = await r.json(); } catch (e) { res = { ok: false, error: 'bad_response_' + r.status }; }
+  } catch (e) { res = { ok: false, error: 'fetch_failed: ' + String(e && e.message || e).slice(0, 120) }; }
+  if (!res.ok) { await setMeta(db, 'backup_error', new Date().toISOString() + ' ' + (res.error || 'unknown')); return res; }
+  await db.prepare('DELETE FROM sync_queue WHERE n<=?').bind(q[q.length - 1].n).run();
+  await setMeta(db, 'backup_at', Date.now());
+  await setMeta(db, 'backup_error', '');
+  return { ok: true, sent, more: q.length === 1000 };
+}
+async function backupStatus(env) {
+  const db = env.DB;
+  const pending = await db.prepare('SELECT COUNT(*) n FROM sync_queue').first();
+  return { ok: true, configured: !!(env.SHEET_BACKUP_URL && env.SHEET_BACKUP_KEY), pending: pending.n,
+    lastBackupAt: Number(await getMeta(db, 'backup_at')) || null, lastError: await getMeta(db, 'backup_error') };
+}
+
 async function api(request, env) {
   const db = env.DB;
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -269,6 +325,7 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }
   }
@@ -278,6 +335,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, import_cases: importCases };
+    if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });
       return json(await needKey[b.action](db, b));
@@ -293,7 +351,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.[a-z0-9-]+\.workers\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }
@@ -302,5 +360,11 @@ export default {
       return res;
     }
     return env.ASSETS.fetch(request);
+  },
+  // cron (ตั้งใน wrangler config): ส่งแถวที่เปลี่ยนไป Google Sheet ส่งต่อจนคิวหมด สูงสุด 5 รอบต่อครั้ง
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      for (let i = 0; i < 5; i++) { const r = await backupToSheet(env); if (!r.ok || !r.more) break; }
+    })());
   }
 };

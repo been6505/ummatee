@@ -1,19 +1,17 @@
-// ตั้งค่า Cloudflare Workers (Workers Builds จาก GitHub branch "cloudflare")
-// - หน้าเว็บทั้งหมดเป็น static assets, ส่วน /api ให้ _worker.js จัดการ
-// - ฐานข้อมูล D1 ชื่อ ummatee-db ผูกเป็น DB (ไม่ใส่ database_id: wrangler สร้าง/ผูกให้อัตโนมัติตอน deploy)
+// Worker หน้าประชาชน: ummatee-help (Workers Builds จาก branch "cloudflare" ใช้ไฟล์นี้)
+// หน้าเว็บอยู่ใน public-site/ ส่วน /api ให้ src/worker.js จัดการ ใช้ D1 ตัวเดียวกับหลังบ้าน
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ummatee-help",
-  "main": "_worker.js",
+  "main": "src/worker.js",
   "compatibility_date": "2025-09-01",
   "assets": {
-    "directory": ".",
+    "directory": "./public-site",
     "binding": "ASSETS",
-    "run_worker_first": ["/api", "/api/*"],
-    "not_found_handling": "none"
+    "run_worker_first": ["/api", "/api/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "ummatee-db" }
+    { "binding": "DB", "database_name": "ummatee-db", "database_id": "__D1_ID__" }
   ],
   "observability": { "enabled": true }
 }

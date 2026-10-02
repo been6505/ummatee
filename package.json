@@ -1,0 +1,12 @@
+{
+  "name": "umplus-cloudflare",
+  "private": true,
+  "scripts": {
+    "dev:public": "wrangler dev",
+    "dev:admin": "wrangler dev -c wrangler.admin.jsonc",
+    "deploy:public": "wrangler deploy",
+    "deploy:admin": "wrangler deploy -c wrangler.admin.jsonc",
+    "deploy": "wrangler deploy && wrangler deploy -c wrangler.admin.jsonc"
+  },
+  "devDependencies": { "wrangler": "^4" }
+}

@@ -1,0 +1,18 @@
+// Worker หลังบ้าน: admin-um-help  →  deploy ด้วย  npx wrangler deploy -c wrangler.admin.jsonc
+// หน้าหลังบ้านอยู่ใน admin-site/ ใช้ D1 ตัวเดียวกับหน้าประชาชน และเป็นตัวที่รัน cron สำรองข้อมูลลง Google Sheet
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "admin-um-help",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./admin-site",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api", "/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "ummatee-db", "database_id": "__D1_ID__" }
+  ],
+  "triggers": { "crons": ["* * * * *"] },
+  "observability": { "enabled": true }
+}

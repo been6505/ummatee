@@ -13,7 +13,14 @@ const COVERED=(()=>{
     if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur=''}
     else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur='';rows.push(row);row=[]}else cur+=ch}
     if(cur||row.length){row.push(cur);rows.push(row)}return rows}
-  function fromCells(r){const [org,area,date,link]=r.map(x=>String(x||'').trim());return {org,area,date,link,lat:null,lng:null,approx:false}}
+  /* จัดข้อมูลให้เป็นแบบเดียวกันแม้ชีตกรอกต่างกัน: แยก "เขตxxx" และ "N ชุด" ออกจากชื่อพื้นที่, ปีเป็น พ.ศ. 4 หลัก, ตัดส่วนท้ายลิงก์ */
+  function fromCells(r){let [org,area,date,link,district,sets,note]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
+    if(!sets){const m=area.match(/(\d[\d,]*)\s*ชุด/);if(m){sets=m[1];area=area.replace(m[0],' ')}}
+    if(!district){const m=area.match(/เขต\s*([ก-๙]+)\s*$/);if(m&&area.length-m[0].length>=4){district=m[1];area=area.slice(0,m.index)}}
+    district=String(district||'').replace(/^เขต\s*/,'');area=area.replace(/\s+/g,' ').trim();
+    const d=date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(d){let y=+d[3];if(y<100)y=y>=50?2500+y:y+2543;else if(y<2400)y+=543;date=d[1]+'/'+d[2]+'/'+y;const now=new Date().getFullYear()+543;if(Math.abs(y-now)>1)note=(note?note+' · ':'')+'ปี '+y+' อาจพิมพ์ผิด ตรวจในชีต'}
+    link=link.replace(/\?g_st=\w+$/,'');
+    return {org,area,date,link,district,sets:sets||'',note:note||'',lat:null,lng:null,approx:false}}
   /* วันที่ในชีตเขียนหลายแบบ (2/10/69, 1/10/2569, 1/10/26) → แสดงตามที่กรอก แต่แปลงเป็นเวลาไว้เรียง */
   function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=50?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
   const geoCache=(()=>{try{return JSON.parse(localStorage.getItem('uh_cov_geo')||'{}')}catch(e){return {}}})();
@@ -26,7 +33,7 @@ const COVERED=(()=>{
     if(C.loading)return C.loading;if(C.loaded&&Date.now()-C.loaded<5*60e3)return;
     C.loading=(async()=>{
       let rows=null;
-      if(apiUrl&&apiUrl.charAt(0)==='/'){try{const j=await fetch(apiUrl+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Date.now()).then(x=>x.json());if(j&&j.ok&&Array.isArray(j.items)){rows=j.items;C.source='api'}}catch(e){}}
+      if(apiUrl&&apiUrl.charAt(0)==='/'){try{const j=await fetch(apiUrl+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Date.now()).then(x=>x.json());if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>Object.assign(fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note]),{lat:it.lat,lng:it.lng}));C.source='api'}}catch(e){}}
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);rows=all.slice(1).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});

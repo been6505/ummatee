@@ -398,3 +398,13 @@ a.action-card{text-decoration:none}
 /* บุคคลที่ต้องดูแลเป็นพิเศษ */
 .vul-grid span{font-size:14px;line-height:1.35}
 .case-vul{display:inline-block;margin-top:4px;font-size:13px;color:#a2402f;font-weight:600}
+/* ตรวจข้อมูลครบก่อนส่ง */
+.req{color:#c63d42;font-weight:700}
+.form-missing{background:#fff1e0;border:1px solid #f2d9bc;color:#7a4b12;border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.5}
+.form-missing strong{display:block;margin-bottom:4px;color:#8c3a12}
+.form-missing ul{margin:0;padding-left:18px}.form-missing li{margin:2px 0}
+.form-missing button{border:0;background:none;padding:2px 0;color:#8c3a12;text-decoration:underline;font:inherit;text-align:left;cursor:pointer}
+.form-missing.ok{background:#e4f4e9;border-color:#bfe3cb;color:#1f6b3a}
+#request-submit:disabled{background:#b9c6ca;color:#fff;cursor:not-allowed}
+.is-missing{border-radius:12px;box-shadow:0 0 0 2px #e8a33d;padding:6px;background:#fffaf2}
+.field.is-missing input{border-color:#e8a33d}

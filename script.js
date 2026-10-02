@@ -438,15 +438,44 @@ function alertInline(anchor,msg){const p=document.createElement('p');p.className
 
 /* ---------------- request form ---------------- */
 let pendingRequest=null;
+/* ตรวจข้อมูลครบก่อนส่ง: ปุ่มกดไม่ได้จนกว่าจะครบ และบอกว่าขาดอะไร */
+function formMissing(){
+  const f=$('#request-form'),miss=[],v=n=>String((f.elements[n]||{}).value||'').trim();
+  if(!document.querySelector('#needs input:checked'))miss.push(['needs','ความช่วยเหลือที่ต้องการ (เลือกอย่างน้อย 1 ข้อ)']);
+  if(!document.querySelector('input[name=level]:checked'))miss.push(['levels','ระดับน้ำตอนนี้']);
+  if(!(Number(v('people'))>=1))miss.push(['people','จำนวนคน']);
+  if(!(Number(v('households'))>=1))miss.push(['households','จำนวนครัวเรือน / ครอบครัว']);
+  const mapDown=!$('#map-error').hidden;
+  if(!geo&&!mapDown)miss.push(['request-map','ตำแหน่ง (กด "ใช้ตำแหน่งปัจจุบัน" หรือแตะแผนที่เพื่อปักหมุด)']);
+  if(!v('address'))miss.push(['address','จุดสังเกต / ที่อยู่']);
+  if(!v('name'))miss.push(['name','ชื่อผู้ติดต่อ']);
+  const d=v('phone').replace(/\D/g,'');if(d.length<9||d.length>12)miss.push(['phone',d?'เบอร์โทร (ต้องมี 9–10 หลัก)':'เบอร์โทรติดต่อกลับ']);
+  return miss;
+}
+let formTouched=false;
+function fieldEl(k){return document.getElementById(k)||$('#request-form').elements[k]}
+function sectionOf(k){const e=fieldEl(k);return e&&(e.closest('.field')||e.closest('.form-section'))}
+function renderFormCheck(){
+  const box=$('#form-missing'),btn=$('#request-submit');if(!box||!btn)return;
+  const miss=formMissing();btn.disabled=miss.length>0;btn.setAttribute('aria-disabled',String(miss.length>0));
+  document.querySelectorAll('#request-form .is-missing').forEach(x=>x.classList.remove('is-missing'));
+  if(!miss.length){box.className='form-missing ok';box.textContent='✓ กรอกข้อมูลครบแล้ว กด "ถัดไป" เพื่อตรวจข้อมูลก่อนส่ง';return}
+  if(formTouched)miss.forEach(([k])=>{const sec=sectionOf(k);if(sec)sec.classList.add('is-missing')});
+  box.className='form-missing';box.replaceChildren();
+  const h=document.createElement('strong');h.textContent=`กรุณากรอกข้อมูลให้ครบ (ยังขาด ${miss.length} รายการ)`;box.append(h);
+  const ul=document.createElement('ul');miss.forEach(([k,t])=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.textContent=t;
+    b.onclick=()=>{formTouched=true;renderFormCheck();const sec=sectionOf(k)||fieldEl(k);if(sec)sec.scrollIntoView({behavior:'smooth',block:'center'});const inp=fieldEl(k);if(inp&&inp.focus&&/INPUT|SELECT|TEXTAREA/.test(inp.tagName))setTimeout(()=>inp.focus({preventScroll:true}),350)};li.append(b);ul.append(li)});
+  box.append(ul);
+}
+['input','change'].forEach(ev=>$('#request-form').addEventListener(ev,e=>{if(e.target&&e.target.name!=='website'){if(ev==='change')formTouched=true;renderFormCheck()}}));
+setInterval(()=>{if(currentView==='request')renderFormCheck()},700); // ตำแหน่งจากแผนที่/GPS เปลี่ยนนอกฟอร์ม
 $('#request-form').addEventListener('submit',e=>{
   e.preventDefault();
   const checked=[...document.querySelectorAll('#needs input:checked')].map(x=>x.value);
-  $('#needs-error').hidden=checked.length>0;
-  if(!checked.length){$('#needs input').focus();return}
+  const miss=formMissing();formTouched=true;renderFormCheck();
+  if(miss.length){const sec=sectionOf(miss[0][0]);if(sec)sec.scrollIntoView({behavior:'smooth',block:'center'});return}
   const form=new FormData(e.currentTarget);
   const phone=String(form.get('phone')||'').trim(),address=String(form.get('address')||'').trim();
-  if(phone.replace(/\D/g,'').length<9){e.currentTarget.phone.focus();return}
-  if(!address&&!geo){e.currentTarget.address.focus();return}
   pendingRequest={
     level:(document.querySelector('input[name=level]:checked')||{}).value||'',
     needs:checked,vulnerable:[...document.querySelectorAll('#vulnerable input:checked')].map(x=>x.value),urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,households:Math.max(1,Math.min(999,Number(form.get('households'))||1)),
@@ -475,7 +504,7 @@ $('#send-request').addEventListener('click',async()=>{
     const p2=document.createElement('p');p2.textContent='สถานะ: รอทีมอาสารับเคส · ดูสถานะได้ที่ "ติดตามเคสของฉัน" หน้าหลัก เปิดหน้านี้ไว้ ระบบจะเด้งแจ้งเตือนเมื่อสถานะเปลี่ยน';
     const wrap=document.createElement('div');wrap.append(s,p,p2);if(typeof caseSteps==='function')wrap.append(caseSteps('open'));const nb=typeof notifyButton==='function'&&notifyButton();if(nb)wrap.append(nb);res.append(wrap);res.hidden=false;
     $('#summary-actions').hidden=true;
-    pendingRequest=null;$('#request-form').reset();document.querySelectorAll('#needs input').forEach(i=>i.checked=false);
+    pendingRequest=null;$('#request-form').reset();formTouched=false;setTimeout(renderFormCheck,0);document.querySelectorAll('#needs input').forEach(i=>i.checked=false);
     if(typeof clearRequestLocation==='function')clearRequestLocation();
     $('#summary-back').hidden=true;
     lastLoaded=0;

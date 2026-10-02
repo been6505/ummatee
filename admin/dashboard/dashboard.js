@@ -24,7 +24,7 @@ async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}
 function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;$('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
-  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();render();poll()}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
+  try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();render();poll();VERIFY.load().then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
   catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
 $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';D.cases=[];showLogin('ออกจากระบบแล้ว')});
 
@@ -101,6 +101,9 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
   const st=['open','going','done'].map(s=>[ST[s],n(s),ST_COL[s]]);hbars('#c-status',st,{total:L.length});table('#tb-status',['สถานะ','เคส'],st.map(r=>[r[0],r[1]]));
   const ur=[3,2,1].map(u=>[URG[u],act.filter(c=>sev(c)===u).length,URG_COL[u]]);hbars('#c-urg',ur,{total:act.length});table('#tb-urg',['ระดับ','เคส'],ur.map(r=>[r[0],r[1]]));
   const count=(arr)=>{const m=new Map();arr.forEach(x=>m.set(x,(m.get(x)||0)+1));return [...m.entries()].sort((a,b)=>b[1]-a[1])};
+  if(typeof VERIFY!=='undefined'){const R=VERIFY.RESULT,cols={confirmed:'var(--crit)',likely:'var(--serious)',conflict:'var(--warn)',unverified:'#9aa5aa',notcrit:'var(--good)',nopin:'#c9cfd1'};
+    const vv=['confirmed','likely','conflict','unverified','notcrit','nopin'].map(k=>[R[k].t,act.filter(c=>VERIFY.assess(c).result.k===k).length,cols[k]]);
+    hbars('#c-vr',vv,{total:act.length});table('#tb-vr',['ผลตรวจ','เคส'],vv.map(r=>[r[0],r[1]]));}
   const nd=count(L.flatMap(c=>[...new Set(c.needs)]));hbars('#c-needs',nd);table('#tb-needs',['ความต้องการ','เคส'],nd);
   const vl=count(L.flatMap(c=>vul(c).map(v=>VUL[v]||v)));hbars('#c-vul',vl);table('#tb-vul',['กลุ่ม','เคส'],vl);
   const lv=[...LEVEL.map(([k,t])=>[t,L.filter(c=>c.level===k).length]),['ไม่ระบุ',L.filter(c=>!c.level).length]];hbars('#c-level',lv);table('#tb-level',['ระดับน้ำ','เคส'],lv);
@@ -121,4 +124,4 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
     t.append(tb);const a=el('a',null,'ไปที่หน้าจัดการเคส →');a.href='../../admin.html';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
-if(D.key){showApp();load().then(()=>{if(D.key)poll()})}else showLogin();
+if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render)}})}else showLogin();

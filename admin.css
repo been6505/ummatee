@@ -104,3 +104,23 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .bag-in:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px #d7eeea}
 .tbl td.bag small{display:inline;margin-left:4px}
 @media(max-width:900px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.tbl td.bag{grid-column:1/-1}.tbl td.bag::before{content:"ถุงยังชีพ ";color:var(--muted);margin-right:6px}}
+/* ตรวจสอบพื้นที่ */
+.vr{display:inline-block;border-radius:6px;padding:3px 8px;font-size:12.5px;font-weight:700;white-space:nowrap}
+.vr-confirmed{background:#c62828;color:#fff}.vr-likely{background:#fde3e3;color:#a32121}.vr-conflict{background:#fff0dc;color:#9a4d00;box-shadow:inset 0 0 0 1.5px #e8a33d}
+.vr-unverified{background:#eef2f4;color:#4f6670}.vr-notcrit{background:#e4f4e9;color:#277343}.vr-nopin{background:#f3f3f3;color:#888}
+.vr-score{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.vr-box{border-radius:14px;padding:14px;margin-top:14px;background:#f6f9fa;border:1px solid var(--line)}
+.vr-b-confirmed{background:#fff3f3;border-color:#f3c4c4}.vr-b-conflict{background:#fff8ee;border-color:#f2d9bc}
+.vr-top{display:flex;justify-content:space-between;gap:10px}.vr-top small{color:var(--muted);font-size:12.5px}.vr-top b{display:block;font-size:20px}.vr-top p{margin:2px 0 0;font-size:13.5px;color:#4f6670}
+.vr-num{text-align:right;flex:none}.vr-num b{font-size:30px;line-height:1}.vr-num small{display:block}
+.vr-bars{display:grid;gap:6px;margin:10px 0}.vr-bars div{display:grid;grid-template-columns:150px 1fr 52px;align-items:center;gap:8px;font-size:12.5px;color:#4f6670}
+.vr-bars i{display:block;height:8px;border-radius:0 4px 4px 0;background:var(--teal);max-width:100%}.vr-bars i.neg{background:#b0bec5}.vr-bars em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums}
+.vr-ev{margin:6px 0;padding-left:18px;font-size:13.5px;line-height:1.55}
+.vr-src{font-size:12.5px;color:var(--muted);margin:4px 0}
+.vr-reps{margin:6px 0;padding-left:18px;font-size:12.5px;color:#4f6670;line-height:1.5}.vr-reps a{color:var(--teal)}
+.vr-cctv{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;font-size:14px}
+.vr-cctv-btns{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.vr-links{display:flex;flex-wrap:wrap;gap:12px;font-size:13px}.vr-links a,.linkish{color:var(--teal);font-weight:600;text-decoration:none;background:none;border:0;padding:0;font:inherit;font-size:13px;cursor:pointer}
+.vr-note{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.5}
+.tbl td.vr-cell{white-space:nowrap}
+@media(max-width:900px){.tbl td.vr-cell{grid-column:2/3;text-align:right}.tbl td.vr-cell .vr-score{display:inline;margin-left:4px}.vr-bars div{grid-template-columns:110px 1fr 44px}}

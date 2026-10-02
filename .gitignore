@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 .secrets/
 pages-admin/dist/
+wrangler.localadmin.jsonc

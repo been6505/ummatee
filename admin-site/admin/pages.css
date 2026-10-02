@@ -89,3 +89,25 @@
 @media(max-width:900px){.views button{flex:1;justify-content:center;padding:10px 8px 12px;font-size:15px}}
 .drawer .form-grid>.wide{grid-column:1/-1}
 .bag-it.zero{border-left-color:var(--red)}.bag-it.low{border-left-color:var(--orange)}
+/* สต็อกแบบตาราง */
+.gt-wrap{overflow-x:auto;margin:-4px -6px 0}
+.gt{width:100%;border-collapse:collapse;font-size:14px}
+.gt th{position:sticky;top:0;background:#f6f9fa;text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.gt td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.gt tbody tr:nth-child(even) td{background:#fbfcfc}.gt tbody tr:hover td{background:var(--tint)}
+.gt .r{text-align:right}.gt .n{width:34px;text-align:right}.gt td.q{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.gt td:not(.q).r{font-variant-numeric:tabular-nums}
+.gt tr.zero td.q{color:var(--red)}.gt tr.low td.q{color:#a24f00}
+.gt tr.zero td:first-child{box-shadow:inset 4px 0 var(--red)}.gt tr.low td:first-child{box-shadow:inset 4px 0 var(--orange)}
+.gt small{display:block;color:var(--muted);font-size:12px}
+.gt td.act{white-space:nowrap}
+.ib{width:34px;height:34px;border-radius:8px;border:1px solid #bfd7d8;background:#fff;color:var(--teal);font-size:16px;font-weight:700;margin-left:4px;cursor:pointer}
+.ib.in{background:var(--teal);color:#fff;border-color:var(--teal)}.ib:hover{filter:brightness(.95)}
+.schip.ok{background:#e4f4e9;color:#277343}.schip.need{background:#e7f1fc;color:#28639a}
+@media(max-width:700px){.gt .hide-m{display:none}.gt td,.gt th{padding:7px 6px}}
+#view-stock .cols-stock{grid-template-columns:1fr}
+#view-stock .cols-stock>.panel:last-child{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:4px 24px;align-items:start}
+#view-stock .cols-stock>.panel:last-child>.panel-h.mt{margin-top:0;grid-column:2;grid-row:1}
+#view-stock .cols-stock>.panel:last-child>#log{grid-column:2;grid-row:2;max-height:360px}
+#view-stock .cols-stock>.panel:last-child>#need-list{grid-column:1;grid-row:2}
+@media(max-width:800px){#view-stock .cols-stock>.panel:last-child{display:block}#view-stock .cols-stock>.panel:last-child>.panel-h.mt{margin-top:18px}}

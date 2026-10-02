@@ -26,7 +26,7 @@ const COVERED=(()=>{
     if(C.loading)return C.loading;if(C.loaded&&Date.now()-C.loaded<5*60e3)return;
     C.loading=(async()=>{
       let rows=null;
-      if(apiUrl&&apiUrl.charAt(0)==='/'){try{const j=await fetch(apiUrl+'?action=covered&t='+Date.now()).then(x=>x.json());if(j&&j.ok&&Array.isArray(j.items)){rows=j.items;C.source='api'}}catch(e){}}
+      if(apiUrl&&apiUrl.charAt(0)==='/'){try{const j=await fetch(apiUrl+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Date.now()).then(x=>x.json());if(j&&j.ok&&Array.isArray(j.items)){rows=j.items;C.source='api'}}catch(e){}}
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);rows=all.slice(1).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});

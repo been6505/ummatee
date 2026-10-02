@@ -13,8 +13,8 @@ const VERIFY=(()=>{
     likely:{t:'น่าจะวิกฤต',d:'มีหลักฐานน้ำท่วมใกล้จุดบางส่วน',k:'likely'},
     conflict:{t:'ข้อมูลขัดแย้ง',d:'ผู้แจ้งบอกว่าหนัก แต่กล้องหรือรายงานล่าสุดบอกว่าน้ำลด/ไม่ท่วม ควรโทรยืนยัน',k:'conflict'},
     notcrit:{t:'ไม่น่าวิกฤต',d:'มีน้ำท่วมแต่ไม่รุนแรงตามข้อมูลที่มี',k:'notcrit'},
-    unverified:{t:'ยังยืนยันไม่ได้',d:'ไม่มีข้อมูลน้ำท่วมใกล้จุดนี้ ควรดูกล้องหรือโทรถาม',k:'unverified'},
-    nopin:{t:'ตรวจไม่ได้',d:'ผู้แจ้งไม่ได้ปักหมุด',k:'nopin'}
+    unverified:{t:'รอตรวจเพิ่ม',d:'ไม่มีข้อมูลน้ำท่วมใกล้จุดนี้ ควรดูกล้องหรือโทรถาม',k:'unverified'},
+    nopin:{t:'ยืนยันไม่ได้',d:'ไม่มีพิกัดหรือที่อยู่ที่ชัดเจน ต้องโทรถามตำแหน่งก่อน',k:'nopin'}
   };
 
   /* ---------- โหลดข้อมูล ---------- */
@@ -61,7 +61,12 @@ const VERIFY=(()=>{
     const cctv=parseCctv(c.cctv);
     const out={R,E:0,score:R,ev:[],road:null,reports:[],cctv,result:null};
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
-    if(!hasPin){out.result=RESULT.nopin;out.ev.push('ไม่มีพิกัด จึงเทียบกับแผนที่น้ำท่วมไม่ได้');if(cctv)applyCctv(out,reporterSevere);return finish(out,reporterSevere,false)}
+    // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
+    const addrTxt=[c.address,c.district].filter(Boolean).join(' ').replace(/[\s\-–—.,]/g,''),clearAddr=addrTxt.length>=6;
+    if(!hasPin||!clearAddr){out.result=RESULT.nopin;
+      if(!hasPin)out.ev.push('ไม่มีพิกัด จึงเทียบกับแผนที่น้ำท่วมไม่ได้');
+      if(!clearAddr)out.ev.push('ไม่มีที่อยู่ / จุดสังเกตที่ชัดเจน ทีมหาบ้านไม่เจอ');
+      if(!hasPin){if(cctv)applyCctv(out,reporterSevere);return finish(out,reporterSevere,false)}}
     const lat=+c.lat,lng=+c.lng;
     // 2) ถนนน้ำท่วมจาก Floodboard (ใกล้สุดใน 800 ม.)
     let near=null;F.roads.forEach(r=>{const d=distToLines(lat,lng,r.lines);if(d<=800&&(!near||d<near.d))near={...r,d}});

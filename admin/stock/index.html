@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#102f42">
+<title>สต็อก · UM+ หลังบ้าน</title>
+<link rel="icon" href="../../assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../admin.css?v=6">
+<link rel="stylesheet" href="../pages.css?v=1">
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <img src="../../assets/ummatee-logo.png" alt="UMMATEE" width="110" height="66">
+    <h1>สต็อก · UM+</h1>
+    <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
+    <label class="fld"><span>รหัสทีม</span><input id="login-key" type="password" required autocomplete="current-password"></label>
+    <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
+    <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
+    <p class="err" id="login-err" role="alert"></p>
+    <a class="back" href="../../">← กลับหน้าเว็บหลัก</a>
+  </form>
+</section>
+<div id="app" hidden>
+  <header class="top">
+    <a class="brand" href="../../"><img src="../../assets/ummatee-logo.png" alt="" width="60" height="36"><span>UM+ <b>หลังบ้าน</b></span></a>
+    <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="../teams/">จัดทีม</a><a href="../stock/" aria-current="page">สต็อก</a></nav>
+    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh">⟳ โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
+  </header>
+  <main class="wrap" id="main">
+    <section class="stats" id="stats" aria-label="สรุปสต็อก"></section>
+    <section class="bar">
+      <div class="bar-top"><label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหาของในคลัง" aria-label="ค้นหาของในคลัง"></label><button class="btn primary sm" id="add-item">+ เพิ่มรายการ</button></div>
+      <div class="bar-row"><div class="seg" role="tablist" id="cat"></div><button class="btn ghost sm" id="copy-need">คัดลอกรายการที่ต้องการ</button><button class="btn ghost sm" id="export">⬇ CSV</button></div>
+    </section>
+    <div class="cols cols-stock">
+      <section class="panel"><div id="items"></div></section>
+      <section class="panel">
+        <div class="panel-h"><h2>ต้องการ</h2></div><ul id="need-list" class="need-list"></ul>
+        <div class="panel-h mt"><h2>ประวัติรับเข้า / จ่ายออก</h2></div><div id="log" class="log"></div>
+      </section>
+    </div>
+
+  </main>
+</div>
+<div class="drawer-bg" id="drawer-bg" hidden></div>
+<aside class="drawer" id="drawer" hidden></aside>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="../common.js?v=1"></script>
+<script src="./stock.js?v=1"></script>
+</body>
+</html>

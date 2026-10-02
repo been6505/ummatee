@@ -124,3 +124,5 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .vr-note{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.5}
 .tbl td.vr-cell{white-space:nowrap}
 @media(max-width:900px){.tbl td.vr-cell{grid-column:2/3;text-align:right}.tbl td.vr-cell .vr-score{display:inline;margin-left:4px}.vr-bars div{grid-template-columns:110px 1fr 44px}}
+/* แท็บหลังบ้าน 4 หน้า: มือถือเลื่อนด้านข้างได้ */
+.tabs{overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 auto}.tabs::-webkit-scrollbar{display:none}.tabs a{flex:none}

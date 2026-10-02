@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>ย้ายข้อมูลจาก Google Sheet · UM+ หลังบ้าน</title>
+<link rel="icon" href="../../assets/icon-192.png">
+<link rel="stylesheet" href="../../admin.css?v=6">
+<link rel="stylesheet" href="../pages.css?v=1">
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <h1>ย้ายข้อมูลเคสเก่า</h1>
+    <p>ใส่รหัสทีมของระบบใหม่ (Cloudflare)</p>
+    <label class="fld"><span>รหัสทีม</span><input id="login-key" type="password" required></label>
+    <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
+    <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
+    <p class="err" id="login-err" role="alert"></p>
+  </form>
+</section>
+<div id="app" hidden>
+  <header class="top"><a class="brand" href="../../admin.html"><span>UM+ <b>หลังบ้าน</b> · ย้ายข้อมูล</span></a><div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh" hidden></button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div></header>
+  <main class="wrap" id="main">
+    <section class="panel" style="max-width:720px">
+      <h2>ย้ายเคสเก่าจาก Google Sheet มาฐานข้อมูลใหม่</h2>
+      <p class="muted small">ดึงเคสทั้งหมดจากระบบเดิม (Google Apps Script) แล้วบันทึกลงฐานข้อมูล Cloudflare D1 เคสที่ย้ายแล้วจะไม่ถูกเพิ่มซ้ำ กดซ้ำได้ปลอดภัย</p>
+      <form id="imp" class="form-grid">
+        <label class="fld"><span>ลิงก์ Apps Script เดิม</span><input name="url" value="https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec"></label>
+        <label class="fld"><span>รหัสทีมของระบบเดิม</span><input name="oldkey" type="password" placeholder="ถ้าเหมือนรหัสใหม่ เว้นว่างได้"></label>
+        <div class="form-act"><button class="btn primary" type="submit" id="go">เริ่มย้ายข้อมูล</button></div>
+      </form>
+      <pre id="out" class="small" style="white-space:pre-wrap;background:#f6f9fa;border-radius:10px;padding:10px;min-height:60px"></pre>
+      <p class="muted small">หมายเหตุ: ผู้แจ้งเคสเก่าจะกด "ติดตามเคสของฉัน" ต่อไม่ได้ เพราะระบบเดิมไม่เปิดเผยรหัสติดตามออกมา เคสใหม่ที่แจ้งหลังจากนี้ใช้ได้ปกติ</p>
+    </section>
+  </main>
+</div>
+<div class="toasts" id="toasts"></div>
+<script src="../common.js?v=1"></script>
+<script>
+const out=s=>{$('#out').textContent+=s+'\n'};
+$('#imp').addEventListener('submit',async e=>{e.preventDefault();const f=e.target,btn=$('#go');btn.disabled=true;$('#out').textContent='';
+  try{const key=f.oldkey.value.trim()||ADM.key;out('กำลังดึงเคสจากระบบเดิม…');
+    const r=await fetch(f.url.value.trim()+'?action=list&key='+encodeURIComponent(key)+'&t='+Date.now()).then(x=>x.json());
+    if(!r.ok)throw new Error(r.error||'ดึงไม่ได้');if(!r.volunteer)throw new Error('รหัสระบบเดิมไม่ถูกต้อง (ได้ข้อมูลแบบปิดเบอร์ ไม่ย้ายเพื่อไม่ให้ข้อมูลไม่ครบ)');
+    const cs=r.cases||[];out('พบ '+cs.length+' เคส กำลังบันทึก…');let added=0;
+    for(let i=0;i<cs.length;i+=50){const res=await apiPost({action:'import_cases',cases:cs.slice(i,i+50)});if(!res.ok)throw new Error(res.error);added+=res.added;out(`  ${Math.min(i+50,cs.length)}/${cs.length} · เพิ่มใหม่ ${res.added}`)}
+    out('เสร็จแล้ว ✓ เพิ่มใหม่ทั้งหมด '+added+' เคส');toast('ย้ายข้อมูลเสร็จ เพิ่ม '+added+' เคส',true)}
+  catch(err){out('ผิดพลาด: '+err.message)}finally{btn.disabled=false}});
+adminBoot({action:'stock'},'items',()=>{});
+</script>
+</body>
+</html>

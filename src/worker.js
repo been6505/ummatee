@@ -373,7 +373,7 @@ async function listCovered(db) {
   if (!r.ok) return { ok: false, error: 'sheet_' + r.status };
   const rows = parseCSV(await r.text()).slice(1).filter(x => x[1] && String(x[1]).trim());
   const items = [];
-  for (const x of rows) { const [org, area, date, link, district, sets, note] = x.map(v => String(v || '').trim()); const ll = link ? await resolveMapLink(db, link) : null;
+  for (const x of rows) { const [org, area, date, link, district, sets, note, coord] = x.map(v => String(v || '').trim()); const ll = coordsFromUrl('@' + coord.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
     items.push({ org, area, date, link, district, sets, note, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
   await setMeta(db, 'covered_cache', JSON.stringify({ t: Date.now(), items }));
   return { ok: true, items };
@@ -402,7 +402,8 @@ async function api(request, env) {
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
-      case 'covered': return json(vol ? await listCovered(db) : { ok: false, error: 'not_volunteer' });
+      // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
+      case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }

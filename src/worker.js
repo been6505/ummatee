@@ -371,7 +371,10 @@ async function listCovered(db) {
   const c = await getMeta(db, 'covered_cache'); if (c) { try { const o = JSON.parse(c); if (Date.now() - o.t < 5 * 60e3) return { ok: true, items: o.items, cached: true }; } catch (e) {} }
   const r = await fetch('https://docs.google.com/spreadsheets/d/' + COVERED_SHEET + '/gviz/tq?tqx=out:csv');
   if (!r.ok) return { ok: false, error: 'sheet_' + r.status };
-  const rows = parseCSV(await r.text()).slice(1).filter(x => x[1] && String(x[1]).trim());
+  const all = parseCSV(await r.text()), h = (all[0] || []).map(x => String(x || '').replace(/\s+/g, ''));
+  const col = (re, d) => { const i = h.findIndex(x => re.test(x)); return i < 0 ? d : i; };
+  const cols = [col(/องค/, 0), col(/พื้นที่/, 1), col(/วันที่/, 2), col(/ลิง[คก]|link/i, 3), col(/เขต|จังหวัด/, -1), col(/ชุด/, -1), col(/หมายเหตุ/, -1), col(/พิกัด/, -1)];
+  const rows = all.slice(1).map(x => { const o = cols.map(i => i < 0 ? '' : x[i] || ''); if (!o[3]) o[3] = x.find(v => /https?:\/\//.test(v || '')) || ''; return o; }).filter(x => x[1] && String(x[1]).trim());
   const items = [];
   for (const x of rows) { const [org, area, date, link, district, sets, note, coord] = x.map(v => String(v || '').trim()); const ll = coordsFromUrl('@' + coord.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
     items.push({ org, area, date, link, district, sets, note, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }

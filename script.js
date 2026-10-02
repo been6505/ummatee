@@ -1,4 +1,6 @@
 /* จำนวนครัวเรือน: คอลัมน์ households (Code.gs ใหม่) หรืออ่านจาก [ครัวเรือน N] ในรายละเอียด (Code.gs เดิม) */
+const VUL_TH={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน / เครื่องช่วยหายใจ',dialysis:'ผู้ป่วยฟอกไต',chronic:'ผู้ป่วยโรคเรื้อรัง'};
+const vulList=c=>(Array.isArray(c&&c.vulnerable)?c.vulnerable:String(c&&c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean).map(v=>VUL_TH[v]||v);
 function hhOf(c){const n=Number(c&&c.households);if(n>0)return n;const m=String(c&&c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?Number(m[1]):0}
 const stripHH=t=>String(t||'').replace(/^\[ครัวเรือน \d+\]\s*/,'');
 /* ============================================================
@@ -31,7 +33,7 @@ function fsValue(v){
   return {stringValue:String(v??'')};
 }
 async function fbInboxCreate(data,clientId,token){
-const keep=['level','needs','urgencyLabel','people','households','address','lat','lng','phone','name','details','website'];
+const keep=['level','needs','vulnerable','urgencyLabel','people','households','address','lat','lng','phone','name','details','website'];
   const fields={clientId:fsValue(clientId),token:fsValue(token),sentAt:fsValue(new Date())};
   keep.forEach(k=>{const v=data[k];if(v===''&&(k==='lat'||k==='lng'))return;if(v!=null)fields[k]=fsValue(v)});
   const url=`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(FIREBASE.projectId)}/databases/(default)/documents/inbox?documentId=${encodeURIComponent(clientId)}&key=${encodeURIComponent(FIREBASE.apiKey)}`;
@@ -87,6 +89,7 @@ function statusEl(c){const s=document.createElement('span');s.className='status 
 /* ---------------- views ---------------- */
 function setView(view,record=true){
   if(!document.querySelector(`#view-${view}`))return;
+  if((view==='map'||view==='detail')&&!isVolunteer)view='home'; // ปิดดูเคสสำหรับคนทั่วไป: ทีมอาสาใช้หน้าหลังบ้าน admin.html
   currentView=view;
   if(record&&location.hash!==`#${view}`)history.pushState(null,'',`#${view}`);
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id===`view-${view}`));
@@ -106,7 +109,7 @@ function caseCard(c){
   const st=statusEl(c);
   const t=document.createElement('span');t.className='case-id';t.textContent=ago(c.createdAt);
   top.append(st,t);
-  const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน'+(hhOf(c)?' · 🏠 '+hhOf(c)+' ครัวเรือน':'');
+  const ppl=document.createElement('p');ppl.className='case-people';ppl.textContent='👥 '+(Number(c.people)||1)+' คน'+(hhOf(c)?' · 🏠 '+hhOf(c)+' ครัวเรือน':'');if(vulList(c).length){const v=document.createElement('small');v.className='case-vul';v.textContent='ดูแลพิเศษ: '+vulList(c).join(', ');ppl.append(document.createElement('br'),v)}
   const h=document.createElement('h3');h.className='case-needs';h.textContent=(c.needs||[]).join(' · ')||'ขอความช่วยเหลือ';
   const ad=document.createElement('p');ad.className='case-addr';const at=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');ad.textContent='📍 '+(at||'ไม่ระบุที่อยู่');if(!at)ad.classList.add('none');
   const ct=document.createElement('p');ct.className='case-contact';const ctt=[c.name?'👤 '+c.name:'',c.phone?'☎ '+c.phone:''].filter(Boolean).join('   ');ct.textContent=ctt;
@@ -121,7 +124,7 @@ function srchNorm(s){s=String(s==null?'':s);try{s=s.normalize('NFC')}catch(e){}
 function searchQuery(){const i=$('#case-search');return i?srchNorm(i.value.trim()):''}
 function caseHay(c){
   const d=c.createdAt?new Date(Number(c.createdAt)||c.createdAt):null,dt=d&&!isNaN(d)?d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleDateString('th-TH',{day:'numeric',month:'long'})+' '+d.getDate()+'/'+(d.getMonth()+1):'';
-  const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,Array.isArray(c.vulnerable)?c.vulnerable.join(' '):c.vulnerable,
+  const parts=[c.id,'#'+c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,vulList(c).join(' '),
     statusLabel(c),STATUS_TH[c.status],critLabel(c),c.level,c.level?'น้ำ'+(LEVEL_TH[c.level]||c.level)+' ระดับ'+(LEVEL_TH[c.level]||''):'',c.people?c.people+' คน':'',hhOf(c)?hhOf(c)+' ครัวเรือน':'',dt,c.lat&&c.lng?(+c.lat).toFixed(4)+','+(+c.lng).toFixed(4):'',c.createdBy,c.contact,c.reporter];
   return srchNorm(parts.filter(Boolean).join(' '))}
 function normDigits(x){let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d=d.slice(2);return d.replace(/^0+/,'')}
@@ -366,7 +369,7 @@ function renderDetail(){
   title.append(status,h,muted);head.append(title);
   const card=document.createElement('div');card.className='detail-card';
   const facts=document.createElement('div');facts.className='detail-facts';
-  const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],...(hhOf(c)?[['ครัวเรือน / ครอบครัว',hhOf(c)+' ครัวเรือน']]:[]),['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];
+  const rows=[...(c.district?[['พื้นที่','เขต'+c.district]]:[]),['จำนวนคน',`${c.people||1} คน`],...(hhOf(c)?[['ครัวเรือน / ครอบครัว',hhOf(c)+' ครัวเรือน']]:[]),...(vulList(c).length?[['ต้องดูแลเป็นพิเศษ',vulList(c).join(', ')]]:[]),['ความต้องการ',(c.needs||[]).join(', ')||'-'],['ความเร่งด่วน',Number(c.urgency)===3?'ด่วนมาก · เสี่ยงต่อชีวิต':Number(c.urgency)===2?'ต้องการความช่วยเหลือเร็ว':'ทั่วไป']];
   if(c.address&&c.district)rows.push(['ที่อยู่ / จุดสังเกต',c.address]);
   if(c.name)rows.push(['ผู้ติดต่อ',c.name]);
   if(c.level)rows.push(['ระดับน้ำ',LEVEL_TH[c.level]||c.level]);
@@ -446,12 +449,12 @@ $('#request-form').addEventListener('submit',e=>{
   if(!address&&!geo){e.currentTarget.address.focus();return}
   pendingRequest={
     level:(document.querySelector('input[name=level]:checked')||{}).value||'',
-    needs:checked,urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,households:Math.max(1,Math.min(999,Number(form.get('households'))||1)),
+    needs:checked,vulnerable:[...document.querySelectorAll('#vulnerable input:checked')].map(x=>x.value),urgencyLabel:form.get('urgency'),people:Number(form.get('people'))||1,households:Math.max(1,Math.min(999,Number(form.get('households'))||1)),
     address,lat:geo?+geo.lat.toFixed(6):'',lng:geo?+geo.lng.toFixed(6):'',
     phone,name:String(form.get('name')||'').trim(),details:[`[ครัวเรือน ${Math.max(1,Math.min(999,Number(form.get('households'))||1))}]`,String(form.get('details')||'').trim()].filter(Boolean).join(' '),
     website:String(form.get('website')||'')
   };
-  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ระดับน้ำ',LEVEL_TH[pendingRequest.level]||''],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['ครัวเรือน / ครอบครัว',`${pendingRequest.households} ครัวเรือน`],['สถานการณ์',pendingRequest.details.replace(/^\[ครัวเรือน \d+\]\s*/,'')],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
+  const rows=[['ความช่วยเหลือ',checked.join(', ')],['ระดับน้ำ',LEVEL_TH[pendingRequest.level]||''],['ความเร่งด่วน',form.get('urgency')],['จำนวนคน',`${pendingRequest.people} คน`],['ครัวเรือน / ครอบครัว',`${pendingRequest.households} ครัวเรือน`],['ต้องดูแลเป็นพิเศษ',vulList(pendingRequest).join(', ')],['สถานการณ์',pendingRequest.details.replace(/^\[ครัวเรือน \d+\]\s*/,'')],['ที่อยู่ / จุดสังเกต',address],['ตำแหน่ง',geo?'ปักหมุดแล้ว ✓':''],['ผู้ติดต่อ',pendingRequest.name],['เบอร์โทร',phone]];
   const summary=$('#summary-content');
   summary.replaceChildren(...rows.filter(([,val])=>val).map(([key,val])=>{const row=document.createElement('div');row.className='summary-row';const s=document.createElement('span');s.textContent=key;const v=document.createElement('strong');v.textContent=val;row.append(s,v);return row}));
   $('#send-result').hidden=true;$('#summary-actions').hidden=false;$('#send-request').disabled=false;$('#send-request').textContent='ส่งคำขอความช่วยเหลือ';

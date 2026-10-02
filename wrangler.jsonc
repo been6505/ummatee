@@ -11,7 +11,7 @@
     "run_worker_first": ["/api", "/api/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "ummatee-db", "database_id": "__D1_ID__" }
+    { "binding": "DB", "database_name": "ummatee-db", "database_id": "2d211589-1846-409f-a0f8-cc352337063a" }
   ],
   "observability": { "enabled": true }
 }

@@ -96,3 +96,11 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 }
 .tabs a{white-space:nowrap}
 @media(max-width:600px){.top{gap:6px;padding:8px 10px}.tabs{margin-left:2px}.tabs a{padding:6px 7px;font-size:13.5px}#logout{padding:6px 8px;font-size:13px}.brand img{height:32px}}
+/* ถุงยังชีพ */
+.stats{grid-template-columns:repeat(8,minmax(0,1fr))}
+.tbl td.bag{white-space:nowrap}
+.bag-in{width:68px;border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 8px;font-size:15px;font-weight:600;text-align:right;background:#fff;color:var(--ink)}
+.bag-in::placeholder{color:#b3c2c7;font-weight:400}
+.bag-in:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px #d7eeea}
+.tbl td.bag small{display:inline;margin-left:4px}
+@media(max-width:900px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.tbl td.bag{grid-column:1/-1}.tbl td.bag::before{content:"ถุงยังชีพ ";color:var(--muted);margin-right:6px}}

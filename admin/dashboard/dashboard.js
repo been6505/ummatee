@@ -84,8 +84,9 @@ function render(){
   const n=s=>L.filter(c=>c.status===s).length,done=L.filter(c=>c.status==='done'&&c.updatedAt>c.createdAt);
   const avgH=done.length?done.reduce((s,c)=>s+(c.updatedAt-c.createdAt),0)/done.length/36e5:null;
   const crit=act.filter(c=>sev(c)===3).length,ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),vc=act.filter(c=>vul(c).length).length;
-  const k=[[nf(L.length),'เคสทั้งหมด',`ช่วยแล้ว ${L.length?Math.round(n('done')/L.length*100):0}%`],[nf(n('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(n('going')),'ทีมกำลังไป','','var(--going)'],[nf(n('done')),'ช่วยเหลือแล้ว',avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'} (ประมาณ)`,'var(--good)'],
-    [nf(ppl),'คนที่ยังรอ','จากเคสที่ยังไม่เสร็จ'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(L.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง']];
+const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.reduce((s,c)=>s+(bagsOf(c)||0),0),bagNeed=act.filter(c=>bagsOf(c)==null).reduce((s,c)=>s+(hh(c)||1),0);
+    const k=[[nf(L.length),'เคสทั้งหมด',`ช่วยแล้ว ${L.length?Math.round(n('done')/L.length*100):0}%`],[nf(n('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(n('going')),'ทีมกำลังไป','','var(--going)'],[nf(n('done')),'ช่วยเหลือแล้ว',avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'} (ประมาณ)`,'var(--good)'],
+    [nf(ppl),'คนที่ยังรอ','จากเคสที่ยังไม่เสร็จ'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(L.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง'],[nf(bagSet),'ถุงยังชีพ (ที่ระบุแล้ว)','รวมทุกเคสในช่วงนี้'],[nf(bagNeed),'ถุงที่ควรเตรียมเพิ่ม','เคสยังไม่เสร็จที่ยังไม่ระบุ · ครัวเรือนละ 1']];
   $('#kpis').replaceChildren(...k.map(([v,t,s,col])=>{const d=el('div','kpi');d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
   /* trend */

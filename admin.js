@@ -11,6 +11,8 @@ const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k
 const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:'list',map:null,layer:null,openId:null,rev:null};
 
 const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);
+const bagSuggest=c=>hh(c)||1; // แนะนำ: ครัวเรือนละ 1 ถุง
 const hh=c=>{const n=Number(c.households);if(n>0)return n;const m=String(c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?+m[1]:0};
 const vul=c=>(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean).map(v=>VUL[v]||v);
 const notesOf=c=>String(c.notes||'').replace(/^\[ครัวเรือน \d+\]\s*/,'');
@@ -78,23 +80,24 @@ $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classLis
 function render(){
   const all=A.cases,n=s=>all.filter(c=>c.status===s).length,act=all.filter(c=>c.status!=='done');
   const ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),crit=act.filter(c=>sev(c)===3).length;
-  $('#stats').innerHTML=[['ทั้งหมด',all.length,''],['วิกฤต (ยังไม่เสร็จ)',crit,'red'],['รอความช่วยเหลือ',n('open'),'wait'],['ทีมกำลังไป',n('going'),'go'],['ช่วยเหลือแล้ว',n('done'),'done'],['คนที่ยังรอ',ppl,''],['ครัวเรือนที่ยังรอ',hhs||'–','']]
+  $('#stats').innerHTML=[['ทั้งหมด',all.length,''],['วิกฤต (ยังไม่เสร็จ)',crit,'red'],['รอความช่วยเหลือ',n('open'),'wait'],['ทีมกำลังไป',n('going'),'go'],['ช่วยเหลือแล้ว',n('done'),'done'],['คนที่ยังรอ',ppl,''],['ครัวเรือนที่ยังรอ',hhs||'–',''],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
   const list=filtered();
   $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`;
   $('#sync').textContent=A.loaded?'อัปเดต '+new Date(A.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-  if(A.mode==='list')renderList(list);else drawMap(list);
+  if(A.mode==='list'){if(document.activeElement&&document.activeElement.matches('.bag-in')){A.pendingList=true}else renderList(list)}else drawMap(list);
   if(A.openId)renderDrawer();
 }
 function renderList(list){
   const el=$('#list');
   if(!list.length){el.innerHTML='<p class="empty">ไม่มีเคสที่ตรงกับตัวกรอง</p>';return}
-  el.innerHTML=`<table class="tbl"><thead><tr><th>ระดับ</th><th>สถานะ</th><th>ความต้องการ</th><th>คน / ครัวเรือน</th><th>ที่อยู่</th><th>ผู้ติดต่อ</th><th>ทีม</th><th>แจ้งเมื่อ</th><th></th></tr></thead><tbody>`+
+  el.innerHTML=`<table class="tbl"><thead><tr><th>ระดับ</th><th>สถานะ</th><th>ความต้องการ</th><th>คน / ครัวเรือน</th><th>ถุงยังชีพ</th><th>ที่อยู่</th><th>ผู้ติดต่อ</th><th>ทีม</th><th>แจ้งเมื่อ</th><th></th></tr></thead><tbody>`+
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span></td>
       <td data-l="สถานะ"><select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select></td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
+      <td data-l="ถุงยังชีพ" class="bag"><input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small></td>
       <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?'':'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
       <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
@@ -103,7 +106,21 @@ function renderList(list){
 }
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
   if(e.target.closest('a,select,button'))return;const tr=e.target.closest('tr[data-id]');if(tr)openDrawer(tr.dataset.id)});
-$('#list').addEventListener('change',e=>{const s=e.target.closest('[data-st]');if(s)changeStatus(s.dataset.st,s.value,s)});
+$('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}const s=e.target.closest('[data-st]');if(s)changeStatus(s.dataset.st,s.value,s)});
+$('#list').addEventListener('focusout',e=>{if(e.target.matches('.bag-in')&&A.pendingList){A.pendingList=false;setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('.bag-in'))render()},0)}});
+$('#list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.bag-in'))e.target.blur()});
+/* ---------- ถุงยังชีพ ---------- */
+async function saveBags(id,val,inp){
+  const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
+  const v=String(val).trim()===''?'':Math.max(0,Math.min(9999,Math.round(Number(val)||0)));
+  if(String(v)===String(c.bags==null?'':c.bags))return;
+  const prev=c.bags;c.bags=v;if(inp)inp.disabled=true;
+  try{const r=await post({action:'update',key:A.key,id,status:c.status,volunteer:c.volunteer||'',bags:v,bagsOnly:true});
+    if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
+    if(!r.bagsSupported){c.bags=prev;toast('ยังบันทึกถุงยังชีพไม่ได้ ต้องอัปเดต Code.gs ก่อน');render();return}
+    toast(v===''?`เคส #${id} · ล้างจำนวนถุงแล้ว`:`เคส #${id} · ถุงยังชีพ ${v} ถุง`,true);render()}
+  catch(e){c.bags=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
+  finally{if(inp)inp.disabled=false}}
 
 /* ---------- เปลี่ยนสถานะ ---------- */
 async function changeStatus(id,status,sel,team){
@@ -125,7 +142,7 @@ $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
-  const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
+  const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.id)}</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
@@ -166,8 +183,8 @@ async function drawMap(list){
 
 /* ---------- ส่งออก CSV ---------- */
 $('#export').addEventListener('click',()=>{const list=filtered();
-  const head=['เลขเคส','แจ้งเมื่อ','ระดับ','สถานะ','ความต้องการ','จำนวนคน','ครัวเรือน','ระดับน้ำ','ที่อยู่','เขต','lat','lng','ชื่อ','เบอร์โทร','ทีม','ต้องดูแลเป็นพิเศษ','สถานการณ์'];
-  const rows=list.map(c=>[c.id,fullTime(c.createdAt),URG[sev(c)],ST[c.status],(c.needs||[]).join(', '),c.people||1,hh(c)||'',LEVEL[c.level]||'',c.address,c.district,c.lat,c.lng,c.name,String(c.phone||'').replace(/^'/,''),c.volunteer,vul(c).join(', '),notesOf(c)]);
+  const head=['เลขเคส','แจ้งเมื่อ','ระดับ','สถานะ','ความต้องการ','จำนวนคน','ครัวเรือน','ถุงยังชีพ','ระดับน้ำ','ที่อยู่','เขต','lat','lng','ชื่อ','เบอร์โทร','ทีม','ต้องดูแลเป็นพิเศษ','สถานการณ์'];
+  const rows=list.map(c=>[c.id,fullTime(c.createdAt),URG[sev(c)],ST[c.status],(c.needs||[]).join(', '),c.people||1,hh(c)||'',bagsOf(c)==null?'':bagsOf(c),LEVEL[c.level]||'',c.address,c.district,c.lat,c.lng,c.name,String(c.phone||'').replace(/^'/,''),c.volunteer,vul(c).join(', '),notesOf(c)]);
   const cell=v=>{let s=String(v==null?'':v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
   const csv='﻿'+[head,...rows].map(r=>r.map(cell).join(',')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`umplus-cases-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);

@@ -65,3 +65,5 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.tabs a{padding:6px 8px;font-size:14px}.brand span{display:none}.sync{display:none}}
 @media(max-width:480px){.kpi b{font-size:24px}.top{gap:8px}.hb-row{grid-template-columns:minmax(80px,42%) 1fr}.tlist .hide-s{display:none}}
 .tlist th.n{text-align:right}
+.kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}

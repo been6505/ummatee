@@ -34,6 +34,7 @@ let ready = null;
 async function init(db) {
   if (!ready) ready = (async () => {
     await db.batch(SCHEMA.map(s => db.prepare(s)));
+    for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
       const now = Date.now();
@@ -202,16 +203,17 @@ async function listRoster(db) {
 async function listStock(db) {
   const { results: items } = await db.prepare('SELECT * FROM stock ORDER BY id').all();
   const { results: log } = await db.prepare('SELECT time,itemId,item,type,delta,after,note,caseId,by_ AS "by" FROM stock_log ORDER BY n DESC LIMIT 300').all();
-  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed })), log };
+  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '' })), log };
 }
 async function saveStockItem(db, b) {
   const t = b.item || {}, name = clean(t.name, 80);
   if (!name) return { ok: false, error: 'missing_name' };
   const id = t.id && await db.prepare('SELECT id FROM stock WHERE id=?').bind(String(t.id)).first() ? String(t.id) : 'S' + rand(3);
   const min = t.min === '' || t.min == null ? null : clampInt(t.min, 0, 1e7, null);
-  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt) VALUES (?,?,?,?,0,?,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt`)
-    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now()).run();
+  const expiry = /^\d{4}-\d{2}-\d{2}$/.test(String(t.expiry || '')) ? t.expiry : '';
+  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location) VALUES (?,?,?,?,0,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location`)
+    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now(), expiry, clean(t.location, 60)).run();
   return { ok: true, id };
 }
 async function moveStock(db, b) {
@@ -289,8 +291,15 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-      try { return await api(request, env); }
-      catch (e) { return json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
+      // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
+      const origin = request.headers.get('origin') || '';
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+      let res;
+      try { res = await api(request, env); }
+      catch (e) { res = json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
+      for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
+      return res;
     }
     return env.ASSETS.fetch(request);
   }

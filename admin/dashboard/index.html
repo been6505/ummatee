@@ -40,9 +40,9 @@
 
     <p class="status" id="status" role="status" hidden></p>
     <article class="card mapcard"><div class="map-h"><div><h2>แผนที่เคส</h2><p class="sub" id="map-sub">จุดเคสในช่วงที่เลือก · เส้นสี = ถนนน้ำท่วมจาก Floodboard</p></div>
-      <div class="map-tg"><label><input type="checkbox" id="mt-done"> แสดงเคสที่ช่วยแล้ว</label><label><input type="checkbox" id="mt-flood" checked> ถนนน้ำท่วม</label></div></div>
+      <div class="map-tg"><label><input type="checkbox" id="mt-done"> แสดงเคสที่ช่วยแล้ว</label><label><input type="checkbox" id="mt-flood" checked> ถนนน้ำท่วม</label><label><input type="checkbox" id="mt-cov" checked> พื้นที่องค์กรอื่นรับแล้ว</label></div></div>
       <div id="dmap" class="dmap" role="region" aria-label="แผนที่เคส"></div>
-      <div class="map-leg"><span><i style="background:#d03b3b"></i>วิกฤต</span><span><i style="background:#ec835a"></i>เร่งด่วน</span><span><i style="background:#fab219"></i>ทั่วไป</span><span><i style="background:#2a78d6"></i>ทีมกำลังไป</span><span><i style="background:#0ca30c"></i>ช่วยแล้ว</span><span class="muted" id="map-nopin"></span></div>
+      <div class="map-leg"><span><i style="background:#d03b3b"></i>วิกฤต</span><span><i style="background:#ec835a"></i>เร่งด่วน</span><span><i style="background:#fab219"></i>ทั่วไป</span><span><i style="background:#2a78d6"></i>ทีมกำลังไป</span><span><i style="background:#0ca30c"></i>ช่วยแล้ว</span><span><i style="background:#7b3fc4;border-radius:3px"></i>องค์กรอื่นรับแล้ว</span><span class="muted" id="map-nopin"></span></div>
     </article>
     <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
 
@@ -62,6 +62,7 @@
 </div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="../verify.js?v=2"></script>
-<script src="./dashboard.js?v=4"></script>
+<script src="../covered.js?v=1"></script>
+<script src="./dashboard.js?v=5"></script>
 </body>
 </html>

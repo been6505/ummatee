@@ -64,3 +64,5 @@
   .drawer>.d-head{padding:10px 14px}.drawer>.d-head h2{font-size:18px}.drawer .x{width:36px;height:36px}}
 @media(max-height:820px) and (min-width:701px){.drawer>.d-head{padding:10px 24px}.drawer>form{margin-top:10px;padding:16px 24px}.drawer .form-grid{gap:10px 20px}.drawer .form-grid select,.drawer .form-grid input:not([type=checkbox]){min-height:40px}}
 #preview:empty{display:none}
+
+.cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}

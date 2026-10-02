@@ -64,3 +64,28 @@
   .drawer>.d-head{padding:10px 14px}.drawer>.d-head h2{font-size:18px}.drawer .x{width:36px;height:36px}}
 @media(max-height:820px) and (min-width:701px){.drawer>.d-head{padding:10px 24px}.drawer>form{margin-top:10px;padding:16px 24px}.drawer .form-grid{gap:10px 20px}.drawer .form-grid select,.drawer .form-grid input:not([type=checkbox]){min-height:40px}}
 #preview:empty{display:none}
+/* สต็อก: แท็บคลังของ / ถุงยังชีพ */
+.views{display:flex;gap:8px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.views button{border:0;background:none;padding:10px 16px 12px;font:inherit;font-weight:700;font-size:16px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:8px;min-height:46px}
+.views button[aria-selected=true]{color:var(--teal);border-bottom-color:var(--teal)}
+.vbadge{background:var(--tint);color:var(--teal);border-radius:999px;padding:1px 9px;font-size:13px}.vbadge:empty{display:none}
+/* chip ของที่หมด / ใกล้หมด */
+.lowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px}.lowchips:empty{display:none}
+.lc-lab{font-size:13.5px;font-weight:700;color:#a76115;margin-right:2px}
+.lchip{border:1px solid;border-radius:999px;padding:5px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;background:#fff;min-height:34px}
+.lchip b{font-weight:700;margin-left:2px}
+.lchip.zero{border-color:#f0b9b9;background:#fdecec;color:var(--red)}.lchip.low{border-color:#f6cfa6;background:#fff3e6;color:#a24f00}
+.lchip:hover{filter:brightness(.97)}
+.schip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;vertical-align:2px}
+.schip.zero{background:var(--red);color:#fff}.schip.low{background:#fff0dc;color:#a24f00}
+/* แท็บถุงยังชีพ */
+.bagcount{display:flex;align-items:baseline;gap:12px;margin:8px 0 4px;font-size:14px}.bagcount b{font-size:22px;color:var(--ink)}
+.team-f{justify-content:flex-start}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.bag-items{display:grid;gap:8px}
+.bag-it{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;border:1px solid var(--line);border-left:5px solid #2e9e57;border-radius:12px;padding:10px 12px}
+.bag-it small{display:block}.bag-q{font-size:22px;font-weight:700;white-space:nowrap}.bag-a{grid-column:1/-1;display:flex;gap:6px}
+.quick{display:flex;gap:6px;flex-wrap:wrap;align-self:end}
+@media(max-width:900px){.views button{flex:1;justify-content:center;padding:10px 8px 12px;font-size:15px}}
+.drawer .form-grid>.wide{grid-column:1/-1}
+.bag-it.zero{border-left-color:var(--red)}.bag-it.low{border-left-color:var(--orange)}

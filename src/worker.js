@@ -44,6 +44,7 @@ async function init(db) {
   if (!ready) ready = (async () => {
     await db.batch(SCHEMA.map(s => db.prepare(s)));
     for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
+    try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {} // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
       const now = Date.now();
@@ -218,8 +219,8 @@ async function listRoster(db) {
 }
 async function listStock(db) {
   const { results: items } = await db.prepare('SELECT * FROM stock ORDER BY id').all();
-  const { results: log } = await db.prepare('SELECT time,itemId,item,type,delta,after,note,caseId,by_ AS "by" FROM stock_log ORDER BY n DESC LIMIT 300').all();
-  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '' })), log };
+  const { results: log } = await db.prepare('SELECT time,itemId,item,type,delta,after,note,caseId,by_ AS "by",team FROM stock_log ORDER BY n DESC LIMIT 1000').all();
+  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '' })), log: log.map(l => ({ ...l, team: l.team || '' })) };
 }
 async function saveStockItem(db, b) {
   const t = b.item || {}, name = clean(t.name, 80);
@@ -242,8 +243,8 @@ async function moveStock(db, b) {
   // ตรวจยอดเดิมอีกครั้งตอนเขียน กันสองคนจ่ายของพร้อมกัน
   const u = await db.prepare('UPDATE stock SET qty=?, updatedAt=? WHERE id=? AND qty=?').bind(after, Date.now(), it.id, before).run();
   if (!u.meta.changes) return { ok: false, error: 'conflict_retry' };
-  await db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(Date.now(), it.id, it.name, type, after - before, after, clean(b.note, 200), clean(b.caseId, 30), clean(b.by, 60)).run();
+  await db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(Date.now(), it.id, it.name, type, after - before, after, clean(b.note, 200), clean(b.caseId, 30), clean(b.by, 60), clean(b.team, MAX.volunteer)).run();
   return { ok: true, qty: after };
 }
 async function importCases(db, b) {

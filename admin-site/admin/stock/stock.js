@@ -1,42 +1,116 @@
 /* สต็อก: คงเหลือ / รับเข้า / จ่ายออก / ต้องการ — แทนกระดานในศูนย์ */
-const S={items:[],log:[],cat:'all',loaded:0};
+const S={items:[],log:[],roster:[],cat:'all',loaded:0,view:location.hash==='#bags'?'bags':'stock'};
+const BAG='ถุงยังชีพ',isBag=i=>i&&i.category===BAG;
+const VEH={boat:'🚤 เรือ',truck:'🚚 รถสูง / รถบรรทุก',pickup:'🛻 รถกระบะ',car:'🚐 รถเก๋ง / รถตู้',motorbike:'🛵 มอเตอร์ไซค์',foot:'🚶 เดินเท้า',other:'อื่น ๆ'};
+const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const TYPE={in:'รับเข้า',out:'จ่ายออก',set:'ตั้งยอด'};
 const CATS=['อาหาร','ยา','ถุงยังชีพ','ของใช้'];
 
 async function loadAll(){$('#sync').textContent='กำลังโหลด…';
-  try{const r=await apiGet({action:'stock'});if(r&&r.ok){S.items=r.items||[];S.log=r.log||[];S.loaded=Date.now();render()}else throw 0}
+  try{const [r,ro]=await Promise.all([apiGet({action:'stock'}),apiGet({action:'roster'}).catch(()=>null)]);if(r&&r.ok){S.items=r.items||[];S.log=r.log||[];if(ro&&ro.ok)S.roster=ro.roster||[];S.loaded=Date.now();render()}else throw 0}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden&&$('#drawer').hidden)loadAll()},60000);
 
 function expTag(i){if(!i.expiry)return '';const d=Math.ceil((Date.parse(i.expiry)-Date.now())/864e5);if(isNaN(d))return '';const t=new Date(i.expiry).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});return d<0?` · <span class="needtag">หมดอายุแล้ว (${t})</span>`:d<=30?` · <span class="warn">หมดอายุใน ${d} วัน</span>`:` · หมดอายุ ${t}`}
-const low=i=>i.min!==''&&i.min!=null&&Number(i.qty)<=Number(i.min);
+const received=i=>S.log.filter(l=>l.itemId===i.id).reduce((s,l)=>s+Math.max(0,Number(l.delta)||0),0);
+// ใกล้หมด: ถ้าตั้งขั้นต่ำไว้ใช้ขั้นต่ำ ไม่งั้นเหลือไม่เกิน 20% ของที่เคยรับเข้า
+const low=i=>{const q=Number(i.qty)||0;if(q<=0)return false;if(i.min!==''&&i.min!=null)return q<=Number(i.min);const b=Math.max(received(i),q);return b>0&&q/b<=.2};
+const stChip=i=>Number(i.qty)<=0?'<span class="schip zero">หมด</span>':low(i)?'<span class="schip low">ใกล้หมด</span>':'';
 function filtered(){const q=$('#q').value.trim().toLowerCase();
-  return S.items.filter(i=>{if(q&&!(i.name+' '+i.category+' '+i.note+' '+(i.location||'')).toLowerCase().includes(q))return false;
+  return S.items.filter(i=>{if(isBag(i))return false;if(q&&!(i.name+' '+i.category+' '+i.note+' '+(i.location||'')).toLowerCase().includes(q))return false;
     if(S.cat==='low')return low(i)||Number(i.qty)<=0;if(S.cat==='need')return i.needed;if(S.cat!=='all'&&i.category!==S.cat)return false;return true})}
 function render(){
   $('#sync').textContent=S.loaded?'อัปเดต '+new Date(S.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-  const I=S.items,today=new Date();today.setHours(0,0,0,0);const tl=S.log.filter(l=>Number(l.time)>=today.getTime());
+  $$('.views [data-view]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===S.view)));$('#view-stock').hidden=S.view!=='stock';$('#view-bags').hidden=S.view!=='bags';
+  const bagQty=S.items.filter(isBag).reduce((a,i)=>a+(Number(i.qty)||0),0);$('#bag-badge').textContent=nf(bagQty);
+  renderBags();
+  const I=S.items.filter(i=>!isBag(i)),today=new Date();today.setHours(0,0,0,0);const tl=S.log.filter(l=>Number(l.time)>=today.getTime()&&!isBag(S.items.find(i=>i.id===l.itemId)));
+  const warnI=S.items.filter(i=>Number(i.qty)<=0||low(i)).sort((a,b)=>(Number(a.qty)>0)-(Number(b.qty)>0));
+  $('#lowchips').innerHTML=warnI.length?`<span class="lc-lab">⚠ ต้องเติม</span>`+warnI.map(i=>`<button class="lchip ${Number(i.qty)<=0?'zero':'low'}" data-mv="in" data-item="${esc(i.id)}" title="กดเพื่อรับเข้า">${esc(i.name)} <b>${Number(i.qty)<=0?'หมด':'เหลือ '+nf(i.qty)+' '+esc(i.unit||'')}</b></button>`).join(''):'';
   $('#stats').innerHTML=[['รายการในคลัง',I.length,''],['ของหมด',I.filter(i=>Number(i.qty)<=0).length,'red'],['ใกล้หมด',I.filter(i=>low(i)&&Number(i.qty)>0).length,'wait'],['ต้องการเพิ่ม',I.filter(i=>i.needed).length,'go'],
     ['รับเข้าวันนี้',tl.filter(l=>l.type==='in').length+' ครั้ง','done'],['จ่ายออกวันนี้',tl.filter(l=>l.type==='out').length+' ครั้ง','']].map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
-  const cats=[['all','ทั้งหมด'],...CATS.map(c=>[c,c]),...[...new Set(I.map(i=>i.category).filter(c=>c&&!CATS.includes(c)))].map(c=>[c,c]),['low','หมด / ใกล้หมด'],['need','ต้องการ']];
+  const cats=[['all','ทั้งหมด'],...CATS.filter(c=>c!==BAG).map(c=>[c,c]),...[...new Set(I.map(i=>i.category).filter(c=>c&&!CATS.includes(c)&&c!==BAG))].map(c=>[c,c]),['low','หมด / ใกล้หมด'],['need','ต้องการ']];
   $('#cat').innerHTML=cats.map(([k,t])=>`<button data-cat="${esc(k)}" aria-selected="${S.cat===k}">${esc(t)}</button>`).join('');
   const L=filtered();
   $('#items').innerHTML=L.length?`<table class="tbl stk"><thead><tr><th>รายการ</th><th class="r">คงเหลือ</th><th></th></tr></thead><tbody>${L.map(i=>{const q=Number(i.qty)||0,cls=q<=0?'zero':low(i)?'low':'';
-    return `<tr class="${cls}" data-id="${esc(i.id)}"><td><b>${esc(i.name)}</b><small>${esc(i.category||'')}${i.min!==''&&i.min!=null?` · ขั้นต่ำ ${nf(i.min)}`:''}${i.needed?' · <span class="needtag">ต้องการ</span>':''}${i.location?' · 📍 '+esc(i.location):''}${expTag(i)}</small></td>
-      <td class="r qty">${nf(q)} <span class="unit">${esc(i.unit||'')}</span>${q<=0?'<small class="warn">หมด</small>':low(i)?'<small class="warn">ใกล้หมด</small>':''}</td>
+    return `<tr class="${cls}" data-id="${esc(i.id)}"><td><b>${esc(i.name)}</b> ${stChip(i)}<small>${esc(i.category||'')}${i.min!==''&&i.min!=null?` · ขั้นต่ำ ${nf(i.min)}`:''}${i.needed?' · <span class="needtag">ต้องการ</span>':''}${i.location?' · 📍 '+esc(i.location):''}${expTag(i)}</small></td>
+      <td class="r qty">${nf(q)} <span class="unit">${esc(i.unit||'')}</span></td>
       <td class="act"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า</button><button class="btn ghost sm" data-mv="out" data-item="${esc(i.id)}">− จ่ายออก</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}">✎</button></td></tr>`}).join('')}</tbody></table>`:'<p class="empty">ไม่มีรายการ</p>';
   const need=I.filter(i=>i.needed||Number(i.qty)<=0||low(i));
   $('#need-list').innerHTML=need.length?need.map(i=>`<li><b>${esc(i.name)}</b> <small>${i.needed?'ต้องการ':''}${Number(i.qty)<=0?(i.needed?' · ':'')+'หมด':low(i)?(i.needed?' · ':'')+'เหลือ '+nf(i.qty)+' '+esc(i.unit):''}</small></li>`).join(''):'<li class="muted">ยังไม่มี</li>';
-  $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
+  $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.team?' · 🚚 '+esc(l.team):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
 }
 $('#q').addEventListener('input',render);
 document.addEventListener('click',e=>{
+  const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;history.replaceState(null,'',S.view==='bags'?'#bags':location.pathname);render();scrollTo(0,0);return}
   const c=e.target.closest('[data-cat]');if(c){S.cat=c.dataset.cat;render();return}
+  const ld=e.target.closest('[data-load]');if(ld){openLoad(S.roster.find(t=>t.id===ld.dataset.load),ld.dataset.mode||'out');return}
   const m=e.target.closest('[data-mv]');if(m){openMove(S.items.find(i=>i.id===m.dataset.item),m.dataset.mv);return}
   const ed=e.target.closest('[data-ed]');if(ed){openItem(S.items.find(i=>i.id===ed.dataset.ed));return}
 });
 $('#add-item').addEventListener('click',()=>openItem(null));
+$('#add-bag').addEventListener('click',()=>openItem({category:BAG,unit:'ถุง'}));
+addEventListener('hashchange',()=>{const v=location.hash==='#bags'?'bags':'stock';if(v!==S.view){S.view=v;render()}});
+$('#add-team').addEventListener('click',openTeam);
+
+/* ---------- แท็บถุงยังชีพ: ส่งถุงขึ้นรถของแต่ละทีม ---------- */
+const VEH_ORDER=['truck','pickup','boat','car','motorbike','other','foot',''];
+function bagLoads(){const ids=new Set(S.items.filter(isBag).map(i=>i.id));return S.log.filter(l=>ids.has(l.itemId)&&l.team)}
+function renderBags(){
+  const B=S.items.filter(isBag),total=B.reduce((a,i)=>a+(Number(i.qty)||0),0),L=bagLoads(),t0=new Date();t0.setHours(0,0,0,0);
+  const sent=l=>l.type==='out'?-(Number(l.delta)||0):l.type==='in'?-(Number(l.delta)||0):0; // ขึ้นรถ = +, คืน = −
+  const today=L.filter(l=>Number(l.time)>=t0.getTime()),sum=a=>a.reduce((s,l)=>s+sent(l),0);
+  $('#bag-stats').innerHTML=[['ถุงคงเหลือในคลัง',nf(total)+' ถุง',total<=0?'red':''],['ส่งขึ้นรถวันนี้',nf(sum(today))+' ถุง','go'],['ส่งขึ้นรถทั้งหมด',nf(sum(L))+' ถุง','done'],['ทีมรถ',nf(S.roster.length)+' ทีม','']]
+    .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
+  $('#bag-hint').textContent=!B.length?'ยังไม่มีรายการถุงยังชีพ กด "+ เพิ่มชนิดถุง" ด้านขวาก่อน':total<=0?'ถุงยังชีพในคลังหมด กด "+ รับเข้า" ที่ถุงด้านขวาก่อนส่งขึ้นรถ':'กด "+ ส่งถุงขึ้นรถ" ที่ทีม เพื่อตัดถุงออกจากคลังและบันทึกว่าอยู่กับทีมไหน';
+  const R=[...S.roster].sort((a,b)=>(a.status==='rest')-(b.status==='rest')||VEH_ORDER.indexOf(a.vehicle||'')-VEH_ORDER.indexOf(b.vehicle||'')||String(a.name).localeCompare(String(b.name),'th'));
+  $('#bag-teams').innerHTML=R.length?R.map(t=>{const mine=L.filter(l=>l.team===t.name),td=sum(mine.filter(l=>Number(l.time)>=t0.getTime())),all=sum(mine);
+    return `<article class="team st-${esc(t.status)}"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.leader?'หัวหน้า '+t.leader:'',t.phone].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุพาหนะ'}</small></div><span class="tst tst-${esc(t.status)}">${esc(TST[t.status]||'')}</span></div>
+      <div class="bagcount"><span><b>${nf(td)}</b> ถุง วันนี้</span><span class="muted">รวม ${nf(all)} ถุง</span></div>
+      <div class="team-f"><button class="btn primary sm" data-load="${esc(t.id)}" data-mode="out" ${total<=0?'disabled':''}>+ ส่งถุงขึ้นรถ</button><button class="btn ghost sm" data-load="${esc(t.id)}" data-mode="in" ${all<=0?'disabled':''}>คืนถุง</button></div></article>`}).join('')
+    :`<p class="empty">ยังไม่มีทีมรถ กด "+ เพิ่มทีมรถ" หรือเพิ่มที่หน้า <a href="../teams/">จัดทีม</a></p>`;
+  $('#bag-items').innerHTML=B.length?B.map(i=>`<div class="bag-it${Number(i.qty)<=0?' zero':low(i)?' low':''}"><div><b>${esc(i.name)}</b> ${stChip(i)}<small class="muted">${i.location?'📍 '+esc(i.location):''}${expTag(i)}</small></div><div class="bag-q">${nf(i.qty)} <span class="unit">${esc(i.unit||'ถุง')}</span></div>
+      <div class="bag-a"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}">✎</button></div></div>`).join(''):'<p class="muted small">ยังไม่มี</p>';
+  $('#bag-log').innerHTML=L.length?L.slice(0,60).map(l=>{const n=sent(l);return `<div class="lg lg-${n>0?'out':'in'}"><span class="lg-d">${n>0?'−':'+'}${nf(Math.abs(n))}</span><div><b>🚚 ${esc(l.team)}</b> <small>${n>0?'ขึ้นรถ':'คืนเข้าคลัง'} · ${esc(l.item)} · คลังเหลือ ${nf(l.after)}${l.caseId?' · เคส #'+esc(l.caseId):''}${l.note?' · '+esc(l.note):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`}).join(''):'<p class="muted small">ยังไม่มีการส่งถุงขึ้นรถ</p>';
+}
+function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.length){toast('ยังไม่มีรายการถุงยังชีพ');return}
+  const out=mode==='out',had=bagLoads().filter(l=>l.team===t.name);
+  drawer(`<div class="d-head"><div><small class="muted">${esc(t.vehicle?VEH[t.vehicle]:'ทีม')}</small><h2>${out?'ส่งถุงขึ้นรถ':'คืนถุงเข้าคลัง'} · ${esc(t.name)}</h2><small>ถุงในคลัง <b>${nf(B.reduce((a,i)=>a+(Number(i.qty)||0),0))}</b> ถุง</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  <form id="lform" class="form-grid">
+    <label class="fld wide"><span>ชนิดถุง</span><select name="bag">${B.map(i=>`<option value="${esc(i.id)}">${esc(i.name)} (เหลือ ${nf(i.qty)})</option>`).join('')}</select></label>
+    <label class="fld"><span>จำนวน (ถุง)</span><input name="amount" type="number" min="1" inputmode="numeric" required></label>
+    <div class="quick">${[10,20,50,100].map(n=>`<button type="button" class="chip" data-q="${n}">+${n}</button>`).join('')}</div>
+    <p class="small muted" id="preview"></p>
+    ${out?'<label class="fld"><span>เลขเคส (ถ้าส่งให้เคสเดียว)</span><input name="caseId" maxlength="30" placeholder="เว้นว่างได้"></label>':''}
+    <label class="fld"><span>หมายเหตุ</span><input name="note" maxlength="200" placeholder="${out?'เช่น รอบเช้า ไปชุมชน…':'เช่น เหลือจากรอบบ่าย'}"></label>
+    <div class="form-act"><button class="btn primary" type="submit" id="l-go">${out?'ส่งขึ้นรถ':'คืนเข้าคลัง'}</button></div>
+  </form>`);
+  const f=$('#lform'),amt=f.elements.amount,sel=f.elements.bag; // ไม่ใช้ชื่อ item: ชนกับ elements.item()
+  const upd=()=>{const it=B.find(i=>i.id===sel.value),a=Number(amt.value)||0,q=Number(it.qty)||0,after=out?q-a:q+a;$('#preview').textContent=amt.value===''?'':`${it.name} ในคลังหลังบันทึก: ${nf(after)} ถุง${after<0?' — ถุงไม่พอ':''}`;$('#preview').className='small '+(after<0?'warn':'muted')};
+  $$('#lform [data-q]').forEach(b=>b.onclick=()=>{amt.value=(Number(amt.value)||0)+Number(b.dataset.q);upd()});amt.oninput=upd;sel.onchange=upd;
+  f.onsubmit=async e=>{e.preventDefault();const it=B.find(i=>i.id===sel.value),a=Math.round(Number(amt.value));if(!(a>0)){amt.focus();return}
+    if(out&&a>(Number(it.qty)||0)){toast(`ถุงไม่พอ เหลือ ${nf(it.qty)} ถุง`);return}
+    $('#l-go').disabled=true;
+    try{const r=await apiPost({action:'stock_move',itemId:it.id,type:out?'out':'in',amount:a,team:t.name,note:f.elements.note.value||(out?'ขึ้นรถ ':'คืนจาก ')+t.name,caseId:out&&f.elements.caseId?f.elements.caseId.value:'',by:staffName()});
+      if(!r.ok){toast(r.error==='not_enough'?`ถุงไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));return}
+      toast(`${out?'ส่ง':'คืน'} ${nf(a)} ถุง ${out?'ขึ้นรถ':'จาก'} ${t.name} · คลังเหลือ ${nf(r.qty)}`,true);closeD();loadAll()}
+    catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const b=$('#l-go');if(b)b.disabled=false}};
+}
+function openTeam(){
+  drawer(`<div class="d-head"><div><h2>เพิ่มทีมรถ</h2><small class="muted">ทีมจะขึ้นที่หน้าจัดทีมด้วย</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  <form id="tform" class="form-grid">
+    <label class="fld"><span>ชื่อทีม / ทะเบียนรถ *</span><input name="name" required maxlength="60" placeholder="เช่น รถกระบะ 1 / กข 1234"></label>
+    <label class="fld"><span>พาหนะ</span><select name="vehicle">${Object.entries(VEH).map(([k,v])=>`<option value="${k}" ${k==='pickup'?'selected':''}>${v}</option>`).join('')}</select></label>
+    <label class="fld"><span>หัวหน้าทีม</span><input name="leader" maxlength="60"></label>
+    <label class="fld"><span>เบอร์โทร</span><input name="phone" type="tel" inputmode="tel" maxlength="20"></label>
+    <div class="form-act"><button class="btn primary" type="submit" id="t-go">เพิ่มทีม</button></div>
+  </form>`);
+  $('#tform').onsubmit=async e=>{e.preventDefault();const f=e.target,v=n=>f.elements[n].value.trim();if(!v('name'))return;$('#t-go').disabled=true;
+    try{const r=await apiPost({action:'roster_save',team:{name:v('name'),vehicle:v('vehicle'),leader:v('leader'),phone:v('phone'),status:'ready'},by:staffName()});
+      if(!r.ok){toast(r.error==='duplicate_name'?'มีทีมชื่อนี้แล้ว':'เพิ่มไม่สำเร็จ: '+(r.error||''));return}
+      toast('เพิ่มทีม '+v('name')+' แล้ว',true);closeD();loadAll()}catch(err){if(err.message!=='auth')toast('เพิ่มไม่สำเร็จ ลองใหม่')}finally{const b=$('#t-go');if(b)b.disabled=false}};
+}
 
 /* ---------- รับเข้า / จ่ายออก ---------- */
 function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeD;$('#drawer-bg').onclick=closeD;setTimeout(()=>{const f=d.querySelector('input');if(f)f.focus()},50)}
@@ -97,4 +171,4 @@ $('#export').addEventListener('click',()=>{const cell=v=>{let s=String(v==null?'
   const rows=[['รายการ','หมวด','คงเหลือ','หน่วย','ขั้นต่ำ','ต้องการ','วันหมดอายุ','ที่เก็บ','หมายเหตุ'],...S.items.map(i=>[i.name,i.category,i.qty,i.unit,i.min,i.needed?'ต้องการ':'',i.expiry||'',i.location||'',i.note])];
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download=`umplus-stock-${new Date().toISOString().slice(0,10)}.csv`;a.click()});
 
-adminBoot({action:'stock'},'items',r=>{S.items=r.items||[];S.log=r.log||[];S.loaded=Date.now();render()});
+adminBoot({action:'stock'},'items',r=>{S.items=r.items||[];S.log=r.log||[];S.loaded=Date.now();render();loadAll()});

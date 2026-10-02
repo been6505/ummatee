@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=6">
-<link rel="stylesheet" href="../pages.css?v=4">
+<link rel="stylesheet" href="../pages.css?v=6">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -32,7 +32,10 @@
     <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh">⟳ โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
   </header>
   <main class="wrap" id="main">
+    <div class="views" role="tablist" aria-label="มุมมองสต็อก"><button role="tab" data-view="stock" aria-selected="true">📦 คลังของ</button><button role="tab" data-view="bags" aria-selected="false">🎒 ถุงยังชีพ <span class="vbadge" id="bag-badge"></span></button></div>
+    <div id="view-stock">
     <section class="stats" id="stats" aria-label="สรุปสต็อก"></section>
+    <div class="lowchips" id="lowchips" aria-label="ของที่หมดหรือใกล้หมด"></div>
     <section class="bar">
       <div class="bar-top"><label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหาของในคลัง" aria-label="ค้นหาของในคลัง"></label><button class="btn primary sm" id="add-item">+ เพิ่มรายการ</button></div>
       <div class="bar-row"><div class="seg" role="tablist" id="cat"></div><button class="btn ghost sm" id="copy-need">คัดลอกรายการที่ต้องการ</button><button class="btn ghost sm" id="export">⬇ CSV</button></div>
@@ -44,6 +47,23 @@
         <div class="panel-h mt"><h2>ประวัติรับเข้า / จ่ายออก</h2></div><div id="log" class="log"></div>
       </section>
     </div>
+    </div>
+
+    <div id="view-bags" hidden>
+      <section class="stats" id="bag-stats" aria-label="สรุปถุงยังชีพ"></section>
+      <div class="cols cols-stock">
+        <section class="panel">
+          <div class="panel-h"><h2>ทีมรถ</h2><button class="btn primary sm" id="add-team">+ เพิ่มทีมรถ</button></div>
+          <p class="muted small" id="bag-hint"></p>
+          <div id="bag-teams" class="team-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-h"><h2>ถุงยังชีพในคลัง</h2><button class="btn ghost sm" id="add-bag">+ เพิ่มชนิดถุง</button></div>
+          <div id="bag-items" class="bag-items"></div>
+          <div class="panel-h mt"><h2>ส่งถุงขึ้นรถ / คืนถุง</h2></div><div id="bag-log" class="log"></div>
+        </section>
+      </div>
+    </div>
 
   </main>
 </div>
@@ -51,6 +71,6 @@
 <aside class="drawer" id="drawer" hidden></aside>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="./stock.js?v=2"></script>
+<script src="./stock.js?v=5"></script>
 </body>
 </html>

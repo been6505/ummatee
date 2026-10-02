@@ -7,6 +7,11 @@ const COVERED=(()=>{
   const SHEET_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/edit';
   const CSV_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv';
   const NEAR_M=800;
+  /* ตัวช่วยแปลงลิงก์ย่อ Google Maps เป็นพิกัด (Cloudflare Worker ของมูลนิธิ) — ใช้เมื่อเว็บนี้ไม่ได้อยู่บน Cloudflare เอง */
+  const RESOLVER='https://ummatee-help.akasitlove.workers.dev/api';
+  function coordsFromUrl(u){u=String(u||'');try{u=decodeURIComponent(u)}catch(e){}
+    const pats=[/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,/\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,/^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{2,3}\.\d+)\s*$/];
+    for(const re of pats){const m=u.match(re);if(m){const a=+m[1],b=+m[2];if(a>5&&a<21&&b>97&&b<106)return [a,b]}}return null}
   const C={rows:[],loaded:0,error:'',loading:null,source:''};
   const norm=s=>String(s||'').normalize('NFC').replace(/\s+/g,' ').replace(/ซ\.\s*/g,'ซอย').replace(/ถ\.\s*/g,'ถนน').toLowerCase().trim();
   function parseCSV(t){const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];
@@ -14,13 +19,14 @@ const COVERED=(()=>{
     else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur='';rows.push(row);row=[]}else cur+=ch}
     if(cur||row.length){row.push(cur);rows.push(row)}return rows}
   /* จัดข้อมูลให้เป็นแบบเดียวกันแม้ชีตกรอกต่างกัน: แยก "เขตxxx" และ "N ชุด" ออกจากชื่อพื้นที่, ปีเป็น พ.ศ. 4 หลัก, ตัดส่วนท้ายลิงก์ */
-  function fromCells(r){let [org,area,date,link,district,sets,note]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
+  function fromCells(r){let [org,area,date,link,district,sets,note,coord]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
     if(!sets){const m=area.match(/(\d[\d,]*)\s*ชุด/);if(m){sets=m[1];area=area.replace(m[0],' ')}}
     if(!district){const m=area.match(/เขต\s*([ก-๙]+)\s*$/);if(m&&area.length-m[0].length>=4){district=m[1];area=area.slice(0,m.index)}}
     district=String(district||'').replace(/^เขต\s*/,'');area=area.replace(/\s+/g,' ').trim();
     const d=date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(d){let y=+d[3];if(y<100)y=y>=50?2500+y:y+2543;else if(y<2400)y+=543;date=d[1]+'/'+d[2]+'/'+y;const now=new Date().getFullYear()+543;if(Math.abs(y-now)>1)note=(note?note+' · ':'')+'ปี '+y+' อาจพิมพ์ผิด ตรวจในชีต'}
     link=link.replace(/\?g_st=\w+$/,'');
-    return {org,area,date,link,district,sets:sets||'',note:note||'',lat:null,lng:null,approx:false}}
+    const ll=coordsFromUrl(coord)||coordsFromUrl(link);
+    return {org,area,date,link,district,sets:sets||'',note:note||'',lat:ll?ll[0]:null,lng:ll?ll[1]:null,approx:false}}
   /* วันที่ในชีตเขียนหลายแบบ (2/10/69, 1/10/2569, 1/10/26) → แสดงตามที่กรอก แต่แปลงเป็นเวลาไว้เรียง */
   function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=50?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
   const geoCache=(()=>{try{return JSON.parse(localStorage.getItem('uh_cov_geo')||'{}')}catch(e){return {}}})();
@@ -33,7 +39,7 @@ const COVERED=(()=>{
     if(C.loading)return C.loading;if(C.loaded&&Date.now()-C.loaded<5*60e3)return;
     C.loading=(async()=>{
       let rows=null;
-      if(apiUrl&&apiUrl.charAt(0)==='/'){try{const j=await fetch(apiUrl+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Date.now()).then(x=>x.json());if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>Object.assign(fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note]),{lat:it.lat,lng:it.lng}));C.source='api'}}catch(e){}}
+      {const base=apiUrl&&apiUrl.charAt(0)==='/'?apiUrl:RESOLVER;try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);const j=await fetch(base+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Math.floor(Date.now()/60000),{signal:ctl.signal}).then(x=>x.json()).finally(()=>clearTimeout(tm));if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>{const r=fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note]);if(it.lat!=null&&it.lat!==''){r.lat=+it.lat;r.lng=+it.lng}return r});C.source='api'}}catch(e){}}
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);rows=all.slice(1).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});
@@ -65,5 +71,5 @@ const COVERED=(()=>{
     hits.sort((a,b)=>(a.d==null?1e9:a.d)-(b.d==null?1e9:b.d)||(b.len||0)-(a.len||0)||b.r.t-a.r.t);
     return {best:hits[0],all:hits};
   }
-  return {C,load,match,SHEET_URL,distM,keys};
+  return {C,load,match,SHEET_URL,distM,keys,coordsFromUrl};
 })();

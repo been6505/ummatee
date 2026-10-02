@@ -70,7 +70,9 @@ function filtered(){
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
       return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(ca-cb)});
 }
-['#q','#f-status','#f-urg','#f-need','#f-sort'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>render()));
+['#q','#f-status','#f-urg','#f-need','#f-sort'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
+function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
+$('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classList.contains('open');$('#filters-box').classList.toggle('open',o);$('#f-toggle').setAttribute('aria-expanded',String(o))});
 
 /* ---------- แสดงผล ---------- */
 function render(){

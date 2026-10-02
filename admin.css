@@ -78,3 +78,21 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 @media(max-width:600px){.top-r #refresh{display:none}.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.stat{padding:8px;border-radius:10px}.stat b{font-size:19px}.stat span{font-size:11px;line-height:1.3;display:block}.tbl td.act .btn{min-height:34px}}
 .tabs{display:flex;gap:4px;margin-right:auto;margin-left:8px}.tabs a{color:#bad0d9;text-decoration:none;padding:8px 12px;border-radius:9px;font-weight:600;font-size:15px}.tabs a[aria-current=page]{background:#ffffff1f;color:#fff}
 @media(max-width:600px){.tabs a{padding:6px 8px;font-size:14px}.brand span{display:none}}
+/* แถบค้นหา/กรอง: คอมแสดงครบ · มือถือย่อเหลือช่องค้นหา + ปุ่มตัวกรอง */
+.bar-top{display:flex;gap:8px;align-items:center}.bar-top .search{flex:1;min-width:0}
+.f-toggle{display:none}.f-toggle b{background:var(--teal);color:#fff;border-radius:999px;font-size:12px;padding:1px 7px;margin-left:2px}
+.filters-box{display:contents}
+@media(max-width:900px){
+  .bar{position:static;padding:10px 0 2px;gap:8px}
+  .search input{min-height:42px;font-size:15px;padding:8px 10px 8px 34px;border-radius:10px}
+  .f-toggle{display:inline-flex;min-height:42px;flex:none}
+  .filters-box{display:none;grid-template-columns:1fr 1fr;gap:6px;width:100%}
+  .filters-box.open{display:grid}
+  .filters-box select{min-height:38px;font-size:13.5px;padding:4px 8px;width:100%}
+  .bar-row{gap:6px}.bar-row>.seg,.bar-row>#export{flex:none}
+  .seg button{min-height:32px;padding:4px 12px;font-size:14px}
+  .bar-row #export{min-height:38px}
+  .count{font-size:12.5px}
+}
+.tabs a{white-space:nowrap}
+@media(max-width:600px){.top{gap:6px;padding:8px 10px}.tabs{margin-left:2px}.tabs a{padding:6px 7px;font-size:13.5px}#logout{padding:6px 8px;font-size:13px}.brand img{height:32px}}

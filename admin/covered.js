@@ -37,9 +37,9 @@ const COVERED=(()=>{
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);rows=all.slice(1).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});
-      C.rows=rows;C.error='';C.loaded=Date.now();
+      C.rows=rows;C.error='';C.loaded=Date.now();if(C.onupdate)try{C.onupdate()}catch(e){}
       // หาพิกัดโดยประมาณทีละแถว (เฉพาะที่ยังไม่มีพิกัด) ไม่ให้ยิงคำขอถี่เกิน
-      for(const r of rows.filter(x=>x.lat==null)){if(await geocode(r))await new Promise(s=>setTimeout(s,300))}
+      for(const r of rows.filter(x=>x.lat==null)){if(await geocode(r))await new Promise(s=>setTimeout(s,300));if(C.onupdate)try{C.onupdate()}catch(e){}}
       C.loaded=Date.now();
     })().finally(()=>{C.loading=null});
     return C.loading;

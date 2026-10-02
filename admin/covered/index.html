@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=5">
-<link rel="stylesheet" href="./covered.css?v=1">
+<link rel="stylesheet" href="./covered.css?v=3">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -38,19 +38,23 @@
       <p class="muted">ดึงสดจาก Google Sheet ทุก 5 นาที · ใช้ตรวจก่อนส่งทีม เพื่อไม่ให้ซ้ำพื้นที่</p></div>
       <a class="btn ghost-d sm" id="sheet-link" target="_blank" rel="noopener">แก้ไขในชีต ↗</a>
     </div>
-    <section class="cv-stats" id="stats" aria-label="สรุป"></section>
     <div class="cv-tools">
       <input id="q" type="search" placeholder="ค้นหาพื้นที่ เขต หรือองค์กร" aria-label="ค้นหา">
       <div class="seg" role="tablist" id="orgs" aria-label="กรองตามองค์กร"></div>
     </div>
-    <p class="status" id="status" hidden></p>
-    <div class="cv-tw"><table class="cv-tbl"><thead><tr><th>องค์กร</th><th>พื้นที่</th><th>เขต</th><th>วันที่</th><th class="n">ชุด</th><th>แผนที่</th><th>เคสที่อาจซ้ำ</th></tr></thead><tbody id="tb"></tbody></table></div>
+    <p class="status" id="status">กำลังโหลดข้อมูลจากชีต…</p>
+    <section class="cv-mapcard" aria-label="แผนที่พื้นที่ที่องค์กรอื่นรับแล้ว">
+      <div class="cv-map" id="cmap"></div>
+      <div class="cv-leg"><span><i class="lg-p"></i>ตำแหน่งจากลิงก์</span><span><i class="lg-a"></i>ตำแหน่งโดยประมาณ (จากชื่อพื้นที่)</span><label><input type="checkbox" id="mt-cases" checked><i class="lg-c"></i>เคสที่ยังไม่เสร็จ</label><span class="muted" id="map-miss"></span></div>
+    </section>
+    <section class="cv-stats" id="stats" aria-label="สรุป"></section>
+    <div class="cv-tw"><table class="cv-tbl"><thead><tr><th>องค์กร</th><th>พื้นที่</th><th>เขต</th><th>วันที่</th><th class="n">ชุด</th><th>แผนที่</th><th>เคสที่อาจซ้ำ</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
     <p class="muted small">"เคสที่อาจซ้ำ" นับเคสที่ยังไม่เสร็จซึ่งอยู่ใกล้จุดนี้ (ไม่เกิน ~800 ม.) หรือที่อยู่มีชื่อซอยตรงกัน · ตำแหน่ง "โดยประมาณ" หามาจากชื่อพื้นที่ เพราะยังไม่มีลิงก์ หรือเว็บนี้แปลงลิงก์ย่อ Google Maps ไม่ได้</p>
   </main>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="../covered.js?v=3"></script>
-<script src="./covered-page.js?v=1"></script>
+<script src="../covered.js?v=4"></script>
+<script src="./covered-page.js?v=2"></script>
 </body>
 </html>

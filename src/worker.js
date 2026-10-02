@@ -1,5 +1,5 @@
 /* UM+ บน Cloudflare Workers — API แทน Google Apps Script + ฐานข้อมูล D1
-   ใช้ร่วมกัน 2 Worker: ummatee-help (หน้าประชาชน) และ admin-um-help (หลังบ้าน) ผูก D1 ตัวเดียวกันชื่อ DB
+   ใช้ร่วมกัน: Worker ummatee-help (หน้าประชาชน + cron สำรอง) และ Pages admin-um-help (หลังบ้าน, ไฟล์นี้เป็น _worker.js) ผูก D1 ตัวเดียวกันชื่อ DB
    Secret: VOLUNTEER_KEY (รหัสทีม), SHEET_BACKUP_URL + SHEET_BACKUP_KEY (สำรองลง Google Sheet ทุก 1 นาที)
    รูปแบบคำขอเหมือน Code.gs เดิมทุกอย่าง: GET /api?action=... และ POST /api (JSON) */
 
@@ -351,7 +351,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.[a-z0-9-]+\.workers\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }

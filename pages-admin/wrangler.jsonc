@@ -1,0 +1,10 @@
+// หลังบ้านบน Cloudflare Pages: https://admin-um-help.pages.dev (ลิงก์ไม่มีชื่อบัญชี)
+// สร้างไฟล์ด้วย  npm run build:admin  แล้ว deploy ด้วย  npm run deploy:admin  (ใช้ D1 ตัวเดียวกับหน้าประชาชน)
+{
+  "name": "admin-um-help",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2025-09-01",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "ummatee-db", "database_id": "2d211589-1846-409f-a0f8-cc352337063a" }
+  ]
+}

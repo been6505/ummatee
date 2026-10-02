@@ -1,5 +1,6 @@
 // Worker หน้าประชาชน: ummatee-help (Workers Builds จาก branch "cloudflare" ใช้ไฟล์นี้)
-// หน้าเว็บอยู่ใน public-site/ ส่วน /api ให้ src/worker.js จัดการ ใช้ D1 ตัวเดียวกับหลังบ้าน
+// หน้าเว็บอยู่ใน public-site/ ส่วน /api ให้ src/worker.js จัดการ ใช้ D1 ตัวเดียวกับหลังบ้าน (pages-admin/)
+// cron ทุก 1 นาที: ส่งข้อมูลที่เปลี่ยนไปสำรองใน Google Sheet
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ummatee-help",
@@ -13,5 +14,6 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "ummatee-db", "database_id": "2d211589-1846-409f-a0f8-cc352337063a" }
   ],
+  "triggers": { "crons": ["* * * * *"] },
   "observability": { "enabled": true }
 }

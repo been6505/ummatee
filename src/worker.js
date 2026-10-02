@@ -257,7 +257,7 @@ async function importCases(db, b) {
       clean(c.address, MAX.address), num(c.lat, -90, 90), num(c.lng, -180, 180), LEVELS.includes(c.level) ? c.level : '', list(c.needs).join(', '), list(c.vulnerable).join(', '),
       clean(c.notes, MAX.notes), clean(String(c.volunteer || '').replace(/^'/, ''), MAX.volunteer), Number(c.updatedAt) || Date.now(), rand(16),
       c.households === '' || c.households == null ? null : clampInt(c.households, 1, 999, null), c.bags === '' || c.bags == null ? null : clampInt(c.bags, 0, 9999, null), clean(c.cctv, 40)).run();
-    added += r.meta.changes || 0;
+    if (r.meta.changes) added++; // changes นับรวมแถวที่ trigger ใส่คิวสำรอง จึงนับแค่ว่ามีเพิ่มหรือไม่
   }
   if (added) await bumpRev(db);
   return { ok: true, added, total: rows.length };

@@ -56,3 +56,6 @@
 .cf-dup{background:#fdf7e7;border:1px solid #f0dfaa;border-radius:12px;padding:10px 14px;font-size:14px}.cf-dup ul{margin:6px 0 0;padding-left:18px}
 #cf-err:empty{display:none}#cf-err{margin:0}
 @media(max-width:700px){#cform{grid-template-columns:1fr 1fr}.cv-act{width:100%}.cv-act .btn{flex:1;justify-content:center;text-align:center}}
+/* แผนที่ Leaflet มี z-index สูง: กักไว้ในกรอบ ไม่ให้ทับฟอร์ม */
+.cv-mapcard,.cv-map,.cf-map{isolation:isolate;position:relative;z-index:0}
+#drawer{z-index:2000}#drawer-bg{z-index:1999}

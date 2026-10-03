@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=5">
-<link rel="stylesheet" href="./covered.css?v=6">
+<link rel="stylesheet" href="./covered.css?v=7">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -38,20 +38,6 @@
       <p class="muted">ดึงสดจาก Google Sheet ทุก 5 นาที · ใช้ตรวจก่อนส่งทีม เพื่อไม่ให้ซ้ำพื้นที่</p></div>
       <div class="cv-act"><button class="btn primary sm" id="add-cov" type="button">+ เพิ่มพื้นที่ที่มอบแล้ว</button><a class="btn ghost-d sm" id="sheet-link" target="_blank" rel="noopener">แก้ไขในชีต ↗</a></div>
     </div>
-    <details class="cv-guide" id="guide">
-      <summary>วิธีกรอกในชีตโดยตรง <span class="muted">แตะเพื่อดู</span></summary>
-      <p class="small">หัวคอลัมน์เรียงตามนี้ (แถวแรกของชีต อย่าเปลี่ยนชื่อหัว):</p>
-      <div class="cv-cols"><span>องค์กร</span><span>วันที่</span><span>รายการ</span><span>จำนวน</span><span>สถานที่</span><span>โลเคชั่น</span></div>
-      <ol>
-        <li><b>องค์กร</b> ชื่อองค์กรที่ลงพื้นที่ ใช้ชื่อเดิมทุกแถว เช่น "สภาเครือข่าย" (ไม่สลับชื่อย่อ) ปุ่มกรองจะนับถูก</li>
-        <li><b>วันที่</b> วัน/เดือน/ปี พ.ศ. เช่น 3/10/2569 หรือ 3/10/69</li>
-        <li><b>รายการ</b> ของที่มอบ เช่น ถุงยังชีพ, อาหารกล่อง, น้ำดื่ม</li>
-        <li><b>จำนวน</b> ใส่ตัวเลข เช่น 120 (ถ้าไม่ใช่ชุด พิมพ์หน่วยด้วย เช่น 50 แพ็ก)</li>
-        <li><b>สถานที่</b> ชื่อชุมชน/ซอย/มัสยิดให้ชัด และเขต เช่น "ชุมชนวังโสม หัวหมาก เขตบางกะปิ" · หลายจุดให้แยกแถว</li>
-        <li><b>โลเคชั่น</b> สำคัญที่สุด: เปิด Google Maps → ปักหมุดตรงจุด → แชร์ → คัดลอกลิงก์ แล้ววางทั้งลิงก์ (maps.app.goo.gl/… ได้เลย) หรือพิมพ์พิกัด เช่น <code>13.8123, 100.7012</code> · ถ้าเว้นว่าง ระบบจะเดาจากชื่อสถานที่ อาจคลาดได้</li>
-      </ol>
-      <p class="muted small">กรอกแล้วหน้านี้อัปเดตเองภายในประมาณ 5 นาที หรือกด ⟳ โหลดใหม่ · ห้ามใส่ชื่อ-เบอร์โทรผู้ประสบภัยในชีตนี้</p>
-    </details>
     <div class="cv-tools">
       <input id="q" type="search" placeholder="ค้นหาพื้นที่ เขต หรือองค์กร" aria-label="ค้นหา">
       <div class="seg" role="tablist" id="orgs" aria-label="กรองตามองค์กร"></div>

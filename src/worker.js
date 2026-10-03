@@ -32,6 +32,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`,
   // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
   `CREATE TABLE IF NOT EXISTS zones (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
+  `CREATE TABLE IF NOT EXISTS covered_extra (n INTEGER PRIMARY KEY AUTOINCREMENT, org TEXT, date TEXT, items TEXT, qty TEXT, place TEXT, location TEXT, by_ TEXT, createdAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
@@ -378,8 +379,24 @@ async function listCovered(db) {
   const items = [];
   for (const x of rows) { const [org, area, date, link, district, sets, note, coord, what] = x.map(v => String(v || '').trim()); const ll = coordsFromUrl('@' + coord.replace(/\s+/g, '')) || coordsFromUrl('@' + link.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
     items.push({ org, area, date, link, district, sets, note, items: what, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
+  // แถวที่กรอกผ่านฟอร์มบนเว็บนี้ (เก็บใน D1) — ข้ามถ้าชีตมีแถวเดียวกันแล้ว
+  const seen = new Set(items.map(i => [i.org, i.area, i.date].join('|')));
+  const { results: extra } = await db.prepare('SELECT * FROM covered_extra ORDER BY n').all();
+  for (const e of extra || []) { if (seen.has([e.org, e.place, e.date].join('|'))) continue;
+    const loc = String(e.location || ''), link = /^https?:\/\//.test(loc) ? loc : '';
+    const ll = coordsFromUrl('@' + loc.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
+    items.push({ org: e.org, area: e.place, date: e.date, link, district: '', sets: e.qty, note: 'กรอกผ่านเว็บ', items: e.items, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
   await setMeta(db, 'covered_cache', JSON.stringify({ t: Date.now(), items }));
   return { ok: true, items };
+}
+async function addCovered(db, b) {
+  const r = b.row || {}, cut = (v, n) => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
+  const v = { org: cut(r.org, 80), date: cut(r.date, 20), items: cut(r.items, 120), qty: cut(r.qty, 40), place: cut(r.place, 200), location: cut(r.location, 300) };
+  if (!v.org || !v.place) return { ok: false, error: 'missing_fields' };
+  if (v.location && !/^https?:\/\//i.test(v.location) && !/^-?\d{1,2}\.\d+\s*,\s*-?\d{2,3}\.\d+$/.test(v.location)) return { ok: false, error: 'bad_location' };
+  await db.prepare('INSERT INTO covered_extra (org,date,items,qty,place,location,by_,createdAt) VALUES (?,?,?,?,?,?,?,?)').bind(v.org, v.date, v.items, v.qty, v.place, v.location, cut(b.by, 60), Date.now()).run();
+  await setMeta(db, 'covered_cache', '');
+  return { ok: true };
 }
 
 async function api(request, env) {
@@ -416,7 +433,7 @@ async function api(request, env) {
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
-    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
+    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });

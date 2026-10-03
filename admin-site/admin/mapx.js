@@ -25,7 +25,16 @@ const MX=(()=>{
 
   /* ---------- ติดตั้งบนแผนที่ ---------- */
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
-    S.L.route.addTo(map);map.on('click',onMapClick);toolbar();applyVis();loadZones();renderSide()}
+    S.L.route.addTo(map);map.on('click',onMapClick);toolbar();applyVis();loadZones();renderSide();
+    // ปุ่มขยายเต็มจอ (ใช้ CSS เต็มหน้าต่าง ใช้ได้ทั้งมือถือและคอม)
+    const FS=L.Control.extend({options:{position:'topleft'},onAdd(){const b=L.DomUtil.create('button','fs-btn');b.type='button';b.title='ขยายแผนที่เต็มจอ';b.setAttribute('aria-label','ขยายแผนที่เต็มจอ');b.textContent='⛶';
+      L.DomEvent.disableClickPropagation(b);L.DomEvent.on(b,'click',()=>fullscreen());S.fsBtn=b;return b}});
+    map.addControl(new FS())}
+  function fullscreen(on){const w=document.getElementById('map-wrap');on=on===undefined?!w.classList.contains('fs'):on;
+    w.classList.toggle('fs',on);document.body.classList.toggle('noscroll',on);
+    if(S.fsBtn){S.fsBtn.textContent=on?'✕':'⛶';S.fsBtn.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';S.fsBtn.setAttribute('aria-label',S.fsBtn.title)}
+    setTimeout(()=>S.map&&S.map.invalidateSize(),80)}
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('map-wrap')?.classList.contains('fs')&&!document.querySelector('#drawer:not([hidden])'))fullscreen(false)});
   function group(k){return k==='cases'?A.layer:k==='roads'?A.flood:S.L[k]}
   function applyVis(){LAYERS.forEach(([k])=>{const g=group(k);if(!g)return;if(S.on[k]){if(!S.map.hasLayer(g))g.addTo(S.map)}else if(S.map.hasLayer(g))S.map.removeLayer(g)});legend()}
   function toolbar(){$('#map-tools').innerHTML=LAYERS.map(([k,t])=>`<button type="button" class="lyr" data-lyr="${k}" aria-pressed="${!!S.on[k]}">${t}</button>`).join('')}

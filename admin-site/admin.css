@@ -181,3 +181,10 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .cov-box{background:#f6f0fd;border:1px solid #dccbf3;border-radius:14px;padding:12px 14px;margin-top:14px;color:#3d1f63}
 .cov-box p{margin:4px 0}.cov-box a{color:#5b2d91;font-weight:600}.cov-box ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px;font-size:14px}.cov-box small{display:block;color:#6d5a86;font-size:12.5px}
 @media(max-width:900px){.tbl td.vr-cell{white-space:normal;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px}.tbl td.vr-cell .cov{margin:0}}
+/* แผนที่เต็มจอ: อยู่เหนือแถบเมนู แต่ใต้หน้ารายละเอียดเคส (drawer z-index 40+) */
+.fs-btn{width:34px;height:34px;border:0;border-radius:4px;background:#fff;font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.35)}.fs-btn:hover{background:#f4f4f4}
+.map-wrap.fs{position:fixed;inset:0;z-index:30;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;padding:8px 10px}
+.map-wrap.fs .map-body{flex:1;min-height:0}
+.map-wrap.fs #map,.map-wrap.fs.compact #map{height:100%;min-height:0}
+.map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{height:100%;max-height:none;min-height:0}
+@media(max-width:1000px){.map-wrap.fs .map-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.map-wrap.fs #map{min-height:55vh}.map-wrap.fs .map-side{max-height:35vh}}

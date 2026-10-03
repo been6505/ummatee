@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=5">
-<link rel="stylesheet" href="./covered.css?v=5">
+<link rel="stylesheet" href="./covered.css?v=6">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -36,10 +36,10 @@
     <div class="cv-head">
       <div><h1 class="cv-h1">พื้นที่ที่องค์กรอื่นรับแล้ว</h1>
       <p class="muted">ดึงสดจาก Google Sheet ทุก 5 นาที · ใช้ตรวจก่อนส่งทีม เพื่อไม่ให้ซ้ำพื้นที่</p></div>
-      <a class="btn ghost-d sm" id="sheet-link" target="_blank" rel="noopener">แก้ไขในชีต ↗</a>
+      <div class="cv-act"><button class="btn primary sm" id="add-cov" type="button">+ เพิ่มพื้นที่ที่มอบแล้ว</button><a class="btn ghost-d sm" id="sheet-link" target="_blank" rel="noopener">แก้ไขในชีต ↗</a></div>
     </div>
     <details class="cv-guide" id="guide">
-      <summary>วิธีกรอกข้อมูลในชีต <span class="muted">(แตะเพื่อดู)</span></summary>
+      <summary>วิธีกรอกในชีตโดยตรง <span class="muted">แตะเพื่อดู</span></summary>
       <p class="small">หัวคอลัมน์เรียงตามนี้ (แถวแรกของชีต อย่าเปลี่ยนชื่อหัว):</p>
       <div class="cv-cols"><span>องค์กร</span><span>วันที่</span><span>รายการ</span><span>จำนวน</span><span>สถานที่</span><span>โลเคชั่น</span></div>
       <ol>
@@ -66,9 +66,12 @@
     <p class="muted small">"เคสที่อาจซ้ำ" นับเคสที่ยังไม่เสร็จซึ่งอยู่ใกล้จุดนี้ (ไม่เกิน ~800 ม.) หรือที่อยู่มีชื่อซอยตรงกัน · ตำแหน่งได้จากลิงก์ Google Maps ในชีต · ถ้าไม่มีลิงก์จะประมาณจากชื่อพื้นที่ (วงประ) · ใส่พิกัดในช่องโลเคชั่นได้ เช่น 13.8123, 100.7012</p>
   </main>
 </div>
+<div class="drawer-bg" id="drawer-bg" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="ฟอร์มเพิ่มพื้นที่"></aside>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="../covered.js?v=7"></script>
+<script src="../covered.js?v=8"></script>
 <script src="./covered-page.js?v=3"></script>
+<script src="./covered-form.js?v=1"></script>
 </body>
 </html>

@@ -12,7 +12,7 @@ const COVERED=(()=>{
   function coordsFromUrl(u){u=String(u||'');try{u=decodeURIComponent(u)}catch(e){}
     const pats=[/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,/\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,/^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{2,3}\.\d+)\s*$/];
     for(const re of pats){const m=u.match(re);if(m){const a=+m[1],b=+m[2];if(a>5&&a<21&&b>97&&b<106)return [a,b]}}return null}
-  const C={rows:[],loaded:0,error:'',loading:null,source:''};
+  const C={rows:[],loaded:0,error:'',loading:null,source:'',local:[]};
   const norm=s=>String(s||'').normalize('NFC').replace(/\s+/g,' ').replace(/ซ\.\s*/g,'ซอย').replace(/ถ\.\s*/g,'ถนน').toLowerCase().trim();
   function parseCSV(t){const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];
     if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++}else q=false}else cur+=ch}else if(ch==='"')q=true;else if(ch===','){row.push(cur);cur=''}
@@ -51,6 +51,8 @@ const COVERED=(()=>{
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);const cols=colMap(all[0]||[]);rows=all.slice(1).map(r=>pick(r,cols)).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});
+      // แถวที่เพิ่งกรอกผ่านฟอร์ม: แสดงไว้จนกว่าชีต/แคชจะมีแถวนั้น (ไม่เกิน 15 นาที)
+      {const k=r=>[r.org,r.area,r.date].join('|'),have=new Set(rows.map(k));C.local=C.local.filter(r=>Date.now()-r._local<15*60e3&&!have.has(k(r)));rows=C.local.concat(rows)}
       C.rows=rows;C.error='';C.loaded=Date.now();if(C.onupdate)try{C.onupdate()}catch(e){}
       // หาพิกัดโดยประมาณทีละแถว (เฉพาะที่ยังไม่มีพิกัด) ไม่ให้ยิงคำขอถี่เกิน
       for(const r of rows.filter(x=>x.lat==null)){if(await geocode(r))await new Promise(s=>setTimeout(s,300));if(C.onupdate)try{C.onupdate()}catch(e){}}
@@ -79,5 +81,6 @@ const COVERED=(()=>{
     hits.sort((a,b)=>(a.d==null?1e9:a.d)-(b.d==null?1e9:b.d)||(b.len||0)-(a.len||0)||b.r.t-a.r.t);
     return {best:hits[0],all:hits};
   }
-  return {C,load,match,SHEET_URL,distM,keys,coordsFromUrl};
+  function addLocal(cells){const r=fromCells(cells);r.t=dateMs(r.date);r.n=norm(r.area);r._local=Date.now();r.note=r.note||'เพิ่งกรอก';C.local.push(r);C.rows.unshift(r);return r}
+  return {C,load,match,SHEET_URL,distM,keys,coordsFromUrl,addLocal};
 })();

@@ -122,3 +122,9 @@
 .kit-row select,.kit-row input{border:1px solid var(--line);border-radius:10px;min-height:44px;padding:6px 10px;font-size:15px;background:#fff;width:100%}
 #pack-f[hidden]{display:none}
 @media(max-width:700px){.kit-box{margin:0 10px 30px;padding:12px}.kit-t th:nth-child(3),.kit-t td:nth-child(3){display:none}}
+.gt-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:8px}.seg.sm button{min-height:32px;padding:4px 12px;font-size:13.5px}
+.gt td.add{color:#277343;font-weight:600}.gt td.sub{color:#c62828;font-weight:600}.gt .c{text-align:center}.gt td.q .schip{margin-top:2px}
+.needbtn{border:1px dashed #bfd7d8;background:#fff;color:var(--muted);border-radius:999px;min-width:34px;min-height:30px;padding:2px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.needbtn[aria-pressed=true]{background:#e7f1fc;color:#28639a;border:1px solid #b9d3ee}
+.gt th:nth-child(3),.gt th:nth-child(4),.gt th:nth-child(5),.gt th:nth-child(6){min-width:64px}
+@media(max-width:700px){.gt th:nth-child(1),.gt td:nth-child(1),.gt th:nth-child(7),.gt td:nth-child(7){display:none}}

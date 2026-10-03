@@ -348,6 +348,50 @@ async function backupStatus(env) {
     lastBackupAt: Number(await getMeta(db, 'backup_at')) || null, lastError: await getMeta(db, 'backup_error') };
 }
 
+/* ---------- ข้อมูลภายนอก (สาธารณะ ไม่มีข้อมูลส่วนตัว) : ดึงผ่าน Worker แล้วเก็บแคช ลดภาระต้นทาง ---------- */
+async function cached(key, ttl, load) {
+  const cache = caches.default, req = new Request('https://umplus.cache/' + key);
+  const hit = await cache.match(req);
+  if (hit) return hit.json();
+  const data = await load();
+  await cache.put(req, new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=' + ttl } }));
+  return data;
+}
+const UA = { 'user-agent': 'UMplus-flood-help/1.0 (+https://admin-um-help.pages.dev)' };
+// ระดับน้ำบนถนน: เซ็นเซอร์สำนักการระบายน้ำ กทม. + ระดับน้ำคลอง: ThaiWater (สสน.)
+async function waterData() {
+  return cached('water-v1', 300, async () => {
+    const out = { ok: true, time: Date.now(), sensors: [], stations: [], errors: [] };
+    const [dds, tw] = await Promise.allSettled([
+      fetch('https://floodbangkok.bangkok.go.th/bkk/dds/services/api/floods/v1/items/sensor_now?limit=-1&fields=flood_now,flood_max,timestamp,sensor_profile.code,sensor_profile.name,sensor_profile.road,sensor_profile.district,sensor_profile.lat,sensor_profile.long,sensor_profile.device_status', { headers: UA }).then(r => r.json()),
+      fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10', { headers: UA }).then(r => r.json())
+    ]);
+    if (dds.status === 'fulfilled') out.sensors = (dds.value.data || []).map(x => { const p = x.sensor_profile || {}; return {
+      code: p.code || '', name: p.name || '', road: p.road || '', district: p.district || '', lat: Number(p.lat), lng: Number(p.long),
+      now: x.flood_now == null ? null : Number(x.flood_now), max: x.flood_max == null ? null : Number(x.flood_max),
+      status: p.device_status || '', t: x.timestamp ? Date.parse(x.timestamp + (/[zZ+]/.test(x.timestamp.slice(-6)) ? '' : 'Z')) : 0 }; }).filter(x => isFinite(x.lat) && isFinite(x.lng));
+    else out.errors.push('dds');
+    if (tw.status === 'fulfilled') out.stations = ((tw.value.waterlevel_data || {}).data || []).map(x => { const st = x.station || {}; return {
+      id: st.id, name: (st.tele_station_name || {}).th || (st.tele_station_name || {}).en || '', lat: Number(st.tele_station_lat), lng: Number(st.tele_station_long),
+      level: x.waterlevel_msl == null ? null : Number(x.waterlevel_msl), bank: st.min_bank == null ? null : Number(st.min_bank), diff: x.diff_wl_bank == null ? null : Number(x.diff_wl_bank),
+      situation: Number(x.situation_level) || 0, t: x.waterlevel_datetime ? Date.parse(x.waterlevel_datetime.replace(' ', 'T') + ':00+07:00') : 0, agency: ((x.agency || {}).agency_shortname || {}).th || '' }; }).filter(x => isFinite(x.lat) && isFinite(x.lng));
+    else out.errors.push('thaiwater');
+    return out;
+  });
+}
+// กล้อง CCTV: iTIC Foundation (ผ่าน Longdo Traffic) เฉพาะกรุงเทพฯ
+async function cctvData() {
+  return cached('cctv-v2', 3600, async () => {
+    const j = await fetch('https://traffic.longdo.com/camera.json', { headers: UA }).then(r => r.json());
+    const cams = (j.item || []).filter(c => String(c.geocode || '').startsWith('10')).map(c => {
+      const img = /X\.X\.X\.X/.test(c.imgurl || '') ? '' : (c.imgurl || '');
+      const https = u => /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : ''; // ส่งต่อเฉพาะลิงก์ https
+      return { id: c.camid, title: String(c.title || '').replace(/^\(กรุงเทพมหานคร\)\s*/, '').trim(), lat: Number(c.latitude), lng: Number(c.longitude), img: https(img), hls: https(c.hls_url), org: c.organization || '' };
+    }).filter(c => isFinite(c.lat) && isFinite(c.lng));
+    return { ok: true, time: Date.now(), cams };
+  });
+}
+
 async function api(request, env) {
   const db = env.DB;
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -370,6 +414,8 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
+      case 'cctv': try { return json(await cctvData()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });

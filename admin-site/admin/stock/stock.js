@@ -41,13 +41,16 @@ function render(){
   const cats=[['all','ทั้งหมด'],...CATS.filter(c=>c!==BAG).map(c=>[c,c]),...[...new Set(I.map(i=>i.category).filter(c=>c&&!CATS.includes(c)&&c!==BAG))].map(c=>[c,c]),['low','หมด / ใกล้หมด'],['need','ต้องการ']];
   $('#cat').innerHTML=cats.map(([k,t])=>`<button data-cat="${esc(k)}" aria-selected="${S.cat===k}">${esc(t)}</button>`).join('');
   const L=filtered();
-  const used=i=>S.log.filter(l=>l.itemId===i.id&&l.type==='out').reduce((s,l)=>s-(Number(l.delta)||0),0);
-  $('#items').innerHTML=L.length?`<div class="gt-wrap"><table class="gt"><thead><tr><th class="n">#</th><th>รายการ</th><th class="hide-m">หมวด</th><th class="r">คงเหลือ</th><th>หน่วย</th><th class="r hide-m">รับเข้ารวม</th><th class="r hide-m">จ่ายออกรวม</th><th>สถานะ</th><th class="hide-m">ที่เก็บ / หมดอายุ</th><th class="r">จัดการ</th></tr></thead><tbody>${L.map((i,n)=>{const q=Number(i.qty)||0,cls=q<=0?'zero':low(i)?'low':'';
-    return `<tr class="${cls}" data-id="${esc(i.id)}"><td class="n muted">${n+1}</td><td><b>${esc(i.name)}</b>${i.note?`<small>${esc(i.note)}</small>`:''}</td><td class="hide-m muted">${esc(i.category||'-')}</td>
-      <td class="r q">${nf(q)}</td><td class="muted">${esc(i.unit||'')}</td><td class="r hide-m">${nf(Math.max(received(i),q))}</td><td class="r hide-m">${nf(used(i))}</td>
-      <td>${stChip(i)||'<span class="schip ok">พอใช้</span>'}${i.needed?' <span class="schip need">ต้องการ</span>':''}</td>
-      <td class="hide-m small">${[i.location?'📍 '+esc(i.location):'',expTag(i).replace(/^ · /,'')].filter(Boolean).join('<br>')||'<span class="muted">-</span>'}</td>
-      <td class="r act"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="รับเข้า" aria-label="รับเข้า ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="จ่ายออก" aria-label="จ่ายออก ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}">✎</button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
+  // แบบกระดาน: สต็อก (ยอดตั้งต้นของช่วง) + เพิ่ม − ลด = เหลือ · การตั้งยอด/ปรับยอดรวมไว้ในช่องสต็อก
+  const t0=new Date();t0.setHours(0,0,0,0);const from=S.period==='today'?t0.getTime():0;
+  const mv=i=>{let add=0,sub=0;S.log.forEach(l=>{if(l.itemId!==i.id||Number(l.time)<from)return;const d=Number(l.delta)||0;if(l.type==='in')add+=d;else if(l.type==='out')sub-=d});return {add,sub,start:(Number(i.qty)||0)-add+sub}};
+  $('#items').innerHTML=L.length?`<div class="gt-top"><div class="seg sm" role="tablist" aria-label="ช่วงเวลา"><button data-period="all" aria-selected="${S.period!=='today'}">ทั้งหมด</button><button data-period="today" aria-selected="${S.period==='today'}">วันนี้</button></div><small class="muted">${S.period==='today'?'สต็อก = ยอดเมื่อเริ่มวัน':'สต็อก = ยอดตั้งต้น (รวมการปรับยอด)'} · สต็อก + เพิ่ม − ลด = เหลือ</small></div>
+  <div class="gt-wrap"><table class="gt"><thead><tr><th class="n">#</th><th>รายการ</th><th class="r">สต็อก</th><th class="r">เพิ่ม</th><th class="r">ลด</th><th class="r">เหลือ</th><th>หน่วย</th><th class="c">ต้องการ</th><th class="r">จัดการ</th></tr></thead><tbody>${L.map((i,n)=>{const q=Number(i.qty)||0,cls=q<=0?'zero':low(i)?'low':'',m=mv(i);
+    return `<tr class="${cls}" data-id="${esc(i.id)}"><td class="n muted">${n+1}</td><td><b>${esc(i.name)}</b><small>${esc(i.category||'')}${i.location?' · 📍 '+esc(i.location):''}${expTag(i)}</small></td>
+      <td class="r">${nf(m.start)}</td><td class="r add">${m.add?'+'+nf(m.add):'<span class="muted">-</span>'}</td><td class="r sub">${m.sub?'−'+nf(m.sub):'<span class="muted">-</span>'}</td>
+      <td class="r q">${nf(q)}${stChip(i)?'<br>'+stChip(i):''}</td><td class="muted">${esc(i.unit||'')}</td>
+      <td class="c"><button class="needbtn" data-need="${esc(i.id)}" aria-pressed="${!!i.needed}" title="กดเพื่อ${i.needed?'เอาออกจาก':'เพิ่มใน'}รายการต้องการ">${i.needed?'✓ ต้องการ':'+'}</button></td>
+      <td class="r act"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="เพิ่ม (รับเข้า)" aria-label="เพิ่ม ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="ลด (จ่ายออก)" aria-label="ลด ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}">✎</button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
   const need=I.filter(i=>i.needed||Number(i.qty)<=0||low(i));
   $('#need-list').innerHTML=need.length?need.map(i=>`<li><b>${esc(i.name)}</b> <small>${i.needed?'ต้องการ':''}${Number(i.qty)<=0?(i.needed?' · ':'')+'หมด':low(i)?(i.needed?' · ':'')+'เหลือ '+nf(i.qty)+' '+esc(i.unit):''}</small></li>`).join(''):'<li class="muted">ยังไม่มี</li>';
   $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.team?' · 🚚 '+esc(l.team):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
@@ -55,6 +58,8 @@ function render(){
 $('#q').addEventListener('input',render);
 document.addEventListener('click',e=>{
   const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;history.replaceState(null,'',S.view==='bags'?'#bags':location.pathname);render();scrollTo(0,0);return}
+  const pr=e.target.closest('[data-period]');if(pr){S.period=pr.dataset.period;render();return}
+  const nb=e.target.closest('[data-need]');if(nb){toggleNeed(S.items.find(i=>i.id===nb.dataset.need),nb);return}
   const c=e.target.closest('[data-cat]');if(c){S.cat=c.dataset.cat;render();return}
   const kb=e.target.closest('[data-kit]');if(kb){openKit(S.items.find(i=>i.id===kb.dataset.kit));return}
   const ld=e.target.closest('[data-load]');if(ld){openLoad(S.roster.find(t=>t.id===ld.dataset.load),ld.dataset.mode||'out');return}
@@ -127,6 +132,10 @@ function openKit(b){if(!b)return;const opts=S.items.filter(i=>!isBag(i)).sort((x
       if(!r.ok){toast('บันทึกไม่สำเร็จ: '+(r.error||''));return}toast(`บันทึกของในถุงแล้ว (${kit.length} รายการ)`,true);closeD();loadAll()}
     catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const x=$('#k-go');if(x)x.disabled=false}};
 }
+async function toggleNeed(i,btn){if(!i)return;btn.disabled=true;
+  try{const r=await apiPost({action:'stock_item',item:{id:i.id,name:i.name,unit:i.unit,category:i.category,min:i.min,needed:!i.needed,note:i.note,expiry:i.expiry,location:i.location}});
+    if(!r.ok){toast('บันทึกไม่สำเร็จ: '+(r.error||''));return}i.needed=!i.needed;toast(i.needed?`เพิ่ม ${i.name} ในรายการต้องการ`:`เอา ${i.name} ออกจากรายการต้องการ`,true);render()}
+  catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ')}finally{btn.disabled=false}}
 function openTeam(){
   drawer(`<div class="d-head"><div><h2>เพิ่มทีมรถ</h2><small class="muted">ทีมจะขึ้นที่หน้าจัดทีมด้วย</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
   <form id="tform" class="form-grid">

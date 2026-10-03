@@ -8,7 +8,7 @@ const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / หลังคา'};
 const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}},
   set(k,v,remember){try{if(!v){localStorage.removeItem(k);sessionStorage.removeItem(k);return}(remember?localStorage:sessionStorage).setItem(k,v)}catch(e){}}};
-const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:'list',map:null,layer:null,openId:null,rev:null};
+const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:['both','list','map'].includes(store.get('uh_view'))?store.get('uh_view'):'both',map:null,layer:null,openId:null,rev:null};
 
 const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);
@@ -34,7 +34,7 @@ function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;
   $('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
   try{const r=await api({action:'list',key:k});
-    if(r&&r.ok&&r.volunteer){A.key=k;store.set('uh_vol_key',k,$('#login-remember').checked);store.set('uh_vol_ok','1',$('#login-remember').checked);$('#login-key').value='';setCases(r);showApp();render();startPolling();loadFlood()}
+    if(r&&r.ok&&r.volunteer){A.key=k;store.set('uh_vol_key',k,$('#login-remember').checked);store.set('uh_vol_ok','1',$('#login-remember').checked);$('#login-key').value='';setCases(r);showApp();render();startPolling();loadFlood();if(typeof MX!=='undefined')MX.loadZones()}
     else $('#login-err').textContent='รหัสไม่ถูกต้อง';
   }catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'}
   finally{$('#login-go').disabled=false}});
@@ -69,13 +69,14 @@ function filtered(){
     if(u&&String(sev(c))!==u)return false;
     if(nd&&!(c.needs||[]).join(' ').includes(nd))return false;
     const fv=$('#f-vr').value;if(fv&&vr(c).result.k!==fv)return false;
+    const fz=$('#f-zone').value;if(fz&&typeof MX!=='undefined'&&!MX.inZone(c,fz))return false;
     return true}).sort((a,b)=>{const ca=Number(a.createdAt)||0,cb=Number(b.createdAt)||0;
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
       if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
       return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(ca-cb)});
 }
-['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
-function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
+['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
+function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
 $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classList.contains('open');$('#filters-box').classList.toggle('open',o);$('#f-toggle').setAttribute('aria-expanded',String(o))});
 
 /* ---------- ตรวจสอบพื้นที่ (Floodboard + CCTV) ---------- */
@@ -95,7 +96,8 @@ function render(){
   const list=filtered();
   $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`;
   $('#sync').textContent=(A.loaded?'อัปเดต '+new Date(A.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'')+(VERIFY.F.error?' · '+VERIFY.F.error:VERIFY.F.loaded?' · น้ำท่วม '+new Date(VERIFY.F.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'');
-  if(A.mode==='list'){if(document.activeElement&&document.activeElement.matches('.bag-in')){A.pendingList=true}else renderList(list)}else drawMap(list);
+  if(A.mode!=='map'){if(document.activeElement&&document.activeElement.matches('.bag-in')){A.pendingList=true}else renderList(list)}
+  if(A.mode!=='list')drawMap(list);
   if(A.openId)renderDrawer();
 }
 function renderList(list){
@@ -157,11 +159,12 @@ function vrSection(c){
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
     ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
+    ${hasPin(c)&&VERIFY.F.cams.length?(()=>{const cams=VERIFY.nearCams(+c.lat,+c.lng,3);return cams.length?`<div class="vr-cams"><span>กล้องใกล้จุด (iTIC)</span><div class="vr-cam-grid">${cams.map(k=>`<figure>${k.img?`<a href="${esc(k.img)}&t=${Date.now()}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(k.img)}&t=${Math.floor(Date.now()/60000)}" alt="ภาพกล้อง ${esc(k.title)}"></a>`:k.hls?`<a class="vr-cam-live" href="${esc(k.hls)}" target="_blank" rel="noopener">▶ ภาพสด (วิดีโอ)</a>`:''}<figcaption>${esc(k.title)} · ${k.d<1000?Math.round(k.d)+' ม.':(k.d/1000).toFixed(1)+' กม.'}</figcaption></figure>`).join('')}</div></div>`:`<p class="vr-src">ไม่มีกล้อง iTIC ในรัศมี 6 กม.</p>`})():''}
     <div class="vr-cctv"><span>ตรวจจากกล้อง CCTV:</span> <b>${cc?(cc.s==='flood'?'เห็นน้ำท่วม':'ไม่เห็นน้ำท่วม')+(cc.t?' · '+esc(cc.t):''):'ยังไม่ได้ตรวจ'}</b>
       <div class="vr-cctv-btns"><button class="btn ${cc&&cc.s==='flood'?'primary':'ghost'} sm" data-cctv="flood">กล้องเห็นน้ำท่วม</button><button class="btn ${cc&&cc.s==='clear'?'primary':'ghost'} sm" data-cctv="clear">กล้องไม่เห็นน้ำ</button>${cc?'<button class="btn ghost sm" data-cctv="">ล้างผล</button>':''}</div>
       <div class="vr-links"><a href="https://world.tehx.dyndns.info/flood#tab=roads" target="_blank" rel="noopener">เปิดกล้อง CCTV ถนน (JK World) ↗</a><a href="https://world.tehx.dyndns.info/flood#tab=area" target="_blank" rel="noopener">แถวนี้ท่วมมั้ย ↗</a><a href="https://www.floodboard.org/#map" target="_blank" rel="noopener">แผนที่น้ำท่วม Floodboard ↗</a>${ll?`<button type="button" class="linkish" data-copyll="${ll}">คัดลอกพิกัด ${ll}</button>`:''}</div>
     </div>
-    <p class="vr-note">คำนวณจากข้อมูลผู้แจ้ง + ถนนน้ำท่วมและรายงานจาก Floodboard (ในรัศมี 1 กม. · 3 วัน) + ผลดูกล้องที่แอดมินบันทึก ไม่มีข้อมูลใกล้จุด ≠ ไม่ท่วม</p>
+    <p class="vr-note">คำนวณจากข้อมูลผู้แจ้ง + ถนนน้ำท่วมและรายงานจาก Floodboard (1 กม. · 3 วัน) + เซ็นเซอร์น้ำบนถนนของสำนักการระบายน้ำ กทม. (1 กม.) + ผลดูกล้องที่แอดมินบันทึก · ไม่มีข้อมูลใกล้จุด ≠ ไม่ท่วม</p>
   </section>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-copyll]');if(!b)return;(navigator.clipboard?navigator.clipboard.writeText(b.dataset.copyll):Promise.reject()).then(()=>toast('คัดลอกพิกัดแล้ว ใช้ค้นหากล้องใกล้จุดได้',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))});
 async function saveCctv(id,val){
@@ -204,8 +207,10 @@ function renderDrawer(){
 }
 
 /* ---------- มุมมอง รายการ / แผนที่ ---------- */
-document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{A.mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
-  $('#list').hidden=A.mode!=='list';$('#map-wrap').hidden=A.mode!=='map';render()}));
+function applyMode(){document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.mode===A.mode)));
+  $('#list').hidden=A.mode==='map';$('#map-wrap').hidden=A.mode==='list';$('#map-wrap').classList.toggle('compact',A.mode==='both');if(A.map)setTimeout(()=>A.map.invalidateSize(),60)}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{A.mode=b.dataset.mode;store.set('uh_view',A.mode,true);applyMode();render()}));
+applyMode();
 let leafletP=null;
 function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;leafletP=new Promise((res,rej)=>{
   const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);
@@ -213,13 +218,15 @@ function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return l
 async function drawMap(list){
   try{await loadLeaflet()}catch(e){$('#map').innerHTML='<p class="empty">โหลดแผนที่ไม่สำเร็จ</p>';return}
   if(!A.map){A.map=L.map('map',{preferCanvas:true}).setView([13.7563,100.5018],11);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(A.map);A.flood=L.layerGroup().addTo(A.map);A.layer=L.layerGroup().addTo(A.map);A.fitted=false}
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC'}).addTo(A.map);A.flood=L.layerGroup().addTo(A.map);A.layer=L.layerGroup().addTo(A.map);A.fitted=false;
+    if(typeof MX!=='undefined')MX.attach(A.map)}
   if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#c62828':v==='risky'||d>=30?'#ef6c00':v==='caution'||d>=10?'#f9a825':'#1e88e5';r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.8}).bindTooltip(`${r.name}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(A.flood))})}
   setTimeout(()=>A.map.invalidateSize(),50);A.layer.clearLayers();const pts=[];
   list.filter(hasPin).forEach(c=>{const col=c.status==='done'?'#2e9e57':c.status==='going'?'#2b6cb0':sev(c)===3?'#d32f2f':sev(c)===2?'#f57c00':'#e0a800';pts.push([+c.lat,+c.lng]);
     L.circleMarker([+c.lat,+c.lng],{radius:sev(c)===3&&c.status!=='done'?10:8,color:'#fff',weight:2,fillColor:col,fillOpacity:.95}).bindTooltip(`${URG[sev(c)]} · ${vr(c).result.t} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน`).on('click',()=>openDrawer(c.id)).addTo(A.layer)});
   if(pts.length&&!A.fitted){A.map.fitBounds(pts,{padding:[40,40],maxZoom:14});A.fitted=true}
   const miss=list.length-pts.length;$('#count').textContent+=miss?` · ${miss} เคสไม่มีหมุด (ดูในรายการ)`:'';
+  if(typeof MX!=='undefined')MX.refresh(list);
 }
 
 /* ---------- ส่งออก CSV ---------- */

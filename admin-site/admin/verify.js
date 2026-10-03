@@ -1,10 +1,10 @@
-/* ตรวจสอบพื้นที่วิกฤต: เทียบข้อมูลผู้แจ้งกับแผนที่น้ำท่วม Floodboard + ผลตรวจกล้อง CCTV
+/* ตรวจสอบพื้นที่วิกฤต: เทียบข้อมูลผู้แจ้งกับแผนที่น้ำท่วม Floodboard + เซ็นเซอร์น้ำ กทม. + ผลตรวจกล้อง CCTV
    ใช้ร่วมกันระหว่างหน้าจัดการเคส (admin.html) และแดชบอร์ด (admin/dashboard/)
    ผลลัพธ์เป็น "ข้อมูลช่วยตัดสินใจ" — แอดมินเป็นผู้ตัดสินขั้นสุดท้าย */
 const VERIFY=(()=>{
   const ROADS_URL='https://www.floodboard.org/api/export/roads.geojson';
   const REPORTS_URL='https://www.floodboard.org/api/export/reports.csv';
-  const F={roads:[],reports:[],loaded:0,error:'',loading:null};
+  const F={roads:[],reports:[],sensors:[],stations:[],cams:[],loaded:0,error:'',loading:null};
   const LV_CM={ankle:10,knee:45,waist:90,chest:120,roof:180};
   const LV_PTS={ankle:2,knee:5,waist:10,chest:15,roof:20};
   const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
@@ -28,7 +28,16 @@ const VERIFY=(()=>{
   async function load(force){
     if(F.loading)return F.loading;if(!force&&F.loaded&&Date.now()-F.loaded<10*60e3)return;
     F.loading=(async()=>{
-      const [ro,re]=await Promise.allSettled([fetch(ROADS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}),fetch(REPORTS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text()})]);
+      const base=(typeof API_URL!=='undefined'?API_URL:'/api');
+      const [ro,re,wa,cc]=await Promise.allSettled([fetch(ROADS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}),fetch(REPORTS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text()}),
+        fetch(base+'?action=water').then(r=>r.json()),fetch(base+'?action=cctv').then(r=>r.json())]);
+      if(wa.status==='fulfilled'&&wa.value&&wa.value.ok){F.sensors=wa.value.sensors||[];F.stations=wa.value.stations||[]}
+      // ThaiWater ไม่รับคำขอจากเซิร์ฟเวอร์ Cloudflare แต่เปิดให้เบราว์เซอร์เรียกตรงได้ (CORS) → ดึงเองเมื่อฝั่งเซิร์ฟเวอร์ไม่ได้
+      if(!F.stations.length)try{const tw=await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10').then(r=>r.json());
+        F.stations=((tw.waterlevel_data||{}).data||[]).map(x=>{const st=x.station||{},nm=st.tele_station_name||{};return {id:st.id,name:nm.th||nm.en||'',lat:+st.tele_station_lat,lng:+st.tele_station_long,
+          level:x.waterlevel_msl==null?null:+x.waterlevel_msl,bank:st.min_bank==null?null:+st.min_bank,diff:x.diff_wl_bank==null?null:+x.diff_wl_bank,situation:+x.situation_level||0,
+          t:x.waterlevel_datetime?Date.parse(x.waterlevel_datetime.replace(' ','T')+':00+07:00'):0,agency:((x.agency||{}).agency_shortname||{}).th||''}}).filter(x=>isFinite(x.lat)&&isFinite(x.lng))}catch(e){}
+      if(cc.status==='fulfilled'&&cc.value&&cc.value.ok)F.cams=cc.value.cams||[];
       let ok=0;
       if(ro.status==='fulfilled'){ok++;F.roads=[];(ro.value.features||[]).forEach(f=>{const g=f.geometry||{},p=f.properties||{};
         const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
@@ -72,6 +81,12 @@ const VERIFY=(()=>{
     let near=null;F.roads.forEach(r=>{const d=distToLines(lat,lng,r.lines);if(d<=800&&(!near||d<near.d))near={...r,d}});
     if(near){const base=sevPts(near.depth,near.verdict,near.closed)*recency(near.updated)*(.5+.5*Math.min(1,near.conf))*(near.d<=300?1:.6);out.E+=base;out.road=near;
       out.ev.push(`ถนนน้ำท่วม "${near.name}" ห่าง ${Math.round(near.d)} ม.${near.depth!=null?` · ลึก ~${near.depth} ซม.`:''}${near.verdict?` · ${VERDICT_TH[near.verdict]||near.verdict}`:''}`)}
+    // 2.5) เซ็นเซอร์วัดน้ำบนถนนของ กทม. (ใกล้สุดใน 1 กม. · ไม่นับตัวที่เสีย)
+    let sn=null;F.sensors.forEach(x=>{if(x.status==='malfunction'||x.now==null)return;const d=dist(lat,lng,x.lat,x.lng);if(d<=1000&&(!sn||d<sn.d))sn={...x,d}});
+    let sensorClear=false;
+    if(sn){out.sensor=sn;const fresh=sn.t&&Date.now()-sn.t<3*36e5,tt=sn.t?new Date(sn.t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
+      if(sn.now>=5){out.E+=(sn.now>=30?25:sn.now>=15?18:10)*(sn.d<=500?1:.6)*(fresh?1:.6);out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. วัดได้ ${sn.now} ซม.${tt?` (${tt} น.)`:''}`)}
+      else{if(sn.d<=500&&fresh)sensorClear=true;out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. ไม่พบน้ำท่วมบนถนน${tt?` (${tt} น.)`:''} · ในซอย/บ้านอาจยังท่วม`)}}
     // 3) รายงานน้ำท่วมรอบจุด (1 กม. · 72 ชม.)
     const since=Date.now()-72*36e5,rs=F.reports.filter(r=>r.t>=since).map(r=>({...r,d:dist(lat,lng,r.lat,r.lng)})).filter(r=>r.d<=1000).sort((a,b)=>a.d-b.d);
     const active=rs.filter(r=>!r.cleared),cleared=rs.filter(r=>r.cleared&&r.d<=600&&Date.now()-r.t<24*36e5);
@@ -81,14 +96,15 @@ const VERIFY=(()=>{
     const recentlyCleared=cleared.length&&!active.some(r=>r.t>cleared[0].t);
     if(recentlyCleared)out.ev.push('มีรายงานล่าสุดว่าน้ำลด / ระบายแล้วใกล้จุดนี้');
     if(cctv)applyCctv(out,reporterSevere);
-    if(!near&&!active.length&&!cctv)out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');
+    if(sensorClear&&!active.length&&!near)out.sensorClear=true;
+    if(!near&&!active.length&&!cctv&&!sn)out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');
     return finish(out,reporterSevere,recentlyCleared);
   }
   function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''))}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''))}}
   function finish(out,severe,cleared){
     out.E=Math.max(-20,Math.min(50,out.E));out.score=Math.max(0,Math.min(100,Math.round(out.R+out.E)));
     if(out.result)return out;   // ไม่มีหมุด
-    const contra=(out.cctv&&out.cctv.s==='clear')||(cleared&&out.E<10);
+    const contra=(out.cctv&&out.cctv.s==='clear')||((cleared||out.sensorClear)&&out.E<10);
     if(severe&&contra)out.result=RESULT.conflict;
     else if(out.score>=70&&out.E>=25)out.result=RESULT.confirmed;
     else if(out.score>=50&&out.E>=10)out.result=RESULT.likely;
@@ -96,5 +112,7 @@ const VERIFY=(()=>{
     else out.result=RESULT.notcrit;
     return out;
   }
-  return {F,load,assess,RESULT,VERDICT_TH,parseCctv};
+  // กล้องที่ใกล้จุดที่สุด (เรียงตามระยะ)
+  function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
+  return {F,load,assess,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines};
 })();

@@ -200,7 +200,7 @@ if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,
   const fix=()=>setTimeout(()=>{if(!M.map)return;M.map.invalidateSize();const w=M.map.scrollWheelZoom;if(w)w[card.classList.contains('fs')?'enable':'disable']()},80);
   function set(on,fromPop){if(on===card.classList.contains('fs'))return;
     card.classList.toggle('fs',on);card.classList.remove('lay');lay.setAttribute('aria-expanded','false');document.body.classList.toggle('map-fs',on);
-    btn.textContent=on?'✕':'⛶';btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'แผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
+    btn.textContent=on?'✕':'⛶ ขยายจอ';btn.classList.toggle('wide',!on);btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'แผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
     if(on){try{history.pushState({mapfs:1},'')}catch(e){}try{const r=card.requestFullscreen&&card.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{})}catch(e){}}
     else{if(document.fullscreenElement)try{document.exitFullscreen().catch(()=>{})}catch(e){}if(!fromPop&&history.state&&history.state.mapfs)try{history.back()}catch(e){}}
     fix()}

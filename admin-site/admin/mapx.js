@@ -27,12 +27,12 @@ const MX=(()=>{
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
     S.L.route.addTo(map);map.on('click',onMapClick);toolbar();applyVis();loadZones();renderSide();
     // ปุ่มขยายเต็มจอ (ใช้ CSS เต็มหน้าต่าง ใช้ได้ทั้งมือถือและคอม)
-    const FS=L.Control.extend({options:{position:'topleft'},onAdd(){const b=L.DomUtil.create('button','fs-btn');b.type='button';b.title='ขยายแผนที่เต็มจอ';b.setAttribute('aria-label','ขยายแผนที่เต็มจอ');b.textContent='⛶';
+    const FS=L.Control.extend({options:{position:'topleft'},onAdd(){const b=L.DomUtil.create('button','fs-btn');b.type='button';b.title='ขยายแผนที่เต็มจอ';b.setAttribute('aria-label','ขยายแผนที่เต็มจอ');b.textContent='⛶ ขยายจอ';b.classList.add('wide');
       L.DomEvent.disableClickPropagation(b);L.DomEvent.on(b,'click',()=>fullscreen());S.fsBtn=b;return b}});
     map.addControl(new FS())}
   function fullscreen(on){const w=document.getElementById('map-wrap');on=on===undefined?!w.classList.contains('fs'):on;
     w.classList.toggle('fs',on);document.body.classList.toggle('noscroll',on);
-    if(S.fsBtn){S.fsBtn.textContent=on?'✕':'⛶';S.fsBtn.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';S.fsBtn.setAttribute('aria-label',S.fsBtn.title)}
+    if(S.fsBtn){S.fsBtn.textContent=on?'✕':'⛶ ขยายจอ';S.fsBtn.classList.toggle('wide',!on);S.fsBtn.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';S.fsBtn.setAttribute('aria-label',S.fsBtn.title)}
     setTimeout(()=>S.map&&S.map.invalidateSize(),80)}
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('map-wrap')?.classList.contains('fs')&&!document.querySelector('#drawer:not([hidden])'))fullscreen(false)});
   function group(k){return k==='cases'?A.layer:k==='roads'?A.flood:S.L[k]}

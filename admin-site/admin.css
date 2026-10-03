@@ -188,3 +188,4 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .map-wrap.fs #map,.map-wrap.fs.compact #map{height:100%;min-height:0}
 .map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{height:100%;max-height:none;min-height:0}
 @media(max-width:1000px){.map-wrap.fs .map-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.map-wrap.fs #map{min-height:55vh}.map-wrap.fs .map-side{max-height:35vh}}
+.fs-btn.wide{width:auto;padding:0 10px;font:700 13.5px Prompt,sans-serif;white-space:nowrap}

@@ -105,3 +105,4 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 .mapcard.fs .leaflet-control-attribution{font-size:10px}
 body.map-fs{overflow:hidden}
 a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.kpi-cov:active{opacity:.8}
+.fs-btn.wide{width:auto;padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;gap:6px;white-space:nowrap}

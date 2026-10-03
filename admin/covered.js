@@ -21,19 +21,20 @@ const COVERED=(()=>{
   /* จัดข้อมูลให้เป็นแบบเดียวกันแม้ชีตกรอกต่างกัน: แยก "เขตxxx" และ "N ชุด" ออกจากชื่อพื้นที่, ปีเป็น พ.ศ. 4 หลัก, ตัดส่วนท้ายลิงก์ */
   /* หาคอลัมน์จากหัวตาราง (ชีตอาจย้ายคอลัมน์ เช่น ลิงก์ไปอยู่ E) — ถ้าไม่พบใช้ลำดับ A B C D */
   function colMap(h){h=h.map(x=>String(x||'').replace(/\s+/g,''));const f=(re,d)=>{const i=h.findIndex(x=>re.test(x));return i<0?d:i};
-    return [f(/องค/,0),f(/พื้นที่/,1),f(/วันที่/,2),f(/ลิง[คก]|link/i,3),f(/เขต|จังหวัด/,-1),f(/ชุด/,-1),f(/หมายเหตุ/,-1),f(/พิกัด/,-1)]}
+    return [f(/องค/,0),f(/สถานที่|พื้นที่/,1),f(/วันที่/,2),f(/โลเค|ลิง[คก]|link|location/i,3),f(/เขต|จังหวัด/,-1),f(/จำนวน|ชุด/,-1),f(/หมายเหตุ/,-1),f(/พิกัด/,-1),f(/รายการ|สิ่งของ/,-1)]}
   function pick(r,cols){const out=cols.map(i=>i<0?'':r[i]||'');if(!out[3]){const u=r.find(x=>/https?:\/\//.test(x||''));if(u)out[3]=u}return out}
   /* ตำแหน่งที่ทีมหาไว้ให้แถวที่ยังไม่มีลิงก์ (ค้นจาก Google Maps 2 ต.ค. 69) — ใช้เมื่อชีตยังไม่มีลิงก์/พิกัด */
   const KNOWN={"ร้านข้าวเช้าซอยรามคำแหง 53 เขตวังทองหลาง": [13.7698003, 100.6183919, "กลาง"], "บึงขวางซอย 3 เกษรหอม 1": [13.784469, 100.761265, "กลาง"], "มัสยิดอัลยุซรอ หลอแหล": [13.769399, 100.6939231, "สูง"], "มัสยิด 53": [13.7615138, 100.6197928, "กลาง"], "เสรีไทย ซอย 9": [13.7748298, 100.6549002, "กลาง"], "ปากคลองทับช้าง": [13.7290161, 100.6916157, "สูง"], "บึงขวาง 3 แยก 14": [13.785707, 100.757104, "สูง"], "เคหะร่มเกล้า 14 มัสยิดนะฟีอะหฺ": [13.7758841, 100.7251432, "สูง"], "กรุงเทพกรีฑา 45": [13.740695, 100.6890053, "กลาง"], "หัวหมากน้อย วังโสม": [13.7579636, 100.6571238, "สูง"], "กรุุงเทพกรีฑา 7 แยก 1-2 ซอยวะกัฟ": [13.7488631, 100.656936, "กลาง"], "มัสยิดอััลยุซรอ": [13.769399, 100.6939231, "สูง"], "วัดปากบ่อ": [13.7146469, 100.6310799, "สูง"], "เคหะร่มเกล้า โซน 10 มัสยิดอันนูร": [13.7605285, 100.7364273, "สูง"], "บ้านมา 2 ข้างพาสิโอ": [13.7206009, 100.7276188, "กลาง"], "ชุมชนข้างวัดขจรศิริ": [13.7148151, 100.641278, "กลาง"], "บ้านเอื้ออาทร ลาดกระบัง 2": [13.7205423, 100.8243633, "สูง"], "เคหะร่มเกล้า": [13.7678303, 100.7323762, "ต่ำ"], "มัสยิดสมอเซ": [13.7224237, 100.9424902, "สูง"], "ชุมชนคลองห้อง อ่อนนุช 63": [13.7219969, 100.6805344, "กลาง"], "คลองประเวศฝั่งเหนือ ตรงข้ามวัดกระทุ่ม": [13.7229237, 100.6887065, "กลาง"], "รามคำแหง 81": [13.7624741, 100.63385, "กลาง"]};
-  function fromCells(r){let [org,area,date,link,district,sets,note,coord]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
-    if(!sets){const m=area.match(/(\d[\d,]*)\s*ชุด/);if(m){sets=m[1];area=area.replace(m[0],' ')}}
+  function fromCells(r){let [org,area,date,link,district,sets,note,coord,items]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
+    items=items||'';if(!sets){const m=area.match(/(\d[\d,]*)\s*ชุด/);if(m){sets=m[1];area=area.replace(m[0],' ')}}
     if(!district){const m=area.match(/เขต\s*([ก-๙]+)\s*$/);if(m&&area.length-m[0].length>=4){district=m[1];area=area.slice(0,m.index)}}
     district=String(district||'').replace(/^เขต\s*/,'');area=area.replace(/\s+/g,' ').trim();
     const d=date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(d){let y=+d[3];if(y<100)y=y>=50?2500+y:y+2543;else if(y<2400)y+=543;date=d[1]+'/'+d[2]+'/'+y;const now=new Date().getFullYear()+543;if(Math.abs(y-now)>1)note=(note?note+' · ':'')+'ปี '+y+' อาจพิมพ์ผิด ตรวจในชีต'}
     link=link.replace(/\?g_st=\w+$/,'');
     const k0=String(r[1]||'').replace(/\s+/g,' ').trim(),kn=KNOWN[k0];
     const ll=coordsFromUrl(coord)||coordsFromUrl(link)||(kn&&!link?kn:null);
-    return {org,area,date,link,district,sets:sets||'',note:note||'',lat:ll?ll[0]:null,lng:ll?ll[1]:null,approx:false}}
+    if(link&&!/^https?:\/\//i.test(link))link=ll&&coordsFromUrl(link)?'https://www.google.com/maps?q='+ll[0]+','+ll[1]:'';
+    return {org,area,date,link,district,items,sets:sets||'',note:note||'',lat:ll?ll[0]:null,lng:ll?ll[1]:null,approx:false}}
   /* วันที่ในชีตเขียนหลายแบบ (2/10/69, 1/10/2569, 1/10/26) → แสดงตามที่กรอก แต่แปลงเป็นเวลาไว้เรียง */
   function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=50?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
   const geoCache=(()=>{try{return JSON.parse(localStorage.getItem('uh_cov_geo')||'{}')}catch(e){return {}}})();
@@ -46,7 +47,7 @@ const COVERED=(()=>{
     if(C.loading)return C.loading;if(C.loaded&&Date.now()-C.loaded<5*60e3)return;
     C.loading=(async()=>{
       let rows=null;
-      {const base=apiUrl&&apiUrl.charAt(0)==='/'?apiUrl:RESOLVER;try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);const j=await fetch(base+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Math.floor(Date.now()/60000),{signal:ctl.signal}).then(x=>x.json()).finally(()=>clearTimeout(tm));if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>{const r=fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note]);if(it.lat!=null&&it.lat!==''){r.lat=+it.lat;r.lng=+it.lng}return r});C.source='api'}}catch(e){}}
+      {const base=apiUrl&&apiUrl.charAt(0)==='/'?apiUrl:RESOLVER;try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);const j=await fetch(base+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Math.floor(Date.now()/60000),{signal:ctl.signal}).then(x=>x.json()).finally(()=>clearTimeout(tm));if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>{const r=fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note,'',it.items]);if(it.lat!=null&&it.lat!==''){r.lat=+it.lat;r.lng=+it.lng}return r});C.source='api'}}catch(e){}}
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);const cols=colMap(all[0]||[]);rows=all.slice(1).map(r=>pick(r,cols)).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});

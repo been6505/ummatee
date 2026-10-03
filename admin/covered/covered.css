@@ -47,3 +47,4 @@
 .cv-guide summary .muted{font-weight:400;font-size:13px}.cv-guide[open] summary .muted{display:none}
 .cv-guide ol{margin:4px 0 8px;padding-left:22px;line-height:1.65;font-size:14.5px}.cv-guide li{margin-bottom:6px}
 .cv-guide code{background:#eef4f5;border-radius:6px;padding:1px 6px;font-size:13px}
+.cv-cols{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}.cv-cols span{background:#eef4f5;color:#123;border-radius:8px;padding:4px 10px;font-size:13.5px;font-weight:600;counter-increment:c}.cv-cols span::before{content:counter(c,upper-alpha)" · ";color:#5e7279;font-weight:400}.cv-cols{counter-reset:c}

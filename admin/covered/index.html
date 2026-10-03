@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=5">
-<link rel="stylesheet" href="./covered.css?v=4">
+<link rel="stylesheet" href="./covered.css?v=5">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -40,14 +40,15 @@
     </div>
     <details class="cv-guide" id="guide">
       <summary>วิธีกรอกข้อมูลในชีต <span class="muted">(แตะเพื่อดู)</span></summary>
+      <p class="small">หัวคอลัมน์เรียงตามนี้ (แถวแรกของชีต อย่าเปลี่ยนชื่อหัว):</p>
+      <div class="cv-cols"><span>องค์กร</span><span>วันที่</span><span>รายการ</span><span>จำนวน</span><span>สถานที่</span><span>โลเคชั่น</span></div>
       <ol>
-        <li><b>1 แถว = 1 พื้นที่</b> กรอกต่อท้ายแถวล่างสุด ไม่ต้องเว้นแถว และอย่าแก้ชื่อหัวคอลัมน์ (ระบบหาคอลัมน์จากชื่อหัว)</li>
-        <li><b>องค์กร</b> ใช้ชื่อเดิมให้ตรงกันทุกแถว เช่น "สภาเครือข่าย" ไม่สลับเป็นชื่อย่อ เพื่อให้ปุ่มกรองนับถูก</li>
-        <li><b>พื้นที่</b> ชื่อชุมชน/ซอย/มัสยิดให้ชัด เช่น "ชุมชนวังโสม หัวหมาก" ถ้ามีหลายจุดให้แยกเป็นหลายแถว</li>
-        <li><b>วันที่</b> แบบ วัน/เดือน/ปี พ.ศ. เช่น 2/10/2569 หรือ 2/10/69</li>
-        <li><b>ลิงก์</b> สำคัญที่สุด: เปิด Google Maps → ปักหมุดตรงจุด → แชร์ → คัดลอกลิงก์ แล้ววางทั้งลิงก์ (maps.app.goo.gl/… ได้เลย) ถ้าไม่มีลิงก์ ระบบจะเดาตำแหน่งจากชื่อ อาจคลาดได้</li>
-        <li><b>เขต / จำนวนชุด</b> ใส่ในคอลัมน์ของมัน หรือพิมพ์ต่อท้ายชื่อพื้นที่ก็ได้ เช่น "… เขตสะพานสูง 50 ชุด"</li>
-        <li><b>พิกัด</b> (คอลัมน์ H, ไม่บังคับ) ใช้เมื่อไม่มีลิงก์ เช่น <code>13.8123, 100.7012</code> ระบบจะใช้ค่านี้ก่อนลิงก์</li>
+        <li><b>องค์กร</b> ชื่อองค์กรที่ลงพื้นที่ ใช้ชื่อเดิมทุกแถว เช่น "สภาเครือข่าย" (ไม่สลับชื่อย่อ) ปุ่มกรองจะนับถูก</li>
+        <li><b>วันที่</b> วัน/เดือน/ปี พ.ศ. เช่น 3/10/2569 หรือ 3/10/69</li>
+        <li><b>รายการ</b> ของที่มอบ เช่น ถุงยังชีพ, อาหารกล่อง, น้ำดื่ม</li>
+        <li><b>จำนวน</b> ใส่ตัวเลข เช่น 120 (ถ้าไม่ใช่ชุด พิมพ์หน่วยด้วย เช่น 50 แพ็ก)</li>
+        <li><b>สถานที่</b> ชื่อชุมชน/ซอย/มัสยิดให้ชัด และเขต เช่น "ชุมชนวังโสม หัวหมาก เขตบางกะปิ" · หลายจุดให้แยกแถว</li>
+        <li><b>โลเคชั่น</b> สำคัญที่สุด: เปิด Google Maps → ปักหมุดตรงจุด → แชร์ → คัดลอกลิงก์ แล้ววางทั้งลิงก์ (maps.app.goo.gl/… ได้เลย) หรือพิมพ์พิกัด เช่น <code>13.8123, 100.7012</code> · ถ้าเว้นว่าง ระบบจะเดาจากชื่อสถานที่ อาจคลาดได้</li>
       </ol>
       <p class="muted small">กรอกแล้วหน้านี้อัปเดตเองภายในประมาณ 5 นาที หรือกด ⟳ โหลดใหม่ · ห้ามใส่ชื่อ-เบอร์โทรผู้ประสบภัยในชีตนี้</p>
     </details>
@@ -61,13 +62,13 @@
       <div class="cv-leg"><span><i class="lg-p"></i>ตำแหน่งจากลิงก์</span><span><i class="lg-a"></i>ตำแหน่งโดยประมาณ (จากชื่อพื้นที่)</span><label><input type="checkbox" id="mt-cases" checked><i class="lg-c"></i>เคสที่ยังไม่เสร็จ</label><span class="muted" id="map-miss"></span></div>
     </section>
     <section class="cv-stats" id="stats" aria-label="สรุป"></section>
-    <div class="cv-tw"><table class="cv-tbl"><thead><tr><th>องค์กร</th><th>พื้นที่</th><th>เขต</th><th>วันที่</th><th class="n">ชุด</th><th>แผนที่</th><th>เคสที่อาจซ้ำ</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
-    <p class="muted small">"เคสที่อาจซ้ำ" นับเคสที่ยังไม่เสร็จซึ่งอยู่ใกล้จุดนี้ (ไม่เกิน ~800 ม.) หรือที่อยู่มีชื่อซอยตรงกัน · ตำแหน่งได้จากลิงก์ Google Maps ในชีต · ถ้าไม่มีลิงก์จะประมาณจากชื่อพื้นที่ (วงประ) · ใส่พิกัดเองได้ที่คอลัมน์ H ของชีต เช่น 13.8123, 100.7012</p>
+    <div class="cv-tw"><table class="cv-tbl"><thead><tr><th>องค์กร</th><th>พื้นที่</th><th>เขต</th><th>วันที่</th><th>รายการ / จำนวน</th><th>แผนที่</th><th>เคสที่อาจซ้ำ</th><th></th></tr></thead><tbody id="tb"></tbody></table></div>
+    <p class="muted small">"เคสที่อาจซ้ำ" นับเคสที่ยังไม่เสร็จซึ่งอยู่ใกล้จุดนี้ (ไม่เกิน ~800 ม.) หรือที่อยู่มีชื่อซอยตรงกัน · ตำแหน่งได้จากลิงก์ Google Maps ในชีต · ถ้าไม่มีลิงก์จะประมาณจากชื่อพื้นที่ (วงประ) · ใส่พิกัดในช่องโลเคชั่นได้ เช่น 13.8123, 100.7012</p>
   </main>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="../covered.js?v=6"></script>
-<script src="./covered-page.js?v=2"></script>
+<script src="../covered.js?v=7"></script>
+<script src="./covered-page.js?v=3"></script>
 </body>
 </html>

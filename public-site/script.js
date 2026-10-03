@@ -391,7 +391,7 @@ function renderDetail(){
     if(window.__detailMap){try{window.__detailMap.remove()}catch(e){}window.__detailMap=null}
     loadLeaflet().then(()=>{if(!mp.isConnected)return;mp.textContent='';
       const m=L.map(mp,{scrollWheelZoom:false,zoomControl:true,attributionControl:true}).setView([lat,lng],16);window.__detailMap=m;
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(m);if(typeof MAPFS!=='undefined')MAPFS.add(m,{history:false});
       const col=c.status==='done'?'#277343':c.status==='going'?'#28639a':critLevel(c)==='red'?'#d32f2f':critLevel(c)==='orange'?'#f57c00':'#f2b705';
       L.marker([lat,lng],{icon:L.divIcon({className:'case-pin',html:`<span style="background:${col}"></span>`,iconSize:[30,38],iconAnchor:[15,36]})}).addTo(m);
       requestAnimationFrame(()=>m.invalidateSize());setTimeout(()=>m.invalidateSize(),300);

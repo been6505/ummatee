@@ -61,7 +61,7 @@ function openPick(){
   const el=$('#cf-map');el.hidden=false;if(pick){setTimeout(()=>pick.map.invalidateSize(),50);return Promise.resolve(true)}
   return loadLeaflet().then(()=>{if(!document.body.contains(el))return false;if(pick)return true;
     const ll=curLL();pick={map:L.map(el).setView(ll||[13.76,100.65],ll?15:11),mk:null};
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(pick.map);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(pick.map);if(typeof MAPFS!=='undefined')MAPFS.add(pick.map);
     COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lng],{radius:5,color:'#fff',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.7}).bindTooltip(r.org+' · '+r.area).addTo(pick.map));
     if(ll)putMk(ll);
     pick.map.on('click',e=>setLL(e.latlng.lat,e.latlng.lng));

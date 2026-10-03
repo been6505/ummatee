@@ -1,6 +1,6 @@
 // UM+: เก็บหน้าเว็บไว้ในเครื่อง ให้เปิดเบอร์ฉุกเฉินได้แม้สัญญาณแย่
-const CACHE='umplus-cf2';
-const SHELL=['./','./index.html','./styles.css','./emergency.css','./mobile.css','./hotlines.js','./location.js','./script.js','./live.js','./places.js','./trip.js','./assets/ummatee-logo.png','./assets/icon-192.png'];
+const CACHE='umplus-cf3';
+const SHELL=['./','./index.html','./styles.css','./emergency.css','./mobile.css','./hotlines.js','./location.js','./script.js','./live.js','./places.js','./trip.js','./mapfs.js','./assets/ummatee-logo.png','./assets/icon-192.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.allSettled(SHELL.map(u=>c.add(u)))).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==CACHE+'-ext').map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

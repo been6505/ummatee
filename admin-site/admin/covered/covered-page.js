@@ -33,7 +33,7 @@ function drawMap(hit){
   if(!window.L){loadLeaflet().then(()=>drawMap(hit),()=>{$('#cmap').innerHTML='<p class="empty" style="padding:16px">โหลดแผนที่ไม่ได้ ตรวจอินเทอร์เน็ตแล้วกดโหลดใหม่</p>'});return}
   if(!M.map){M.map=L.map($('#cmap'),{scrollWheelZoom:false}).setView([13.76,100.65],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(M.map);
-    M.cov=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map)}
+    M.cov=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);if(typeof MAPFS!=='undefined')MAPFS.add(M.map)}
   M.cov.clearLayers();M.cases.clearLayers();M.mk.clear();const pts=[];
   const rows=COVERED.C.rows.filter(r=>(!P.org||r.org===P.org)&&(!P.q||[r.org,r.area,r.district,r.note,r.items].join(' ').toLowerCase().includes(P.q.trim().toLowerCase())));
   rows.filter(r=>r.lat!=null).forEach(r=>{const ll=[r.lat,r.lng];pts.push(ll);const cs=(hit.get(r)||[]).length;

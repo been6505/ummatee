@@ -37,6 +37,7 @@ function ensureRequestMap(){
   mapLoading=loadLeaflet().then(()=>{
     locationElement('request-map').replaceChildren();
     requestMap=L.map('request-map',{scrollWheelZoom:false}).setView(geo?[geo.lat,geo.lng]:[13.7563,100.5018],geo?16:12);
+    if(typeof MAPFS!=='undefined')MAPFS.add(requestMap,{history:false});
     let failed=0,loaded=0;
     const tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'}).addTo(requestMap);
     tiles.on('tileerror',()=>{failed++;if(!loaded&&failed>=3)showMapError('โหลดพื้นหลังแผนที่ไม่ได้ กรุณาตรวจอินเทอร์เน็ต หรือค้นหาจากที่อยู่ด้านล่าง')});

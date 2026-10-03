@@ -12,14 +12,14 @@ function render(){
   const orgs=[...new Set(rows.map(r=>r.org).filter(Boolean))];
   $('#orgs').innerHTML=['',...orgs].map(o=>`<button data-o="${esc(o)}" aria-selected="${o===P.org}">${o?esc(o):'ทั้งหมด'} <small>${o?rows.filter(r=>r.org===o).length:rows.length}</small></button>`).join('');
   const q=P.q.trim().toLowerCase();
-  const v=rows.filter(r=>(!P.org||r.org===P.org)&&(!q||[r.org,r.area,r.district,r.note].join(' ').toLowerCase().includes(q)));
-  const sets=v.reduce((a,r)=>a+(parseInt(String(r.sets).replace(/,/g,''))||0),0);
-  $('#stats').innerHTML=[[v.length,'พื้นที่'],[orgs.length,'องค์กร'],[v.filter(r=>!r.link).length,'ยังไม่มีลิงก์แผนที่'],[sets?nf(sets):'–','ชุดที่ระบุ'],[v.filter(r=>hit.has(r)).length,'พื้นที่ที่มีเคสอาจซ้ำ']]
+  const v=rows.filter(r=>(!P.org||r.org===P.org)&&(!q||[r.org,r.area,r.district,r.note,r.items].join(' ').toLowerCase().includes(q)));
+  const sets=v.reduce((a,r)=>a+(/^[\d,]+(\s*ชุด)?$/.test(String(r.sets).trim())?parseInt(String(r.sets).replace(/,/g,''))||0:0),0);
+  $('#stats').innerHTML=[[v.length,'พื้นที่'],[orgs.length,'องค์กร'],[v.filter(r=>!r.link).length,'ยังไม่มีลิงก์แผนที่'],[sets?nf(sets):'–','ชุด/ชิ้นที่ระบุ'],[v.filter(r=>hit.has(r)).length,'พื้นที่ที่มีเคสอาจซ้ำ']]
     .map(([n,l],i)=>`<div class="cv-stat${i===4&&n?' alert':''}"><b>${n}</b><span>${l}</span></div>`).join('');
   $('#tb').innerHTML=v.length?v.map(r=>{const cs=hit.get(r)||[];
     const map=r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดแผนที่ ↗</a>`:'<span class="cv-warn">ยังไม่มีลิงก์</span>';
     const pos=r.lat==null?'<small class="muted">ไม่พบตำแหน่ง</small>':r.approx?'<small class="muted">ตำแหน่งโดยประมาณ</small>':'<small class="cv-ok">ตำแหน่งจากลิงก์</small>';
-    return `<tr><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="ชุด" class="n">${r.sets?nf(String(r.sets).replace(/,/g,'')):''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
+    return `<tr><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="รายการ">${esc(r.items)}${r.items&&r.sets?'<br>':''}${r.sets?`<b>${/^[\d,]+$/.test(String(r.sets).trim())?nf(String(r.sets).replace(/,/g,''))+' ชุด':esc(r.sets)}</b>`:''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
       <td data-l="เคสที่อาจซ้ำ">${cs.length?`<a class="cv-dup" href="../../admin.html" title="${esc(cs.map(c=>'#'+c.id+' '+(c.address||'')).join('\n'))}">${cs.length} เคส</a>`:'<span class="muted">–</span>'}</td><td data-l="go">${r.lat!=null?`<button class="cv-go" data-i="${COVERED.C.rows.indexOf(r)}">ดูบนแผนที่</button>`:''}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">ไม่พบพื้นที่ที่ตรงกับการค้นหา</td></tr>';
   drawMap(hit);
   $('#sync').textContent=COVERED.C.loaded?'อัปเดต '+ago(COVERED.C.loaded):'';
@@ -35,11 +35,11 @@ function drawMap(hit){
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(M.map);
     M.cov=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map)}
   M.cov.clearLayers();M.cases.clearLayers();M.mk.clear();const pts=[];
-  const rows=COVERED.C.rows.filter(r=>(!P.org||r.org===P.org)&&(!P.q||[r.org,r.area,r.district,r.note].join(' ').toLowerCase().includes(P.q.trim().toLowerCase())));
+  const rows=COVERED.C.rows.filter(r=>(!P.org||r.org===P.org)&&(!P.q||[r.org,r.area,r.district,r.note,r.items].join(' ').toLowerCase().includes(P.q.trim().toLowerCase())));
   rows.filter(r=>r.lat!=null).forEach(r=>{const ll=[r.lat,r.lng];pts.push(ll);const cs=(hit.get(r)||[]).length;
     L.circle(ll,{radius:r.approx?900:500,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:r.approx?.06:.12,dashArray:r.approx?'5 5':null,interactive:false}).addTo(M.cov);
     const m=L.circleMarker(ll,{radius:r.approx?6:8,color:'#fff',weight:2,fillColor:'#7b3fc4',fillOpacity:r.approx?.55:1}).bindPopup(
-      `<b>🤝 ${esc(r.org)}</b><br>${esc(r.area)}${r.district?' · เขต'+esc(r.district):''}<br>วันที่ ${esc(r.date)}${r.sets?' · '+esc(r.sets)+' ชุด':''}${cs?`<br><b style="color:#5b2d91">เคสที่อาจซ้ำ ${cs} เคส</b>`:''}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov);
+      `<b>🤝 ${esc(r.org)}</b><br>${esc(r.area)}${r.district?' · เขต'+esc(r.district):''}<br>วันที่ ${esc(r.date)}${r.items?'<br>'+esc(r.items):''}${r.sets?' · '+esc(r.sets)+(/^[\d,]+$/.test(String(r.sets).trim())?' ชุด':''):''}${cs?`<br><b style="color:#5b2d91">เคสที่อาจซ้ำ ${cs} เคส</b>`:''}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov);
     M.mk.set(r,m)});
   if($('#mt-cases').checked)P.cases.filter(c=>c.status!=='done'&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)).forEach(c=>{
     L.circleMarker([+c.lat,+c.lng],{radius:4,color:'#d03b3b',weight:1,fillColor:'#d03b3b',fillOpacity:.8}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});

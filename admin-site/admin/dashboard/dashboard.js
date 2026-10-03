@@ -88,25 +88,40 @@ const escT=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt
 async function drawMap(L0){
   try{await loadLeaflet()}catch(e){$('#dmap').textContent='โหลดแผนที่ไม่สำเร็จ';return}
   if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard.org'}).addTo(M.map);
+    M.map.zoomControl.setPosition('bottomright');M.map.attributionControl.setPrefix(false);M.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
+    L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(M.map);let b='road';try{b=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(DBASES[b]?b:'road');
     M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable())}
   const showDone=$('#mt-done').checked,list=L0.filter(c=>(showDone||c.status!=='done'));
   M.cases.clearLayers();const pts=[];let nopin=0;
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
-    L.circleMarker(ll,{radius:c.status!=='done'&&sev(c)===3?9:7,color:'#fff',weight:2,fillColor:caseColor(c),fillOpacity:.95})
+    const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';
+    L.marker(ll,{icon:L.divIcon({className:'um-pin '+k,html:'<span></span>',iconSize:[32,34],iconAnchor:[16,33],popupAnchor:[0,-30]}),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
       .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   $('#map-nopin').textContent=nopin?`· ${nopin} เคสไม่มีหมุด (ไม่แสดงบนแผนที่)`:'';
   if(pts.length&&!M.fitted){M.map.fitBounds(pts,{padding:[30,30],maxZoom:14});M.fitted=true}
   const F=typeof VERIFY!=='undefined'?VERIFY.F:null;
-  if(F&&M.floodAt!==F.loaded){M.floodAt=F.loaded;M.flood.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#c62828':v==='risky'||d>=30?'#ef6c00':v==='caution'||d>=10?'#f9a825':'#1e88e5';
-    r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.8}).bindTooltip(`${escT(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(M.flood))})}
+  if(F&&M.floodAt!==F.loaded){M.floodAt=F.loaded;M.flood.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return; // แบบ Floodboard: เฉพาะถนนที่มีน้ำ
+    r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${escT(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(M.flood))})}
   if($('#mt-flood').checked)M.flood.addTo(M.map);else M.flood.remove();
   if(typeof COVERED!=='undefined'){if(!M.cov)M.cov=L.layerGroup();if(M.covAt!==COVERED.C.loaded){M.covAt=COVERED.C.loaded;M.cov.clearLayers();
     COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>{L.circle([r.lat,r.lng],{radius:r.approx?900:600,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.12,dashArray:r.approx?'4 4':null}).addTo(M.cov);
       L.circleMarker([r.lat,r.lng],{radius:6,color:'#fff',weight:2,fillColor:'#7b3fc4',fillOpacity:1}).bindPopup(`<b>🤝 ${escT(r.org)}</b><br>${escT(r.area)}<br>วันที่ ${escT(r.date)}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${escT(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov)})}
     if($('#mt-cov').checked)M.cov.addTo(M.map);else M.cov.remove()}
+  const dl=$('#dleg');if(dl){dl.querySelector('.lg-done').hidden=!showDone;dl.querySelector('.lg-flood').hidden=!$('#mt-flood').checked;dl.querySelector('.lg-cov').hidden=typeof COVERED==='undefined'||!$('#mt-cov').checked}
   setTimeout(()=>M.map.invalidateSize(),60);
 }
+/* แบบแผนที่ (เหมือนหน้าเว็บหลักและหน้าจัดการเคส): ถนน / ดาวเทียม / มืด */
+const DESRI='https://server.arcgisonline.com/ArcGIS/rest/services/',DBASES={road:1,sat:1,dark:1};
+function setBase(name){const m=M.map,t=(u,a,o={})=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true,...o});if(M.base)m.removeLayer(M.base);
+  if(name==='sat')M.base=L.layerGroup([t(DESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(DESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(DESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
+  else if(name==='dark')M.base=L.layerGroup([t(DESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri',{maxZoom:16,maxNativeZoom:16}),t(DESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
+  else M.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
+  M.base.addTo(m);try{localStorage.setItem('uh_base',name)}catch(e){}document.querySelectorAll('[data-dbase]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.dbase===name)))}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-dbase]');if(b&&M.map){setBase(b.dataset.dbase);return}
+  const menu=$('#dlayer');if(menu&&!menu.hidden&&!e.target.closest('#dlayer')&&!e.target.closest('#fs-lay')){menu.hidden=true;$('#fs-lay').setAttribute('aria-expanded','false');$('#fs-lay').classList.remove('on')}});
+$('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigator.geolocation||!M.map){if(typeof toast==='function')toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}btn.classList.add('busy');
+  navigator.geolocation.getCurrentPosition(p=>{btn.classList.remove('busy');const ll=[p.coords.latitude,p.coords.longitude];if(!M.me)M.me=L.marker(ll,{icon:L.divIcon({className:'me-dot',html:'<span></span>',iconSize:[22,22]}),interactive:false,zIndexOffset:2000}).addTo(M.map);M.me.setLatLng(ll);M.map.flyTo(ll,Math.max(M.map.getZoom(),15),{duration:.6})},
+    ()=>{btn.classList.remove('busy')},{enableHighAccuracy:true,timeout:15000})});
 ['#mt-done','#mt-flood','#mt-cov'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
 /* ---------- render ---------- */
@@ -195,19 +210,21 @@ function renderStock(){
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
 if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}})}else showLogin();
 
+const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',ICON_CLOSE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 /* แผนที่เต็มจอ: ซ่อนส่วนอื่นทั้งหมด เหลือปุ่ม ☰ (ชั้นข้อมูล) กับ ✕ · ปุ่มย้อนกลับของมือถือ/Esc = ออก */
 (()=>{const card=document.querySelector('.mapcard'),btn=$('#fs-btn'),lay=$('#fs-lay');if(!card||!btn)return;
   const fix=()=>setTimeout(()=>{if(!M.map)return;M.map.invalidateSize();const w=M.map.scrollWheelZoom;if(w)w[card.classList.contains('fs')?'enable':'disable']()},80);
   function set(on,fromPop){if(on===card.classList.contains('fs'))return;
-    card.classList.toggle('fs',on);card.classList.remove('lay');lay.setAttribute('aria-expanded','false');document.body.classList.toggle('map-fs',on);
-    btn.textContent=on?'✕':'⛶ ขยายจอ';btn.classList.toggle('wide',!on);btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'แผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
+    card.classList.toggle('fs',on);document.body.classList.toggle('map-fs',on);
+    btn.innerHTML=on?ICON_CLOSE:ICON_FULL;btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'ขยายแผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
     if(on){try{history.pushState({mapfs:1},'')}catch(e){}try{const r=card.requestFullscreen&&card.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{})}catch(e){}}
     else{if(document.fullscreenElement)try{document.exitFullscreen().catch(()=>{})}catch(e){}if(!fromPop&&history.state&&history.state.mapfs)try{history.back()}catch(e){}}
     fix()}
   btn.addEventListener('click',()=>set(!card.classList.contains('fs')));
-  lay.addEventListener('click',()=>{const o=card.classList.toggle('lay');lay.setAttribute('aria-expanded',o)});
+  btn.innerHTML=ICON_FULL;
+  lay.addEventListener('click',()=>{const m=$('#dlayer'),o=m.hidden;m.hidden=!o;lay.setAttribute('aria-expanded',String(o));lay.classList.toggle('on',o)});
   window.addEventListener('popstate',()=>set(false,true));
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&card.classList.contains('fs'))set(false)});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&card.classList.contains('fs'))set(false)});
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const m=$('#dlayer');if(m&&!m.hidden){m.hidden=true;lay.setAttribute('aria-expanded','false');lay.classList.remove('on');return}if(card.classList.contains('fs'))set(false)});
   window.addEventListener('resize',()=>{if(card.classList.contains('fs'))fix()});
 })();

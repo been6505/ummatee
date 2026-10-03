@@ -121,7 +121,13 @@ function render(){
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.reduce((s,c)=>s+(bagsOf(c)||0),0),bagNeed=act.filter(c=>bagsOf(c)==null).reduce((s,c)=>s+(hh(c)||1),0);
     const k=[[nf(L.length),'เคสทั้งหมด',`ช่วยแล้ว ${L.length?Math.round(n('done')/L.length*100):0}%`],[nf(n('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(n('going')),'ทีมกำลังไป','','var(--going)'],[nf(n('done')),'ช่วยเหลือแล้ว',avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'} (ประมาณ)`,'var(--good)'],
     [nf(ppl),'คนที่ยังรอ','จากเคสที่ยังไม่เสร็จ'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(L.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง'],[nf(bagSet),'ถุงยังชีพ (ที่ระบุแล้ว)','รวมทุกเคสในช่วงนี้'],[nf(bagNeed),'ถุงที่ควรเตรียมเพิ่ม','เคสยังไม่เสร็จที่ยังไม่ระบุ · ครัวเรือนละ 1']];
-  $('#kpis').replaceChildren(...k.map(([v,t,s,col])=>{const d=el('div','kpi');d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
+  // พื้นที่ที่องค์กรอื่นช่วยแล้ว (จากชีต) + เคสที่ยังไม่เสร็จซึ่งอยู่ในพื้นที่นั้น (อาจซ้ำ)
+  if(typeof COVERED!=='undefined'){const cr=COVERED.C.rows,orgs=new Set(cr.map(r=>r.org).filter(Boolean));
+    const sets=cr.reduce((a,r)=>a+(/^[\d,]+(\s*ชุด)?$/.test(String(r.sets).trim())?parseInt(String(r.sets).replace(/,/g,''))||0:0),0);
+    const dup=cr.length?act.filter(c=>COVERED.match(c)).length:0;
+    k.push([cr.length?nf(cr.length):(COVERED.C.loading||!COVERED.C.loaded?'…':'0'),'พื้นที่ที่องค์กรอื่นช่วยแล้ว',cr.length?`${nf(orgs.size)} องค์กร${sets?' · '+nf(sets)+' ชุด':''}`:(COVERED.C.error||'กำลังโหลดจากชีต'),'#7b3fc4','../covered/'],
+      [cr.length?nf(dup):'…','เคสรอช่วยในพื้นที่ที่มีคนช่วยแล้ว','ตรวจก่อนส่งทีม (อาจซ้ำ)','#7b3fc4','../covered/']);}
+  $('#kpis').replaceChildren(...k.map(([v,t,s,col,href])=>{const d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
   /* trend */
   let buckets=[];
@@ -188,3 +194,20 @@ function renderStock(){
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
 if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}})}else showLogin();
+
+/* แผนที่เต็มจอ: ซ่อนส่วนอื่นทั้งหมด เหลือปุ่ม ☰ (ชั้นข้อมูล) กับ ✕ · ปุ่มย้อนกลับของมือถือ/Esc = ออก */
+(()=>{const card=document.querySelector('.mapcard'),btn=$('#fs-btn'),lay=$('#fs-lay');if(!card||!btn)return;
+  const fix=()=>setTimeout(()=>{if(!M.map)return;M.map.invalidateSize();const w=M.map.scrollWheelZoom;if(w)w[card.classList.contains('fs')?'enable':'disable']()},80);
+  function set(on,fromPop){if(on===card.classList.contains('fs'))return;
+    card.classList.toggle('fs',on);card.classList.remove('lay');lay.setAttribute('aria-expanded','false');document.body.classList.toggle('map-fs',on);
+    btn.textContent=on?'✕':'⛶';btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'แผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
+    if(on){try{history.pushState({mapfs:1},'')}catch(e){}try{const r=card.requestFullscreen&&card.requestFullscreen({navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+    else{if(document.fullscreenElement)try{document.exitFullscreen().catch(()=>{})}catch(e){}if(!fromPop&&history.state&&history.state.mapfs)try{history.back()}catch(e){}}
+    fix()}
+  btn.addEventListener('click',()=>set(!card.classList.contains('fs')));
+  lay.addEventListener('click',()=>{const o=card.classList.toggle('lay');lay.setAttribute('aria-expanded',o)});
+  window.addEventListener('popstate',()=>set(false,true));
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&card.classList.contains('fs'))set(false)});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&card.classList.contains('fs'))set(false)});
+  window.addEventListener('resize',()=>{if(card.classList.contains('fs'))fix()});
+})();

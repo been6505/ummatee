@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=5">
-<link rel="stylesheet" href="./covered.css?v=3">
+<link rel="stylesheet" href="./covered.css?v=4">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -38,6 +38,19 @@
       <p class="muted">ดึงสดจาก Google Sheet ทุก 5 นาที · ใช้ตรวจก่อนส่งทีม เพื่อไม่ให้ซ้ำพื้นที่</p></div>
       <a class="btn ghost-d sm" id="sheet-link" target="_blank" rel="noopener">แก้ไขในชีต ↗</a>
     </div>
+    <details class="cv-guide" id="guide">
+      <summary>วิธีกรอกข้อมูลในชีต <span class="muted">(แตะเพื่อดู)</span></summary>
+      <ol>
+        <li><b>1 แถว = 1 พื้นที่</b> กรอกต่อท้ายแถวล่างสุด ไม่ต้องเว้นแถว และอย่าแก้ชื่อหัวคอลัมน์ (ระบบหาคอลัมน์จากชื่อหัว)</li>
+        <li><b>องค์กร</b> ใช้ชื่อเดิมให้ตรงกันทุกแถว เช่น "สภาเครือข่าย" ไม่สลับเป็นชื่อย่อ เพื่อให้ปุ่มกรองนับถูก</li>
+        <li><b>พื้นที่</b> ชื่อชุมชน/ซอย/มัสยิดให้ชัด เช่น "ชุมชนวังโสม หัวหมาก" ถ้ามีหลายจุดให้แยกเป็นหลายแถว</li>
+        <li><b>วันที่</b> แบบ วัน/เดือน/ปี พ.ศ. เช่น 2/10/2569 หรือ 2/10/69</li>
+        <li><b>ลิงก์</b> สำคัญที่สุด: เปิด Google Maps → ปักหมุดตรงจุด → แชร์ → คัดลอกลิงก์ แล้ววางทั้งลิงก์ (maps.app.goo.gl/… ได้เลย) ถ้าไม่มีลิงก์ ระบบจะเดาตำแหน่งจากชื่อ อาจคลาดได้</li>
+        <li><b>เขต / จำนวนชุด</b> ใส่ในคอลัมน์ของมัน หรือพิมพ์ต่อท้ายชื่อพื้นที่ก็ได้ เช่น "… เขตสะพานสูง 50 ชุด"</li>
+        <li><b>พิกัด</b> (คอลัมน์ H, ไม่บังคับ) ใช้เมื่อไม่มีลิงก์ เช่น <code>13.8123, 100.7012</code> ระบบจะใช้ค่านี้ก่อนลิงก์</li>
+      </ol>
+      <p class="muted small">กรอกแล้วหน้านี้อัปเดตเองภายในประมาณ 5 นาที หรือกด ⟳ โหลดใหม่ · ห้ามใส่ชื่อ-เบอร์โทรผู้ประสบภัยในชีตนี้</p>
+    </details>
     <div class="cv-tools">
       <input id="q" type="search" placeholder="ค้นหาพื้นที่ เขต หรือองค์กร" aria-label="ค้นหา">
       <div class="seg" role="tablist" id="orgs" aria-label="กรองตามองค์กร"></div>

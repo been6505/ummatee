@@ -25,6 +25,8 @@ const COVERED=(()=>{
   function pick(r,cols){const out=cols.map(i=>i<0?'':r[i]||'');if(!out[3]){const u=r.find(x=>/https?:\/\//.test(x||''));if(u)out[3]=u}return out}
   /* ตำแหน่งที่ทีมหาไว้ให้แถวที่ยังไม่มีลิงก์ (ค้นจาก Google Maps 2 ต.ค. 69) — ใช้เมื่อชีตยังไม่มีลิงก์/พิกัด */
   const KNOWN={"ร้านข้าวเช้าซอยรามคำแหง 53 เขตวังทองหลาง": [13.7698003, 100.6183919, "กลาง"], "บึงขวางซอย 3 เกษรหอม 1": [13.784469, 100.761265, "กลาง"], "มัสยิดอัลยุซรอ หลอแหล": [13.769399, 100.6939231, "สูง"], "มัสยิด 53": [13.7615138, 100.6197928, "กลาง"], "เสรีไทย ซอย 9": [13.7748298, 100.6549002, "กลาง"], "ปากคลองทับช้าง": [13.7290161, 100.6916157, "สูง"], "บึงขวาง 3 แยก 14": [13.785707, 100.757104, "สูง"], "เคหะร่มเกล้า 14 มัสยิดนะฟีอะหฺ": [13.7758841, 100.7251432, "สูง"], "กรุงเทพกรีฑา 45": [13.740695, 100.6890053, "กลาง"], "หัวหมากน้อย วังโสม": [13.7579636, 100.6571238, "สูง"], "กรุุงเทพกรีฑา 7 แยก 1-2 ซอยวะกัฟ": [13.7488631, 100.656936, "กลาง"], "มัสยิดอััลยุซรอ": [13.769399, 100.6939231, "สูง"], "วัดปากบ่อ": [13.7146469, 100.6310799, "สูง"], "เคหะร่มเกล้า โซน 10 มัสยิดอันนูร": [13.7605285, 100.7364273, "สูง"], "บ้านมา 2 ข้างพาสิโอ": [13.7206009, 100.7276188, "กลาง"], "ชุมชนข้างวัดขจรศิริ": [13.7148151, 100.641278, "กลาง"], "บ้านเอื้ออาทร ลาดกระบัง 2": [13.7205423, 100.8243633, "สูง"], "เคหะร่มเกล้า": [13.7678303, 100.7323762, "ต่ำ"], "มัสยิดสมอเซ": [13.7224237, 100.9424902, "สูง"], "ชุมชนคลองห้อง อ่อนนุช 63": [13.7219969, 100.6805344, "กลาง"], "คลองประเวศฝั่งเหนือ ตรงข้ามวัดกระทุ่ม": [13.7229237, 100.6887065, "กลาง"], "รามคำแหง 81": [13.7624741, 100.63385, "กลาง"]};
+  /* พิกัดของลิงก์ย่อ maps.app.goo.gl ในชีต (ทีมหาไว้ 3 ต.ค. 69) — ใช้เมื่อระบบแปลงลิงก์ (Worker) ใช้งานไม่ได้ แทนการเดาจากชื่อ */
+  const LINKPOS={"ZwL4bmYyUYr922UTA":[13.857504,100.833061,"กลาง"],"ZqiqAVnW29xC9m857":[13.794696,100.511289,"สูง"],"oscRpdCNzjA8FR9R9":[13.707,100.6333,"ต่ำ"],"mPN2h29oBwG3FD6r8":[13.723361,100.486297,"สูง"],"wdUeFKjmtTjboaYz6":[13.810372,100.758663,"กลาง"],"Lw83v7mdJEveMmWx7":[13.760529,100.736427,"สูง"],"3kJAC62aKCz1k3xX7":[13.774088,100.651234,"สูง"],"nrj4rbCo6fxetMWH6":[13.750232,100.65126,"สูง"],"7bA2LCwruiSds99w7":[13.743327,100.7,"สูง"],"ok41tUpoZ6sneoB88":[13.749317,100.691657,"สูง"],"GQchXymeR3XeFKyk7":[13.793174,100.74647,"ต่ำ"],"hQhz4pA9m97s3JAWA":[13.791832,100.753425,"สูง"],"XH2VTSUmXkKdFFG97":[13.723436,100.67311,"สูง"],"Sifa7GjGqsdd7tvn9":[13.779712,100.701867,"สูง"],"Gw96r6sVXdF43zkLA":[13.705469,100.693987,"สูง"],"qEBRTFCoiA3Mcg3e6":[13.722382,100.673581,"สูง"],"qWTHsm5aBGeeJFNH9":[13.726967,100.681408,"กลาง"],"C9uuPbk6txD5q6Vx8":[13.720739,100.795397,"ต่ำ"],"FZy328FG7dbD6Kjb7":[13.775421,100.724287,"สูง"],"c2bvX2LwACsgDNew5":[13.797068,100.760936,"กลาง"],"B4NX7GrhNpt8Ppbx5":[13.788748,100.764998,"กลาง"],"CczTvP3ZZom6sCJWA":[13.786546,100.765015,"กลาง"],"EkpWzfaDimmF9gC89":[13.791877,100.757593,"กลาง"],"4eDwF4S8399Mez87A":[13.72125,100.67255,"กลาง"],"p8ijvEWQ2971cQmPA":[13.74902,100.674415,"สูง"]};
   function fromCells(r){let [org,area,date,link,district,sets,note,coord,items]=r.map(x=>String(x||'').replace(/\s+/g,' ').trim());
     items=items||'';if(!sets){const m=area.match(/(\d[\d,]*)\s*ชุด/);if(m){sets=m[1];area=area.replace(m[0],' ')}}
     if(!district){const m=area.match(/เขต\s*([ก-๙]+)\s*$/);if(m&&area.length-m[0].length>=4){district=m[1];area=area.slice(0,m.index)}}
@@ -32,9 +34,14 @@ const COVERED=(()=>{
     const d=date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(d){let y=+d[3];if(y<100)y=y>=50?2500+y:y+2543;else if(y<2400)y+=543;date=d[1]+'/'+d[2]+'/'+y;const now=new Date().getFullYear()+543;if(Math.abs(y-now)>1)note=(note?note+' · ':'')+'ปี '+y+' อาจพิมพ์ผิด ตรวจในชีต'}
     link=link.replace(/\?g_st=\w+$/,'');
     const k0=String(r[1]||'').replace(/\s+/g,' ').trim(),kn=KNOWN[k0];
-    const ll=coordsFromUrl(coord)||coordsFromUrl(link)||(kn&&!link?kn:null);
+    const tok=(link.match(/goo\.gl\/([A-Za-z0-9]+)/)||[])[1],lp=tok&&LINKPOS[tok];
+    let src='',ll=coordsFromUrl(coord);if(ll)src='coord';
+    if(!ll&&(ll=coordsFromUrl(link)))src='link';
+    if(!ll&&lp){ll=lp;src='known'}
+    if(!ll&&kn&&!link){ll=kn;src='known'}
+    const low=src==='known'&&ll[2]==='ต่ำ';
     if(link&&!/^https?:\/\//i.test(link))link=ll&&coordsFromUrl(link)?'https://www.google.com/maps?q='+ll[0]+','+ll[1]:'';
-    return {org,area,date,link,district,items,sets:sets||'',note:note||'',lat:ll?ll[0]:null,lng:ll?ll[1]:null,approx:false}}
+    return {org,area,date,link,district,items,sets:sets||'',note:note||'',lat:ll?ll[0]:null,lng:ll?ll[1]:null,approx:low,src}}
   /* วันที่ในชีตเขียนหลายแบบ (2/10/69, 1/10/2569, 1/10/26) → แสดงตามที่กรอก แต่แปลงเป็นเวลาไว้เรียง */
   function dateMs(s){const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return 0;let y=+m[3];if(y<100)y=y>=50?2500+y-543:2000+y;else if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])}
   const geoCache=(()=>{try{return JSON.parse(localStorage.getItem('uh_cov_geo')||'{}')}catch(e){return {}}})();
@@ -47,7 +54,7 @@ const COVERED=(()=>{
     if(C.loading)return C.loading;if(C.loaded&&Date.now()-C.loaded<5*60e3)return;
     C.loading=(async()=>{
       let rows=null;
-      {const base=apiUrl&&apiUrl.charAt(0)==='/'?apiUrl:RESOLVER;try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);const j=await fetch(base+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Math.floor(Date.now()/60000),{signal:ctl.signal}).then(x=>x.json()).finally(()=>clearTimeout(tm));if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>{const r=fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note,'',it.items]);if(it.lat!=null&&it.lat!==''){r.lat=+it.lat;r.lng=+it.lng}return r});C.source='api'}}catch(e){}}
+      {const base=apiUrl&&apiUrl.charAt(0)==='/'?apiUrl:RESOLVER;try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);const j=await fetch(base+'?action=covered&key='+encodeURIComponent(key||'')+'&t='+Math.floor(Date.now()/60000),{signal:ctl.signal}).then(x=>x.json()).finally(()=>clearTimeout(tm));if(j&&j.ok&&Array.isArray(j.items)){rows=j.items.map(it=>{const r=fromCells([it.org,it.area,it.date,it.link,it.district,it.sets,it.note,'',it.items]);if(it.lat!=null&&it.lat!==''){r.lat=+it.lat;r.lng=+it.lng;r.src='link';r.approx=false}return r});C.source='api'}}catch(e){}}
       if(!rows){try{const t=await fetch(CSV_URL+'&t='+Math.floor(Date.now()/60000)).then(x=>{if(!x.ok)throw 0;return x.text()});
         const all=parseCSV(t);const cols=colMap(all[0]||[]);rows=all.slice(1).map(r=>pick(r,cols)).filter(r=>r[1]&&String(r[1]).trim()).map(fromCells);C.source='sheet'}catch(e){C.error='โหลดข้อมูลพื้นที่องค์กรอื่นไม่สำเร็จ';return}}
       rows.forEach(r=>{r.t=dateMs(r.date);r.n=norm(r.area);if(r.lat!=null&&r.lat!=='')r.lat=+r.lat,r.lng=+r.lng;else r.lat=r.lng=null});

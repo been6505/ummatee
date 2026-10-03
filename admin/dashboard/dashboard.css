@@ -81,3 +81,22 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 @media(max-width:900px){.dmap{height:340px}}
 
 @media(max-width:600px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.kpi{padding:8px 10px;border-radius:12px}.kpi b{font-size:20px}.kpi span{font-size:12px;line-height:1.3}.kpi small{font-size:11px;margin-top:3px}.map-tg{font-size:12.5px;gap:10px}}
+/* ---- แผนที่เต็มจอ ---- */
+.dmap-wrap{position:relative;isolation:isolate}
+.fs-bar{position:absolute;top:10px;right:10px;z-index:1000;display:flex;gap:8px}
+.fs-btn{width:44px;height:44px;border-radius:12px;border:0;background:#fff;color:#102f42;font-size:22px;line-height:1;box-shadow:0 1px 5px rgba(0,0,0,.3);cursor:pointer;display:grid;place-items:center;padding:0}
+.fs-btn:active{background:#eef4f5}.fs-lay{display:none}
+.mapcard.fs{position:fixed;inset:0;z-index:3000;margin:0;border-radius:0;padding:0;border:0;background:#e8eef0}
+.mapcard.fs .map-h>div:first-child{display:none}
+.mapcard.fs .dmap-wrap,.mapcard.fs .dmap{height:100vh;height:100dvh;border-radius:0;margin:0}
+.mapcard.fs .fs-bar{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+.mapcard.fs .fs-lay{display:grid}.mapcard.fs .fs-lay[aria-expanded=true]{background:#166d75;color:#fff}
+.mapcard.fs .map-tg,.mapcard.fs .map-leg{display:none}
+.mapcard.fs.lay .map-h{position:absolute;z-index:1001;top:calc(max(10px,env(safe-area-inset-top)) + 54px);right:max(10px,env(safe-area-inset-right));display:block}
+.mapcard.fs.lay .map-tg{display:grid;gap:10px;background:#fff;color:#102f42;border-radius:12px;padding:12px 14px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14.5px;max-width:min(300px,calc(100vw - 20px))}
+.mapcard.fs.lay .map-tg label{min-height:28px}
+.mapcard.fs.lay .map-leg{display:flex;position:absolute;z-index:1001;left:10px;right:10px;bottom:max(24px,calc(env(safe-area-inset-bottom) + 18px));background:rgba(255,255,255,.95);color:#102f42;border-radius:12px;padding:8px 12px;margin:0;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:12.5px}
+@media(pointer:coarse){.mapcard.fs .leaflet-control-zoom{display:none}}
+.mapcard.fs .leaflet-control-attribution{font-size:10px}
+body.map-fs{overflow:hidden}
+a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.kpi-cov:active{opacity:.8}

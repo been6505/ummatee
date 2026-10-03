@@ -23,29 +23,57 @@ const MX=(()=>{
       if(z&&z.ok)S.zones=z.zones||[];if(r&&r.ok)S.roster=r.roster||[];fillZoneFilter();drawZones();renderSide()}catch(e){}}
   function fillZoneFilter(){const sel=$('#f-zone');if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">ทุกโซน</option>'+S.zones.map(z=>`<option value="${esc(z.id)}">โซน ${esc(z.name)}</option>`).join('');sel.value=S.zones.some(z=>z.id===v)?v:''}
 
-  /* ---------- ติดตั้งบนแผนที่ ---------- */
+  /* ---------- ติดตั้งบนแผนที่: หน้าตาแบบหน้าเว็บหลัก (แผนที่เต็มพื้นที่ + ปุ่มลอยขวาบน + เมนูชั้นข้อมูล + คำอธิบายสีมุมซ้ายบน) ---------- */
+  const ICON={layers:'<path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/>',locate:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
+    full:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',close:'<path d="M6 6l12 12M18 6 6 18"/>'};
+  const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/',BASES={road:'ถนน',sat:'ดาวเทียม',dark:'มืด'};
+  function setBase(name){const m=S.map,t=(u,a,o={})=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true,...o});if(S.base)m.removeLayer(S.base);
+    if(name==='sat')S.base=L.layerGroup([t(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
+    else if(name==='dark')S.base=L.layerGroup([t(ESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri',{maxZoom:16,maxNativeZoom:16}),t(ESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
+    else S.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
+    S.base.addTo(m);S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
-    S.L.route.addTo(map);map.on('click',onMapClick);toolbar();applyVis();loadZones();renderSide();
-    // ปุ่มขยายเต็มจอ (ใช้ CSS เต็มหน้าต่าง ใช้ได้ทั้งมือถือและคอม)
-    const FS=L.Control.extend({options:{position:'topleft'},onAdd(){const b=L.DomUtil.create('button','fs-btn');b.type='button';b.title='ขยายแผนที่เต็มจอ';b.setAttribute('aria-label','ขยายแผนที่เต็มจอ');b.textContent='⛶ ขยายจอ';b.classList.add('wide');
-      L.DomEvent.disableClickPropagation(b);L.DomEvent.on(b,'click',()=>fullscreen());S.fsBtn=b;return b}});
-    map.addControl(new FS())}
-  function fullscreen(on){const w=document.getElementById('map-wrap');on=on===undefined?!w.classList.contains('fs'):on;
+    map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
+    map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC');
+    if(map.zoomControl)map.zoomControl.setPosition('bottomright');L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);
+    let saved='road';try{saved=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(BASES[saved]?saved:'road');
+    S.L.route.addTo(map);map.on('click',onMapClick);fabs();applyVis();loadZones();renderSide()}
+  function fabs(){$('#mx-fabs').innerHTML=`<button type="button" class="fab" data-fab="layers" aria-label="แบบแผนที่และชั้นข้อมูล" title="แบบแผนที่และชั้นข้อมูล" aria-haspopup="dialog" aria-expanded="false" aria-controls="layer-menu">${svg('layers')}</button>`+
+    `<button type="button" class="fab" data-fab="locate" aria-label="ตำแหน่งของฉัน" title="ตำแหน่งของฉัน">${svg('locate')}</button>`+
+    `<button type="button" class="fab" data-fab="full" aria-label="ขยายแผนที่เต็มจอ" title="ขยายแผนที่เต็มจอ">${svg('full')}</button>`}
+  function layerMenu(){const m=$('#layer-menu');if(!m)return;const F=VERIFY.F;
+    m.innerHTML=`<div class="lm-bases">${Object.entries(BASES).map(([k,t])=>`<button type="button" data-base="${k}" aria-pressed="${S.baseName===k}">${t}</button>`).join('')}</div><hr>`+
+      LAYERS.map(([k,t])=>`<label class="tg"><input type="checkbox" data-lyr="${k}" ${S.on[k]?'checked':''}><span>${t}</span></label>`+
+        (k==='roads'?`<div class="flood-key"><span><i style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span><i style="background:#f57c00"></i>เสี่ยง</span><span><i style="background:#fbc02d"></i>น้ำขัง ผ่านได้</span></div>`:'')+
+        (k==='sensors'?`<div class="flood-key"><span><i style="background:#c62828"></i>≥30 ซม.</span><span><i style="background:#ef6c00"></i>15–30 ซม.</span><span><i style="background:#f9a825"></i>5–15 ซม.</span><span><i style="background:#4fc3f7"></i>ต่ำกว่า 5 ซม.</span></div>`:'')+
+        (k==='stations'?`<div class="flood-key">${[5,4,3,2].map(n=>`<span><i class="sq" style="background:${TW[n][0]}"></i>${TW[n][1]}</span>`).join('')}</div>`:'')).join('')+
+      `<p class="lm-src">${F.sensors.length?`เซ็นเซอร์ กทม. มีน้ำ ${nf(F.sensors.filter(x=>x.now>0).length)} จาก ${nf(F.sensors.length)} จุด`:'กำลังโหลดข้อมูลน้ำ…'}${F.loaded?' · อัปเดต '+fmtT(F.loaded):''}</p>`}
+  function menuOpen(on){const m=$('#layer-menu'),b=$('[data-fab="layers"]');if(!m)return;on=on===undefined?m.hidden:on;if(on)layerMenu();m.hidden=!on;if(b){b.setAttribute('aria-expanded',String(on));b.classList.toggle('on',on)}}
+  function fullscreen(on){const w=$('#map-wrap');on=on===undefined?!w.classList.contains('fs'):on;
     w.classList.toggle('fs',on);document.body.classList.toggle('noscroll',on);
-    if(S.fsBtn){S.fsBtn.textContent=on?'✕':'⛶ ขยายจอ';S.fsBtn.classList.toggle('wide',!on);S.fsBtn.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';S.fsBtn.setAttribute('aria-label',S.fsBtn.title)}
+    const b=$('[data-fab="full"]');if(b){b.innerHTML=svg(on?'close':'full');b.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';b.setAttribute('aria-label',b.title)}
     setTimeout(()=>S.map&&S.map.invalidateSize(),80)}
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('map-wrap')?.classList.contains('fs')&&!document.querySelector('#drawer:not([hidden])'))fullscreen(false)});
+  function locate(btn){if(!navigator.geolocation){toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}btn.classList.add('busy');
+    navigator.geolocation.getCurrentPosition(p=>{btn.classList.remove('busy');const ll=[p.coords.latitude,p.coords.longitude];
+      if(!S.me)S.me=L.marker(ll,{icon:L.divIcon({className:'me-dot',html:'<span></span>',iconSize:[22,22]}),interactive:false,zIndexOffset:2000}).addTo(S.map);
+      S.me.setLatLng(ll);S.map.flyTo(ll,Math.max(S.map.getZoom(),15),{duration:.6})},
+      ()=>{btn.classList.remove('busy');toast('หาตำแหน่งไม่ได้ ตรวจสอบว่าอนุญาตให้ใช้ตำแหน่งแล้ว')},{enableHighAccuracy:true,timeout:15000})}
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const m=$('#layer-menu');if(m&&!m.hidden){menuOpen(false);return}
+    if($('#map-wrap')?.classList.contains('fs')&&!document.querySelector('#drawer:not([hidden])'))fullscreen(false)});
+  document.addEventListener('click',e=>{const f=e.target.closest('[data-fab]');
+    if(f){const k=f.dataset.fab;if(k==='layers')menuOpen();else if(k==='locate')locate(f);else if(k==='full')fullscreen();return}
+    const bs=e.target.closest('[data-base]');if(bs){setBase(bs.dataset.base);return}
+    const m=$('#layer-menu');if(m&&!m.hidden&&!e.target.closest('#layer-menu'))menuOpen(false)});
+  document.addEventListener('change',e=>{const t=e.target;if(!t.dataset||!t.dataset.lyr||!t.closest('#layer-menu'))return;const k=t.dataset.lyr;S.on[k]=t.checked;saveOn();applyVis();if(S.on[k])draw()});
   function group(k){return k==='cases'?A.layer:k==='roads'?A.flood:S.L[k]}
   function applyVis(){LAYERS.forEach(([k])=>{const g=group(k);if(!g)return;if(S.on[k]){if(!S.map.hasLayer(g))g.addTo(S.map)}else if(S.map.hasLayer(g))S.map.removeLayer(g)});legend()}
-  function toolbar(){$('#map-tools').innerHTML=LAYERS.map(([k,t])=>`<button type="button" class="lyr" data-lyr="${k}" aria-pressed="${!!S.on[k]}">${t}</button>`).join('')}
-  document.addEventListener('click',e=>{const b=e.target.closest('[data-lyr]');if(b){const k=b.dataset.lyr;S.on[k]=!S.on[k];saveOn();b.setAttribute('aria-pressed',String(S.on[k]));applyVis();if(S.on[k])draw();return}
-    const sd=e.target.closest('[data-side]');if(sd&&sd.closest('#map-tools')){S.side=sd.dataset.side;S.form=null;clearPreview();renderSide();return}});
 
   /* ---------- วาดชั้นข้อมูล ---------- */
   function refresh(list){S.list=list;draw();const a=document.activeElement;if(!S.form&&!(a&&a.closest&&a.closest('#map-side')))renderSide()}
   function draw(){if(!S.map)return;const F=VERIFY.F;
     if(S.on.sensors&&S.drawn.sensors!==F.loaded+':'+F.sensors.length){S.drawn.sensors=F.loaded+':'+F.sensors.length;S.L.sensors.clearLayers();
-      F.sensors.filter(x=>x.status!=='malfunction'&&x.now!=null).sort((a,b)=>a.now-b.now).forEach(x=>{const d=x.now;
+      F.sensors.filter(x=>x.status!=='malfunction'&&x.now>0).sort((a,b)=>a.now-b.now).forEach(x=>{const d=x.now;
         L.circleMarker([x.lat,x.lng],{radius:d>=30?9:d>=15?8:d>=5?7:3,color:'#fff',weight:d>0?1.5:.5,fillColor:depthCol(d),fillOpacity:d>0?.95:.45})
           .bindTooltip(`💧 <b>${esc(x.name)}</b><br>น้ำบนถนน <b>${d} ซม.</b>${x.max!=null?` · สูงสุดวันนี้ ${x.max} ซม.`:''}<br>${esc(x.district?'เขต'+x.district:'')} · ${fmtT(x.t)}`).addTo(S.L.sensors)})}
     if(S.on.stations&&S.drawn.stations!==F.loaded+':'+F.stations.length){S.drawn.stations=F.loaded+':'+F.stations.length;S.L.stations.clearLayers();
@@ -63,12 +91,11 @@ const MX=(()=>{
         .bindTooltip(`<b>โซน ${esc(z.name)}</b><br>ยังไม่เสร็จ ${st.act} เคส${st.crit?` · วิกฤต ${st.crit}`:''} · ${st.teams.length} ทีม`)
         .on('click',()=>{if(S.form||S.picking)return;S.side='zone';S.zoneId=z.id;drawZones();renderSide()}).addTo(S.L.zones)})}
   function zoneStats(z){const act=A.cases.filter(c=>c.status!=='done'&&inZone(c,z));return {act:act.length,crit:act.filter(c=>sev(c)===3).length,open:act.filter(c=>c.status==='open').length,ppl:act.reduce((s,c)=>s+(Number(c.people)||1),0),teams:S.roster.filter(t=>t.zone===z.name)}}
-  function legend(){const p=[];
-    if(S.on.cases)p.push(`<span><i style="background:#d32f2f"></i>วิกฤต</span><span><i style="background:#f57c00"></i>เร่งด่วน</span><span><i style="background:#e0a800"></i>ทั่วไป</span><span><i style="background:#2b6cb0"></i>ทีมกำลังไป</span>`);
-    if(S.on.roads||S.on.sensors)p.push(`<span class="lg-gap">ความลึกน้ำบนถนน:</span><span><i class="ln" style="background:#c62828"></i>≥30 ซม./ปิด</span><span><i class="ln" style="background:#ef6c00"></i>15–30</span><span><i class="ln" style="background:#f9a825"></i>5–15</span><span><i class="ln" style="background:#4fc3f7"></i>&lt;5</span>`);
-    if(S.on.stations)p.push(`<span class="lg-gap">คลอง:</span>${[5,4,3,2].map(k=>`<span><i class="sq" style="background:${TW[k][0]}"></i>${TW[k][1]}</span>`).join('')}`);
-    if(S.route)p.push(`<span class="lg-gap"><i class="ln" style="background:#0d5f62"></i>เส้นทาง</span><span><i style="background:#fff;box-shadow:inset 0 0 0 3px #c62828"></i>จุดน้ำท่วมบนเส้นทาง</span>`);
-    const F=VERIFY.F;$('#map-legend').innerHTML=p.join('')+`<span class="lg-src">${F.sensors.length?`เซ็นเซอร์ กทม. ${nf(F.sensors.filter(x=>x.now>=5).length)}/${nf(F.sensors.length)} จุดมีน้ำ`:''}${F.loaded?' · อัปเดต '+fmtT(F.loaded):''}</span>`}
+  function legend(){const el=$('#map-legend');if(!el)return;const p=[];
+    if(S.on.cases)p.push(`<span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span><i class="lp done"></i>ช่วยแล้ว</span>`);
+    const x=[];if(S.on.roads)x.push('<span><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span>');if(S.on.sensors)x.push('<span><i style="background:#ef6c00"></i>จุดวัดน้ำ กทม.</span>');
+    if(S.on.stations)x.push('<span><i class="sq" style="background:#1e40ff"></i>ระดับน้ำคลอง</span>');if(S.route)x.push('<span><i class="ln" style="background:#0d5f62"></i>เส้นทาง</span>');
+    el.innerHTML=p.join('')+(x.length?`<span class="lg-sep"></span>${x.join('')}`:'');el.hidden=!p.length&&!x.length;if(!$('#layer-menu')?.hidden)layerMenu()}
 
   /* ---------- คลิกแผนที่: วางจุดกลางโซน / เลือกจุดเริ่มเส้นทาง ---------- */
   function onMapClick(e){const ll=e.latlng;if(!ll)return;
@@ -79,7 +106,7 @@ const MX=(()=>{
   function clearPreview(){if(S.preview){S.map.removeLayer(S.preview);S.preview=null}}
 
   /* ---------- แผงด้านข้าง ---------- */
-  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<div class="ms-tabs"><button data-side="zones" aria-selected="${S.side==='zones'||S.side==='zone'}">⭕ โซน</button><button data-side="route" aria-selected="${S.side==='route'}">🧭 จัดเส้นทาง</button></div>${h}`};
+  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:S.zones.length?`โซน ${S.zones.length} · จัดเส้นทาง`:'โซน · จัดเส้นทาง'}</span></button><div class="ms-tabs"><button data-side="zones" aria-selected="${S.side==='zones'||S.side==='zone'}">⭕ โซน</button><button data-side="route" aria-selected="${S.side==='route'}">🧭 จัดเส้นทาง</button></div>${h}`};
   function renderSide(){if(!$('#map-side'))return;
     if(S.form)return side(zoneForm());
     if(S.side==='zone'&&zoneOf(S.zoneId))return side(zoneDetail(zoneOf(S.zoneId)));
@@ -186,6 +213,7 @@ const MX=(()=>{
     if(t.dataset.zTeam){const tm=S.roster.find(x=>x.id===t.dataset.zTeam),z=zoneOf(S.zoneId);if(tm&&z)saveTeamZone(tm,t.checked?z.name:(tm.zone===z.name?'':tm.zone))}});
   async function saveTeamZone(t,zone){try{const r=await post({action:'roster_save',key:A.key,team:{...t,zone},by:'หลังบ้าน'});if(r&&r.ok){t.zone=zone;toast(zone?`${t.name} → โซน ${zone}`:`${t.name} ออกจากโซน`,true);drawZones();renderSide()}else toast('บันทึกไม่สำเร็จ: '+(r&&r.error||''))}catch(e){toast('บันทึกไม่สำเร็จ')}}
   document.addEventListener('click',async e=>{const t=e.target.closest('button,a');if(!t||!t.closest('#map-side'))return;const d=t.dataset;
+    if(d.sheet!==undefined){const o=$('#map-side').classList.toggle('open');t.setAttribute('aria-expanded',String(o));return}
     if(d.side!==undefined){S.side=d.side;S.form=null;clearPreview();if(S.side!=='zone')S.zoneId=null;drawZones();renderSide();return}
     if(d.zAdd!==undefined){S.form={name:'',radius:1500,color:ZCOL[S.zones.length%ZCOL.length],lat:null,lng:null,note:''};renderSide();return}
     if(d.zOpen){S.side='zone';S.zoneId=d.zOpen;const z=zoneOf(d.zOpen);if(z)S.map.flyToBounds(L.latLng(z.lat,z.lng).toBounds(z.radius*2.2),{duration:.6});drawZones();renderSide();return}

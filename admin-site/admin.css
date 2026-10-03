@@ -189,3 +189,57 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{height:100%;max-height:none;min-height:0}
 @media(max-width:1000px){.map-wrap.fs .map-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.map-wrap.fs #map{min-height:55vh}.map-wrap.fs .map-side{max-height:35vh}}
 .fs-btn.wide{width:auto;padding:0 10px;font:700 13.5px Prompt,sans-serif;white-space:nowrap}
+/* ===== แผนที่หน้าตาแบบหน้าเว็บหลัก (umplus-help): แผนที่เต็มพื้นที่ + ปุ่มลอย + คำอธิบายสี + หมุดหยดน้ำ ===== */
+.map-wrap{padding:0;overflow:hidden;background:#fff}
+.map-body{gap:0;grid-template-columns:minmax(0,1fr) 380px}
+.map-cell{position:relative;min-width:0}
+.map-wrap #map{height:calc(100vh - 230px);min-height:480px;border-radius:0}
+.map-wrap.compact #map{height:540px;min-height:0}
+.map-side{border:0;border-left:1px solid var(--line);border-radius:0;max-height:calc(100vh - 230px);min-height:480px;padding:12px 14px}
+.map-wrap.compact .map-side{height:540px;max-height:540px;min-height:0}
+.mx-legend{position:absolute;z-index:500;left:12px;top:12px;background:#fff;border-radius:14px;padding:8px 12px;font-size:12.5px;font-weight:600;color:#161B3D;display:grid;gap:3px;box-shadow:0 8px 28px rgba(22,27,61,.12),0 1px 3px rgba(22,27,61,.08)}
+.mx-legend[hidden]{display:none}.mx-legend span{display:flex;align-items:center;gap:8px}
+.mx-legend i{width:12px;height:12px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px #D9DEF3}
+.mx-legend i.ln{width:16px;height:5px;border-radius:3px;border:0;box-shadow:none}.mx-legend i.sq{border-radius:3px}
+.mx-legend .lg-sep{height:1px;background:#E3E6EF;margin:3px 0}
+.lp.danger{background:#E5383B}.lp.urgent{background:#f57c00}.lp.open{background:#2D45C8}.lp.going{background:#7B8CEB}.lp.done{background:#2E9E57}
+.mx-fabs{position:absolute;z-index:500;right:12px;top:12px;display:grid;gap:10px}
+.fab{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;border:0;background:#fff;color:#1F2A5E;padding:0;cursor:pointer;box-shadow:0 8px 28px rgba(22,27,61,.12),0 1px 3px rgba(22,27,61,.08)}
+.fab:hover{background:#f4f6fb}.fab.on{background:#2D45C8;color:#fff}.fab.busy svg{animation:mxspin 1s linear infinite}
+@keyframes mxspin{to{transform:rotate(360deg)}}
+.layer-menu{position:absolute;z-index:600;right:68px;top:12px;background:#fff;border-radius:18px;padding:6px;width:250px;max-height:calc(100% - 24px);overflow:auto;display:grid;gap:2px;align-content:start;box-shadow:0 8px 28px rgba(22,27,61,.16),0 1px 3px rgba(22,27,61,.08)}
+.layer-menu[hidden]{display:none}
+.lm-bases{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.lm-bases button{min-height:40px;border:0;border-radius:12px;background:#F2F3F7;font:inherit;font-size:14px;font-weight:700;color:#161B3D;cursor:pointer}
+.lm-bases button[aria-pressed=true]{background:#2D45C8;color:#fff}
+.layer-menu hr{border:0;border-top:1px solid #D9DEF3;margin:4px 6px}
+.layer-menu .tg{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 10px;font-size:14px;font-weight:600;color:#161B3D;cursor:pointer;border-radius:10px}
+.layer-menu .tg:hover{background:#F2F3F7}.layer-menu .tg input{width:20px;height:20px;accent-color:#2D45C8;flex:none}
+.flood-key{display:grid;gap:3px;padding:0 12px 6px 40px;font-size:12px;color:#5a659f}.flood-key span{display:flex;align-items:center;gap:7px}
+.flood-key i{width:16px;height:5px;border-radius:3px;flex:none}.flood-key i.sq{width:11px;height:11px}
+.lm-src{margin:4px 10px 6px;font-size:11.5px;color:#5B6386}
+.leaflet-div-icon.um-pin,.leaflet-div-icon.me-dot{background:none;border:0}
+.um-pin span{display:block;width:26px;height:26px;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 8px rgba(15,33,136,.4);margin:2px;position:relative}
+.um-pin span::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:#fff;left:6px;top:6px}
+.um-pin.open span{background:#2D45C8}.um-pin.going span{background:#7B8CEB}.um-pin.done span{background:#2E9E57}.um-pin.urgent span{background:#f57c00}
+.um-pin.danger span{background:#E5383B;animation:pinpulse 1.2s ease-in-out infinite}
+@keyframes pinpulse{0%,100%{box-shadow:0 0 0 0 rgba(211,47,47,.55),0 3px 8px rgba(15,33,136,.4)}50%{box-shadow:0 0 0 10px rgba(211,47,47,0),0 3px 8px rgba(15,33,136,.4)}}
+@media(prefers-reduced-motion:reduce){.um-pin.danger span{animation:none}}
+.me-dot span{display:block;width:18px;height:18px;border-radius:50%;background:#2D45C8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(45,69,200,.25)}
+.ms-handle{display:none}
+.map-wrap.fs{padding:0}
+.map-wrap.fs .map-cell{height:100%}
+@media(max-width:1000px){
+  .map-body{grid-template-columns:1fr}.map-side{border-left:0;border-top:1px solid var(--line);min-height:0;max-height:none}
+  .map-wrap.compact #map{height:420px}.map-wrap #map{height:62vh;min-height:360px}
+  .mx-legend{font-size:11.5px;padding:6px 10px;left:10px;top:10px}.mx-legend .lg-sep,.mx-legend .lg-sep~span{display:none}
+  .mx-fabs{right:10px;top:10px;gap:8px}.fab{width:42px;height:42px;border-radius:12px}.layer-menu{right:60px;top:10px;width:230px}
+  /* เต็มจอบนมือถือ: แผงโซน/เส้นทางเป็นแผ่นเลื่อนขึ้นจากล่าง */
+  .map-wrap.fs .map-body{display:block;position:relative;height:100%}
+  .map-wrap.fs #map,.map-wrap.fs.compact #map{height:100%;min-height:0}
+  .map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{position:absolute;z-index:700;left:0;right:0;bottom:0;height:auto;max-height:96px;border:0;border-radius:24px 24px 0 0;box-shadow:0 -8px 30px rgba(15,33,136,.18);overflow:hidden;transition:max-height .25s;padding:0 12px 12px;background:#fff}
+  .map-wrap.fs .map-side.open,.map-wrap.fs.compact .map-side.open{max-height:72%;overflow:auto}
+  .map-wrap.fs .ms-handle{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;border:0;padding:8px 0 6px;font:inherit;font-weight:700;font-size:15px;color:#161B3D;position:sticky;top:0;background:#fff;z-index:1;cursor:pointer}
+  .ms-handle i{width:40px;height:5px;border-radius:3px;background:#C5CAE0}
+  .map-wrap.fs .leaflet-bottom{bottom:96px}
+}

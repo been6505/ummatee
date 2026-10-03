@@ -223,10 +223,13 @@ async function drawMap(list){
   if(!A.map){A.map=L.map('map',{preferCanvas:true}).setView([13.7563,100.5018],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC'}).addTo(A.map);A.flood=L.layerGroup().addTo(A.map);A.layer=L.layerGroup().addTo(A.map);A.fitted=false;
     if(typeof MX!=='undefined')MX.attach(A.map)}
-  if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#c62828':v==='risky'||d>=30?'#ef6c00':v==='caution'||d>=10?'#f9a825':'#1e88e5';r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.8}).bindTooltip(`${r.name}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(A.flood))})}
+  if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return; // แบบ Floodboard: แสดงเฉพาะถนนที่มีน้ำขัง/เสี่ยง/ผ่านไม่ได้
+      r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${r.name}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(A.flood))})}
   setTimeout(()=>A.map.invalidateSize(),50);A.layer.clearLayers();const pts=[];
-  list.filter(hasPin).forEach(c=>{const col=c.status==='done'?'#2e9e57':c.status==='going'?'#2b6cb0':sev(c)===3?'#d32f2f':sev(c)===2?'#f57c00':'#e0a800';pts.push([+c.lat,+c.lng]);
-    L.circleMarker([+c.lat,+c.lng],{radius:sev(c)===3&&c.status!=='done'?10:8,color:'#fff',weight:2,fillColor:col,fillOpacity:.95}).bindTooltip(`${URG[sev(c)]} · ${vr(c).result.t} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน`).on('click',()=>openDrawer(c.id)).addTo(A.layer)});
+  // หมุดหยดน้ำแบบหน้าเว็บหลัก: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป · ช่วยแล้ว
+  const PZ={danger:1000,urgent:700,open:400,going:200,done:0};
+  list.filter(hasPin).forEach(c=>{const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';pts.push([+c.lat,+c.lng]);
+    L.marker([+c.lat,+c.lng],{icon:L.divIcon({className:'um-pin '+k,html:'<span></span>',iconSize:[32,34],iconAnchor:[16,33]}),zIndexOffset:PZ[k],keyboard:false}).bindTooltip(esc(`${URG[sev(c)]} · ${vr(c).result.t} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน`),{direction:'top',offset:[0,-30]}).on('click',()=>openDrawer(c.id)).addTo(A.layer)});
   if(pts.length&&!A.fitted){A.map.fitBounds(pts,{padding:[40,40],maxZoom:14});A.fitted=true}
   const miss=list.length-pts.length;$('#count').textContent+=miss?` · ${miss} เคสไม่มีหมุด (ดูในรายการ)`:'';
   if(typeof MX!=='undefined')MX.refresh(list);

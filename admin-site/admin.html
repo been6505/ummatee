@@ -9,7 +9,7 @@
 <link rel="icon" href="./assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./admin.css?v=13">
+<link rel="stylesheet" href="./admin.css?v=15">
 </head>
 <body>
 <!-- ===== เข้าสู่ระบบ ===== -->
@@ -59,9 +59,15 @@
     </section>
 
     <section id="map-wrap" class="map-wrap">
-      <div class="map-tools" id="map-tools" role="toolbar" aria-label="ชั้นข้อมูลแผนที่"></div>
-      <div class="map-body"><div id="map"></div><aside class="map-side" id="map-side" aria-label="โซนและเส้นทาง"></aside></div>
-      <div class="map-legend" id="map-legend"></div>
+      <div class="map-body">
+        <div class="map-cell">
+          <div id="map"></div>
+          <div class="mx-legend" id="map-legend" aria-label="คำอธิบายสีบนแผนที่"></div>
+          <div class="mx-fabs" id="mx-fabs"></div>
+          <div class="layer-menu" id="layer-menu" role="dialog" aria-label="แบบแผนที่และชั้นข้อมูล" hidden></div>
+        </div>
+        <aside class="map-side" id="map-side" aria-label="โซนและเส้นทาง"></aside>
+      </div>
     </section>
     <section id="list" class="list"></section>
   </main>
@@ -74,7 +80,7 @@
 
 <script src="./admin/verify.js?v=4"></script>
 <script src="./admin/covered.js?v=9"></script>
-<script src="./admin.js?v=7"></script>
-<script src="./admin/mapx.js?v=5"></script>
+<script src="./admin.js?v=8"></script>
+<script src="./admin/mapx.js?v=6"></script>
 </body>
 </html>

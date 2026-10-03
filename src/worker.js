@@ -32,6 +32,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`,
   // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
   `CREATE TABLE IF NOT EXISTS zones (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
+  `CREATE TABLE IF NOT EXISTS covered_extra (n INTEGER PRIMARY KEY AUTOINCREMENT, org TEXT, date TEXT, items TEXT, qty TEXT, place TEXT, location TEXT, by_ TEXT, createdAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
@@ -391,6 +392,55 @@ async function cctvData() {
     return { ok: true, time: Date.now(), cams };
   });
 }
+/* พื้นที่ที่องค์กรอื่นรับแล้ว: อ่านจาก Google Sheet ที่แชร์แบบ "ทุกคนที่มีลิงก์" แล้วแปลงลิงก์ Google Maps (maps.app.goo.gl) เป็นพิกัด
+   แคชผลรวม 5 นาที และแคชพิกัดของแต่ละลิงก์ถาวรใน meta (ลิงก์เดิมไม่ต้อง resolve ซ้ำ) */
+const COVERED_SHEET = '1QwVsFfWqNBP8qJMBBk_PrvbSm6gNFOF0CGwJl5BNaFc';
+function parseCSV(t) { const rows = []; let row = [], cur = '', q = false; for (let i = 0; i < t.length; i++) { const ch = t[i];
+  if (q) { if (ch === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; } else if (ch === '"') q = true; else if (ch === ',') { row.push(cur); cur = ''; }
+  else if (ch === '\n' || ch === '\r') { if (ch === '\r' && t[i + 1] === '\n') i++; row.push(cur); cur = ''; rows.push(row); row = []; } else cur += ch; }
+  if (cur || row.length) { row.push(cur); rows.push(row); } return rows; }
+function coordsFromUrl(u) { u = decodeURIComponent(String(u || ''));
+  const pats = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/, /\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/];
+  for (const re of pats) { const m = u.match(re); if (m) { const a = +m[1], b = +m[2]; if (a > 5 && a < 21 && b > 97 && b < 106) return [a, b]; } } return null; }
+async function resolveMapLink(db, link) {
+  if (!/^https?:\/\//.test(link)) return null; const k = 'covlink:' + link; const c = await getMeta(db, k);
+  if (c) return c === '-' ? null : JSON.parse(c);
+  let u = link, ll = coordsFromUrl(u);
+  for (let i = 0; i < 4 && !ll; i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (UMPlus relief map)' } });
+    const loc = r.headers.get('location'); if (loc) { u = new URL(loc, u).toString(); ll = coordsFromUrl(u); continue; }
+    if (r.ok) { const t = (await r.text()).slice(0, 200000); ll = coordsFromUrl(t.match(/https:\/\/www\.google\.[^"' ]*@-?\d+\.\d+,-?\d+\.\d+[^"' ]*/)?.[0] || t.match(/center=-?\d+\.\d+%2C-?\d+\.\d+/)?.[0]?.replace('%2C', ',') || ''); }
+    break; } catch (e) { return null; } }
+  await setMeta(db, k, ll ? JSON.stringify(ll) : '-'); return ll; }
+async function listCovered(db) {
+  const c = await getMeta(db, 'covered_cache'); if (c) { try { const o = JSON.parse(c); if (Date.now() - o.t < 5 * 60e3) return { ok: true, items: o.items, cached: true }; } catch (e) {} }
+  const r = await fetch('https://docs.google.com/spreadsheets/d/' + COVERED_SHEET + '/gviz/tq?tqx=out:csv');
+  if (!r.ok) return { ok: false, error: 'sheet_' + r.status };
+  const all = parseCSV(await r.text()), h = (all[0] || []).map(x => String(x || '').replace(/\s+/g, ''));
+  const col = (re, d) => { const i = h.findIndex(x => re.test(x)); return i < 0 ? d : i; };
+  const cols = [col(/องค/, 0), col(/สถานที่|พื้นที่/, 1), col(/วันที่/, 2), col(/โลเค|ลิง[คก]|link|location/i, 3), col(/เขต|จังหวัด/, -1), col(/จำนวน|ชุด/, -1), col(/หมายเหตุ/, -1), col(/พิกัด/, -1), col(/รายการ|สิ่งของ/, -1)];
+  const rows = all.slice(1).map(x => { const o = cols.map(i => i < 0 ? '' : x[i] || ''); if (!o[3]) o[3] = x.find(v => /https?:\/\//.test(v || '')) || ''; return o; }).filter(x => x[1] && String(x[1]).trim());
+  const items = [];
+  for (const x of rows) { const [org, area, date, link, district, sets, note, coord, what] = x.map(v => String(v || '').trim()); const ll = coordsFromUrl('@' + coord.replace(/\s+/g, '')) || coordsFromUrl('@' + link.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
+    items.push({ org, area, date, link, district, sets, note, items: what, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
+  // แถวที่กรอกผ่านฟอร์มบนเว็บนี้ (เก็บใน D1) — ข้ามถ้าชีตมีแถวเดียวกันแล้ว
+  const seen = new Set(items.map(i => [i.org, i.area, i.date].join('|')));
+  const { results: extra } = await db.prepare('SELECT * FROM covered_extra ORDER BY n').all();
+  for (const e of extra || []) { if (seen.has([e.org, e.place, e.date].join('|'))) continue;
+    const loc = String(e.location || ''), link = /^https?:\/\//.test(loc) ? loc : '';
+    const ll = coordsFromUrl('@' + loc.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
+    items.push({ org: e.org, area: e.place, date: e.date, link, district: '', sets: e.qty, note: 'กรอกผ่านเว็บ', items: e.items, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
+  await setMeta(db, 'covered_cache', JSON.stringify({ t: Date.now(), items }));
+  return { ok: true, items };
+}
+async function addCovered(db, b) {
+  const r = b.row || {}, cut = (v, n) => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').trim().slice(0, n);
+  const v = { org: cut(r.org, 80), date: cut(r.date, 20), items: cut(r.items, 120), qty: cut(r.qty, 40), place: cut(r.place, 200), location: cut(r.location, 300) };
+  if (!v.org || !v.place) return { ok: false, error: 'missing_fields' };
+  if (v.location && !/^https?:\/\//i.test(v.location) && !/^-?\d{1,2}\.\d+\s*,\s*-?\d{2,3}\.\d+$/.test(v.location)) return { ok: false, error: 'bad_location' };
+  await db.prepare('INSERT INTO covered_extra (org,date,items,qty,place,location,by_,createdAt) VALUES (?,?,?,?,?,?,?,?)').bind(v.org, v.date, v.items, v.qty, v.place, v.location, cut(b.by, 60), Date.now()).run();
+  await setMeta(db, 'covered_cache', '');
+  return { ok: true };
+}
 
 async function api(request, env) {
   const db = env.DB;
@@ -417,6 +467,8 @@ async function api(request, env) {
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'cctv': try { return json(await cctvData()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
+      // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
+      case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }
@@ -426,7 +478,7 @@ async function api(request, env) {
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
-    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
+    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });

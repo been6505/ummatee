@@ -57,7 +57,7 @@ function render(){
   const q=queue.slice().sort((a,b)=>order(b)-order(a)||(Number(a.createdAt)-Number(b.createdAt)));
   $('#q-count').textContent=q.length?q.length+' เคส':'';
   $('#queue').innerHTML=q.length?q.slice(0,60).map(c=>{const sg=suggest(c),best=sg[0],vr=typeof VERIFY!=='undefined'?VERIFY.assess(c):null;
-    return `<article class="qcase u${sev(c)}"><div class="q-h"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span>${vr&&vr.result.k!=='nopin'?`<span class="vr vr-${vr.result.k}">${esc(vr.result.t)}</span>`:''}<small class="muted">${esc(ago(c.createdAt))} · #${esc(c.id)}</small></div>
+    return `<article class="qcase u${sev(c)}"><div class="q-h"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span>${vr&&vr.result.k!=='nopin'?`<span class="vr vr-${vr.result.k}">${esc(vr.result.t)}</span>`:''}${(()=>{const m=typeof COVERED!=='undefined'?COVERED.match(c):null;return m?`<span class="cov" title="${esc(m.best.r.area+' · '+m.best.how)}">🤝 ${esc(m.best.r.org)} รับแล้ว</span>`:''})()}<small class="muted">${esc(ago(c.createdAt))} · #${esc(c.id)}</small></div>
       <b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><div class="small">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''} · ${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
       ${R.length?`<div class="assign"><select data-pick="${esc(c.id)}" aria-label="เลือกทีมสำหรับเคส ${esc(c.id)}">${sg.map((x,i)=>`<option value="${esc(x.t.name)}">${i===0?'แนะนำ: ':''}${esc(x.t.name)} (${esc(x.why)})</option>`).join('')}</select><button class="btn primary sm" data-assign="${esc(c.id)}">มอบหมาย</button></div>`:'<p class="muted small">เพิ่มทีมก่อนจึงจะมอบหมายได้</p>'}
     </article>`}).join(''):'<p class="empty">ไม่มีเคสรอจัดทีม 👍</p>';
@@ -101,4 +101,4 @@ function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
 function closeForm(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeForm()});
 
-adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[];render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{})});
+adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[];render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{});if(typeof COVERED!=='undefined')COVERED.load(API_URL,ADM.key).then(render,()=>{})});

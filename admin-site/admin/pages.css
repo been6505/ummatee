@@ -128,3 +128,5 @@
 .needbtn[aria-pressed=true]{background:#e7f1fc;color:#28639a;border:1px solid #b9d3ee}
 .gt th:nth-child(3),.gt th:nth-child(4),.gt th:nth-child(5),.gt th:nth-child(6){min-width:64px}
 @media(max-width:700px){.gt th:nth-child(1),.gt td:nth-child(1),.gt th:nth-child(7),.gt td:nth-child(7){display:none}}
+
+.cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}

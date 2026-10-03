@@ -18,7 +18,9 @@ function open(){
     <label class="fld"><span>วันที่ *</span><input name="date" type="date" required value="${todayISO()}"></label>
     <label class="fld"><span>รายการ</span><input name="items" maxlength="120" list="cf-items" placeholder="เช่น ถุงยังชีพ" autocomplete="off"><datalist id="cf-items">${ITEMS.map(o=>`<option value="${o}">`).join('')}</datalist></label>
     <label class="fld"><span>จำนวน</span><input name="qty" maxlength="40" inputmode="numeric" placeholder="เช่น 120 หรือ 50 แพ็ก" autocomplete="off"></label>
-    <label class="fld cf-wide"><span>สถานที่ *</span><input name="place" required maxlength="200" placeholder="ชื่อชุมชน/ซอย/มัสยิด และเขต เช่น ชุมชนวังโสม หัวหมาก เขตบางกะปิ" autocomplete="off"></label>
+    <div class="fld cf-wide"><span>สถานที่ *</span><textarea name="place" required maxlength="200" rows="2" placeholder="ชื่อชุมชน/ซอย/มัสยิด และเขต เช่น ชุมชนวังโสม หัวหมาก เขตบางกะปิ" aria-label="สถานที่"></textarea>
+      <button type="button" class="btn ghost-d sm cf-find" id="cf-find">🔍 ค้นหาตำแหน่งจากชื่อสถานที่</button>
+      <div class="cf-found" id="cf-found" hidden></div></div>
     <div class="fld cf-wide"><span>โลเคชั่น <small class="muted">(สำคัญ: ทำให้หมุดบนแผนที่ตรงจุด)</small></span>
       <input name="location" maxlength="300" placeholder="วางลิงก์ Google Maps หรือพิกัด เช่น 13.8123, 100.7012" autocomplete="off" aria-label="โลเคชั่น">
       <div class="cf-locbtn"><button type="button" class="btn ghost-d sm" id="cf-gps">📍 ใช้ตำแหน่งปัจจุบัน</button><button type="button" class="btn ghost-d sm" id="cf-pick">🗺 เลือกบนแผนที่</button></div>
@@ -36,32 +38,64 @@ function open(){
   setTimeout(()=>(last?f.elements.place:f.elements.org).focus(),50);
   const loc=f.elements.location;
   loc.addEventListener('input',()=>{showLoc();checkDup()});
-  f.elements.place.addEventListener('input',checkDup);
+  const pl=f.elements.place,grow=()=>{pl.style.height='auto';pl.style.height=pl.scrollHeight+2+'px'};
+  pl.addEventListener('input',()=>{grow();checkDup()});
+  pl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();find()}});
+  $('#cf-find').onclick=find;
   $('#cf-gps').onclick=()=>{if(!navigator.geolocation){hint('เครื่องนี้ไม่รองรับการหาตำแหน่ง');return}
     hint('กำลังหาตำแหน่ง…');navigator.geolocation.getCurrentPosition(p=>{setLL(p.coords.latitude,p.coords.longitude);hint('ใช้ตำแหน่งปัจจุบัน (คลาดเคลื่อน ~'+Math.round(p.coords.accuracy)+' ม.) ถ้าไม่ได้ยืนอยู่ที่จุดนั้น ให้เลือกบนแผนที่แทน')},
       e=>hint(e.code===1?'ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง เปิดสิทธิ์ตำแหน่งในเบราว์เซอร์ หรือเลือกบนแผนที่':'หาตำแหน่งไม่ได้ ลองเลือกบนแผนที่'),{enableHighAccuracy:true,timeout:15000,maximumAge:60000})};
-  $('#cf-pick').onclick=()=>{const m=$('#cf-map');m.hidden=!m.hidden;if(!m.hidden)openPick()};
+  $('#cf-pick').onclick=()=>{const m=$('#cf-map');if(!m.hidden){m.hidden=true;return}openPick()};
   f.addEventListener('submit',e=>{e.preventDefault();save(f)});
 }
 function hint(t){const h=$('#cf-lochint');if(h)h.textContent=t}
 function curLL(){const v=$('#cform').elements.location.value.trim();const m=v.match(LL);if(m)return [+m[1],+m[2]];return COVERED.coordsFromUrl(v)}
 function setLL(a,b){const f=$('#cform');f.elements.location.value=a.toFixed(6)+', '+b.toFixed(6);showLoc();checkDup()}
 function showLoc(){const v=$('#cform').elements.location.value.trim(),ll=curLL();
-  if(pick&&ll){pick.mk?pick.mk.setLatLng(ll):pick.mk=L.marker(ll).addTo(pick.map);pick.map.setView(ll,Math.max(pick.map.getZoom(),15))}
+  if(pick&&ll){putMk(ll);pick.map.setView(ll,Math.max(pick.map.getZoom(),16))}
   if(!v)hint('');else if(ll)hint('✓ ได้พิกัด '+ll[0].toFixed(5)+', '+ll[1].toFixed(5));
   else if(/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.[a-z.]+\/maps|maps\.google\.)/i.test(v))hint('✓ ลิงก์ Google Maps ระบบจะหาพิกัดจากลิงก์ให้');
   else if(/^https?:\/\//i.test(v))hint('ลิงก์นี้ไม่ใช่ Google Maps ตรวจอีกครั้ง');
   else hint('ใส่ได้เฉพาะลิงก์ Google Maps หรือพิกัดแบบ 13.8123, 100.7012')}
 function openPick(){
-  const el=$('#cf-map');if(pick)return setTimeout(()=>pick.map.invalidateSize(),50);
-  loadLeaflet().then(()=>{if(el.hidden||!document.body.contains(el))return;
+  const el=$('#cf-map');el.hidden=false;if(pick){setTimeout(()=>pick.map.invalidateSize(),50);return Promise.resolve(true)}
+  return loadLeaflet().then(()=>{if(!document.body.contains(el))return false;if(pick)return true;
     const ll=curLL();pick={map:L.map(el).setView(ll||[13.76,100.65],ll?15:11),mk:null};
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(pick.map);
     COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>L.circleMarker([r.lat,r.lng],{radius:5,color:'#fff',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.7}).bindTooltip(r.org+' · '+r.area).addTo(pick.map));
-    if(ll)pick.mk=L.marker(ll).addTo(pick.map);
+    if(ll)putMk(ll);
     pick.map.on('click',e=>setLL(e.latlng.lat,e.latlng.lng));
-    hint('แตะบนแผนที่ตรงจุดที่มอบของ (จุดม่วง = พื้นที่ที่มีคนมอบแล้ว)');setTimeout(()=>pick.map.invalidateSize(),50)},
-    ()=>hint('โหลดแผนที่ไม่ได้ ใช้วิธีวางลิงก์แทน'))}
+    hint('แตะบนแผนที่ตรงจุดที่มอบของ (จุดม่วง = พื้นที่ที่มีคนมอบแล้ว)');setTimeout(()=>pick.map.invalidateSize(),50);return true},
+    ()=>{hint('โหลดแผนที่ไม่ได้ ใช้วิธีวางลิงก์แทน');return false})}
+function putMk(ll){if(!pick)return;if(pick.mk){pick.mk.setLatLng(ll);return}
+  pick.mk=L.marker(ll,{draggable:true}).addTo(pick.map);pick.mk.on('dragend',()=>{const p=pick.mk.getLatLng();setLL(p.lat,p.lng)})}
+/* ค้นหาพิกัดจากข้อความในช่องสถานที่ทั้งกล่อง: ลองทั้งข้อความก่อน แล้วค่อยตัดคำท้ายทีละคำถ้าไม่พบ */
+const BBOX='99.8,13.3,101.4,14.3';
+async function geo(q,nomi){const out=[];
+  try{const j=await fetch('https://photon.komoot.io/api/?limit=5&lat=13.75&lon=100.6&location_bias_scale=0.5&bbox='+BBOX+'&q='+encodeURIComponent(q)).then(x=>x.json());
+    (j.features||[]).forEach(f=>{const c=f.geometry&&f.geometry.coordinates,p=f.properties||{};if(c)out.push({lat:c[1],lng:c[0],name:[p.name,p.street,p.district||p.locality,p.city].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' · ')})})}catch(e){}
+  if(!out.length&&nomi)try{const j=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=th&accept-language=th&viewbox=99.8,14.3,101.4,13.3&bounded=1&q='+encodeURIComponent(q)).then(x=>x.json());
+    (j||[]).forEach(r=>out.push({lat:+r.lat,lng:+r.lon,name:String(r.display_name||'').split(',').slice(0,4).join(' ·')}))}catch(e){}
+  return out}
+let finding=0;
+async function find(){
+  const f=$('#cform'),box=$('#cf-found'),btn=$('#cf-find'),raw=f.elements.place.value.replace(/\s+/g,' ').trim();
+  if(raw.length<3){box.hidden=false;box.innerHTML='<span class="muted">พิมพ์ชื่อสถานที่ก่อน แล้วกดค้นหา</span>';f.elements.place.focus();return}
+  const my=++finding;btn.disabled=true;btn.textContent='กำลังค้นหา…';box.hidden=false;box.innerHTML='<span class="muted">กำลังค้นหา "'+esc(raw)+'"…</span>';
+  const base=raw.replace(/\d[\d,]*\s*ชุด/g,' ').replace(/[()]/g,' ').replace(/\s+/g,' ').trim();
+  const words=base.split(' ');const tries=[];for(let n=words.length;n>=1&&tries.length<4;n--){const q=words.slice(0,n).join(' ');if(q.length>=3)tries.push(q)}
+  let res=[],used='';for(const q of tries){res=await geo(q+(/กรุงเทพ/.test(q)?'':' กรุงเทพ'));if(!res.length)res=await geo(q);if(res.length){used=q;break}}
+  // สำรอง: OpenStreetMap Nominatim (จำกัด 1 ครั้ง/วินาที จึงลองแค่ 2 แบบ)
+  if(!res.length)for(const q of tries.slice(0,2)){res=await geo(q,true);if(res.length){used=q;break}await new Promise(s=>setTimeout(s,1100))}
+  if(my!==finding)return;btn.disabled=false;btn.textContent='🔍 ค้นหาตำแหน่งจากชื่อสถานที่';
+  if(!res.length){box.innerHTML='ไม่พบตำแหน่งจากชื่อนี้ · ลองพิมพ์ชื่อซอย/ถนนให้สั้นลง หรือกด "เลือกบนแผนที่" แล้วแตะตรงจุด';return}
+  box.innerHTML=(used!==base?'<small class="muted">ไม่พบทั้งข้อความ ค้นด้วย "'+esc(used)+'"</small>':'')+
+    '<div class="cf-res">'+res.map((r,i)=>`<button type="button" data-i="${i}" aria-pressed="${i===0}"><b>${i+1}.</b> ${esc(r.name||'ไม่มีชื่อ')}<small>${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</small></button>`).join('')+'</div>'+
+    '<small class="muted">แตะเลือกผลที่ตรง (เลือกผลที่ 1 ไว้ให้ก่อน) แล้วตรวจหมุดบนแผนที่ ลากหมุดหรือแตะแผนที่เพื่อขยับได้</small>';
+  const use=i=>{const r=res[i];box.querySelectorAll('.cf-res button').forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
+    openPick().then(ok=>{setLL(r.lat,r.lng);if(ok&&pick)pick.map.setView([r.lat,r.lng],16);hint('ตำแหน่งจากการค้นหา: '+r.lat.toFixed(5)+', '+r.lng.toFixed(5)+' · ตรวจว่าหมุดตรงจุดจริง ลากหมุดเพื่อขยับได้')})};
+  box.querySelectorAll('.cf-res button').forEach(b=>b.onclick=()=>use(+b.dataset.i));use(0);
+}
 /* เตือนก่อนบันทึก ถ้ามีองค์กรมอบใกล้จุดนี้หรือชื่อสถานที่ซ้ำ */
 function checkDup(){
   const f=$('#cform'),box=$('#cf-dup'),ll=curLL(),place=f.elements.place.value.trim();

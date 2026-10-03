@@ -59,3 +59,9 @@
 /* แผนที่ Leaflet มี z-index สูง: กักไว้ในกรอบ ไม่ให้ทับฟอร์ม */
 .cv-mapcard,.cv-map,.cf-map{isolation:isolate;position:relative;z-index:0}
 #drawer{z-index:2000}#drawer-bg{z-index:1999}
+#cform textarea{border:1px solid #dce6e9;border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;font-weight:400;resize:none;min-height:50px;line-height:1.45;overflow:hidden}
+#cform textarea:focus{outline:none;border-color:#166d75;box-shadow:0 0 0 3px #d7eeea}
+.cf-find{margin-top:6px;justify-self:start;font-weight:500}
+.cf-found{font-weight:400;font-size:14px;display:grid;gap:6px}
+.cf-res{display:grid;gap:6px}.cf-res button{text-align:left;border:1px solid #dce6e9;background:#fff;border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;line-height:1.4}
+.cf-res button small{display:block;color:#5e7279;font-variant-numeric:tabular-nums}.cf-res button[aria-pressed=true]{border-color:#166d75;background:#eef7f7;box-shadow:inset 0 0 0 1px #166d75}

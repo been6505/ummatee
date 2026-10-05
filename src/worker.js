@@ -33,7 +33,12 @@ const SCHEMA = [
   // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
   `CREATE TABLE IF NOT EXISTS zones (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS covered_extra (n INTEGER PRIMARY KEY AUTOINCREMENT, org TEXT, date TEXT, items TEXT, qty TEXT, place TEXT, location TEXT, by_ TEXT, createdAt INTEGER)`,
-  `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`
+  `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`,
+  // เคสที่เจอจากโซเชียล/Traffy (Hermes agent หรือปุ่มดึง) รอแอดมินคัด: รับเป็นเคสจริง หรือตัดทิ้ง · ไม่สำรองลงชีตจนกว่าจะรับเป็นเคส
+  `CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, url TEXT UNIQUE, source TEXT, postedAt INTEGER, foundAt INTEGER, title TEXT, text TEXT,
+    district TEXT, address TEXT, lat REAL, lng REAL, needs TEXT, urgency INTEGER, people TEXT, names TEXT, phone TEXT, flags TEXT,
+    status TEXT, reason TEXT, caseId TEXT, by_ TEXT, updatedAt INTEGER)`,
+  `CREATE INDEX IF NOT EXISTS leads_status ON leads(status, postedAt)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
@@ -442,6 +447,143 @@ async function addCovered(db, b) {
   return { ok: true };
 }
 
+/* ---------- เคสจากโซเชียล (leads) ----------
+   แหล่ง: Hermes agent ส่งเข้ามา (lead_add) หรือปุ่ม "ดึงเคสใหม่" อ่านคำร้อง Traffy Fondue ผ่านไฟล์ส่งออกสาธารณะของ Floodboard (lead_pull)
+   ตัวกรอง: ตัดโพสต์เก่า (ก่อนเกิดเหตุ / เก่ากว่า N วัน / ปีก่อน) และโพสต์ขอเงินที่ไม่บอกสถานที่ · ติดธงบัญชีที่ซ้ำกับเคสอื่นต่างพื้นที่ */
+const LEAD_STATUS = ['new', 'accepted', 'rejected'];
+const BANK_WORDS = /(บัญชี|บช\.?|ธนาคาร|พร้อมเพย์|promptpay|โอน|บริจาค|กสิกร|ไทยพาณิชย์|กรุงไทย|กรุงเทพ|กรุงศรี|ออมสิน|ธ\.?ก\.?ส|ทีทีบี|ttb|kbank|scb|ktb|bbl|gsb)/i;
+const ACCOUNT_RE = /(?<!\d)(\d{3}[- ]?\d[- ]?\d{5}[- ]?\d|\d{3}[- ]?\d{3}[- ]?\d{4}|\d{10,15})(?!\d)/g;
+function moneyAccounts(text) {
+  const out = new Set(); let m; ACCOUNT_RE.lastIndex = 0;
+  while ((m = ACCOUNT_RE.exec(text))) { const w = text.slice(Math.max(0, m.index - 60), m.index + m[0].length + 30); if (BANK_WORDS.test(w)) out.add(m[1].replace(/\D/g, '')); }
+  return [...out];
+}
+async function leadSettings(db) {
+  return { eventStart: await getMeta(db, 'leads_event_start') || '2026-09-24', maxAgeDays: Number(await getMeta(db, 'leads_max_age')) || 14 };
+}
+const bkkDate = s => Date.parse(s + 'T00:00:00+07:00');
+/* คืน [เหตุผลที่ตัดทิ้ง หรือ '', ธง[]] — เหตุผลที่เป็นความผิดของคนกรอกวันที่ (ไม่มีวันที่/วันที่อนาคต) จะไม่ถูกจำ ส่งใหม่ได้ */
+async function checkLead(db, l, st) {
+  const flags = [], now = Date.now();
+  if (!l.postedAt) return ['no_post_date', flags];
+  if (l.postedAt > now + 3600e3) return ['post_date_in_future', flags];
+  const start = bkkDate(st.eventStart);
+  if (isFinite(start) && l.postedAt < start - 86400e3) return ['old_post_before_event', flags];
+  if (l.postedAt < now - st.maxAgeDays * 86400e3) return ['old_post_too_old', flags];
+  if (new Date(l.postedAt).getUTCFullYear() < new Date(now).getUTCFullYear()) return ['old_post_previous_year', flags];
+  const text = [l.title, l.text].join(' ');
+  const years = [...text.matchAll(/(?<!\d)(25[4-9]\d)(?!\d)/g)].map(m => +m[1] - 543).concat([...text.matchAll(/(?<!\d)(20[0-4]\d)(?!\d)/g)].map(m => +m[1]));
+  if (years.length && Math.max(...years) < new Date(now).getUTCFullYear()) flags.push('past_year_text');
+  const accts = moneyAccounts(text), hasPlace = !!(l.address || l.district) || l.lat != null;
+  if (accts.length || /(พร้อมเพย์|promptpay|โอนเงิน|ขอรับบริจาค)/i.test(text)) { if (!hasPlace) return ['money_no_place', flags]; flags.push('asks_money'); }
+  for (const a of accts) {
+    flags.push('acct:' + a);
+    const other = await db.prepare("SELECT id, district FROM leads WHERE flags LIKE ? AND status!='rejected' LIMIT 1").bind('%acct:' + a + '%').first();
+    if (other && other.district !== l.district) flags.push('account_reused:' + other.id);
+  }
+  return ['', flags];
+}
+function readLead(x) {
+  const t = v => typeof v === 'number' ? v : Date.parse(String(v || '')) || 0;
+  return { url: clean(x.url, 400), source: clean(x.source, 30) || 'social', postedAt: t(x.postedAt || x.posted_at), title: clean(x.title, 160), text: clean(x.text, 2000),
+    district: clean(x.district, MAX.district), address: clean(x.address || x.place, MAX.address), lat: num(x.lat, -90, 90), lng: num(x.lng ?? x.lon, -180, 180),
+    needs: list(x.needs), urgency: clampInt(x.urgency, 1, 3, 1), people: clean(x.people, 60), names: list(x.names).join(', '),
+    phone: clean(Array.isArray(x.phone) ? x.phone.join(', ') : x.phone || (x.contacts_public || []).join?.(', ') || '', 60).replace(/[^\d+\-\s,]/g, '') };
+}
+async function insertLead(db, l, st) {
+  if (!/^https?:\/\//.test(l.url)) return { ok: false, error: 'missing_url' };
+  const old = await db.prepare('SELECT id, status, reason FROM leads WHERE url=?').bind(l.url).first();
+  if (old) return { ok: true, duplicate: true, id: old.id, status: old.status, reason: old.reason || '' };
+  const [reason, flags] = await checkLead(db, l, st);
+  if (reason === 'no_post_date' || reason === 'post_date_in_future') return { ok: false, error: reason };
+  const id = 'L' + Date.now().toString(36).toUpperCase() + rand(2).toUpperCase(), now = Date.now();
+  await db.prepare(`INSERT INTO leads (id,url,source,postedAt,foundAt,title,text,district,address,lat,lng,needs,urgency,people,names,phone,flags,status,reason,caseId,by_,updatedAt)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'','',?)`).bind(id, l.url, l.source, l.postedAt, now, l.title, l.text, l.district, l.address, l.lat, l.lng,
+    l.needs.join(', '), l.urgency, l.people, l.names, l.phone, flags.join(','), reason ? 'rejected' : 'new', reason, now).run();
+  for (const f of flags) if (f.startsWith('account_reused:')) await db.prepare("UPDATE leads SET flags = flags || ? WHERE id=? AND flags NOT LIKE ?").bind(',account_reused:' + id, f.slice(15), '%account_reused:' + id + '%').run();
+  return { ok: true, id, status: reason ? 'rejected' : 'new', reason, flags: flags.filter(f => !f.startsWith('acct:')) };
+}
+async function addLeads(db, b) {
+  const st = await leadSettings(db), rows = Array.isArray(b.leads) ? b.leads.slice(0, 100) : [b.lead || {}];
+  const results = [];
+  for (const x of rows) results.push(await insertLead(db, readLead(x), st));
+  return { ok: true, results, added: results.filter(r => r.ok && !r.duplicate && r.status === 'new').length, rejected: results.filter(r => r.status === 'rejected' && !r.duplicate).length };
+}
+/* คำร้อง Traffy Fondue (ผ่าน Floodboard export) ที่เป็นคนขอความช่วยเหลือจริง ไม่ใช่เรื่องขยะ ท่อ ถนน ทรัพย์สิน */
+// คำไทยสั้นชนกับคำอื่นง่าย: "ยา" อยู่ใน ยาว/ยาย, "เรือ" อยู่ใน บ้านเรือน, "อาหาร" อยู่ใน เศษอาหาร/ร้านอาหาร, "จมน้ำ" ใช้กับรถ/ประตูด้วย
+const RX = { food: /(?<!เศษ|ร้าน|ขยะเศษ)อาหาร(?!เสริม)|ข้าวกล่อง/, boat: /เรือ(?!น)/, meds: /ยารักษา|ยาทา|ยาแก้|ยาสามัญ|น้ำกัดเท้า|ยาน้ำกัดเท้า/ };
+const NEED_STRONG = new RegExp([/ถุงยังชีพ|น้ำดื่ม|ติดเตียง|ผู้ป่วย|ออกไม่ได้|ออกจากบ้านไม่ได้|ติดอยู่ใน|อพยพ|ช่วยด้วย|ไฟช็อต|ไฟดูด|ฟอกไต|ออกซิเจน|พลัดตก|คนพิการ|ตั้งครรภ์/.source, RX.food.source, RX.boat.source, RX.meds.source].join('|'));
+const NEED_SOFT = /ขอความช่วยเหลือ|ช่วยเหลือด่วน|ผู้สูงอายุ|คนแก่|เด็กเล็ก/;
+const NOT_PEOPLE = /ขยะ|ไฟส่องทาง|ไฟฟ้าส่องทาง|เสาไฟ|ถนนชำรุด|หลุม|รถจมน้ำ|รถเสียหาย|รถมาจอด|จอดรถ|ตู้เย็น|เครื่องใช้ไฟฟ้า|ค่าเสียหาย|เยียวยา|ลอกท่อ|ฝาท่อ|ท่อตัน|บริษัท|ออฟฟิศ|ร้านได้รับความเสียหาย|ไม่ได้รับความเป็นธรรม|วัชพืช/;
+const CORE_PEOPLE = new RegExp([/ถุงยังชีพ|น้ำดื่ม|ติดเตียง|ผู้ป่วย|ออกไม่ได้|ออกจากบ้านไม่ได้|ติดอยู่ใน|ช่วยด้วย|ไฟช็อต|ไฟดูด|ผู้สูงอายุ|เด็กเล็ก/.source, RX.food.source].join('|'));
+const NEED_LABELS = [[/ถุงยังชีพ/, 'ถุงยังชีพ'], [RX.food, 'อาหาร'], [/น้ำดื่ม/, 'น้ำดื่ม'], [RX.boat, 'เรือ'], [RX.meds, 'ยา'], [/อพยพ/, 'อพยพ'],
+  [/สูบน้ำ|ระบายน้ำ/, 'สูบน้ำ'], [/กระสอบทราย/, 'กระสอบทราย'], [/ไฟช็อต|ไฟดูด|ระบบไฟ/, 'ช่างไฟ'], [/แพมเพิส|ผ้าอ้อม/, 'ผ้าอ้อม'], [/ฟอกไต|ผู้ป่วย|ติดเตียง/, 'ผู้ป่วย']];
+function leadUrgency(t) {
+  if (/ติดเตียง|ออกซิเจน|ฟอกไต|ไฟดูด|ติดอยู่ใน|ช่วยด้วย|พลัดตก|(คน|เด็ก|ผู้)\S{0,6}จมน้ำ/.test(t)) return 3;
+  if (/ผู้ป่วย|ผู้สูงอายุ|คนแก่|เด็กเล็ก|ถุงยังชีพ|น้ำดื่ม|ไฟช็อต|ออกไม่ได้|ออกจากบ้านไม่ได้/.test(t) || RX.food.test(t) || RX.boat.test(t) || RX.meds.test(t)) return 2;
+  return 1;
+}
+async function pullLeads(db) {
+  const r = await fetch('https://floodboard.org/api/export/reports.csv', { headers: UA });
+  if (!r.ok) return { ok: false, error: 'floodboard_' + r.status };
+  const rows = parseCSV((await r.text()).replace(/^﻿/, '')), h = rows[0] || [], ix = k => h.indexOf(k);
+  const st = await leadSettings(db), out = { ok: true, scanned: 0, matched: 0, added: 0, rejected: 0, duplicate: 0 };
+  let named = 0; // ชื่อพื้นที่ (Photon) สูงสุด 25 ครั้งต่อรอบ กันเกินโควตา subrequest
+  for (const x of rows.slice(1)) {
+    if (x[ix('source')] !== 'traffy') continue;
+    out.scanned++;
+    const text = x[ix('text')] || '';
+    const strong = NEED_STRONG.test(text);
+    if (!strong && (!NEED_SOFT.test(text) || NOT_PEOPLE.test(text))) continue;
+    if (NOT_PEOPLE.test(text) && !CORE_PEOPLE.test(text)) continue;
+    out.matched++;
+    if (await db.prepare('SELECT 1 FROM leads WHERE url=?').bind(x[ix('url')]).first()) { out.duplicate++; continue; }
+    const lat = num(x[ix('lat')], -90, 90), lng = num(x[ix('lon')], -180, 180);
+    const dm = text.match(/เขต[:\s]*([ก-๙]+)/);
+    const l = { url: x[ix('url')], source: 'traffy', postedAt: Date.parse(x[ix('time_utc')]) || 0, title: text.slice(0, 90), text: text.slice(0, 2000),
+      district: dm ? clean(dm[1], MAX.district) : '', address: lat != null && named++ < 25 ? await areaName(lat, lng) : '', lat, lng,
+      needs: NEED_LABELS.filter(([re]) => re.test(text)).map(([, n]) => n), urgency: leadUrgency(text), people: '', names: '', phone: '' };
+    const res = await insertLead(db, l, st);
+    if (res.duplicate) out.duplicate++; else if (res.status === 'new') out.added++; else if (res.status === 'rejected') out.rejected++;
+  }
+  await setMeta(db, 'leads_pulled_at', Date.now());
+  return out;
+}
+async function listLeads(db, p) {
+  const since = Date.now() - clampInt(p.days, 1, 120, 30) * 86400e3;
+  const { results } = await db.prepare('SELECT * FROM leads WHERE foundAt>? ORDER BY postedAt DESC LIMIT 600').bind(since).all();
+  return { ok: true, leads: results.map(l => ({ ...l, needs: l.needs ? l.needs.split(/\s*,\s*/).filter(Boolean) : [], names: l.names ? l.names.split(/\s*,\s*/).filter(Boolean) : [],
+    flags: (l.flags || '').split(',').filter(f => f && !f.startsWith('acct:')), by: l.by_ })),
+    settings: await leadSettings(db), pulledAt: Number(await getMeta(db, 'leads_pulled_at')) || null };
+}
+async function decideLead(db, b) {
+  const l = await db.prepare('SELECT * FROM leads WHERE id=?').bind(clean(b.id, 30)).first();
+  if (!l) return { ok: false, error: 'not_found' };
+  const by = clean(b.by, 60), now = Date.now();
+  if (b.decision === 'reject' || b.decision === 'reopen') {
+    if (l.status === 'accepted') return { ok: false, error: 'already_case', caseId: l.caseId };
+    await db.prepare('UPDATE leads SET status=?, reason=?, by_=?, updatedAt=? WHERE id=?').bind(b.decision === 'reject' ? 'rejected' : 'new', b.decision === 'reject' ? clean(b.reason, 120) || 'rejected_by_staff' : '', by, now, l.id).run();
+    return { ok: true };
+  }
+  if (b.decision !== 'accept') return { ok: false, error: 'bad_decision' };
+  if (l.status === 'accepted') return { ok: true, caseId: l.caseId, duplicate: true };
+  const flags = (l.flags || '').split(',').filter(f => /^(asks_money|account_reused)/.test(f));
+  if (flags.length && !b.confirmRisk) return { ok: false, error: 'flagged', flags };
+  const id = caseId(), u = clampInt(b.urgency, 1, 3, l.urgency || 1);
+  const notes = clean([`[จากโซเชียล ${l.source}] ${l.url}`, `โพสต์ ${new Date(l.postedAt).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}`, l.people ? 'จำนวน: ' + l.people : '', l.text].filter(Boolean).join('\n'), MAX.notes);
+  await db.prepare(`INSERT INTO cases (id,createdAt,status,urgency,name,phone,district,people,address,lat,lng,level,needs,vulnerable,notes,volunteer,updatedAt,token,clientId,households,bags,cctv,ipHash)
+    VALUES (?,?,'open',?,?,?,?,1,?,?,?,'',?,'',?,'',?,?,NULL,NULL,NULL,'','')`)
+    .bind(id, l.postedAt || now, u, clean(l.names, MAX.name), clean(l.phone, MAX.phone), l.district, clean(l.address || l.title, MAX.address), l.lat, l.lng, l.needs, notes, now, rand(16)).run();
+  await db.prepare("UPDATE leads SET status='accepted', caseId=?, by_=?, updatedAt=? WHERE id=?").bind(id, by, now, l.id).run();
+  await bumpRev(db);
+  return { ok: true, caseId: id };
+}
+async function saveLeadSettings(db, b) {
+  if (b.eventStart !== undefined) { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(b.eventStart))) return { ok: false, error: 'bad_date' }; await setMeta(db, 'leads_event_start', b.eventStart); }
+  if (b.maxAgeDays !== undefined) await setMeta(db, 'leads_max_age', clampInt(b.maxAgeDays, 1, 90, 14));
+  return { ok: true, settings: await leadSettings(db) };
+}
+
 async function api(request, env) {
   const db = env.DB;
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -470,6 +612,7 @@ async function api(request, env) {
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
+      case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }
   }
@@ -478,7 +621,8 @@ async function api(request, env) {
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
-    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags };
+    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+      lead_add: addLeads, lead_pull: pullLeads, lead_decide: decideLead, lead_settings: saveLeadSettings };
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });

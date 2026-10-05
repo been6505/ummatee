@@ -47,6 +47,8 @@ async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').text
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);render();
+    // ลิงก์ admin.html#<รหัสเคส> (เช่นจากหน้าเคสจากโซเชียล) เปิดเคสนั้นทันที ครั้งเดียว
+    const h=decodeURIComponent(location.hash.slice(1));if(h&&A.cases.some(c=>c.id===h)){history.replaceState(null,'',location.pathname);openDrawer(h)}
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
 let pollT=null;

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#ffffff">
+<title>เคสจากโซเชียล · UM+ หลังบ้าน</title>
+<link rel="icon" href="../../assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="../../admin.css?v=6">
+<link rel="stylesheet" href="../pages.css?v=4">
+<link rel="stylesheet" href="../theme.css?v=1">
+<link rel="stylesheet" href="./leads.css?v=1">
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <img src="../../assets/ummatee-logo.png" alt="UMMATEE" width="110" height="66">
+    <h1>เคสจากโซเชียล · UM+</h1>
+    <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
+    <label class="fld"><span>รหัสทีม</span><input id="login-key" type="password" required autocomplete="current-password"></label>
+    <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
+    <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
+    <p class="err" id="login-err" role="alert"></p>
+    <a class="back" href="https://ummatee-help.akasitlove.workers.dev/">← กลับหน้าเว็บหลัก</a>
+  </form>
+</section>
+<div id="app" hidden>
+  <header class="top">
+    <a class="brand" href="../../admin.html"><img src="../../assets/ummatee-logo.png" alt="" width="60" height="36"><span>UM+ <b>หลังบ้าน</b></span></a>
+    <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="./" aria-current="page">เคสจากโซเชียล</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a></nav>
+    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh">⟳ โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
+  </header>
+  <main class="wrap" id="main">
+    <section class="stats ld-stats" id="stats" aria-label="สรุป"></section>
+    <div class="ld-bar">
+      <div class="seg" role="tablist" id="ld-filter"><button data-f="new" aria-selected="true">รอคัด</button><button data-f="accepted" aria-selected="false">รับเป็นเคสแล้ว</button><button data-f="rejected" aria-selected="false">ตัดทิ้ง</button><button data-f="all" aria-selected="false">ทั้งหมด</button></div>
+      <input id="ld-q" class="ld-q" type="search" placeholder="ค้นหา ข้อความ เขต ความต้องการ…" aria-label="ค้นหา">
+      <span class="ld-sp"></span>
+      <span class="muted small" id="pulled"></span>
+      <button class="btn primary sm" id="pull">⤓ ดึงเคสใหม่จาก Traffy</button>
+      <button class="btn ghost sm" id="set-btn" aria-expanded="false" aria-controls="settings">⚙ ตัวกรอง</button>
+    </div>
+    <form class="panel ld-set" id="settings" hidden>
+      <label class="fld"><span>วันเริ่มเหตุการณ์ (ตัดโพสต์ก่อนวันนี้)</span><input type="date" id="set-start" required></label>
+      <label class="fld"><span>ตัดโพสต์ที่เก่ากว่า (วัน)</span><input type="number" id="set-age" min="1" max="90" required></label>
+      <button class="btn primary sm" type="submit">บันทึก</button>
+      <p class="muted small">ตัดอัตโนมัติ: โพสต์ก่อนเกิดเหตุ · เก่าเกินกำหนด · โพสต์ปีก่อน · ขอเงิน/เลขบัญชีแต่ไม่บอกสถานที่<br>ติดธง ⚠️: ขอเงินแต่มีสถานที่ · เลขบัญชีซ้ำกับเคสอื่นต่างพื้นที่ · อ้างถึงแต่ปีเก่า</p>
+    </form>
+    <div class="ld-cols">
+      <section class="panel ld-listp"><div id="list" class="ld-list" aria-live="polite"></div></section>
+      <section class="panel ld-mapp"><div id="lmap" class="ld-map" role="region" aria-label="แผนที่เคสจากโซเชียล"></div>
+        <div class="ld-leg"><span><i style="background:var(--red)"></i>วิกฤต</span><span><i style="background:var(--orange)"></i>เร่งด่วน</span><span><i style="background:#e0a800"></i>ทั่วไป</span><span><i style="background:#2E9E57"></i>ทีมแชร์ตำแหน่ง</span><span><i style="background:#1F2A5E"></i>จุดกู้ภัย</span><span><i style="background:#7b3fc4"></i>องค์กรอื่นรับแล้ว</span></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="../common.js?v=1"></script>
+<script src="./leads.js?v=2"></script>
+</body>
+</html>

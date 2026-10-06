@@ -111,7 +111,7 @@ $('#ld-filter').addEventListener('click',e=>{const b=e.target.closest('button');
 $('#ld-q').addEventListener('input',e=>{LD.q=e.target.value.trim().toLowerCase();render()});
 $('#pull').addEventListener('click',async()=>{const b=$('#pull');b.disabled=true;b.textContent='กำลังดึง…';
   try{const r=await apiPost({action:'lead_pull'});
-    if(r&&r.ok){toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))})}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
+    if(r&&r.ok){toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))});if(r.helpme&&r.helpme.ok)toast(r.helpme.full?'Help Me: รหัสถูกต้อง ได้ข้อมูลเต็ม (ชื่อ เบอร์ พิกัดจริง)':'Help Me: ได้แค่ข้อมูลสาธารณะ — HELPME_KEY ไม่ถูกต้องหรือยังไม่ได้ตั้ง',r.helpme.full)}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
     await loadAll()}finally{b.disabled=false;b.textContent='⤓ ดึงเคสใหม่ (Traffy + Help Me)'}});
 $('#set-btn').addEventListener('click',()=>{const f=$('#settings');f.hidden=!f.hidden;$('#set-btn').setAttribute('aria-expanded',String(!f.hidden))});
 $('#settings').addEventListener('submit',async e=>{e.preventDefault();

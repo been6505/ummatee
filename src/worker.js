@@ -387,9 +387,9 @@ async function waterData() {
 }
 // กล้อง CCTV: iTIC Foundation (ผ่าน Longdo Traffic) เฉพาะกรุงเทพฯ
 async function cctvData() {
-  return cached('cctv-v2', 3600, async () => {
+  return cached('cctv-v3', 3600, async () => {
     const j = await fetch('https://traffic.longdo.com/camera.json', { headers: UA }).then(r => r.json());
-    const cams = (j.item || []).filter(c => String(c.geocode || '').startsWith('10')).map(c => {
+    const cams = (j.item || []).filter(c => String(c.geocode || '').startsWith('10') || c.hls_url).map(c => { // กรุงเทพฯ ทุกตัว + กล้องภาพสดทั้งประเทศ
       const img = /X\.X\.X\.X/.test(c.imgurl || '') ? '' : (c.imgurl || '');
       const https = u => /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : ''; // ส่งต่อเฉพาะลิงก์ https
       return { id: c.camid, title: String(c.title || '').replace(/^\(กรุงเทพมหานคร\)\s*/, '').trim(), lat: Number(c.latitude), lng: Number(c.longitude), img: https(img), hls: https(c.hls_url), org: c.organization || '' };

@@ -177,3 +177,10 @@ html.dash[data-theme="dark"] .mx-legend{color:var(--ink)!important}
 html.dash[data-theme="dark"] .brand b{color:var(--ink)!important}
 html.dash[data-theme="dark"] .brand{background:rgba(255,255,255,.94)!important;border-color:rgba(255,255,255,.9)!important}
 html.dash[data-theme="dark"] .brand b{color:#161B3D!important}
+
+/* ---------- โหมดมืดของหน้าอื่น (ไม่ใช่แดชบอร์ด): กลับสีทั้งหน้า แล้วกลับคืนเฉพาะแผนที่ รูป วิดีโอ และกรอบที่ฝัง ---------- */
+html[data-theme="dark"]:not(.dash){filter:invert(.9) hue-rotate(180deg);background:#fff}
+html[data-theme="dark"]:not(.dash) :is(img,video,iframe,canvas,.leaflet-container,.cam-live){filter:invert(1) hue-rotate(180deg)}
+html[data-theme="dark"]:not(.dash) .leaflet-container :is(img,video,canvas,.cam-live){filter:none}
+.cam-golive{display:block;width:100%;text-align:left;border:0;border-radius:12px;background:var(--tint);color:var(--primary);font:inherit;font-size:12.5px;font-weight:600;padding:8px 10px;cursor:pointer}
+.cam-golive:hover{background:var(--tint-2)}

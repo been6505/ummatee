@@ -4,7 +4,7 @@
    ใช้ตัวแปรจาก admin.js: A, api, post, sev, URG, ST, hasPin, esc, toast, render, openDrawer */
 const MX=(()=>{
   const S={map:null,zones:[],roster:[],L:{},on:{},side:'zones',zoneId:null,form:null,preview:null,route:null,start:null,picking:false,drawn:{}};
-  const LAYERS=[['cases','📍 เคส'],['roads','🛣 ถนนน้ำท่วม'],['sensors','💧 น้ำบนถนน (กทม.)'],['stations','🌊 ระดับน้ำคลอง'],['cams','📷 กล้อง CCTV'],['gistda','🛰 น้ำท่วมจากดาวเทียม 7 วัน (GISTDA)'],['zones','⭕ โซน']];
+  const LAYERS=[['cases','<i data-ic="pin"></i> เคส'],['roads','<i data-ic="road"></i> ถนนน้ำท่วม'],['sensors','<i data-ic="drop"></i> น้ำบนถนน (กทม.)'],['stations','<i data-ic="wave"></i> ระดับน้ำคลอง'],['cams','<i data-ic="cam"></i> กล้อง CCTV'],['gistda','<i data-ic="sat"></i> น้ำท่วมจากดาวเทียม 7 วัน (GISTDA)'],['zones','⭕ โซน']];
   const DEF={cases:1,roads:1,sensors:1,stations:1,cams:0,gistda:0,zones:1};
   const ZCOL=['#2a78d6','#0ca30c','#8e44ad','#e67e22','#16a085','#c0392b','#d81b60','#546e7a'];
   const TW={5:['#e53935','ล้นตลิ่ง'],4:['#1e40ff','น้ำมาก'],3:['#00a651','ปกติ'],2:['#ffb300','น้ำน้อย'],1:['#b5651d','น้อยวิกฤต']};
@@ -77,11 +77,11 @@ const MX=(()=>{
     if(S.on.sensors&&S.drawn.sensors!==F.loaded+':'+F.sensors.length){S.drawn.sensors=F.loaded+':'+F.sensors.length;S.L.sensors.clearLayers();
       F.sensors.filter(x=>x.status!=='malfunction'&&x.now>0).sort((a,b)=>a.now-b.now).forEach(x=>{const d=x.now;
         L.circleMarker([x.lat,x.lng],{radius:d>=30?9:d>=15?8:d>=5?7:3,color:'#fff',weight:d>0?1.5:.5,fillColor:depthCol(d),fillOpacity:d>0?.95:.45})
-          .bindTooltip(`💧 <b>${esc(x.name)}</b><br>น้ำบนถนน <b>${d} ซม.</b>${x.max!=null?` · สูงสุดวันนี้ ${x.max} ซม.`:''}<br>${esc(x.district?'เขต'+x.district:'')} · ${fmtT(x.t)}`).addTo(S.L.sensors)})}
+          .bindTooltip(`<b>${esc(x.name)}</b><br>น้ำบนถนน <b>${d} ซม.</b>${x.max!=null?` · สูงสุดวันนี้ ${x.max} ซม.`:''}<br>${esc(x.district?'เขต'+x.district:'')} · ${fmtT(x.t)}`).addTo(S.L.sensors)})}
     if(S.on.stations&&S.drawn.stations!==F.loaded+':'+F.stations.length){S.drawn.stations=F.loaded+':'+F.stations.length;S.L.stations.clearLayers();
       F.stations.forEach(x=>{const [col,lab]=TW[x.situation]||['#78909c','ไม่ทราบ'];
         L.marker([x.lat,x.lng],{icon:L.divIcon({className:'wl-ic',html:`<i style="background:${col}"></i>`,iconSize:[18,18]})})
-          .bindTooltip(`🌊 <b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
+          .bindTooltip(`<b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
     // กล้อง ~1,400 ตัว (POPNIX + iTIC): วาดบน canvas แสดงเมื่อซูมระดับ 12 ขึ้นไป · ป๊อปอัปเล่นภาพสด/ภาพนิ่งล่าสุด (camlive.js)
     if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;if(S.camLayer)S.camLayer.remove();S.camLayer=CAMLIVE.layer(S.map,F.cams)}
     if(!S.on.cams&&S.camLayer){S.camLayer.remove();S.camLayer=null;S.drawn.cams=-1}
@@ -108,7 +108,7 @@ const MX=(()=>{
   function clearPreview(){if(S.preview){S.map.removeLayer(S.preview);S.preview=null}}
 
   /* ---------- แผงด้านข้าง ---------- */
-  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:S.zones.length?`โซน ${S.zones.length} · จัดเส้นทาง`:'โซน · จัดเส้นทาง'}</span></button><div class="ms-tabs"><button data-side="zones" aria-selected="${S.side==='zones'||S.side==='zone'}">⭕ โซน</button><button data-side="route" aria-selected="${S.side==='route'}">🧭 จัดเส้นทาง</button></div>${h}`};
+  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:S.zones.length?`โซน ${S.zones.length} · จัดเส้นทาง`:'โซน · จัดเส้นทาง'}</span></button><div class="ms-tabs"><button data-side="zones" aria-selected="${S.side==='zones'||S.side==='zone'}">⭕ โซน</button><button data-side="route" aria-selected="${S.side==='route'}"><i data-ic="route"></i> จัดเส้นทาง</button></div>${h}`};
   function renderSide(){if(!$('#map-side'))return;
     if(S.form)return side(zoneForm());
     if(S.side==='zone'&&zoneOf(S.zoneId))return side(zoneDetail(zoneOf(S.zoneId)));
@@ -118,7 +118,7 @@ const MX=(()=>{
       :`<p class="muted small">ยังไม่มีโซน แบ่งพื้นที่เป็นโซนเพื่อจัดทีมรับผิดชอบ และกรองเคสตามโซนได้</p>`))}
   function zoneForm(){const f=S.form;
     return `<div class="ms-h"><b>${f.id?'แก้ไขโซน':'เพิ่มโซนใหม่'}</b></div>
-    <p class="ms-tip ${f.lat==null?'wait':''}">${f.lat==null?'👆 แตะบนแผนที่เพื่อวางจุดกลางโซน':'✓ วางจุดกลางแล้ว แตะที่อื่นเพื่อย้าย'}</p>
+    <p class="ms-tip ${f.lat==null?'wait':''}">${f.lat==null?'<i data-ic="hand"></i> แตะบนแผนที่เพื่อวางจุดกลางโซน':'<i data-ic="check"></i> วางจุดกลางแล้ว แตะที่อื่นเพื่อย้าย'}</p>
     <label class="fld"><span>ชื่อโซน</span><input id="zf-name" maxlength="60" value="${esc(f.name)}" placeholder="เช่น บางบัวทอง / A1"></label>
     <label class="fld"><span>รัศมี <b id="zf-rv">${(f.radius/1000).toFixed(1)} กม.</b></span><input id="zf-r" type="range" min="300" max="10000" step="100" value="${f.radius}"></label>
     <div class="fld"><span>สี</span><div class="zsw">${ZCOL.map(c=>`<button type="button" data-zc="${c}" style="background:${c}" aria-label="สี ${c}" aria-pressed="${c===f.color}"></button>`).join('')}</div></div>
@@ -128,7 +128,7 @@ const MX=(()=>{
     return `<div class="ms-h"><b><i class="zdot" style="background:${esc(z.color)}"></i>โซน ${esc(z.name)}</b><button class="btn ghost sm" data-side="zones">← ทั้งหมด</button></div>
     <div class="zstat"><span><b>${st.act}</b>ยังไม่เสร็จ</span><span class="r"><b>${st.crit}</b>วิกฤต</span><span><b>${st.open}</b>ยังไม่มีทีม</span><span><b>${nf(st.ppl)}</b>คน</span></div>
     ${z.note?`<p class="small muted">${esc(z.note)}</p>`:''}
-    <div class="ms-act"><button class="btn primary sm" data-route-zone="${esc(z.id)}">🧭 จัดเส้นทางโซนนี้</button><button class="btn ghost sm" data-z-filter="${esc(z.id)}">ดูเคสในโซน</button><button class="btn ghost sm" data-z-edit="${esc(z.id)}">✎ แก้ไข</button></div>
+    <div class="ms-act"><button class="btn primary sm" data-route-zone="${esc(z.id)}"><i data-ic="route"></i> จัดเส้นทางโซนนี้</button><button class="btn ghost sm" data-z-filter="${esc(z.id)}">ดูเคสในโซน</button><button class="btn ghost sm" data-z-edit="${esc(z.id)}"><i data-ic="note"></i> แก้ไข</button></div>
     <h4>ทีมรับผิดชอบ</h4>${S.roster.length?`<div class="zteams">${S.roster.map(t=>`<label class="chk"><input type="checkbox" data-z-team="${esc(t.id)}" ${t.zone===z.name?'checked':''}><span>${esc(t.name)}${t.vehicle?` <small>${esc(VEH[t.vehicle]||'')}</small>`:''}${t.zone&&t.zone!==z.name?` <small>(อยู่โซน ${esc(t.zone)})</small>`:''}</span></label>`).join('')}</div>`:'<p class="small muted">ยังไม่มีทีม เพิ่มได้ที่หน้า จัดทีม</p>'}
     <h4>เคสในโซน (${cases.length})</h4><div class="zcases">${cases.slice(0,30).map(c=>`<button data-open-case="${esc(c.id)}"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).slice(0,2).join(', ')||'-')} · ${c.people||1} คน<small>${esc(ST[c.status])}${c.volunteer?' · '+esc(c.volunteer):''}</small></button>`).join('')||'<p class="small muted">ไม่มีเคสที่ยังไม่เสร็จ</p>'}</div>`}
 
@@ -140,10 +140,10 @@ const MX=(()=>{
     <label class="fld"><span>เคสจาก</span><select id="r-src">${opts.map(([v,t])=>`<option value="${esc(v)}" ${R.src===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>
     <div class="r-row"><label class="fld"><span>จำนวนจุดสูงสุด</span><select id="r-max">${[5,8,10,15].map(n=>`<option ${R.max===n?'selected':''}>${n}</option>`).join('')}</select></label>
       <label class="chk"><input type="checkbox" id="r-open" ${R.onlyOpen?'checked':''}><span>เฉพาะเคสที่ยังไม่มีทีม</span></label></div>
-    <div class="fld"><span>จุดเริ่มต้น</span><div class="r-start"><b>${S.start?esc(S.start.label):'ยังไม่ได้เลือก (เริ่มจากเคสแรก)'}</b><div><button type="button" class="btn ghost sm" data-r-gps>📍 ตำแหน่งฉัน</button><button type="button" class="btn ghost sm ${S.picking?'primary':''}" data-r-pick>${S.picking?'แตะแผนที่…':'แตะเลือกบนแผนที่'}</button></div></div></div>
+    <div class="fld"><span>จุดเริ่มต้น</span><div class="r-start"><b>${S.start?esc(S.start.label):'ยังไม่ได้เลือก (เริ่มจากเคสแรก)'}</b><div><button type="button" class="btn ghost sm" data-r-gps><i data-ic="pin"></i> ตำแหน่งฉัน</button><button type="button" class="btn ghost sm ${S.picking?'primary':''}" data-r-pick>${S.picking?'แตะแผนที่…':'แตะเลือกบนแผนที่'}</button></div></div></div>
     <label class="chk"><input type="checkbox" id="r-avoid" ${R.avoid?'checked':''}><span>เลี่ยงถนนน้ำท่วม / ถนนปิด (Floodboard + เซ็นเซอร์ กทม.)</span></label>
     <p class="ms-tip">เรียงเคสวิกฤตก่อน แล้วเร่งด่วน แล้วทั่วไป ในแต่ละระดับไปจุดที่ใกล้ที่สุดก่อน</p>
-    <button class="btn primary" data-r-go style="width:100%">🧭 คำนวณเส้นทาง</button>
+    <button class="btn primary" data-r-go style="width:100%"><i data-ic="route"></i> คำนวณเส้นทาง</button>
     <div id="r-out">${r?routeResult(r):''}</div>`}
   function candidates(){let cs=R.src.startsWith('zone:')?A.cases.filter(c=>inZone(c,R.src.slice(5))):(S.list||[]);
     cs=cs.filter(c=>hasPin(c)&&c.status!=='done'&&(!R.onlyOpen||c.status==='open'));return cs}
@@ -185,15 +185,15 @@ const MX=(()=>{
     S.route=res;drawRoute();renderSide();legend()}
   function drawRoute(){const g=S.L.route;g.clearLayers();const r=S.route;if(!r)return;
     L.polyline(r.coords,{color:'#fff',weight:9,opacity:.9,interactive:false}).addTo(g);L.polyline(r.coords,{color:'#0d5f62',weight:5,opacity:.95,interactive:false}).addTo(g);
-    const seen=new Set();r.hits.forEach(h=>{const k=h.name;if(seen.has(k))return;seen.add(k);L.circleMarker([h.lat,h.lng],{radius:8,color:'#c62828',weight:3,fillColor:'#fff',fillOpacity:1}).bindTooltip(`⚠ ${esc(h.name)}${h.depth!=null?` ~${h.depth} ซม.`:''}`).addTo(g)});
-    if(r.start)L.marker([r.start.lat,r.start.lng],{icon:L.divIcon({className:'rt-ic start',html:'▶',iconSize:[26,26]})}).bindTooltip('จุดเริ่มต้น').addTo(g);
+    const seen=new Set();r.hits.forEach(h=>{const k=h.name;if(seen.has(k))return;seen.add(k);L.circleMarker([h.lat,h.lng],{radius:8,color:'#c62828',weight:3,fillColor:'#fff',fillOpacity:1}).bindTooltip(`${esc(h.name)}${h.depth!=null?` ~${h.depth} ซม.`:''}`).addTo(g)});
+    if(r.start)L.marker([r.start.lat,r.start.lng],{icon:L.divIcon({className:'rt-ic start',html:'<i data-ic="play"></i>',iconSize:[26,26]})}).bindTooltip('จุดเริ่มต้น').addTo(g);
     r.stops.forEach((p,i)=>L.marker([p.lat,p.lng],{icon:L.divIcon({className:'rt-ic u'+p.sv,html:String(i+1),iconSize:[26,26]})}).bindTooltip(`${i+1}. ${URG[p.sv]} · ${esc((p.c.needs||[]).join(', '))}`).on('click',()=>openDrawer(p.c.id)).addTo(g));
     S.map.fitBounds(r.coords,{padding:[30,30]})}
   function gmLinks(r){const pts=[...(r.start?[r.start]:[]),...r.stops].map(p=>`${(+p.lat).toFixed(6)},${(+p.lng).toFixed(6)}`),links=[];
     for(let i=0;i<pts.length-1;i+=10){const seg=pts.slice(i,i+11);links.push('https://www.google.com/maps/dir/?api=1&travelmode=driving&origin='+seg[0]+'&destination='+seg[seg.length-1]+(seg.length>2?'&waypoints='+encodeURIComponent(seg.slice(1,-1).join('|')):''))}return links}
   function routeResult(r){const names=[...new Set(r.hits.map(h=>h.name))],off=r.start?1:0,links=gmLinks(r);
     return `<div class="r-sum"><b>${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที</b><small>${esc(r.engine)}${r.excluded?` · เลี่ยงจุดน้ำท่วม ${r.excluded} จุด`:''}${r.zone?' · โซน '+esc(r.zone.name):''}</small></div>
-    ${names.length?`<div class="r-warn">⚠ เส้นทางยังผ่านจุดน้ำท่วม ${names.length} แห่ง: ${names.slice(0,5).map(esc).join(', ')}${names.length>5?'…':''}<br><small>มักเป็นจุดที่ใกล้บ้านผู้แจ้ง เลี่ยงไม่ได้ · ควรใช้รถสูงหรือเรือ</small></div>`:r.coords.length?'<div class="r-ok">✓ ไม่พบถนนน้ำท่วมลึกบนเส้นทาง (ตามข้อมูลที่มี)</div>':''}
+    ${names.length?`<div class="r-warn"><i data-ic="alert"></i> เส้นทางยังผ่านจุดน้ำท่วม ${names.length} แห่ง: ${names.slice(0,5).map(esc).join(', ')}${names.length>5?'…':''}<br><small>มักเป็นจุดที่ใกล้บ้านผู้แจ้ง เลี่ยงไม่ได้ · ควรใช้รถสูงหรือเรือ</small></div>`:r.coords.length?'<div class="r-ok"><i data-ic="check"></i> ไม่พบถนนน้ำท่วมลึกบนเส้นทาง (ตามข้อมูลที่มี)</div>':''}
     <ol class="r-stops">${r.stops.map((p,i)=>{const c=p.c,lg=(off?r.legs[i]:r.legs[i-1])||null;return `<li><button data-open-case="${esc(c.id)}"><span class="urg urg-${p.sv}">${URG[p.sv]}</span> ${esc((c.needs||[]).slice(0,2).join(', ')||'-')} · ${c.people||1} คน<small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'-')}${lg?` · +${lg.km.toFixed(1)} กม.`:''}</small></button></li>`}).join('')}</ol>
     <div class="ms-act">${links.map((u,i)=>`<a class="btn primary sm" href="${esc(u)}" target="_blank" rel="noopener">นำทาง Google Maps${links.length>1?' ช่วง '+(i+1):''}</a>`).join('')}<button class="btn ghost sm" data-r-copy>คัดลอกส่งไลน์</button></div>
     ${S.roster.length?`<div class="r-assign"><select id="r-team"><option value="">มอบหมายเส้นทางให้ทีม…</option>${S.roster.map(t=>`<option>${esc(t.name)}</option>`).join('')}</select><button class="btn primary sm" data-r-assign>มอบหมาย</button></div>`:''}`}
@@ -202,8 +202,8 @@ const MX=(()=>{
     let ok=0;for(const id of ids){try{const x=await post({action:'update',key:A.key,id,status:'going',volunteer:team});if(x&&x.ok)ok++}catch(e){}}
     toast(`มอบหมายให้ ${team} แล้ว ${ok}/${ids.length} เคส`,ok===ids.length);if(typeof load==='function')load()}
   function copyRoute(){const r=S.route;if(!r)return;const links=gmLinks(r);
-    const txt=`🧭 เส้นทาง Helpme+${r.zone?' โซน '+r.zone.name:''} · ${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที\n`+r.stops.map((p,i)=>{const c=p.c;return `${i+1}. [${URG[p.sv]}] #${c.id} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน\n   ${[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')}${c.name?'\n   ติดต่อ: '+c.name:''}${c.phone?' '+c.phone:''}\n   https://www.google.com/maps?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`}).join('\n')+
-      ([...new Set(r.hits.map(h=>h.name))].length?`\n⚠ ระวังน้ำท่วม: ${[...new Set(r.hits.map(h=>h.name))].slice(0,6).join(', ')}`:'')+`\n\nนำทางทั้งเส้น:\n${links.join('\n')}`;
+    const txt=`<i data-ic="route"></i> เส้นทาง Helpme+${r.zone?' โซน '+r.zone.name:''} · ${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที\n`+r.stops.map((p,i)=>{const c=p.c;return `${i+1}. [${URG[p.sv]}] #${c.id} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน\n   ${[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')}${c.name?'\n   ติดต่อ: '+c.name:''}${c.phone?' '+c.phone:''}\n   https://www.google.com/maps?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`}).join('\n')+
+      ([...new Set(r.hits.map(h=>h.name))].length?`\n<i data-ic="alert"></i> ระวังน้ำท่วม: ${[...new Set(r.hits.map(h=>h.name))].slice(0,6).join(', ')}`:'')+`\n\nนำทางทั้งเส้น:\n${links.join('\n')}`;
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ได้เลย (มีเบอร์โทรผู้แจ้ง ส่งเฉพาะกลุ่มทีม)',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))}
 
   /* ---------- ปุ่มในแผงด้านข้าง ---------- */
@@ -234,7 +234,7 @@ const MX=(()=>{
     if(d.rGps!==undefined){if(!navigator.geolocation){toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}t.textContent='กำลังหาตำแหน่ง…';
       navigator.geolocation.getCurrentPosition(p=>{S.start={lat:p.coords.latitude,lng:p.coords.longitude,label:'ตำแหน่งของฉัน'};renderSide()},()=>{toast('หาตำแหน่งไม่ได้ ลองแตะเลือกบนแผนที่');renderSide()},{enableHighAccuracy:true,timeout:15000});return}
     if(d.rPick!==undefined){S.picking=!S.picking;S.map.getContainer().classList.toggle('picking',S.picking);renderSide();return}
-    if(d.rGo!==undefined){t.disabled=true;t.textContent='กำลังคำนวณ…';try{await compute()}finally{const b=document.querySelector('[data-r-go]');if(b){b.disabled=false;b.textContent='🧭 คำนวณเส้นทาง'}}return}
+    if(d.rGo!==undefined){t.disabled=true;t.textContent='กำลังคำนวณ…';try{await compute()}finally{const b=document.querySelector('[data-r-go]');if(b){b.disabled=false;b.textContent='คำนวณเส้นทาง'}}return}
     if(d.rClear!==undefined){S.route=null;S.L.route.clearLayers();renderSide();legend();return}
     if(d.rCopy!==undefined){copyRoute();return}
     if(d.rAssign!==undefined){assign($('#r-team').value);return}

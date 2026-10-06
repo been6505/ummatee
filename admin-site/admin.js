@@ -87,8 +87,8 @@ let vrCache=new Map();
 function vr(c){const k=c.id+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c);vrCache.set(c.id,{k,v});return v}
 async function loadFlood(force){try{await VERIFY.load(force)}catch(e){}render();if(typeof COVERED!=='undefined')COVERED.load(API_URL,A.key).then(render,render)}
 const cov=c=>typeof COVERED!=='undefined'?COVERED.match(c):null;
-function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}">🤝 ${esc(r.org)} รับแล้ว</span>`}
-function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b>🤝 พื้นที่นี้มีองค์กรอื่นรับไปแล้ว</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
+function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} รับแล้ว</span>`}
+function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b><i data-ic="hand"></i> พื้นที่นี้มีองค์กรอื่นรับไปแล้ว</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
 setInterval(()=>{if(A.key&&!document.hidden)loadFlood()},10*60e3);
 function vrBadge(c){const v=vr(c);return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>`}
 
@@ -197,7 +197,7 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
-  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.id)}</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.id)}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
     ${covSection(c)}${vrSection(c)}
     <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>

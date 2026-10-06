@@ -1,5 +1,5 @@
 /* ชั้นข้อมูลแผนที่แบบ Help Me ช่วยด้วย (ใช้ในแดชบอร์ด)
-   - เรดาร์ฝน: RainViewer ภาพย้อนหลัง 2 ชม. ทุก 10 นาที (ซูมจริงสูงสุด 7) · ปุ่ม ▶ เล่นทิศทางฝน
+   - เรดาร์ฝน: RainViewer ภาพย้อนหลัง 2 ชม. ทุก 10 นาที (ซูมจริงสูงสุด 7) · ปุ่ม <i data-ic="play"></i> เล่นทิศทางฝน
    - ทีมกู้ภัยและเครือข่าย: จุดที่องค์กรลงพื้นที่ (outreach ของ Help Me + ชีตพื้นที่มอบแล้วของ UM+) เป็นป้ายสีตามองค์กร
    - กล้อง CCTV: /api?action=cctv (iTIC ผ่าน Longdo · เฉพาะกรุงเทพฯ)
    ใช้: MAPL.attach(map) แล้ว MAPL.sync() ทุกครั้งที่สวิตช์ใน #dlayer เปลี่ยน */
@@ -24,7 +24,7 @@ const MAPL=(()=>{
     if(!r||!r.host||!r.radar||!(r.radar.past||[]).length)throw new Error('rain');S.rain=r;S.rainAt=Date.now()}
   function rainShow(i){if(!S.rainL)return;S.rainL.forEach((l,j)=>{if(j===i&&!S.map.hasLayer(l))l.addTo(S.map);if(S.map.hasLayer(l))l.setOpacity(j===i?RAIN_OP:0)});S.rainI=i;ctlSync()}
   function ctlSync(){if(!S.ctl)return;const fr=frames(),f=fr[S.rainI];if(!f)return;const el=S.ctl.getContainer();
-    el.querySelector('button').textContent=S.anim?'❚❚':'▶';el.querySelector('button').setAttribute('aria-label',S.anim?'หยุดเล่นภาพเรดาร์':'เล่นภาพเรดาร์ย้อนหลัง 2 ชั่วโมง');
+    el.querySelector('button').innerHTML=ic(S.anim?'pause':'play');el.querySelector('button').setAttribute('aria-label',S.anim?'หยุดเล่นภาพเรดาร์':'เล่นภาพเรดาร์ย้อนหลัง 2 ชั่วโมง');
     el.querySelector('b').textContent=tm(f);el.querySelector('small').textContent=S.rainI===fr.length-1?'ล่าสุด':'ย้อนหลัง';el.classList.toggle('past',S.rainI!==fr.length-1)}
   function stop(){if(S.anim){clearInterval(S.anim);S.anim=null}rainShow(frames().length-1)}
   function play(){if(S.anim){stop();return}const fr=frames();if(fr.length<2)return;let i=0;S.rainL.forEach(l=>{if(!S.map.hasLayer(l))l.setOpacity(0).addTo(S.map)});
@@ -35,7 +35,7 @@ const MAPL=(()=>{
     if(!S.map.getPane('rain')){const p=S.map.createPane('rain');p.style.zIndex=350;p.style.pointerEvents='none'}
     S.rainL=fr.map(f=>L.tileLayer(S.rain.host+f.path+'/256/{z}/{x}/{y}/2/1_0.png',{pane:'rain',opacity:0,maxNativeZoom:7,maxZoom:20,tileSize:256}));
     S.map.attributionControl.addAttribution(RAIN_ATTR);
-    const C=L.Control.extend({onAdd(){const d=L.DomUtil.create('div','rain-ctl');d.innerHTML='<button type="button">▶</button><span><small>ล่าสุด</small><b></b></span>';
+    const C=L.Control.extend({onAdd(){const d=L.DomUtil.create('div','rain-ctl');d.innerHTML='<button type="button">'+ic('play')+'</button><span><small>ล่าสุด</small><b></b></span>';
       L.DomEvent.disableClickPropagation(d);d.querySelector('button').addEventListener('click',play);return d}});
     S.ctl=new C({position:'bottomleft'}).addTo(S.map);rainShow(fr.length-1);
     setSub('mt-rain',`ภาพล่าสุด ${tm(fr[fr.length-1])} น. · อัปเดตทุก 10 นาที`)}

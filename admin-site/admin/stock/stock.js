@@ -1,7 +1,7 @@
 /* สต็อก: คงเหลือ / รับเข้า / จ่ายออก / ต้องการ — แทนกระดานในศูนย์ */
 const S={items:[],log:[],roster:[],cat:'all',loaded:0,view:location.hash==='#bags'?'bags':'stock'};
 const BAG='ถุงยังชีพ',isBag=i=>i&&i.category===BAG;
-const VEH={boat:'🚤 เรือ',truck:'🚚 รถสูง / รถบรรทุก',pickup:'🛻 รถกระบะ',car:'🚐 รถเก๋ง / รถตู้',motorbike:'🛵 มอเตอร์ไซค์',foot:'🚶 เดินเท้า',other:'อื่น ๆ'};
+const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const TYPE={in:'รับเข้า',out:'จ่ายออก',set:'ตั้งยอด'};
 const CATS=['อาหาร','ยา','ถุงยังชีพ','ของใช้'];
@@ -20,7 +20,7 @@ const kitOf=b=>(Array.isArray(b&&b.kit)?b.kit:[]).map(k=>({...k,it:S.items.find(
 const canPack=b=>{const K=kitOf(b);return K.length?Math.min(...K.map(k=>Math.floor((Number(k.it.qty)||0)/k.qty))):null};
 function kitBox(b,n){const K=kitOf(b),cp=canPack(b);
   if(!K.length)return `<section class="kit-box"><div class="kit-h"><h3>ของใน 1 ถุง</h3><button type="button" class="btn ghost sm" data-kit="${esc(b.id)}">+ กำหนดของในถุง</button></div><p class="muted small">ยังไม่ได้กำหนดว่าใน 1 ถุงมีอะไรบ้าง กำหนดไว้แล้วระบบจะตัดของในคลังให้เองตอนแพ็คถุง และบอกได้ว่าแพ็คได้อีกกี่ถุง</p></section>`;
-  return `<section class="kit-box"><div class="kit-h"><h3>ของใน 1 ถุง <small>${K.length} รายการ</small></h3><button type="button" class="btn ghost sm" data-kit="${esc(b.id)}">✎ แก้ไขของในถุง</button></div>
+  return `<section class="kit-box"><div class="kit-h"><h3>ของใน 1 ถุง <small>${K.length} รายการ</small></h3><button type="button" class="btn ghost sm" data-kit="${esc(b.id)}"><i data-ic="note"></i> แก้ไขของในถุง</button></div>
     <table class="kit-t"><thead><tr><th>รายการ</th><th class="r">ต่อ 1 ถุง</th><th class="r">คลังมี</th>${n?`<th class="r">ใช้ ${nf(n)} ถุง</th>`:''}<th class="r">พอแพ็ค</th></tr></thead><tbody>${K.map(k=>{const have=Number(k.it.qty)||0,need=k.qty*(n||0),enough=Math.floor(have/k.qty);
       return `<tr class="${n&&need>have?'short':''}"><td>${esc(k.it.name)}</td><td class="r">${nf(k.qty)} ${esc(k.it.unit||'')}</td><td class="r">${nf(have)}</td>${n?`<td class="r"><b>${nf(need)}</b>${need>have?' <span class="schip zero">ไม่พอ</span>':''}</td>`:''}<td class="r">${nf(enough)} ถุง</td></tr>`}).join('')}</tbody></table>
     <p class="kit-cap">ของในคลังตอนนี้แพ็คได้อีก <b>${nf(cp)} ถุง</b>${cp<=0?' · ต้องเติมของก่อน':''}</p></section>`}
@@ -35,7 +35,7 @@ function render(){
   renderBags();
   const I=S.items.filter(i=>!isBag(i)),today=new Date();today.setHours(0,0,0,0);const tl=S.log.filter(l=>Number(l.time)>=today.getTime()&&!isBag(S.items.find(i=>i.id===l.itemId)));
   const warnI=S.items.filter(i=>Number(i.qty)<=0||low(i)).sort((a,b)=>(Number(a.qty)>0)-(Number(b.qty)>0));
-  $('#lowchips').innerHTML=warnI.length?`<span class="lc-lab">⚠ ต้องเติม</span>`+warnI.map(i=>`<button class="lchip ${Number(i.qty)<=0?'zero':'low'}" data-mv="in" data-item="${esc(i.id)}" title="กดเพื่อรับเข้า">${esc(i.name)} <b>${Number(i.qty)<=0?'หมด':'เหลือ '+nf(i.qty)+' '+esc(i.unit||'')}</b></button>`).join(''):'';
+  $('#lowchips').innerHTML=warnI.length?`<span class="lc-lab"><i data-ic="alert"></i> ต้องเติม</span>`+warnI.map(i=>`<button class="lchip ${Number(i.qty)<=0?'zero':'low'}" data-mv="in" data-item="${esc(i.id)}" title="กดเพื่อรับเข้า">${esc(i.name)} <b>${Number(i.qty)<=0?'หมด':'เหลือ '+nf(i.qty)+' '+esc(i.unit||'')}</b></button>`).join(''):'';
   $('#stats').innerHTML=[['รายการในคลัง',I.length,''],['ของหมด',I.filter(i=>Number(i.qty)<=0).length,'red'],['ใกล้หมด',I.filter(i=>low(i)&&Number(i.qty)>0).length,'wait'],['ต้องการเพิ่ม',I.filter(i=>i.needed).length,'go'],
     ['รับเข้าวันนี้',tl.filter(l=>l.type==='in').length+' ครั้ง','done'],['จ่ายออกวันนี้',tl.filter(l=>l.type==='out').length+' ครั้ง','']].map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
   const cats=[['all','ทั้งหมด'],...CATS.filter(c=>c!==BAG).map(c=>[c,c]),...[...new Set(I.map(i=>i.category).filter(c=>c&&!CATS.includes(c)&&c!==BAG))].map(c=>[c,c]),['low','หมด / ใกล้หมด'],['need','ต้องการ']];
@@ -46,14 +46,14 @@ function render(){
   const mv=i=>{let add=0,sub=0;S.log.forEach(l=>{if(l.itemId!==i.id||Number(l.time)<from)return;const d=Number(l.delta)||0;if(l.type==='in')add+=d;else if(l.type==='out')sub-=d});return {add,sub,start:(Number(i.qty)||0)-add+sub}};
   $('#items').innerHTML=L.length?`<div class="gt-top"><div class="seg sm" role="tablist" aria-label="ช่วงเวลา"><button data-period="all" aria-selected="${S.period!=='today'}">ทั้งหมด</button><button data-period="today" aria-selected="${S.period==='today'}">วันนี้</button></div><small class="muted">${S.period==='today'?'สต็อก = ยอดเมื่อเริ่มวัน':'สต็อก = ยอดตั้งต้น (รวมการปรับยอด)'} · สต็อก + เพิ่ม − ลด = เหลือ</small></div>
   <div class="gt-wrap"><table class="gt"><thead><tr><th class="n">#</th><th>รายการ</th><th class="r">สต็อก</th><th class="r">เพิ่ม</th><th class="r">ลด</th><th class="r">เหลือ</th><th>หน่วย</th><th class="c">ต้องการ</th><th class="r">จัดการ</th></tr></thead><tbody>${L.map((i,n)=>{const q=Number(i.qty)||0,cls=q<=0?'zero':low(i)?'low':'',m=mv(i);
-    return `<tr class="${cls}" data-id="${esc(i.id)}"><td class="n muted">${n+1}</td><td><b>${esc(i.name)}</b><small>${esc(i.category||'')}${i.location?' · 📍 '+esc(i.location):''}${expTag(i)}</small></td>
+    return `<tr class="${cls}" data-id="${esc(i.id)}"><td class="n muted">${n+1}</td><td><b>${esc(i.name)}</b><small>${esc(i.category||'')}${i.location?' · <i data-ic="pin"></i> '+esc(i.location):''}${expTag(i)}</small></td>
       <td class="r">${nf(m.start)}</td><td class="r add">${m.add?'+'+nf(m.add):'<span class="muted">-</span>'}</td><td class="r sub">${m.sub?'−'+nf(m.sub):'<span class="muted">-</span>'}</td>
       <td class="r q">${nf(q)}${stChip(i)?'<br>'+stChip(i):''}</td><td class="muted">${esc(i.unit||'')}</td>
-      <td class="c"><button class="needbtn" data-need="${esc(i.id)}" aria-pressed="${!!i.needed}" title="กดเพื่อ${i.needed?'เอาออกจาก':'เพิ่มใน'}รายการต้องการ">${i.needed?'✓ ต้องการ':'+'}</button></td>
-      <td class="r act"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="เพิ่ม (รับเข้า)" aria-label="เพิ่ม ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="ลด (จ่ายออก)" aria-label="ลด ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}">✎</button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
+      <td class="c"><button class="needbtn" data-need="${esc(i.id)}" aria-pressed="${!!i.needed}" title="กดเพื่อ${i.needed?'เอาออกจาก':'เพิ่มใน'}รายการต้องการ">${i.needed?'<i data-ic="check"></i> ต้องการ':'+'}</button></td>
+      <td class="r act"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="เพิ่ม (รับเข้า)" aria-label="เพิ่ม ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="ลด (จ่ายออก)" aria-label="ลด ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}"><i data-ic="note"></i></button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
   const need=I.filter(i=>i.needed||Number(i.qty)<=0||low(i));
   $('#need-list').innerHTML=need.length?need.map(i=>`<li><b>${esc(i.name)}</b> <small>${i.needed?'ต้องการ':''}${Number(i.qty)<=0?(i.needed?' · ':'')+'หมด':low(i)?(i.needed?' · ':'')+'เหลือ '+nf(i.qty)+' '+esc(i.unit):''}</small></li>`).join(''):'<li class="muted">ยังไม่มี</li>';
-  $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.team?' · 🚚 '+esc(l.team):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
+  $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.team?' · <i data-ic="car"></i> '+esc(l.team):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
 }
 $('#q').addEventListener('input',render);
 document.addEventListener('click',e=>{
@@ -87,14 +87,14 @@ function renderBags(){
       <div class="bagcount"><span><b>${nf(td)}</b> ถุง วันนี้</span><span class="muted">รวม ${nf(all)} ถุง</span></div>
       <div class="team-f"><button class="btn primary sm" data-load="${esc(t.id)}" data-mode="out" ${total<=0?'disabled':''}>+ ส่งถุงขึ้นรถ</button><button class="btn ghost sm" data-load="${esc(t.id)}" data-mode="in" ${all<=0?'disabled':''}>คืนถุง</button></div></article>`}).join('')
     :`<p class="empty">ยังไม่มีทีมรถ กด "+ เพิ่มทีมรถ" หรือเพิ่มที่หน้า <a href="../teams/">จัดทีม</a></p>`;
-  $('#bag-items').innerHTML=B.length?B.map(i=>`<div class="bag-it${Number(i.qty)<=0?' zero':low(i)?' low':''}"><div><b>${esc(i.name)}</b> ${stChip(i)}<small class="muted">${i.location?'📍 '+esc(i.location):''}${expTag(i)}</small></div><div class="bag-q">${nf(i.qty)} <span class="unit">${esc(i.unit||'ถุง')}</span></div>
+  $('#bag-items').innerHTML=B.length?B.map(i=>`<div class="bag-it${Number(i.qty)<=0?' zero':low(i)?' low':''}"><div><b>${esc(i.name)}</b> ${stChip(i)}<small class="muted">${i.location?'<i data-ic="pin"></i> '+esc(i.location):''}${expTag(i)}</small></div><div class="bag-q">${nf(i.qty)} <span class="unit">${esc(i.unit||'ถุง')}</span></div>
       <div class="bag-kit">${kitOf(i).length?`<span class="muted">ในถุง:</span> ${kitOf(i).map(k=>`${esc(k.it.name)} ${nf(k.qty)} ${esc(k.it.unit||'')}`).join(' · ')}<br><span class="muted">แพ็คได้อีก</span> <b>${nf(canPack(i))} ถุง</b>`:'<span class="muted">ยังไม่ได้กำหนดของในถุง</span>'}</div>
-      <div class="bag-a"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า / แพ็ค</button><button class="btn ghost sm" data-kit="${esc(i.id)}">ของในถุง</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}">✎</button></div></div>`).join(''):'<p class="muted small">ยังไม่มี</p>';
-  $('#bag-log').innerHTML=L.length?L.slice(0,60).map(l=>{const n=sent(l);return `<div class="lg lg-${n>0?'out':'in'}"><span class="lg-d">${n>0?'−':'+'}${nf(Math.abs(n))}</span><div><b>🚚 ${esc(l.team)}</b> <small>${n>0?'ขึ้นรถ':'คืนเข้าคลัง'} · ${esc(l.item)} · คลังเหลือ ${nf(l.after)}${l.caseId?' · เคส #'+esc(l.caseId):''}${l.note?' · '+esc(l.note):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`}).join(''):'<p class="muted small">ยังไม่มีการส่งถุงขึ้นรถ</p>';
+      <div class="bag-a"><button class="btn primary sm" data-mv="in" data-item="${esc(i.id)}">+ รับเข้า / แพ็ค</button><button class="btn ghost sm" data-kit="${esc(i.id)}">ของในถุง</button><button class="btn ghost sm" data-ed="${esc(i.id)}" aria-label="แก้ไข ${esc(i.name)}"><i data-ic="note"></i></button></div></div>`).join(''):'<p class="muted small">ยังไม่มี</p>';
+  $('#bag-log').innerHTML=L.length?L.slice(0,60).map(l=>{const n=sent(l);return `<div class="lg lg-${n>0?'out':'in'}"><span class="lg-d">${n>0?'−':'+'}${nf(Math.abs(n))}</span><div><b><i data-ic="car"></i> ${esc(l.team)}</b> <small>${n>0?'ขึ้นรถ':'คืนเข้าคลัง'} · ${esc(l.item)} · คลังเหลือ ${nf(l.after)}${l.caseId?' · เคส #'+esc(l.caseId):''}${l.note?' · '+esc(l.note):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`}).join(''):'<p class="muted small">ยังไม่มีการส่งถุงขึ้นรถ</p>';
 }
 function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.length){toast('ยังไม่มีรายการถุงยังชีพ');return}
   const out=mode==='out',had=bagLoads().filter(l=>l.team===t.name);
-  drawer(`<div class="d-head"><div><small class="muted">${esc(t.vehicle?VEH[t.vehicle]:'ทีม')}</small><h2>${out?'ส่งถุงขึ้นรถ':'คืนถุงเข้าคลัง'} · ${esc(t.name)}</h2><small>ถุงในคลัง <b>${nf(B.reduce((a,i)=>a+(Number(i.qty)||0),0))}</b> ถุง</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  drawer(`<div class="d-head"><div><small class="muted">${esc(t.vehicle?VEH[t.vehicle]:'ทีม')}</small><h2>${out?'ส่งถุงขึ้นรถ':'คืนถุงเข้าคลัง'} · ${esc(t.name)}</h2><small>ถุงในคลัง <b>${nf(B.reduce((a,i)=>a+(Number(i.qty)||0),0))}</b> ถุง</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="lform" class="form-grid">
     <label class="fld wide"><span>ชนิดถุง</span><select name="bag">${B.map(i=>`<option value="${esc(i.id)}">${esc(i.name)} (เหลือ ${nf(i.qty)})</option>`).join('')}</select></label>
     <label class="fld"><span>จำนวน (ถุง)</span><input name="amount" type="number" min="1" inputmode="numeric" required></label>
@@ -117,10 +117,10 @@ function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.lengt
 }
 function openKit(b){if(!b)return;const opts=S.items.filter(i=>!isBag(i)).sort((x,y)=>String(x.category).localeCompare(String(y.category),'th')||String(x.name).localeCompare(String(y.name),'th'));
   let rows=(Array.isArray(b.kit)?b.kit:[]).map(k=>({...k}));if(!rows.length)rows=[{id:'',qty:1}];
-  drawer(`<div class="d-head"><div><small class="muted">ถุงยังชีพ</small><h2>ของใน 1 ถุง · ${esc(b.name)}</h2><small>เลือกของจากคลังและจำนวนที่ใส่ใน 1 ถุง</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  drawer(`<div class="d-head"><div><small class="muted">ถุงยังชีพ</small><h2>ของใน 1 ถุง · ${esc(b.name)}</h2><small>เลือกของจากคลังและจำนวนที่ใส่ใน 1 ถุง</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="kform" class="form-grid"><div class="wide kit-rows" id="kit-rows"></div><div class="wide"><button type="button" class="btn ghost sm" id="kit-add">+ เพิ่มของ</button></div>
     <div class="form-act"><button class="btn primary" type="submit" id="k-go">บันทึกของในถุง</button></div></form>`);
-  const draw=()=>{$('#kit-rows').innerHTML=rows.map((r,n)=>`<div class="kit-row"><select data-r="${n}" aria-label="ของชิ้นที่ ${n+1}"><option value="">เลือกของ…</option>${opts.map(i=>`<option value="${esc(i.id)}" ${i.id===r.id?'selected':''}>${esc(i.name)} (${esc(i.unit||'')})</option>`).join('')}</select><input type="number" min="1" inputmode="numeric" data-q="${n}" value="${esc(r.qty)}" aria-label="จำนวนต่อถุง"><button type="button" class="ib" data-del="${n}" aria-label="ลบ">✕</button></div>`).join('')};
+  const draw=()=>{$('#kit-rows').innerHTML=rows.map((r,n)=>`<div class="kit-row"><select data-r="${n}" aria-label="ของชิ้นที่ ${n+1}"><option value="">เลือกของ…</option>${opts.map(i=>`<option value="${esc(i.id)}" ${i.id===r.id?'selected':''}>${esc(i.name)} (${esc(i.unit||'')})</option>`).join('')}</select><input type="number" min="1" inputmode="numeric" data-q="${n}" value="${esc(r.qty)}" aria-label="จำนวนต่อถุง"><button type="button" class="ib" data-del="${n}" aria-label="ลบ"><i data-ic="close"></i></button></div>`).join('')};
   draw();const box=$('#kit-rows');
   box.onchange=e=>{const r=e.target.dataset.r,q=e.target.dataset.q;if(r!=null)rows[r].id=e.target.value;if(q!=null)rows[q].qty=Math.max(1,Math.round(Number(e.target.value)||1))};
   box.oninput=box.onchange;
@@ -137,7 +137,7 @@ async function toggleNeed(i,btn){if(!i)return;btn.disabled=true;
     if(!r.ok){toast('บันทึกไม่สำเร็จ: '+(r.error||''));return}i.needed=!i.needed;toast(i.needed?`เพิ่ม ${i.name} ในรายการต้องการ`:`เอา ${i.name} ออกจากรายการต้องการ`,true);render()}
   catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ')}finally{btn.disabled=false}}
 function openTeam(){
-  drawer(`<div class="d-head"><div><h2>เพิ่มทีมรถ</h2><small class="muted">ทีมจะขึ้นที่หน้าจัดทีมด้วย</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  drawer(`<div class="d-head"><div><h2>เพิ่มทีมรถ</h2><small class="muted">ทีมจะขึ้นที่หน้าจัดทีมด้วย</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="tform" class="form-grid">
     <label class="fld"><span>ชื่อทีม / ทะเบียนรถ *</span><input name="name" required maxlength="60" placeholder="เช่น รถกระบะ 1 / กข 1234"></label>
     <label class="fld"><span>พาหนะ</span><select name="vehicle">${Object.entries(VEH).map(([k,v])=>`<option value="${k}" ${k==='pickup'?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -156,7 +156,7 @@ function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;$('#d
 function closeD(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
 function openMove(it,type){if(!it)return;
-  drawer(`<div class="d-head"><div><small class="muted">${esc(it.category||'')}</small><h2>${esc(it.name)}</h2><small>คงเหลือ <b>${nf(it.qty)}</b> ${esc(it.unit||'')}</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  drawer(`<div class="d-head"><div><small class="muted">${esc(it.category||'')}</small><h2>${esc(it.name)}</h2><small>คงเหลือ <b>${nf(it.qty)}</b> ${esc(it.unit||'')}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="mform" class="form-grid">
     <div class="seg mv-seg">${Object.entries(TYPE).map(([k,v])=>`<button type="button" data-t="${k}" aria-selected="${k===type}">${v}</button>`).join('')}</div>
     <label class="fld"><span id="amt-lab">จำนวน (${esc(it.unit||'หน่วย')})</span><input name="amount" type="number" min="0" inputmode="numeric" required></label>
@@ -189,7 +189,7 @@ function openMove(it,type){if(!it)return;
 }
 /* ---------- เพิ่ม / แก้ไขรายการ ---------- */
 function openItem(it){it=it||{};const isNew=!it.id;
-  drawer(`<div class="d-head"><div><h2>${isNew?'เพิ่มรายการใหม่':'แก้ไขรายการ'}</h2></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  drawer(`<div class="d-head"><div><h2>${isNew?'เพิ่มรายการใหม่':'แก้ไขรายการ'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="iform" class="form-grid">
     <label class="fld"><span>ชื่อรายการ *</span><input name="name" required maxlength="80" value="${esc(it.name)}"></label>
     <label class="fld"><span>หมวด</span><input name="category" list="cats" maxlength="30" value="${esc(it.category)}" placeholder="อาหาร, ยา, ของใช้…"><datalist id="cats">${CATS.map(c=>`<option value="${c}">`).join('')}</datalist></label>
@@ -214,7 +214,7 @@ function openItem(it){it=it||{};const isNew=!it.id;
 }
 /* ---------- คัดลอก / ส่งออก ---------- */
 $('#copy-need').addEventListener('click',()=>{const need=S.items.filter(i=>i.needed||Number(i.qty)<=0||low(i));
-  const txt='📦 ศูนย์ UMMATEE ต้องการรับบริจาค\n'+need.map((i,n)=>`${n+1}. ${i.name}${Number(i.qty)<=0?' (หมด)':low(i)?` (เหลือ ${nf(i.qty)} ${i.unit||''})`:''}`).join('\n');
+  const txt='<i data-ic="box"></i> ศูนย์ UMMATEE ต้องการรับบริจาค\n'+need.map((i,n)=>`${n+1}. ${i.name}${Number(i.qty)<=0?' (หมด)':low(i)?` (เหลือ ${nf(i.qty)} ${i.unit||''})`:''}`).join('\n');
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ / เพจได้เลย',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))});
 $('#export').addEventListener('click',()=>{const cell=v=>{let s=String(v==null?'':v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
   const rows=[['รายการ','หมวด','คงเหลือ','หน่วย','ขั้นต่ำ','ต้องการ','วันหมดอายุ','ที่เก็บ','หมายเหตุ'],...S.items.map(i=>[i.name,i.category,i.qty,i.unit,i.min,i.needed?'ต้องการ':'',i.expiry||'',i.location||'',i.note])];

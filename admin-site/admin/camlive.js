@@ -14,10 +14,10 @@ const CAMLIVE=(()=>{
   function html(c){
     const live=c.hls?`<div class="cam-live"><video data-hls="${esc(c.hls)}" muted autoplay playsinline aria-label="ภาพสดจากกล้อง ${esc(c.title)}"></video><span class="cam-badge">● สด</span><span class="cam-msg">กำลังเปิดภาพสด…</span></div>`
       :c.img?`<img class="cam-img" data-still="${esc(c.img)}" src="${esc(c.img)}${c.img.includes('?')?'&':'?'}t=${Date.now()}" alt="ภาพกล้อง ${esc(c.title)}" onerror="this.replaceWith(Object.assign(document.createElement('p'),{className:'cam-msg static',textContent:'โหลดภาพจากกล้องไม่ได้ตอนนี้'}))">`:'';
-    const st=stale(c),when=c.hls?'ภาพสด':c.at?(st?'⚠️ กล้องนี้ไม่ส่งภาพใหม่มา '+ago(c.at).replace('ที่แล้ว',''):'ภาพเมื่อ '+ago(c.at)+' · โหลดภาพใหม่ทุก 10 วิ'):'ภาพนิ่ง · โหลดภาพใหม่ทุก 10 วิ';
-    const nl=!c.hls&&c._near?`<button type="button" class="cam-golive" data-golive="${esc(c._near.c.id)}">📹 ดูภาพสดเคลื่อนไหวจากกล้องใกล้สุด · ${esc(c._near.c.title)} (${c._near.km.toFixed(1)} กม.)</button>`:'';
+    const st=stale(c),when=c.hls?'ภาพสด':c.at?(st?'<i data-ic="alert"></i> กล้องนี้ไม่ส่งภาพใหม่มา '+ago(c.at).replace('ที่แล้ว',''):'ภาพเมื่อ '+ago(c.at)+' · โหลดภาพใหม่ทุก 10 วิ'):'ภาพนิ่ง · โหลดภาพใหม่ทุก 10 วิ';
+    const nl=!c.hls&&c._near?`<button type="button" class="cam-golive" data-golive="${esc(c._near.c.id)}"><i data-ic="video"></i> ดูภาพสดเคลื่อนไหวจากกล้องใกล้สุด · ${esc(c._near.c.title)} (${c._near.km.toFixed(1)} กม.)</button>`:'';
     const more=c.hls?` · <a href="${esc(c.hls)}" target="_blank" rel="noopener">เปิดในแท็บใหม่ ↗</a>`:c.src==='POPNIX Flood'?` · <a href="https://flood.pop.in.th/#cctv" target="_blank" rel="noopener">POPNIX Flood ↗</a>`:'';
-    return `<div class="cam-pop"><b>${c.hls?'🔴':'📷'} ${esc(c.title)}</b>${live}<small>${esc(c.org||'iTIC')} · ${when}${more}</small>${nl}</div>`}
+    return `<div class="cam-pop"><b>${c.hls?'<i data-ic="live"></i>':'<i data-ic="cam"></i>'} ${esc(c.title)}</b>${live}<small>${esc(c.org||'iTIC')} · ${when}${more}</small>${nl}</div>`}
   function fail(v,t){const box=v.closest('.cam-live');if(box){box.classList.add('err');box.querySelector('.cam-msg').textContent=t||'เปิดภาพสดไม่ได้ตอนนี้ ลองกด "เปิดในแท็บใหม่"'}}
   function ok(v){const box=v.closest('.cam-live');if(box)box.classList.add('on')}
   async function start(root){

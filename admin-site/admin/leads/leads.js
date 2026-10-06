@@ -44,25 +44,25 @@ function leadText(l){return `Helpme+ เคสจากโซเชียล: ${
 function card(l){
   const n=nearby(l),flags=(l.flags||[]).map(f=>f.split(':')[0]),st=l.status;
   const head=[`<span class="urg urg-${sev(l)}">${URG[sev(l)]}</span>`,`<span class="src">${esc(SRC[l.source]||l.source)}</span>`,
-    ...flags.map(f=>RISK(f)?`<span class="flag">⚠️ ${esc(FLAG[f]||f)}</span>`:`<span class="src">📍 ${esc(FLAG[f]||f)}</span>`),
+    ...flags.map(f=>RISK(f)?`<span class="flag"><i data-ic="alert"></i> ${esc(FLAG[f]||f)}</span>`:`<span class="src"><i data-ic="pin"></i> ${esc(FLAG[f]||f)}</span>`),
     st==='rejected'?`<span class="rej">ตัดทิ้ง · ${esc(REASON[l.reason]||l.reason||'')}</span>`:'',
-    st==='accepted'?`<span class="acc">✓ เป็นเคส #${esc(l.caseId)}</span>`:'',
+    st==='accepted'?`<span class="acc"><i data-ic="check"></i> เป็นเคส #${esc(l.caseId)}</span>`:'',
     `<small>โพสต์ ${esc(ago(l.postedAt))}</small>`].join('');
   const where=[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · ');
   const near=n?[
-    n.live.length?`<div><b>ทีมที่แชร์ตำแหน่ง</b>${n.live.map(x=>`<div class="row">🟢 ${esc(x.t.team)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(ago(x.t.updatedAt))}</span>${x.t.caseId?' <span class="km">(ถือเคสอยู่)</span>':''}${(()=>{const r=(LD.roster||[]).find(r=>String(r.name).trim()===String(x.t.team).trim());return typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(r||{name:x.t.team},{caseText:leadText(l)}):''})()}</div>`).join('')}</div>`:'',
-    n.places.length?`<div><b>จุดกู้ภัยใกล้สุด</b>${n.places.map(x=>`<div class="row">🚑 ${esc(x.p.name)} <span class="km">${x.km.toFixed(1)} กม.</span>${x.p.phone?` <a href="tel:${esc(String(x.p.phone).replace(/[^\d+]/g,''))}" onclick="event.stopPropagation()">${esc(x.p.phone)}</a>`:''}</div>`).join('')}</div>`:'',
-    n.cov.length?`<div><b>องค์กรอื่นที่ลงพื้นที่ใกล้ ๆ</b>${n.cov.map(x=>`<div class="row">🤝 ${esc(x.c.org)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(x.c.date||'')}</span>${x.t&&l.postedAt&&x.t<l.postedAt-12*3600e3?' <span class="before">ไปก่อนโพสต์นี้ — ยังไม่นับว่าช่วยแล้ว</span>':''}</div>`).join('')}</div>`:'',
+    n.live.length?`<div><b>ทีมที่แชร์ตำแหน่ง</b>${n.live.map(x=>`<div class="row"><i data-ic="live"></i> ${esc(x.t.team)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(ago(x.t.updatedAt))}</span>${x.t.caseId?' <span class="km">(ถือเคสอยู่)</span>':''}${(()=>{const r=(LD.roster||[]).find(r=>String(r.name).trim()===String(x.t.team).trim());return typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(r||{name:x.t.team},{caseText:leadText(l)}):''})()}</div>`).join('')}</div>`:'',
+    n.places.length?`<div><b>จุดกู้ภัยใกล้สุด</b>${n.places.map(x=>`<div class="row"><i data-ic="ambulance"></i> ${esc(x.p.name)} <span class="km">${x.km.toFixed(1)} กม.</span>${x.p.phone?` <a href="tel:${esc(String(x.p.phone).replace(/[^\d+]/g,''))}" onclick="event.stopPropagation()">${esc(x.p.phone)}</a>`:''}</div>`).join('')}</div>`:'',
+    n.cov.length?`<div><b>องค์กรอื่นที่ลงพื้นที่ใกล้ ๆ</b>${n.cov.map(x=>`<div class="row"><i data-ic="hand"></i> ${esc(x.c.org)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(x.c.date||'')}</span>${x.t&&l.postedAt&&x.t<l.postedAt-12*3600e3?' <span class="before">ไปก่อนโพสต์นี้ — ยังไม่นับว่าช่วยแล้ว</span>':''}</div>`).join('')}</div>`:'',
   ].filter(Boolean).join('')||'<span class="muted">ไม่พบทีมหรือจุดกู้ภัยในระยะ '+NEAR_KM+' กม.</span>':'<span class="muted">ไม่มีพิกัด — เปิดโพสต์ต้นทางเพื่อหาที่อยู่</span>';
   const act=st==='new'?`<select data-urg="${esc(l.id)}" aria-label="ระดับความเร่งด่วน">${[3,2,1].map(u=>`<option value="${u}" ${u===sev(l)?'selected':''}>${URG[u]}</option>`).join('')}</select>
-      <button class="btn primary sm" data-accept="${esc(l.id)}">✓ รับเป็นเคส</button>
-      <select data-rej="${esc(l.id)}" aria-label="ตัดทิ้งเพราะ"><option value="">✕ ตัดทิ้งเพราะ…</option><option value="duplicate">ซ้ำกับเคสอื่น</option><option value="not_people">ไม่ใช่คนเดือดร้อน</option><option value="resolved">ได้รับความช่วยเหลือแล้ว</option><option value="suspicious">น่าสงสัย / มิจฉาชีพ</option><option value="rejected_by_staff">อื่น ๆ</option></select>`
-    :st==='rejected'?`<button class="btn ghost sm" data-reopen="${esc(l.id)}">↩ คืนเข้าคิว</button>`
+      <button class="btn primary sm" data-accept="${esc(l.id)}"><i data-ic="check"></i> รับเป็นเคส</button>
+      <select data-rej="${esc(l.id)}" aria-label="ตัดทิ้งเพราะ"><option value="">ตัดทิ้งเพราะ…</option><option value="duplicate">ซ้ำกับเคสอื่น</option><option value="not_people">ไม่ใช่คนเดือดร้อน</option><option value="resolved">ได้รับความช่วยเหลือแล้ว</option><option value="suspicious">น่าสงสัย / มิจฉาชีพ</option><option value="rejected_by_staff">อื่น ๆ</option></select>`
+    :st==='rejected'?`<button class="btn ghost sm" data-reopen="${esc(l.id)}"><i data-ic="undo"></i> คืนเข้าคิว</button>`
     :`<a href="../../admin.html#${esc(l.caseId)}" target="_top" data-case="${esc(l.caseId)}">เปิดเคส #${esc(l.caseId)} →</a>`;
   return `<article class="lead u${sev(l)} st-${esc(st)}${LD.sel===l.id?' sel':''}${LD.open.has(l.id)?' open':''}" data-id="${esc(l.id)}">
     <div class="l-h">${head}</div>
     <h3>${esc(l.title||'(ไม่มีหัวข้อ)')}</h3>
-    <div class="l-m">${where?`<span>📍 ${esc(where)}</span>`:''}${l.people?`<span>👥 ${esc(l.people)}</span>`:''}${l.names&&l.names.length?`<span>🙍 ${esc(l.names.join(', '))}</span>`:''}${l.phone?`<span>☎ ${String(l.phone).split(/\s*,\s*/).map(p=>`<a href="tel:${esc(p.replace(/[^\d+]/g,''))}" onclick="event.stopPropagation()">${esc(p)}</a>`).join(', ')}</span>`:''}</div>
+    <div class="l-m">${where?`<span><i data-ic="pin"></i> ${esc(where)}</span>`:''}${l.people?`<span><i data-ic="users"></i> ${esc(l.people)}</span>`:''}${l.names&&l.names.length?`<span><i data-ic="user"></i> ${esc(l.names.join(', '))}</span>`:''}${l.phone?`<span><i data-ic="phone"></i> ${String(l.phone).split(/\s*,\s*/).map(p=>`<a href="tel:${esc(p.replace(/[^\d+]/g,''))}" onclick="event.stopPropagation()">${esc(p)}</a>`).join(', ')}</span>`:''}</div>
     ${l.needs&&l.needs.length?`<div class="l-needs">${l.needs.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
     ${l.text&&l.text!==l.title?`<div class="l-text">${esc(l.text)}</div>`:''}
     <div class="near">${near}</div>
@@ -75,7 +75,7 @@ function visible(){const q=LD.q;return LD.leads.filter(l=>(LD.filter==='all'||l.
 function render(){
   $('#sync').textContent=LD.loaded?'อัปเดต '+new Date(LD.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
   const c=s=>LD.leads.filter(l=>l.status===s).length,nw=LD.leads.filter(l=>l.status==='new');
-  $('#stats').innerHTML=[['รอคัด',nw.length,''],['วิกฤตรอคัด',nw.filter(l=>sev(l)===3).length,'red'],['ติดธง ⚠️',nw.filter(l=>(l.flags||[]).some(RISK)).length,''],['รับเป็นเคสแล้ว',c('accepted'),'done'],['ตัดทิ้ง',c('rejected'),'']]
+  $('#stats').innerHTML=[['รอคัด',nw.length,''],['วิกฤตรอคัด',nw.filter(l=>sev(l)===3).length,'red'],['ติดธง <i data-ic="alert"></i>',nw.filter(l=>(l.flags||[]).some(RISK)).length,''],['รับเป็นเคสแล้ว',c('accepted'),'done'],['ตัดทิ้ง',c('rejected'),'']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
   $('#pulled').textContent=LD.pulledAt?'ดึงล่าสุด '+ago(LD.pulledAt):'';
   if(LD.settings){$('#set-start').value=LD.settings.eventStart;$('#set-age').value=LD.settings.maxAgeDays}
@@ -91,7 +91,7 @@ function drawMap(v){
   LD.layer.clearLayers();LD.marks={};const pts=[];
   LD.covered.forEach(c=>L.circleMarker([+c.lat,+c.lng],{radius:6,color:'#7b3fc4',weight:2,fillOpacity:.35}).bindTooltip(esc(c.org+' · '+(c.area||'')+' · '+(c.date||''))).addTo(LD.layer));
   LD.places.forEach(p=>L.circleMarker([+p.lat,+p.lng],{radius:6,color:'#1F2A5E',weight:2,fillColor:'#1F2A5E',fillOpacity:.8}).bindTooltip(esc(p.name)).addTo(LD.layer));
-  LD.live.forEach(t=>L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',iconSize:null,html:`<span class="ltm" style="--c:#2E9E57">🟢 ${esc(t.team)}</span>`}),zIndexOffset:500}).bindTooltip(esc(t.team+' · '+ago(t.updatedAt))).addTo(LD.layer));
+  LD.live.forEach(t=>L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',iconSize:null,html:`<span class="ltm" style="--c:#2E9E57"><i data-ic="live"></i> ${esc(t.team)}</span>`}),zIndexOffset:500}).bindTooltip(esc(t.team+' · '+ago(t.updatedAt))).addTo(LD.layer));
   v.filter(pin).forEach(l=>{const m=L.marker([+l.lat,+l.lng],{icon:L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div class="lpin u${sev(l)}${LD.sel===l.id?' sel':''}"></div>`}),zIndexOffset:sev(l)*100})
     .bindTooltip(esc(URG[sev(l)]+' · '+(l.title||'')).slice(0,120)).on('click',()=>select(l.id,false)).addTo(LD.layer);LD.marks[l.id]=m;pts.push([+l.lat,+l.lng])});
   if(pts.length&&!LD.fitted){LD.map.fitBounds(pts,{padding:[30,30],maxZoom:14});LD.fitted=true}}
@@ -118,7 +118,7 @@ $('#ld-q').addEventListener('input',e=>{LD.q=e.target.value.trim().toLowerCase()
 $('#pull').addEventListener('click',async()=>{const b=$('#pull');b.disabled=true;b.textContent='กำลังดึง…';
   try{const r=await apiPost({action:'lead_pull'});
     if(r&&r.ok){if(r.filled)toast(`Help Me: เติมข้อมูลเต็มให้ ${r.filled} เคสที่รอคัด`,true);toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))});if(r.helpme&&r.helpme.ok)toast(r.helpme.full?'Help Me: รหัสถูกต้อง ได้ข้อมูลเต็ม (ชื่อ เบอร์ พิกัดจริง)':'Help Me: ได้แค่ข้อมูลสาธารณะ — HELPME_KEY ไม่ถูกต้องหรือยังไม่ได้ตั้ง',r.helpme.full)}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
-    await loadAll()}finally{b.disabled=false;b.textContent='⤓ ดึงเคสใหม่ (Traffy + Help Me)'}});
+    await loadAll()}finally{b.disabled=false;b.textContent='ดึงเคสใหม่ (Traffy + Help Me)'}});
 $('#set-btn').addEventListener('click',()=>{const f=$('#settings');f.hidden=!f.hidden;$('#set-btn').setAttribute('aria-expanded',String(!f.hidden))});
 $('#settings').addEventListener('submit',async e=>{e.preventDefault();
   const r=await apiPost({action:'lead_settings',eventStart:$('#set-start').value,maxAgeDays:$('#set-age').value});

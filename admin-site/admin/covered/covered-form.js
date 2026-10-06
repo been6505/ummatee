@@ -12,18 +12,18 @@ function open(){
   const orgs=[...new Set(COVERED.C.rows.map(r=>r.org).filter(Boolean))];
   const last=store.get('uh_cov_org')||'';
   const d=$('#drawer');
-  d.innerHTML=`<div class="d-head"><div><h2>เพิ่มพื้นที่ที่มอบแล้ว</h2><small class="muted">บันทึกลงชีตเดียวกับที่ทีมกรอก · ช่องที่มี * ต้องกรอก</small></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  d.innerHTML=`<div class="d-head"><div><h2>เพิ่มพื้นที่ที่มอบแล้ว</h2><small class="muted">บันทึกลงชีตเดียวกับที่ทีมกรอก · ช่องที่มี * ต้องกรอก</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="cform" class="form-grid" novalidate>
     <label class="fld"><span>องค์กร *</span><input name="org" required maxlength="80" list="cf-orgs" value="${esc(last)}" placeholder="เช่น สภาเครือข่าย" autocomplete="off"><datalist id="cf-orgs">${orgs.map(o=>`<option value="${esc(o)}">`).join('')}</datalist></label>
     <label class="fld"><span>วันที่ *</span><input name="date" type="date" required value="${todayISO()}"></label>
     <label class="fld"><span>รายการ</span><input name="items" maxlength="120" list="cf-items" placeholder="เช่น ถุงยังชีพ" autocomplete="off"><datalist id="cf-items">${ITEMS.map(o=>`<option value="${o}">`).join('')}</datalist></label>
     <label class="fld"><span>จำนวน</span><input name="qty" maxlength="40" inputmode="numeric" placeholder="เช่น 120 หรือ 50 แพ็ก" autocomplete="off"></label>
     <div class="fld cf-wide"><span>สถานที่ *</span><textarea name="place" required maxlength="200" rows="2" placeholder="ชื่อชุมชน/ซอย/มัสยิด และเขต เช่น ชุมชนวังโสม หัวหมาก เขตบางกะปิ" aria-label="สถานที่"></textarea>
-      <button type="button" class="btn ghost-d sm cf-find" id="cf-find">🔍 ค้นหาตำแหน่งจากชื่อสถานที่</button>
+      <button type="button" class="btn ghost-d sm cf-find" id="cf-find"><i data-ic="search"></i> ค้นหาตำแหน่งจากชื่อสถานที่</button>
       <div class="cf-found" id="cf-found" hidden></div></div>
     <div class="fld cf-wide"><span>โลเคชั่น <small class="muted">(สำคัญ: ทำให้หมุดบนแผนที่ตรงจุด)</small></span>
       <input name="location" maxlength="300" placeholder="วางลิงก์ Google Maps หรือพิกัด เช่น 13.8123, 100.7012" autocomplete="off" aria-label="โลเคชั่น">
-      <div class="cf-locbtn"><button type="button" class="btn ghost-d sm" id="cf-gps">📍 ใช้ตำแหน่งปัจจุบัน</button><button type="button" class="btn ghost-d sm" id="cf-pick">🗺 เลือกบนแผนที่</button></div>
+      <div class="cf-locbtn"><button type="button" class="btn ghost-d sm" id="cf-gps"><i data-ic="pin"></i> ใช้ตำแหน่งปัจจุบัน</button><button type="button" class="btn ghost-d sm" id="cf-pick"><i data-ic="map"></i> เลือกบนแผนที่</button></div>
       <div class="cf-map" id="cf-map" hidden></div>
       <small class="muted" id="cf-lochint"></small>
     </div>
@@ -53,8 +53,8 @@ function curLL(){const v=$('#cform').elements.location.value.trim();const m=v.ma
 function setLL(a,b){const f=$('#cform');f.elements.location.value=a.toFixed(6)+', '+b.toFixed(6);showLoc();checkDup()}
 function showLoc(){const v=$('#cform').elements.location.value.trim(),ll=curLL();
   if(pick&&ll){putMk(ll);pick.map.setView(ll,Math.max(pick.map.getZoom(),16))}
-  if(!v)hint('');else if(ll)hint('✓ ได้พิกัด '+ll[0].toFixed(5)+', '+ll[1].toFixed(5));
-  else if(/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.[a-z.]+\/maps|maps\.google\.)/i.test(v))hint('✓ ลิงก์ Google Maps ระบบจะหาพิกัดจากลิงก์ให้');
+  if(!v)hint('');else if(ll)hint('<i data-ic="check"></i> ได้พิกัด '+ll[0].toFixed(5)+', '+ll[1].toFixed(5));
+  else if(/^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.[a-z.]+\/maps|maps\.google\.)/i.test(v))hint('<i data-ic="check"></i> ลิงก์ Google Maps ระบบจะหาพิกัดจากลิงก์ให้');
   else if(/^https?:\/\//i.test(v))hint('ลิงก์นี้ไม่ใช่ Google Maps ตรวจอีกครั้ง');
   else hint('ใส่ได้เฉพาะลิงก์ Google Maps หรือพิกัดแบบ 13.8123, 100.7012')}
 function openPick(){
@@ -87,7 +87,7 @@ async function find(){
   let res=[],used='';for(const q of tries){res=await geo(q+(/กรุงเทพ/.test(q)?'':' กรุงเทพ'));if(!res.length)res=await geo(q);if(res.length){used=q;break}}
   // สำรอง: OpenStreetMap Nominatim (จำกัด 1 ครั้ง/วินาที จึงลองแค่ 2 แบบ)
   if(!res.length)for(const q of tries.slice(0,2)){res=await geo(q,true);if(res.length){used=q;break}await new Promise(s=>setTimeout(s,1100))}
-  if(my!==finding)return;btn.disabled=false;btn.textContent='🔍 ค้นหาตำแหน่งจากชื่อสถานที่';
+  if(my!==finding)return;btn.disabled=false;btn.textContent='ค้นหาตำแหน่งจากชื่อสถานที่';
   if(!res.length){box.innerHTML='ไม่พบตำแหน่งจากชื่อนี้ · ลองพิมพ์ชื่อซอย/ถนนให้สั้นลง หรือกด "เลือกบนแผนที่" แล้วแตะตรงจุด';return}
   box.innerHTML=(used!==base?'<small class="muted">ไม่พบทั้งข้อความ ค้นด้วย "'+esc(used)+'"</small>':'')+
     '<div class="cf-res">'+res.map((r,i)=>`<button type="button" data-i="${i}" aria-pressed="${i===0}"><b>${i+1}.</b> ${esc(r.name||'ไม่มีชื่อ')}<small>${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</small></button>`).join('')+'</div>'+
@@ -104,7 +104,7 @@ function checkDup(){
     if(ll&&r.lat!=null){const d=COVERED.distM(ll[0],ll[1],r.lat,r.lng);if(d<=800)return {r,why:'ห่าง ~'+(d<100?'<100':Math.round(d/50)*50)+' ม.',d}}
     if(ks.length&&r.area&&ks.some(k=>r.area.includes(k)))return {r,why:'ชื่อสถานที่คล้ายกัน',d:9e9};return null}).filter(Boolean).sort((a,b)=>a.d-b.d).slice(0,4);
   box.hidden=!near.length;
-  box.innerHTML=near.length?`<b>⚠ มีองค์กรมอบในพื้นที่นี้แล้ว ${near.length} รายการ</b> ตรวจก่อนบันทึก ถ้าเป็นการมอบรอบใหม่ บันทึกได้ตามปกติ<ul>${near.map(x=>`<li>${esc(x.r.org)} · ${esc(x.r.area)} · ${esc(x.r.date)}${x.r.items?' · '+esc(x.r.items):''}${x.r.sets?' '+esc(x.r.sets):''} <small class="muted">(${x.why})</small></li>`).join('')}</ul>`:''}
+  box.innerHTML=near.length?`<b><i data-ic="alert"></i> มีองค์กรมอบในพื้นที่นี้แล้ว ${near.length} รายการ</b> ตรวจก่อนบันทึก ถ้าเป็นการมอบรอบใหม่ บันทึกได้ตามปกติ<ul>${near.map(x=>`<li>${esc(x.r.org)} · ${esc(x.r.area)} · ${esc(x.r.date)}${x.r.items?' · '+esc(x.r.items):''}${x.r.sets?' '+esc(x.r.sets):''} <small class="muted">(${x.why})</small></li>`).join('')}</ul>`:''}
 
 async function save(f){
   const v=k=>f.elements[k].value.trim(),err=$('#cf-err');err.textContent='';

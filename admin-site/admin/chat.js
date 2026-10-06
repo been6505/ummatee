@@ -2,7 +2,7 @@
    - รายชื่อห้องแชทของทุกทีม + ตัวเลขข้อความที่ยังไม่อ่าน · เลือกทีมจากรายชื่อทีม (roster) เพื่อเริ่มคุยใหม่ได้
    - ดึงข้อความใหม่ทุก 5 วิ ตอนเปิดหน้าต่าง (นอกนั้นทุก 20 วิ เพื่อเช็กตัวเลข)
    - ทีมคุยจากหน้า /team/ (มือถือ) ด้วยรหัสทีมเดียวกัน
-   ใช้: CHAT.open(teamName) เปิดห้องของทีมนั้น (เช่นจากปุ่ม 💬 แชท บนการ์ดทีม) */
+   ใช้: CHAT.open(teamName) เปิดห้องของทีมนั้น (เช่นจากปุ่ม <i data-ic="chat"></i> แชท บนการ์ดทีม) */
 const CHAT=(()=>{
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,12 +15,12 @@ const CHAT=(()=>{
   let root;
   function build(){
     root=document.createElement('div');root.className='chat-root';
-    root.innerHTML=`<button type="button" class="chat-fab" aria-label="แชทกับทีม" aria-expanded="false">💬<b class="chat-badge" hidden></b></button>
+    root.innerHTML=`<button type="button" class="chat-fab" aria-label="แชทกับทีม" aria-expanded="false"><i data-ic="chat"></i><b class="chat-badge" hidden></b></button>
       <section class="chat-win" hidden aria-label="แชทกับทีม">
-        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden>‹</button><b class="chat-title">แชทกับทีม</b><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม">🔗 ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด">✕</button></header>
+        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><b class="chat-title">แชทกับทีม</b><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
         <div class="chat-list"></div>
         <div class="chat-msgs" hidden aria-live="polite"></div>
-        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-send" type="submit" aria-label="ส่ง">➤</button></form>
+        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
       </section>`;
     document.body.append(root);
     root.querySelector('.chat-fab').onclick=()=>toggle();
@@ -37,12 +37,12 @@ const CHAT=(()=>{
     if(inTeam){drawMsgs();setTimeout(()=>root.querySelector('.chat-in').focus(),30)}else drawList()}
   function drawList(){const known=new Set(S.threads.map(t=>t.team));
     const others=S.roster.map(r=>r.name).filter(n=>n&&!known.has(n));
-    root.querySelector('.chat-list').innerHTML=(S.threads.length?S.threads.map(t=>`<button type="button" class="chat-row${t.unread?' new':''}" data-chat-team="${esc(t.team)}"><span class="chat-av">${esc(String(t.team).slice(0,1))}</span><span class="chat-rt"><b>${esc(t.team)}</b><small>${t.last?esc((t.last.sender==='hq'?'คุณ: ':'')+(t.last.text||(t.last.lat!=null?'📍 ส่งตำแหน่ง':''))):''}</small></span><span class="chat-rm"><small>${t.at?esc(Date.now()-t.at<864e5?hhmm(t.at):day(t.at)):''}</small>${t.unread?`<b class="chat-n">${t.unread}</b>`:''}</span></button>`).join(''):'<p class="chat-empty">ยังไม่มีแชท · เลือกทีมด้านล่างเพื่อเริ่มคุย</p>')
+    root.querySelector('.chat-list').innerHTML=(S.threads.length?S.threads.map(t=>`<button type="button" class="chat-row${t.unread?' new':''}" data-chat-team="${esc(t.team)}"><span class="chat-av">${esc(String(t.team).slice(0,1))}</span><span class="chat-rt"><b>${esc(t.team)}</b><small>${t.last?esc((t.last.sender==='hq'?'คุณ: ':'')+(t.last.text||(t.last.lat!=null?'<i data-ic="pin"></i> ส่งตำแหน่ง':''))):''}</small></span><span class="chat-rm"><small>${t.at?esc(Date.now()-t.at<864e5?hhmm(t.at):day(t.at)):''}</small>${t.unread?`<b class="chat-n">${t.unread}</b>`:''}</span></button>`).join(''):'<p class="chat-empty">ยังไม่มีแชท · เลือกทีมด้านล่างเพื่อเริ่มคุย</p>')
       +(others.length?`<p class="chat-sec">เริ่มคุยกับทีม</p>`+others.map(n=>`<button type="button" class="chat-row" data-chat-team="${esc(n)}"><span class="chat-av">${esc(n.slice(0,1))}</span><span class="chat-rt"><b>${esc(n)}</b><small>ยังไม่เคยคุย</small></span></button>`).join(''):'')}
   function drawMsgs(){const box=root.querySelector('.chat-msgs');const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;let lastDay='';
     box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==lastDay?`<p class="chat-day">${esc(d)}</p>`:'';lastDay=d;
-      const loc=m.lat!=null?`<a class="chat-loc" href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener">📍 ตำแหน่งของทีม · เปิดแผนที่</a>`:'';
-      return `${sep}<div class="chat-m ${m.sender==='hq'?'me':'them'}${m.pending?' pending':''}">${m.sender==='hq'?'':`<small class="chat-who">${esc(m.name||S.team)}</small>`}${m.text?`<p>${esc(m.text)}</p>`:''}${loc}<small class="chat-t">${esc(m.sender==='hq'&&m.name?m.name+' · ':'')}${hhmm(m.at)}${m.sender==='hq'?(m.readTeam?' · อ่านแล้ว':''):''}</small></div>`}).join(''):'<p class="chat-empty">ยังไม่มีข้อความ · ส่งลิงก์ 🔗 ให้ทีมเปิดหน้าแชทบนมือถือ</p>';
+      const loc=m.lat!=null?`<a class="chat-loc" href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่งของทีม · เปิดแผนที่</a>`:'';
+      return `${sep}<div class="chat-m ${m.sender==='hq'?'me':'them'}${m.pending?' pending':''}">${m.sender==='hq'?'':`<small class="chat-who">${esc(m.name||S.team)}</small>`}${m.text?`<p>${esc(m.text)}</p>`:''}${loc}<small class="chat-t">${esc(m.sender==='hq'&&m.name?m.name+' · ':'')}${hhmm(m.at)}${m.sender==='hq'?(m.readTeam?' · อ่านแล้ว':''):''}</small></div>`}).join(''):'<p class="chat-empty">ยังไม่มีข้อความ · ส่งลิงก์ <i data-ic="link"></i> ให้ทีมเปิดหน้าแชทบนมือถือ</p>';
     if(atBottom||S.justOpened){box.scrollTop=box.scrollHeight;S.justOpened=false}}
   async function openTeam(name){if(!S.open)toggle(true);S.team=name;S.msgs=[];S.last=0;S.justOpened=true;view();await poll(true)}
   async function poll(force){if(!KEY())return;S.lastPoll=Date.now();

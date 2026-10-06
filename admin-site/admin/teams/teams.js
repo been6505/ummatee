@@ -48,7 +48,7 @@ function render(){
       <select class="tst tst-${esc(t.status)}" data-tst="${esc(t.id)}" aria-label="สถานะทีม ${esc(t.name)}">${Object.entries(TST).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${lv?`<span class="live">● แชร์ตำแหน่ง ${esc(ago(lv.updatedAt))}</span>`:''}</div>
       ${typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(t,{caseText:g[0]?TEAMCALL.caseText(g[0]):''}):''}
-      ${g.length?`<ul class="tcases">${g.map(c=>`<li><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน <small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}</small> <button class="linkish" data-done="${esc(c.id)}">✓ ช่วยแล้ว</button></li>`).join('')}</ul>`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}
+      ${g.length?`<ul class="tcases">${g.map(c=>`<li><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน <small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}</small> <button class="linkish" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยแล้ว</button></li>`).join('')}</ul>`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}
       <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></div></article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
   /* teams seen in cases but not in roster */
   const known=new Set(R.map(t=>tname(t.name))),seen=[...new Set(T.cases.map(c=>tname(c.volunteer)).filter(Boolean))].filter(n=>!known.has(n));
@@ -58,10 +58,10 @@ function render(){
   const q=queue.slice().sort((a,b)=>order(b)-order(a)||(Number(a.createdAt)-Number(b.createdAt)));
   $('#q-count').textContent=q.length?q.length+' เคส':'';
   $('#queue').innerHTML=q.length?q.slice(0,60).map(c=>{const sg=suggest(c),best=sg[0],vr=typeof VERIFY!=='undefined'?VERIFY.assess(c):null;
-    return `<article class="qcase u${sev(c)}"><div class="q-h"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span>${vr&&vr.result.k!=='nopin'?`<span class="vr vr-${vr.result.k}">${esc(vr.result.t)}</span>`:''}${(()=>{const m=typeof COVERED!=='undefined'?COVERED.match(c):null;return m?`<span class="cov" title="${esc(m.best.r.area+' · '+m.best.how)}">🤝 ${esc(m.best.r.org)} รับแล้ว</span>`:''})()}<small class="muted">${esc(ago(c.createdAt))} · #${esc(c.id)}</small></div>
+    return `<article class="qcase u${sev(c)}"><div class="q-h"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span>${vr&&vr.result.k!=='nopin'?`<span class="vr vr-${vr.result.k}">${esc(vr.result.t)}</span>`:''}${(()=>{const m=typeof COVERED!=='undefined'?COVERED.match(c):null;return m?`<span class="cov" title="${esc(m.best.r.area+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(m.best.r.org)} รับแล้ว</span>`:''})()}<small class="muted">${esc(ago(c.createdAt))} · #${esc(c.id)}</small></div>
       <b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><div class="small">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''} · ${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
-      ${R.length?`<div class="assign"><select data-pick="${esc(c.id)}" aria-label="เลือกทีมสำหรับเคส ${esc(c.id)}">${sg.map((x,i)=>`<option value="${esc(x.t.name)}">${i===0?'แนะนำ: ':''}${esc(x.t.name)} (${esc(x.why)})</option>`).join('')}</select><button class="btn primary sm" data-assign="${esc(c.id)}">มอบหมาย</button><button class="btn ghost sm" data-callpick="${esc(c.id)}" title="โทร / SMS / วิดีโอคอล ทีมที่เลือก">📞 ติดต่อทีม</button></div>`:'<p class="muted small">เพิ่มทีมก่อนจึงจะมอบหมายได้</p>'}
-    </article>`}).join(''):'<p class="empty">ไม่มีเคสรอจัดทีม 👍</p>';
+      ${R.length?`<div class="assign"><select data-pick="${esc(c.id)}" aria-label="เลือกทีมสำหรับเคส ${esc(c.id)}">${sg.map((x,i)=>`<option value="${esc(x.t.name)}">${i===0?'แนะนำ: ':''}${esc(x.t.name)} (${esc(x.why)})</option>`).join('')}</select><button class="btn primary sm" data-assign="${esc(c.id)}">มอบหมาย</button><button class="btn ghost sm" data-callpick="${esc(c.id)}" title="โทร / SMS / วิดีโอคอล ทีมที่เลือก"><i data-ic="phone"></i> ติดต่อทีม</button></div>`:'<p class="muted small">เพิ่มทีมก่อนจึงจะมอบหมายได้</p>'}
+    </article>`}).join(''):'<p class="empty">ไม่มีเคสรอจัดทีม <i data-ic="check"></i></p>';
 }
 
 /* ---------- actions ---------- */
@@ -84,13 +84,13 @@ $('#add-team').addEventListener('click',()=>openForm(null));
 
 /* แผ่นติดต่อทีมจากคิวเคส: โทร / SMS พร้อมรายละเอียดเคส / วิดีโอคอล */
 function callSheet(t,c){const txt=TEAMCALL.caseText(c),p=tel(t.phone);
-  const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2>📞 ติดต่อ ${esc(t.name)}</h2><p class="muted small">${[t.leader?'หัวหน้าทีม '+t.leader:'',p.length>=9?p:'ยังไม่มีเบอร์ (แก้ไขทีมเพื่อใส่เบอร์)',t.vehicle?VEH[t.vehicle]:''].filter(Boolean).map(esc).join(' · ')}</p></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="phone"></i> ติดต่อ ${esc(t.name)}</h2><p class="muted small">${[t.leader?'หัวหน้าทีม '+t.leader:'',p.length>=9?p:'ยังไม่มีเบอร์ (แก้ไขทีมเพื่อใส่เบอร์)',t.vehicle?VEH[t.vehicle]:''].filter(Boolean).map(esc).join(' · ')}</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="call-sheet"><p class="muted small">ข้อความที่จะส่ง</p><div class="call-msg">${esc(txt)}</div>${TEAMCALL.buttons(t,{caseText:txt})}</div>`;
   d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm}
 
 /* ---------- ฟอร์มเพิ่ม/แก้ไขทีม ---------- */
 function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
-  d.innerHTML=`<div class="d-head"><div><h2>${t.id?'แก้ไขทีม':'เพิ่มทีมใหม่'}</h2></div><button class="x" id="d-close" aria-label="ปิด">✕</button></div>
+  d.innerHTML=`<div class="d-head"><div><h2>${t.id?'แก้ไขทีม':'เพิ่มทีมใหม่'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="tform" class="form-grid">
     <label class="fld"><span>ชื่อทีม *</span><input name="name" required maxlength="60" value="${esc(t.name)}"></label>
     <label class="fld"><span>หัวหน้าทีม</span><input name="leader" maxlength="60" value="${esc(t.leader)}"></label>

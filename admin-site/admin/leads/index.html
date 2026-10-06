@@ -17,7 +17,8 @@
 <link rel="stylesheet" href="./leads.css?v=2">
 <script>/* หน้านี้อยู่ในแท็บ "จัดการเคส" แล้ว (admin.html#leads) — เปิดตรง ๆ จะพาไปที่นั่น */
 if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads');else document.documentElement.classList.add('embed')</script>
-<link rel="stylesheet" href="../helpme-skin.css?v=11">
+<link rel="stylesheet" href="../helpme-skin.css?v=12">
+<script src="../icons.js?v=1"></script>
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -25,7 +26,7 @@ if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads
     <img src="../../assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
     <h1>เคสจากโซเชียล · Helpme+</h1>
     <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
-    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส">👁</button></span></label>
+    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
     <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
     <p class="err" id="login-err" role="alert"></p>
@@ -36,7 +37,7 @@ if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads
   <header class="top">
     <a class="brand" href="../../admin.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>หลังบ้าน</b></span></a>
     <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a></nav>
-    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh">⟳ โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
+    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
   </header>
   <main class="wrap" id="main">
     <section class="stats ld-stats" id="stats" aria-label="สรุป"></section>
@@ -45,14 +46,14 @@ if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads
       <input id="ld-q" class="ld-q" type="search" placeholder="ค้นหา ข้อความ เขต ความต้องการ…" aria-label="ค้นหา">
       <span class="ld-sp"></span>
       <span class="muted small" id="pulled"></span>
-      <button class="btn primary sm" id="pull">⤓ ดึงเคสใหม่ (Traffy + Help Me)</button>
-      <button class="btn ghost sm" id="set-btn" aria-expanded="false" aria-controls="settings">⚙ ตัวกรอง</button>
+      <button class="btn primary sm" id="pull"><i data-ic="download"></i> ดึงเคสใหม่ (Traffy + Help Me)</button>
+      <button class="btn ghost sm" id="set-btn" aria-expanded="false" aria-controls="settings"><i data-ic="settings"></i> ตัวกรอง</button>
     </div>
     <form class="panel ld-set" id="settings" hidden>
       <label class="fld"><span>วันเริ่มเหตุการณ์ (ตัดโพสต์ก่อนวันนี้)</span><input type="date" id="set-start" required></label>
       <label class="fld"><span>ตัดโพสต์ที่เก่ากว่า (วัน)</span><input type="number" id="set-age" min="1" max="90" required></label>
       <button class="btn primary sm" type="submit">บันทึก</button>
-      <p class="muted small">ตัดอัตโนมัติ: โพสต์ก่อนเกิดเหตุ · เก่าเกินกำหนด · โพสต์ปีก่อน · ขอเงิน/เลขบัญชีแต่ไม่บอกสถานที่<br>ติดธง ⚠️: ขอเงินแต่มีสถานที่ · เลขบัญชีซ้ำกับเคสอื่นต่างพื้นที่ · อ้างถึงแต่ปีเก่า</p>
+      <p class="muted small">ตัดอัตโนมัติ: โพสต์ก่อนเกิดเหตุ · เก่าเกินกำหนด · โพสต์ปีก่อน · ขอเงิน/เลขบัญชีแต่ไม่บอกสถานที่<br>ติดธง <i data-ic="alert"></i>: ขอเงินแต่มีสถานที่ · เลขบัญชีซ้ำกับเคสอื่นต่างพื้นที่ · อ้างถึงแต่ปีเก่า</p>
     </form>
     <div class="ld-cols">
       <section class="panel ld-listp"><div id="list" class="ld-list" aria-live="polite"></div></section>
@@ -65,10 +66,10 @@ if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="../common.js?v=1"></script>
-<script src="../teamcall.js?v=2"></script>
-<script src="./leads.js?v=7"></script>
-<script src="../theme-toggle.js?v=1"></script>
-<script src="../chat.js?v=2"></script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.textContent=show?"🙈":"👁";i.focus()});</script>
+<script src="../teamcall.js?v=3"></script>
+<script src="./leads.js?v=8"></script>
+<script src="../theme-toggle.js?v=2"></script>
+<script src="../chat.js?v=3"></script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

@@ -249,3 +249,11 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 /* ปุ่มแสดงรหัสในช่องเข้าระบบ */
 .pw-wrap{position:relative;display:block}.pw-wrap input{width:100%;padding-right:52px!important}
 .pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:18px;width:40px;height:40px;cursor:pointer;border-radius:50%}.pw-eye:hover{background:var(--tint)}
+
+/* ไอคอนเส้น (icons.js): ขนาดตามตัวหนังสือ สีตามข้อความ */
+.ic{width:1.15em;height:1.15em;vertical-align:-.22em;flex:none;display:inline-block}
+.btn .ic,.call-btn .ic,.tabs a .ic{width:1.1em;height:1.1em}
+.fab .ic,.chat-fab .ic{width:24px;height:24px}.chat-send .ic,.rain-ctl button .ic{width:18px;height:18px}
+.lic .ic{width:20px;height:20px;color:var(--c)}
+.pw-eye .ic,.theme-btn .ic{width:19px;height:19px}
+.chat-back .ic,.chat-x .ic,.tc-x .ic,.x .ic{width:16px;height:16px}

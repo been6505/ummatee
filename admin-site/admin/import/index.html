@@ -12,14 +12,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=11">
+<link rel="stylesheet" href="../helpme-skin.css?v=12">
+<script src="../icons.js?v=1"></script>
 </head>
 <body>
 <section id="login" class="login" hidden>
   <form id="login-form" class="login-card" autocomplete="off">
     <h1>ย้ายข้อมูลเคสเก่า</h1>
     <p>ใส่รหัสทีมของระบบใหม่ (Cloudflare)</p>
-    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส">👁</button></span></label>
+    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
     <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
     <p class="err" id="login-err" role="alert"></p>
@@ -51,11 +52,11 @@ $('#imp').addEventListener('submit',async e=>{e.preventDefault();const f=e.targe
     if(!r.ok)throw new Error(r.error||'ดึงไม่ได้');if(!r.volunteer)throw new Error('รหัสระบบเดิมไม่ถูกต้อง (ได้ข้อมูลแบบปิดเบอร์ ไม่ย้ายเพื่อไม่ให้ข้อมูลไม่ครบ)');
     const cs=r.cases||[];out('พบ '+cs.length+' เคส กำลังบันทึก…');let added=0;
     for(let i=0;i<cs.length;i+=50){const res=await apiPost({action:'import_cases',cases:cs.slice(i,i+50)});if(!res.ok)throw new Error(res.error);added+=res.added;out(`  ${Math.min(i+50,cs.length)}/${cs.length} · เพิ่มใหม่ ${res.added}`)}
-    out('เสร็จแล้ว ✓ เพิ่มใหม่ทั้งหมด '+added+' เคส');toast('ย้ายข้อมูลเสร็จ เพิ่ม '+added+' เคส',true)}
+    out('เสร็จแล้ว <i data-ic="check"></i> เพิ่มใหม่ทั้งหมด '+added+' เคส');toast('ย้ายข้อมูลเสร็จ เพิ่ม '+added+' เคส',true)}
   catch(err){out('ผิดพลาด: '+err.message)}finally{btn.disabled=false}});
 adminBoot({action:'stock'},'items',()=>{});
 </script>
-<script src="../theme-toggle.js?v=1"></script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.textContent=show?"🙈":"👁";i.focus()});</script>
+<script src="../theme-toggle.js?v=2"></script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

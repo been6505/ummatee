@@ -4,7 +4,7 @@
 (()=>{
   const root=document.documentElement;
   const apply=t=>{if(t==='dark')root.dataset.theme='dark';else delete root.dataset.theme;const b=document.getElementById('theme-btn');if(b)label(b)};
-  const label=b=>{const dark=root.dataset.theme==='dark',t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.textContent=dark?'☀️':'🌙';b.setAttribute('aria-pressed',String(dark));b.setAttribute('aria-label',t);b.title=t};
+  const label=b=>{const dark=root.dataset.theme==='dark',t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.innerHTML=ic(dark?'sun':'moon');b.setAttribute('aria-pressed',String(dark));b.setAttribute('aria-label',t);b.title=t};
   window.addEventListener('storage',e=>{if(e.key==='uh_theme')apply(e.newValue)});
   if(document.getElementById('theme-btn'))return;
   const host=document.querySelector('.top-r')||document.querySelector('.top');if(!host)return;

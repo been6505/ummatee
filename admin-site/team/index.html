@@ -42,6 +42,7 @@ form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;bac
 [hidden]{display:none!important}
 .pw-wrap{position:relative;display:block}.pw-wrap input{padding-right:52px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:18px;width:40px;height:40px;cursor:pointer;border-radius:50%}
 </style>
+<script src="../admin/icons.js?v=1"></script>
 </head>
 <body>
 <!-- เข้าระบบ -->
@@ -50,7 +51,7 @@ form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;bac
   <h1>แชทกับศูนย์ประสานงาน</h1>
   <p>สำหรับทีมอาสา · ใส่รหัสทีม แล้วเลือกชื่อทีมของคุณ</p>
   <form id="lf" style="display:grid;gap:12px">
-    <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส">👁</button></span></label>
+    <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label>ชื่อทีม<input id="team" list="teams" required maxlength="60" placeholder="เช่น ทีมเรือ 1"><datalist id="teams"></datalist></label>
     <label>ชื่อคุณ (ไม่บังคับ)<input id="name" maxlength="60" placeholder="เช่น หัวหน้าทีม"></label>
     <button class="primary" type="submit" id="go">เข้าแชท</button>
@@ -61,7 +62,7 @@ form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;bac
 <header class="top" id="top" hidden><img src="../assets/helpme-logo.png" alt="Helpme+" width="152" height="22"><div class="who"><b id="tname"></b><small id="st">แชทกับศูนย์</small></div><button class="ghost" id="out" type="button">ออก</button></header>
 <main id="msgs" hidden aria-live="polite"></main>
 <div class="quick" id="quick" hidden><button type="button">รับทราบ</button><button type="button">กำลังเดินทาง</button><button type="button">ถึงจุดแล้ว</button><button type="button">ช่วยเสร็จแล้ว</button><button type="button">ต้องการกำลังเสริม</button><button type="button">ของไม่พอ</button></div>
-<form class="send" id="send" hidden><button class="loc" type="button" id="loc" aria-label="ส่งตำแหน่งของฉัน" title="ส่งตำแหน่งของฉัน">📍</button><input id="in" maxlength="1000" placeholder="พิมพ์ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button type="submit" aria-label="ส่ง">➤</button></form>
+<form class="send" id="send" hidden><button class="loc" type="button" id="loc" aria-label="ส่งตำแหน่งของฉัน" title="ส่งตำแหน่งของฉัน"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="พิมพ์ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -77,7 +78,7 @@ async function login(e){e&&e.preventDefault();const k=$('#code').value.trim()||S
     else{$('#err').textContent=r&&r.error==='not_volunteer'?'รหัสทีมไม่ถูกต้อง':'เข้าไม่ได้ ลองใหม่';S.key=''}}catch(err){$('#err').textContent='เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ต'}finally{$('#go').disabled=false}}
 function draw(){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
-    const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener">📍 ตำแหน่ง${mine?'ของฉัน':''} · เปิดแผนที่</a></p>`:'';
+    const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง${mine?'ของฉัน':''} · เปิดแผนที่</a></p>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ · ทักศูนย์ได้เลย หรือกดข้อความด่วนด้านล่าง</p>';
   if(bottom||S.first){box.scrollTop=box.scrollHeight;S.first=false}}
 async function poll(first){if(!S.key||!S.team)return;try{const r=await api({action:'chat',team:S.team});if(!r.ok){if(r.error==='not_volunteer'){logout('รหัสทีมเปลี่ยนแล้ว กรุณาเข้าใหม่')}return}
@@ -101,6 +102,6 @@ if(S.key&&S.team)login();else show(false);
 /* รายชื่อทีมให้เลือก (ต้องมีรหัสถูกก่อน) */
 $('#code').addEventListener('change',async()=>{S.key=$('#code').value.trim();try{const r=await api({action:'roster'});if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
 </script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.textContent=show?"🙈":"👁";i.focus()});</script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

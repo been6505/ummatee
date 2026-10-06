@@ -62,6 +62,10 @@ $('#refresh').addEventListener('click',load);
 const norm=s=>{s=String(s==null?'':s);try{s=s.normalize('NFC')}catch(e){}return s.replace(/[​-‍﻿]/g,'').replace(/ํ([่-๋]?)า/g,'$1ำ').toLowerCase()};
 const digits=x=>{let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d=d.slice(2);return d.replace(/^0+/,'')};
 function hay(c){return norm([c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,ST[c.status],URG[sev(c)],LEVEL[c.level]||'',(c.people||1)+' คน',hh(c)?hh(c)+' ครัวเรือน':'',vul(c).join(' ')].join(' '))}
+// ผลตรวจพื้นที่ที่ถือว่า "ลำบาก + ยืนยันแล้ว"
+const VR_OK=new Set(['confirmed','likely']);
+// ใช้ VR_ORDER เดิม (มาก = วิกฤต/ยืนยันได้มากกว่า) → กลับด้านเพื่อให้เรียงขึ้นก่อน
+const vrRank=c=>-(VR_ORDER[vr(c).result.k]??2);
 function filtered(){
   const q=norm($('#q').value.trim()),st=$('#f-status').value,u=$('#f-urg').value,nd=$('#f-need').value,so=$('#f-sort').value;
   return A.cases.filter(c=>{
@@ -70,12 +74,13 @@ function filtered(){
     if(['open','going','done'].includes(st)&&c.status!==st)return false;
     if(u&&String(sev(c))!==u)return false;
     if(nd&&!(c.needs||[]).join(' ').includes(nd))return false;
-    const fv=$('#f-vr').value;if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
+    const fv=$('#f-vr').value;if(fv==='verified'){if(!VR_OK.has(vr(c).result.k))return false}else if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
     const fz=$('#f-zone').value;if(fz&&typeof MX!=='undefined'&&!MX.inZone(c,fz))return false;
     return true}).sort((a,b)=>{const ca=Number(a.createdAt)||0,cb=Number(b.createdAt)||0;
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
       if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
-      return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(ca-cb)});
+      // วิกฤตก่อน: ในระดับความรุนแรงเดียวกัน เคสที่ตรวจพื้นที่แล้วยืนยันได้ขึ้นก่อน เคสที่ยืนยันไม่ได้ลงท้าย
+      return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||(vrRank(a)-vrRank(b))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(vr(b).score-vr(a).score)||(ca-cb)});
 }
 ['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
 function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}

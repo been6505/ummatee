@@ -38,7 +38,10 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, url TEXT UNIQUE, source TEXT, postedAt INTEGER, foundAt INTEGER, title TEXT, text TEXT,
     district TEXT, address TEXT, lat REAL, lng REAL, needs TEXT, urgency INTEGER, people TEXT, names TEXT, phone TEXT, flags TEXT,
     status TEXT, reason TEXT, caseId TEXT, by_ TEXT, updatedAt INTEGER)`,
-  `CREATE INDEX IF NOT EXISTS leads_status ON leads(status, postedAt)`
+  `CREATE INDEX IF NOT EXISTS leads_status ON leads(status, postedAt)`,
+  // แชทระหว่างศูนย์ (hq) กับทีม · อ่านแล้ว/ยังไม่อ่าน แยกฝั่ง
+  `CREATE TABLE IF NOT EXISTS chat (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, sender TEXT, name TEXT, text TEXT, caseId TEXT, lat REAL, lng REAL, at INTEGER, readHq INTEGER DEFAULT 0, readTeam INTEGER DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
@@ -650,6 +653,35 @@ async function pullAll(db, b, env) {
   return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, filled: helpme.filled || 0, traffy, helpme };
 }
 
+/* ---------- แชทกับทีม ---------- */
+async function chatSend(db, b) {
+  const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
+  const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
+  if (!team || (!text && lat == null)) return { ok: false, error: 'missing' };
+  const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' ? 1 : 0, from === 'team' ? 1 : 0).run();
+  await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
+  return { ok: true, n: r.meta.last_row_id };
+}
+async function chatList(db, p) {
+  const team = clean(p.team, MAX.volunteer), since = Number(p.since) || 0;
+  if (!team) return { ok: false, error: 'missing_team' };
+  const { results } = await db.prepare('SELECT n,team,sender,name,text,caseId,lat,lng,at,readHq,readTeam FROM chat WHERE team=? AND n>? ORDER BY n DESC LIMIT 200').bind(team, since).all();
+  return { ok: true, messages: results.reverse(), rev: await getMeta(db, 'chat_rev') || '0' };
+}
+async function chatThreads(db) {
+  const { results } = await db.prepare(`SELECT team, MAX(n) last, SUM(CASE WHEN sender='team' AND readHq=0 THEN 1 ELSE 0 END) unread, MAX(at) at FROM chat GROUP BY team ORDER BY last DESC LIMIT 200`).all();
+  const out = [];
+  for (const t of results) { const m = await db.prepare('SELECT sender,name,text,lat,at FROM chat WHERE n=?').bind(t.last).first(); out.push({ team: t.team, unread: t.unread || 0, at: t.at, last: m }); }
+  return { ok: true, threads: out, rev: await getMeta(db, 'chat_rev') || '0' };
+}
+async function chatRead(db, b) {
+  const team = clean(b.team, MAX.volunteer); if (!team) return { ok: false, error: 'missing_team' };
+  if (b.side === 'team') await db.prepare("UPDATE chat SET readTeam=1 WHERE team=? AND sender='hq' AND readTeam=0").bind(team).run();
+  else await db.prepare("UPDATE chat SET readHq=1 WHERE team=? AND sender='team' AND readHq=0").bind(team).run();
+  return { ok: true };
+}
+
 async function listLeads(db, p) {
   const since = Date.now() - clampInt(p.days, 1, 120, 30) * 86400e3;
   const { results } = await db.prepare('SELECT * FROM leads WHERE foundAt>? ORDER BY postedAt DESC LIMIT 600').bind(since).all();
@@ -729,6 +761,9 @@ async function api(request, env) {
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
+      case 'chat': return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' });
+      case 'chat_threads': return json(vol ? await chatThreads(db) : { ok: false, error: 'not_volunteer' });
+      case 'chat_rev': return json(vol ? { ok: true, rev: await getMeta(db, 'chat_rev') || '0' } : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
     }
   }
@@ -738,7 +773,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
-      lead_add: addLeads, lead_decide: decideLead, lead_settings: saveLeadSettings };
+      lead_add: addLeads, chat_send: chatSend, chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings };
     if (b.action === 'lead_pull') return json(isVol(env, b.key) ? await pullAll(db, b, env) : { ok: false, error: 'not_volunteer' });
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
@@ -756,7 +791,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }

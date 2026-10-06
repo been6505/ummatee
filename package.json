@@ -4,7 +4,7 @@
   "scripts": {
     "dev:public": "wrangler dev",
     "deploy:public": "wrangler deploy",
-    "deploy:admin": "sh pages-admin/build.sh && cd pages-admin && wrangler pages deploy --project-name admin-um-help --branch main",
+    "deploy:admin": "sh pages-admin/build.sh && cd pages-admin && wrangler pages deploy --project-name admin-helpme --branch main",
     "deploy": "wrangler deploy && npm run deploy:admin",
     "build:admin": "sh pages-admin/build.sh"
   },

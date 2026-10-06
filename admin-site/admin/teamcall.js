@@ -17,7 +17,7 @@ const TEAMCALL=(()=>{
     return `Helpme+ แจ้งเคส #${c.id}: ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${where?' · '+where:''}${c.phone?' · ผู้แจ้ง '+String(c.phone).replace(/^'/,''):''}${pin}`}
   function buttons(t,opt={}){
     if(!t)return '';const k='tc'+(++seq);store.set(k,{t,opt});const p=tel(t.phone),ok=p.length>=9;
-    return `<span class="call-row">${ok?`<a class="call-btn tel" href="tel:${esc(p)}" title="โทรหา ${esc(t.name)} ${esc(p)}">📞 โทร</a><a class="call-btn" href="${esc(sms(p,opt.caseText||'Helpme+: ติดต่อทีม '+t.name))}" title="ส่ง SMS">💬 SMS</a>`:'<span class="call-none">ยังไม่มีเบอร์ทีม</span>'}<button type="button" class="call-btn vid" data-tcall="${k}" title="วิดีโอคอลกับ ${esc(t.name)}">🎥 วิดีโอคอล</button></span>`}
+    return `<span class="call-row">${ok?`<a class="call-btn tel" href="tel:${esc(p)}" title="โทรหา ${esc(t.name)} ${esc(p)}">📞 โทร</a><a class="call-btn" href="${esc(sms(p,opt.caseText||'Helpme+: ติดต่อทีม '+t.name))}" title="ส่ง SMS">💬 SMS</a>`:'<span class="call-none">ยังไม่มีเบอร์ทีม</span>'}<button type="button" class="call-btn vid" data-tcall="${k}" title="วิดีโอคอลกับ ${esc(t.name)}">🎥 วิดีโอคอล</button>${typeof CHAT!=='undefined'?`<button type="button" class="call-btn" data-tchat="${esc(t.name)}" title="แชทกับ ${esc(t.name)}">💬 แชท</button>`:''}</span>`}
   function sheet(html){close();const bg=document.createElement('div');bg.className='tc-bg';bg.id='tc-bg';const d=document.createElement('div');d.className='tc-sheet';d.id='tc-sheet';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
     d.innerHTML=html;document.body.append(bg,d);bg.onclick=close;d.querySelector('.tc-x').onclick=close;setTimeout(()=>d.querySelector('a,button:not(.tc-x)')?.focus(),30)}
   function close(){document.getElementById('tc-bg')?.remove();document.getElementById('tc-sheet')?.remove()}
@@ -34,6 +34,7 @@ const TEAMCALL=(()=>{
     d.querySelector('[data-tc-copy]').onclick=async e=>{try{await navigator.clipboard.writeText(url);e.target.textContent='คัดลอกแล้ว ✓'}catch(err){d.querySelector('.tc-link').select()}};
     const sh=d.querySelector('[data-tc-share]');if(sh)sh.onclick=()=>navigator.share({title:'Helpme+ วิดีโอคอล',text:msg,url}).catch(()=>{})}
   document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-tcall]');if(!b)return;e.preventDefault();e.stopPropagation();const v=store.get(b.dataset.tcall);if(v)video(v.t,v.opt)},true);
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-tchat]');if(!b||typeof CHAT==='undefined')return;e.preventDefault();e.stopPropagation();close();CHAT.open(b.dataset.tchat)},true);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
   return {buttons,video,caseText,close}
 })();

@@ -34,6 +34,7 @@ function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=m
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
   try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
     api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
+    api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null;render()}).catch(()=>{});
     D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
@@ -141,21 +142,25 @@ function render(){
   drawMap(L);
   $('#sync').textContent=D.loaded?'อัปเดต '+new Date(D.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
   $('#range-note').textContent=from?`ตั้งแต่ ${new Date(from).toLocaleDateString('th-TH',{day:'numeric',month:'short'})} · ${nf(L.length)} เคส`:`${nf(L.length)} เคสทั้งหมด`;
-  const n=s=>L.filter(c=>c.status===s).length,done=L.filter(c=>c.status==='done'&&c.updatedAt>c.createdAt);
-  const avgH=done.length?done.reduce((s,c)=>s+(c.updatedAt-c.createdAt),0)/done.length/36e5:null;
-  const crit=act.filter(c=>sev(c)===3).length,ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),vc=act.filter(c=>vul(c).length).length;
-const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.reduce((s,c)=>s+(bagsOf(c)||0),0),bagNeed=act.filter(c=>bagsOf(c)==null).reduce((s,c)=>s+(hh(c)||1),0);
-    const k=[[nf(L.length),'เคสทั้งหมด',`ช่วยแล้ว ${L.length?Math.round(n('done')/L.length*100):0}%`],[nf(n('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(n('going')),'ทีมกำลังไป','','var(--going)'],[nf(n('done')),'ช่วยเหลือแล้ว',avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'} (ประมาณ)`,'var(--good)'],
-    [nf(ppl),'คนที่ยังรอ','จากเคสที่ยังไม่เสร็จ'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(L.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง'],[nf(bagSet),'ถุงยังชีพ (ที่ระบุแล้ว)','รวมทุกเคสในช่วงนี้'],[nf(bagNeed),'ถุงที่ควรเตรียมเพิ่ม','เคสยังไม่เสร็จที่ยังไม่ระบุ · ครัวเรือนละ 1']];
+  const n=s=>L.filter(c=>c.status===s).length;
+  /* การ์ดตัวเลข: เคสจาก Google Sheet ของ Help Me (ตามช่วงเวลาที่เลือก) ถ้าโหลดได้ ไม่ได้ใช้เคสในระบบ Helpme+ */
+  const HMC=!!D.hmc,KL=HMC?D.hmc.filter(c=>!from||c.createdAt>=from):L,ka=KL.filter(c=>c.status!=='done'),kn=s=>KL.filter(c=>c.status===s).length;
+  const doneAt=c=>Number(c.doneAt)||c.updatedAt,done=KL.filter(c=>c.status==='done'&&doneAt(c)>c.createdAt);
+  const avgH=done.length?done.reduce((s,c)=>s+(doneAt(c)-c.createdAt),0)/done.length/36e5:null;
+  const crit=ka.filter(c=>sev(c)===3).length,ppl=ka.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=ka.reduce((s,c)=>s+hh(c),0),vc=ka.filter(c=>vul(c).length||(c.needs||[]).includes('ผู้ป่วย / ผู้สูงอายุ')).length;
+const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.reduce((s,c)=>s+(bagsOf(c)||0),0),bagNeed=ka.filter(c=>bagsOf(c)==null).reduce((s,c)=>s+(hh(c)||1),0);
+    const k=[[nf(KL.length),'เคสทั้งหมด',`ช่วยแล้ว ${KL.length?Math.round(kn('done')/KL.length*100):0}%`],[nf(kn('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(kn('going')),'ทีมกำลังไป','','var(--going)'],[nf(kn('done')),'ช่วยเหลือแล้ว',avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'} (ประมาณ)`,'var(--good)'],
+    [nf(ppl),'คนที่ยังรอ','จากเคสที่ยังไม่เสร็จ'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(KL.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง'],[nf(bagSet),'ถุงยังชีพ (ที่ระบุแล้ว)','รวมทุกเคสในช่วงนี้'],[nf(bagNeed),'ถุงที่ควรเตรียมเพิ่ม','เคสยังไม่เสร็จที่ยังไม่ระบุ · ครัวเรือนละ 1']];
+  const fromHM=new Set(HMC?k:[]); // การ์ดที่คำนวณจากเคส Help Me (ติดป้าย)
   // พื้นที่ที่องค์กรอื่นช่วยแล้ว (จากชีต) + เคสที่ยังไม่เสร็จซึ่งอยู่ในพื้นที่นั้น (อาจซ้ำ)
   if(typeof COVERED!=='undefined'){const cr=COVERED.C.rows,orgs=new Set(cr.map(r=>r.org).filter(Boolean));
     const sets=cr.reduce((a,r)=>a+(/^[\d,]+(\s*ชุด)?$/.test(String(r.sets).trim())?parseInt(String(r.sets).replace(/,/g,''))||0:0),0);
-    const dup=cr.length?act.filter(c=>COVERED.match(c)).length:0;
+    const dup=cr.length?ka.filter(c=>COVERED.match(c)).length:0;
     k.push([cr.length?nf(cr.length):(COVERED.C.loading||!COVERED.C.loaded?'…':'0'),'พื้นที่ที่องค์กรอื่นช่วยแล้ว',cr.length?`${nf(orgs.size)} องค์กร${sets?' · '+nf(sets)+' ชุด':''}`:(COVERED.C.error||'กำลังโหลดจากชีต'),'#7b3fc4','../covered/'],
       [cr.length?nf(dup):'…','เคสรอช่วยในพื้นที่ที่มีคนช่วยแล้ว','ตรวจก่อนส่งทีม (อาจซ้ำ)','#7b3fc4','../covered/']);}
   if(D.leads){const nw=D.leads.filter(l=>l.status==='new');
     k.splice(1,0,[nf(nw.length),'เคสจากโซเชียลรอคัด',`วิกฤต ${nf(nw.filter(l=>+l.urgency===3).length)} · ติดธง ${nf(nw.filter(l=>(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))).length)}`,'var(--crit)','../../admin.html#leads'])}
-  $('#kpis').replaceChildren(...k.map(([v,t,s,col,href])=>{const d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
+  $('#kpis').replaceChildren(...k.map(item=>{const [v,t,s,col,href]=item,d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;const lab=el('span',null,t);if(fromHM.has(item))lab.append(' ',el('small','hm-tag','Help Me'));d.append(el('b',null,v),lab);if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
   /* trend: เคสใหม่ (และช่วยเสร็จ) จาก Google Sheet ของ Help Me ถ้าโหลดได้ ไม่ได้ใช้เคสในระบบ Helpme+ */
   const HM=D.hm&&Array.isArray(D.hm.created)?D.hm:null,inR=t=>t>=from;
@@ -203,6 +208,7 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
 /* ---------- ภาพรวมจาก Help Me (ตัวเลขชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
 function renderHelpme(){
   const h=D.hm;document.querySelectorAll('.hm-part').forEach(e=>e.hidden=!h);if(!h)return;
+  $('#hm-kpis').hidden=!!D.hmc; // การ์ดแถวบนใช้เคส Help Me แล้ว ไม่ต้องแสดงซ้ำ
   const dur=ms=>{if(!ms)return '–';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
   const I=n=>typeof ic==='function'?ic(n):'';
   $('#hm-upd').textContent=`Help Me ช่วยด้วย · ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · จาก Google Sheet ของ Help Me · อัปเดตทุก 1 นาที${h.source==='sheet'||h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;

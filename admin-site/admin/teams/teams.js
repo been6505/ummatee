@@ -1,5 +1,5 @@
 /* จัดทีม: รายชื่อทีม สถานะ พาหนะ เคสที่ถือ + มอบหมายเคสที่รออยู่ให้ทีม */
-const T={roster:[],live:[],cases:[],filter:'all',loaded:0};
+const T={roster:[],live:[],cases:[],filter:'all',loaded:0,hqPhone:''};
 const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
@@ -13,12 +13,22 @@ const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 async function loadAll(){
   $('#sync').textContent='กำลังโหลด…';
   try{const [r,c]=await Promise.all([apiGet({action:'roster'}),apiGet({action:'list'})]);
-    if(r&&r.ok){T.roster=r.roster||[];T.live=r.live||[]}
+    if(r&&r.ok){T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||''}
     if(c&&c.ok)T.cases=(c.cases||[]).map(x=>({...x,needs:Array.isArray(x.needs)?x.needs:String(x.needs||'').split(/\s*,\s*/).filter(Boolean)}));
     T.loaded=Date.now();render()}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},60000);
+/* ตำแหน่งสดทุก 15 วิ: อัปเดตแผนที่ + ป้ายสถานะบนการ์ด (ไม่วาดหน้าใหม่ทั้งหมด) */
+setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded)return;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}},15000);
+function liveUI(){if(typeof TRACK!=='undefined')TRACK.update(T.live,T.roster);
+  $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
+/* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกงานแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */
+function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
+  if(!lv)return `<span class="lv lv-none" data-live-of="${id}">${t.status==='out'?'<i data-ic="alert"></i> ไม่แชร์ตำแหน่ง':'ไม่แชร์ตำแหน่ง'}</span>`;
+  const m=(Date.now()-lv.updatedAt)/60000,k=m<5?'on':m<30?'idle':'old',lost=t.status==='out'&&m>=10;
+  return `<span class="lv lv-${lost?'lost':k}" data-live-of="${id}">● ${lost?'ขาดการติดต่อ ':''}${esc(ago(lv.updatedAt))}${lv.battery!=null?` · แบต ${lv.battery}%`:''}${lv.speed!=null&&lv.speed>=1?` · ${Math.round(lv.speed)} กม./ชม.`:''}</span>`}
+const sosOn=t=>t&&t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);
 
 function teamCases(name){const n=tname(name);return T.cases.filter(c=>tname(c.volunteer)===n)}
 function liveOf(name){return T.live.find(l=>tname(l.team)===tname(name))}
@@ -37,19 +47,24 @@ function render(){
   const R=T.roster,cnt=s=>R.filter(t=>t.status===s).length,people=R.reduce((s,t)=>s+(Number(t.members)||0),0);
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,''],['พร้อมออกงาน',cnt('ready'),'done'],['กำลังออกงาน',cnt('out'),'go'],['พัก',cnt('rest'),''],['อาสาทั้งหมด',people||'–',''],['เคสรอจัดทีม',queue.length,'red'],['เคสที่ทีมกำลังไป',going,'go']]
+  const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,''],['พร้อมออกงาน',cnt('ready'),'done'],['กำลังออกงาน',cnt('out'),'go'],['แชร์ตำแหน่ง',sharing,'go'],['อาสาทั้งหมด',people||'–',''],['เคสรอจัดทีม',queue.length,'red'],['SOS',sos.length,sos.length?'red':'']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
+  $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
+    <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
+  if(document.activeElement!==$('#hq-phone'))$('#hq-phone').value=tname(T.hqPhone);
+  liveUI();
   /* teams */
   const list=R.filter(t=>T.filter==='all'||t.status===T.filter).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
-    return `<article class="team st-${esc(t.status)}"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.members?t.members+' คน':'',t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุรายละเอียด'}</small></div>
+    return `<article class="team st-${esc(t.status)}${sosOn(t)?' sos':''}" data-team-id="${esc(t.id)}"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.members?t.members+' คน':'',t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุรายละเอียด'}</small></div>
       <select class="tst tst-${esc(t.status)}" data-tst="${esc(t.id)}" aria-label="สถานะทีม ${esc(t.name)}">${Object.entries(TST).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${lv?`<span class="live">● แชร์ตำแหน่ง ${esc(ago(lv.updatedAt))}</span>`:''}</div>
+      <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${liveTag(t)}${lv?`<button class="linkish" data-track="${esc(t.name)}"><i data-ic="pin"></i> ติดตาม</button>`:''}</div>
       ${typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(t,{caseText:g[0]?TEAMCALL.caseText(g[0]):''}):''}
       ${g.length?`<ul class="tcases">${g.map(c=>`<li><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน <small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}</small> <button class="linkish" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยแล้ว</button></li>`).join('')}</ul>`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}
-      <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></div></article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
+      <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><span><button class="btn ghost sm" data-tlink="${esc(t.id)}"><i data-ic="link"></i> ลิงก์ทีม</button> <button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></span></div></article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
   /* teams seen in cases but not in roster */
   const known=new Set(R.map(t=>tname(t.name))),seen=[...new Set(T.cases.map(c=>tname(c.volunteer)).filter(Boolean))].filter(n=>!known.has(n));
   if(seen.length)el.insertAdjacentHTML('beforeend',`<div class="seen"><small class="muted">ทีมที่เคยรับเคสแต่ยังไม่อยู่ในรายชื่อ:</small> ${seen.map(n=>`<button class="chip" data-quick="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>`);
@@ -77,10 +92,32 @@ document.addEventListener('click',e=>{
   const cp=e.target.closest('[data-callpick]');if(cp&&typeof TEAMCALL!=='undefined'){const c=T.cases.find(x=>String(x.id)===cp.dataset.callpick),sel=document.querySelector(`[data-pick="${CSS.escape(cp.dataset.callpick)}"]`),t=sel&&T.roster.find(x=>x.name===sel.value);
     if(t)callSheet(t,c);return}
   const d=e.target.closest('[data-done]');if(d){const c=T.cases.find(x=>String(x.id)===d.dataset.done);if(c)updateCase(c,'done');return}
+  const tr=e.target.closest('[data-track]');if(tr&&typeof TRACK!=='undefined'){TRACK.focus(tr.dataset.track);$('#trk-map').scrollIntoView({behavior:'smooth',block:'center'});return}
+  const lk=e.target.closest('[data-tlink]');if(lk){linkSheet(T.roster.find(x=>String(x.id)===lk.dataset.tlink));return}
+  const ack=e.target.closest('[data-sosack]');if(ack){const t=T.roster.find(x=>String(x.id)===ack.dataset.sosack);if(t){ack.disabled=true;apiPost({action:'sos_ack',id:t.id,team:t.name,by:staffName()}).then(r=>{toast(r.ok?`รับทราบ SOS ของ ${t.name} แล้ว`:'บันทึกไม่สำเร็จ',r.ok);loadAll()}).catch(()=>{})}return}
   const ed=e.target.closest('[data-edit]');if(ed){openForm(T.roster.find(x=>String(x.id)===ed.dataset.edit));return}
   const q=e.target.closest('[data-quick]');if(q){saveTeam({name:q.dataset.quick,status:'ready'},`เพิ่มทีม ${q.dataset.quick} แล้ว`);return}
 });
 $('#add-team').addEventListener('click',()=>openForm(null));
+$('#hqp').addEventListener('submit',async e=>{e.preventDefault();try{const r=await apiPost({action:'hq_phone',phone:$('#hq-phone').value});if(r.ok){T.hqPhone=r.hqPhone;toast('บันทึกเบอร์ศูนย์แล้ว',true)}}catch(err){}});
+
+/* ลิงก์เฉพาะทีม: ทีมเปิดบนมือถือได้ทันที ไม่ต้องใช้รหัสกลาง · เปลี่ยนลิงก์ได้ถ้าหลุด */
+const QR_SRI='sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU';
+const teamUrl=t=>location.origin+'/team/?id='+encodeURIComponent(t.token||'');
+let qrP=null;
+function loadQR(){if(window.QRCode)return Promise.resolve();return qrP||(qrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.integrity=QR_SRI;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>{qrP=null;rej()};document.head.append(s)}))}
+function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกงาน`;
+  const sms=`sms:${p}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}`;
+  const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="link"></i> ลิงก์ทีม ${esc(t.name)}</h2><p class="muted small">ลิงก์นี้ใช้แทนรหัส · ส่งให้ทีมนี้เท่านั้น</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
+    <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div>
+      <input class="tc-link" readonly value="${esc(url)}" aria-label="ลิงก์ทีม" onclick="this.select()">
+      <div class="tc-acts"><button class="btn primary" type="button" id="l-copy"><i data-ic="copy"></i> คัดลอก</button>${p.length>=9?`<a class="btn ghost" href="${esc(sms)}"><i data-ic="chat"></i> ส่ง SMS</a>`:''}<a class="btn ghost" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">เปิดดู ↗</a></div>
+      <p class="muted small">ลิงก์หลุดหรือคนออกจากทีม: สร้างลิงก์ใหม่ ลิงก์เดิมจะใช้ไม่ได้ทันที</p>
+      <button class="btn ghost" type="button" id="l-new"><i data-ic="refresh"></i> สร้างลิงก์ใหม่</button></div>`;
+  d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm;
+  loadQR().then(()=>{const q=$('#qr');if(q){q.innerHTML='';new QRCode(q,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}}).catch(()=>{const q=$('#qr');if(q)q.hidden=true});
+  $('#l-copy').onclick=async e=>{try{await navigator.clipboard.writeText(url);toast('คัดลอกลิงก์แล้ว',true)}catch(err){d.querySelector('.tc-link').select()}};
+  $('#l-new').onclick=async()=>{if(!confirm(`สร้างลิงก์ใหม่ให้ ${t.name}? ลิงก์เดิมจะใช้ไม่ได้`))return;try{const r=await apiPost({action:'team_link',id:t.id});if(r.ok){t.token=r.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งให้ทีมอีกครั้ง',true);linkSheet(t)}else toast('สร้างไม่สำเร็จ')}catch(err){}}}
 
 /* แผ่นติดต่อทีมจากคิวเคส: โทร / SMS พร้อมรายละเอียดเคส / วิดีโอคอล */
 function callSheet(t,c){const txt=TEAMCALL.caseText(c),p=tel(t.phone);
@@ -110,4 +147,4 @@ function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
 function closeForm(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeForm()});
 
-adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[];render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{});if(typeof COVERED!=='undefined')COVERED.load(API_URL,ADM.key).then(render,()=>{})});
+adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||'';if(typeof TRACK!=='undefined')TRACK.init($('#trk-map')).then(liveUI);render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{});if(typeof COVERED!=='undefined')COVERED.load(API_URL,ADM.key).then(render,()=>{})});

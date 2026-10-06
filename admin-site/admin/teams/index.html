@@ -11,9 +11,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../admin.css?v=6">
-<link rel="stylesheet" href="../pages.css?v=4">
+<link rel="stylesheet" href="../pages.css?v=12">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=13">
+<link rel="stylesheet" href="../helpme-skin.css?v=14">
 <script src="../icons.js?v=1"></script>
 </head>
 <body>
@@ -37,6 +37,12 @@
   </header>
   <main class="wrap" id="main">
     <section class="stats" id="stats" aria-label="สรุปทีม"></section>
+    <div id="sos-list"></div>
+    <section class="panel trk">
+      <div class="panel-h"><h2><i data-ic="live"></i> ติดตามทีม</h2><form class="hqp" id="hqp"><label for="hq-phone" class="muted small">เบอร์ศูนย์ที่ทีมโทรเข้า</label><input id="hq-phone" type="tel" inputmode="tel" maxlength="20" placeholder="เช่น 0812345678"><button class="btn ghost sm" type="submit">บันทึก</button></form></div>
+      <div id="trk-map" class="trk-map"></div>
+      <p class="muted small trk-foot"><span class="trk-lg"><i class="trk-dot on"></i>สด &lt;5 นาที <i class="trk-dot idle"></i>5–30 นาที <i class="trk-dot old"></i>นานกว่า <i class="trk-dot sos"></i>SOS</span><span id="trk-sel">กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง</span></p>
+    </section>
     <div class="cols">
       <section class="panel">
         <div class="panel-h"><h2>ทีมอาสา</h2><button class="btn primary sm" id="add-team">+ เพิ่มทีม</button></div>
@@ -58,10 +64,12 @@
 <script src="../common.js?v=1"></script>
 <script src="../verify.js?v=4"></script>
 <script src="../covered.js?v=9"></script>
-<script src="../teamcall.js?v=3"></script>
-<script src="./teams.js?v=4"></script>
+<script src="../teamcall.js?v=4"></script>
+<script src="../mapfs.js?v=1"></script>
+<script src="./track.js?v=1"></script>
+<script src="./teams.js?v=5"></script>
 <script src="../theme-toggle.js?v=2"></script>
-<script src="../chat.js?v=3"></script>
+<script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

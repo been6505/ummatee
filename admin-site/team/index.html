@@ -4,104 +4,314 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#F2F3F7">
-<title>แชทกับศูนย์ · Helpme+</title>
+<title>ทีม · Helpme+</title>
 <link rel="icon" href="../assets/hm-icon-192.png">
 <link rel="apple-touch-icon" href="../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* หน้าแชทสำหรับทีมอาสา (มือถือ) · สีและรูปทรงแบบ Help Me */
-:root{--primary:#2D45C8;--primary-2:#2338A8;--ink:#161B3D;--muted:#5B6386;--line:#E3E6EF;--bg:#F2F3F7;--tint:#E9ECFB;--ok:#2E9E57;--red:#E5383B;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;--safe-b:env(safe-area-inset-bottom,0px)}
+/* หน้ามือถือของทีมอาสา · เข้าด้วยลิงก์เฉพาะทีม (?id=) · สีและรูปทรงแบบ Help Me */
+:root{--primary:#2D45C8;--ink:#161B3D;--muted:#5B6386;--line:#E3E6EF;--bg:#F2F3F7;--tint:#E9ECFB;--ok:#2E9E57;--okt:#E3F4EA;--red:#E5383B;--redt:#FDE7E7;--amber:#C77A00;--ambert:#FFF3DC;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;--safe-b:env(safe-area-inset-bottom,0px);--nav:62px}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
 body{font:16px/1.5 var(--font);background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
-button,input,select{font:inherit}
-.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 0 var(--line);position:sticky;top:0;z-index:2}
-.top img{height:22px}.top .who{flex:1;min-width:0}.top .who b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .who small{color:var(--muted);font-size:12px}
-.ghost{border:0;background:var(--tint);color:var(--primary);border-radius:999px;padding:7px 12px;font-weight:600;font-size:13px;cursor:pointer}
+button,input,select,textarea{font:inherit;color:inherit}a{color:var(--primary)}
+[hidden]{display:none!important}
+.ic{width:1.15em;height:1.15em;vertical-align:-.2em}
+/* เข้าระบบ / หน้าจอแจ้ง */
 .card{background:#fff;border-radius:24px;box-shadow:0 8px 28px rgba(22,27,61,.1);padding:24px 20px;margin:auto;width:min(420px,calc(100% - 28px));display:grid;gap:14px}
 .card img{width:200px;margin:0 auto}.card h1{margin:0;font-size:20px;text-align:center}.card p{margin:0;color:var(--muted);font-size:14px;text-align:center}
+.card .big{font-size:52px;text-align:center;line-height:1;color:var(--primary)}
 label{display:grid;gap:6px;font-weight:600;font-size:14px}
-input,select{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;font-size:16px;width:100%}
+input,select,textarea{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;font-size:16px;width:100%}
 .primary{border:0;background:var(--primary);color:#fff;border-radius:999px;padding:14px;font-weight:700;font-size:16px;cursor:pointer;box-shadow:0 6px 16px rgba(45,69,200,.3)}
+.linkbtn{border:0;background:none;color:var(--muted);font-size:14px;text-decoration:underline;cursor:pointer}
 .err{color:var(--red);font-size:14px;text-align:center;min-height:1.2em}
-#msgs{flex:1;overflow:auto;padding:14px 12px 8px;display:flex;flex-direction:column;gap:6px}
-.m{max-width:82%;padding:9px 13px;border-radius:18px;background:#fff;box-shadow:0 1px 2px rgba(22,27,61,.06);word-wrap:break-word}
+.pw-wrap{position:relative;display:block}.pw-wrap input{padding-right:52px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;width:40px;height:40px;cursor:pointer;border-radius:50%}
+/* หัว + แถบตำแหน่ง */
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 0 var(--line);position:sticky;top:0;z-index:5}
+.top .who{flex:1;min-width:0}.top .who b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .who small{color:var(--muted);font-size:12px}
+.st{border:0;border-radius:999px;padding:7px 30px 7px 12px;font-weight:700;font-size:14px;width:auto;appearance:none;-webkit-appearance:none;background:var(--okt) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23161B3D' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center/14px no-repeat;color:var(--ok)}
+.st.out{background-color:var(--ambert);color:var(--amber)}.st.rest{background-color:#ECEEF3;color:var(--muted)}
+.locbar{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13.5px;font-weight:600;background:var(--okt);color:var(--ok)}
+.locbar.off{background:var(--redt);color:var(--red)}.locbar.wait{background:var(--ambert);color:var(--amber)}
+.locbar span{flex:1;min-width:0}.locbar button{border:0;border-radius:999px;padding:5px 12px;font-weight:700;font-size:13px;background:#fff;color:inherit;cursor:pointer}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}.locbar:not(.off) .dot{animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.sosbar{background:var(--red);color:#fff;padding:10px 14px;font-weight:700;display:flex;gap:10px;align-items:center}.sosbar span{flex:1}.sosbar button{border:0;border-radius:999px;background:#fff;color:var(--red);font-weight:700;padding:6px 12px;cursor:pointer}
+/* เนื้อหา */
+#app{flex:1;min-height:0;display:flex;flex-direction:column}
+main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(--safe-b) + 84px)}
+.sec{margin:6px 2px 8px;font-size:13px;font-weight:700;color:var(--muted)}
+.case{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(22,27,61,.06);border-left:5px solid var(--primary)}
+.case.u3{border-left-color:var(--red)}.case.u2{border-left-color:var(--amber)}.case.done{opacity:.6;border-left-color:var(--ok)}
+.case h3{margin:0 0 4px;font-size:16px}.case .meta{font-size:14px;color:var(--muted)}.case .note{font-size:14px;background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap}
+.tag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-right:4px;background:var(--tint);color:var(--primary)}.tag.u3{background:var(--redt);color:var(--red)}.tag.u2{background:var(--ambert);color:var(--amber)}.tag.ok{background:var(--okt);color:var(--ok)}
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:14px;padding:12px 10px;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;background:var(--tint);color:var(--primary);min-height:48px}
+.btn.green{background:var(--ok);color:#fff}.btn.blue{background:var(--primary);color:#fff}.btn.red{background:var(--red);color:#fff}.btn.full{grid-column:1/-1}
+.empty{color:var(--muted);text-align:center;padding:26px 10px;font-size:14px;background:#fff;border-radius:18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer}.chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:#fff}
+.box{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;display:grid;gap:10px}
+/* แชท */
+#v-chat{display:flex;flex-direction:column;padding:0}
+#msgs{flex:1;overflow:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:6px}
+.m{max-width:84%;padding:9px 13px;border-radius:18px;background:#fff;box-shadow:0 1px 2px rgba(22,27,61,.06);overflow-wrap:anywhere}
 .m p{margin:0;white-space:pre-wrap}.m small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .m.hq{align-self:flex-start;border-bottom-left-radius:6px}.m.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:6px}.m.me small{color:rgba(255,255,255,.75)}
-.m.me a{color:#fff}.m .who{font-weight:700;color:var(--primary);font-size:12px;margin:0 0 2px}
+.m.me a{color:#fff}.m .who{font-weight:700;color:var(--primary);font-size:12px}.m.alert{background:var(--red);color:#fff}.m.alert small{color:#fff}
+.m .join{display:inline-flex;margin-top:6px;border-radius:999px;padding:6px 12px;background:var(--ok);color:#fff;font-weight:700;text-decoration:none;font-size:14px}
 .day{align-self:center;font-size:12px;color:var(--muted);background:rgba(255,255,255,.7);border-radius:999px;padding:2px 10px;margin:6px 0}
-.empty{color:var(--muted);text-align:center;margin:auto;font-size:14px;padding:20px}
-.quick{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;scrollbar-width:none}.quick::-webkit-scrollbar{display:none}
-.quick button{flex:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer}
-form.send{display:flex;gap:8px;padding:8px 12px calc(10px + var(--safe-b));background:rgba(255,255,255,.92);box-shadow:0 -1px 0 var(--line)}
+.quick{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;scrollbar-width:none}.quick::-webkit-scrollbar{display:none}.quick button{flex:none}
+form.send{display:flex;gap:8px;padding:8px 12px 10px;background:rgba(255,255,255,.95);box-shadow:0 -1px 0 var(--line)}
 form.send input{border-radius:999px;padding:11px 16px}
-form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:18px;cursor:pointer}
-.loc{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--tint);font-size:18px;cursor:pointer}
-[hidden]{display:none!important}
-.pw-wrap{position:relative;display:block}.pw-wrap input{padding-right:52px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:18px;width:40px;height:40px;cursor:pointer;border-radius:50%}
+.round{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--primary);color:#fff;cursor:pointer;display:grid;place-items:center}.round.soft{background:var(--tint);color:var(--primary)}
+/* โทร */
+.callgrid{display:grid;gap:10px}.callgrid .btn{min-height:64px;font-size:17px;border-radius:18px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+/* แถบล่าง + SOS */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -1px 0 var(--line);padding-bottom:var(--safe-b)}
+nav.tabs button{border:0;background:none;height:var(--nav);display:grid;place-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
+nav.tabs button .ic{width:24px;height:24px}nav.tabs button[aria-selected="true"]{color:var(--primary)}
+.badge{position:absolute;top:6px;left:calc(50% + 6px);background:var(--red);color:#fff;border-radius:999px;font-size:11px;min-width:18px;padding:0 5px;line-height:18px}
+.sos{position:fixed;right:14px;bottom:calc(var(--nav) + var(--safe-b) + 14px);z-index:7;width:68px;height:68px;border-radius:50%;border:0;background:var(--red);color:#fff;font-weight:800;font-size:17px;letter-spacing:.5px;box-shadow:0 8px 22px rgba(229,56,59,.45);cursor:pointer}
+body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;height:50px;font-size:13px}
+#v-chat{padding-bottom:calc(var(--nav) + var(--safe-b));overflow:hidden}body.chatting #msgs{padding-right:68px}
+/* แผ่นล่าง / สายเข้า */
+.bg{position:fixed;inset:0;background:rgba(22,27,61,.45);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + var(--safe-b));display:grid;gap:12px;max-height:88vh;overflow:auto}
+.sheet h2{margin:0;font-size:19px}
+.ring{position:fixed;inset:0;z-index:30;background:linear-gradient(160deg,#2D45C8,#161B3D);color:#fff;display:grid;place-items:center;text-align:center;padding:24px}
+.ring .av{width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.15);display:grid;place-items:center;margin:0 auto 14px;animation:pulse 1.4s infinite;color:#fff}
+.ring .av .ic{width:44px;height:44px}.ring h2{margin:0 0 4px;font-size:24px}.ring p{margin:0 0 28px;opacity:.8}
+.ring .row{display:flex;gap:40px;justify-content:center}.ring .row button{width:72px;height:72px;border-radius:50%;border:0;color:#fff;cursor:pointer;display:grid;place-items:center}.ring .row .ic{width:30px;height:30px}
+.ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
 </style>
 <script src="../admin/icons.js?v=1"></script>
 </head>
 <body>
-<!-- เข้าระบบ -->
+<!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
 <section class="card" id="login" hidden>
   <img src="../assets/helpme-logo.png" alt="Helpme+" width="200" height="29">
-  <h1>แชทกับศูนย์ประสานงาน</h1>
-  <p>สำหรับทีมอาสา · ใส่รหัสทีม แล้วเลือกชื่อทีมของคุณ</p>
+  <h1>หน้าทีม · Helpme+</h1>
+  <p>เปิดจากลิงก์ที่ศูนย์ส่งให้ หรือใส่รหัสทีม</p>
   <form id="lf" style="display:grid;gap:12px">
-    <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
+    <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label>ชื่อทีม<input id="team" list="teams" required maxlength="60" placeholder="เช่น ทีมเรือ 1"><datalist id="teams"></datalist></label>
-    <label>ชื่อคุณ (ไม่บังคับ)<input id="name" maxlength="60" placeholder="เช่น หัวหน้าทีม"></label>
-    <button class="primary" type="submit" id="go">เข้าแชท</button>
+    <label>ชื่อคุณ (ไม่บังคับ)<input id="name" maxlength="60"></label>
+    <button class="primary" type="submit" id="go">เข้าใช้งาน</button>
     <p class="err" id="err" role="alert"></p>
   </form>
 </section>
-<!-- แชท -->
-<header class="top" id="top" hidden><img src="../assets/helpme-logo.png" alt="Helpme+" width="152" height="22"><div class="who"><b id="tname"></b><small id="st">แชทกับศูนย์</small></div><button class="ghost" id="out" type="button">ออก</button></header>
-<main id="msgs" hidden aria-live="polite"></main>
-<div class="quick" id="quick" hidden><button type="button">รับทราบ</button><button type="button">กำลังเดินทาง</button><button type="button">ถึงจุดแล้ว</button><button type="button">ช่วยเสร็จแล้ว</button><button type="button">ต้องการกำลังเสริม</button><button type="button">ของไม่พอ</button></div>
-<form class="send" id="send" hidden><button class="loc" type="button" id="loc" aria-label="ส่งตำแหน่งของฉัน" title="ส่งตำแหน่งของฉัน"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="พิมพ์ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
+<!-- ลิงก์ใช้ไม่ได้ -->
+<section class="card" id="bad" hidden><div class="big"><i data-ic="link"></i></div><h1>ลิงก์ใช้ไม่ได้</h1><p>ลิงก์ถูกเปลี่ยนหรือทีมถูกปิด · ขอลิงก์ใหม่จากศูนย์</p></section>
+<!-- ขอเปิดตำแหน่ง (ต้องเปิดก่อนเริ่มงาน) -->
+<section class="card" id="gate" hidden>
+  <div class="big"><i data-ic="gps"></i></div>
+  <h1 id="g-team">เปิดตำแหน่ง</h1>
+  <p>ศูนย์ต้องเห็นตำแหน่งทีมเพื่อส่งงานและช่วยเหลือเมื่อเกิดเหตุ</p>
+  <button class="primary" id="g-on" type="button">เปิดตำแหน่ง</button>
+  <p class="err" id="g-err" role="alert"></p>
+  <button class="linkbtn" id="g-skip" type="button" hidden>เข้าใช้ต่อโดยไม่แชร์ตำแหน่ง</button>
+</section>
+
+<div id="app" hidden>
+  <header class="top"><img src="../assets/hm-icon-192.png" alt="" width="30" height="30" style="border-radius:8px"><div class="who"><b id="tname"></b><small id="tsub"></small></div>
+    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกงาน</option><option value="rest">พัก</option></select></header>
+  <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
+  <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
+
+  <main id="v-work"><div id="cases"></div>
+    <p class="sec">ขอของจากศูนย์</p>
+    <div class="box"><div class="chips" id="supplies"></div><input id="sup-note" maxlength="200" placeholder="จำนวน / หมายเหตุ เช่น ถุงยังชีพ 20 ถุง"><button class="btn blue" id="sup-send" type="button"><i data-ic="send"></i> ส่งคำขอ</button></div>
+    <p class="sec">ตั้งค่า</p>
+    <div class="box"><label style="display:flex;align-items:center;gap:10px;font-weight:600"><input type="checkbox" id="wake" style="width:22px;height:22px"> จอไม่ดับ (ส่งตำแหน่งต่อเนื่อง)</label>
+      <p class="hint">ปิดหน้านี้หรือจอดับ ตำแหน่งจะหยุดส่ง · เปิดหน้านี้ค้างไว้ระหว่างออกงาน</p>
+      <button class="btn" id="install" type="button" hidden><i data-ic="download"></i> เพิ่มไปหน้าจอหลัก</button></div>
+  </main>
+  <main id="v-chat" hidden><div id="msgs" aria-live="polite"></div>
+    <div class="quick" id="quick"><button class="chip" type="button">รับทราบ</button><button class="chip" type="button">กำลังเดินทาง</button><button class="chip" type="button">ถึงจุดแล้ว</button><button class="chip" type="button">ต้องการกำลังเสริม</button><button class="chip" type="button">ของไม่พอ</button><button class="chip" type="button">เส้นทางไปไม่ได้</button></div>
+    <form class="send" id="send"><button class="round soft" type="button" id="loc-send" aria-label="ส่งตำแหน่ง"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button class="round" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
+  </main>
+  <main id="v-call" hidden>
+    <div class="callgrid">
+      <a class="btn green" id="c-tel" href="#"><i data-ic="phone"></i> โทรเข้าเบอร์ศูนย์</a>
+      <button class="btn blue" type="button" data-call="voice"><i data-ic="wifi"></i> โทรด้วยเสียง (ผ่านเน็ต)</button>
+      <button class="btn" type="button" data-call="video"><i data-ic="video"></i> วิดีโอคอล</button>
+    </div>
+    <p class="hint" style="margin-top:10px">โทรผ่านเน็ต: ศูนย์จะเห็นสายเข้าบนหน้าจอ · ไม่ต้องลงแอป</p>
+    <p class="hint" id="c-none" hidden>ศูนย์ยังไม่ได้ตั้งเบอร์โทร · ใช้โทรผ่านเน็ตแทน</p>
+  </main>
+  <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="work" aria-selected="true"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
+</div>
+<div id="layer"></div>
+
 <script>
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const st={get:k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},set:(k,v)=>{try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}};
-const S={key:st.get('uh_vol_key'),team:st.get('uh_chat_team')||new URLSearchParams(location.search).get('t')||'',name:st.get('uh_chat_name'),msgs:[],timer:null,lastN:0};
-const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,key:S.key,t:Date.now()}),{cache:'no-store'})).json();
-const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,key:S.key})})).json();
+const qs=new URLSearchParams(location.search);
+const S={tk:(qs.get('id')||'').replace(/[^a-z0-9]/g,''),key:'',team:'',name:'',me:null,msgs:[],lastN:0,seenN:+st.get('uh_tm_seen')||0,view:'work',sup:new Set(),handledCall:+st.get('uh_tm_call')||0};
+if(S.tk){st.set('uh_tm_tk',S.tk)}else{S.tk=st.get('uh_tm_tk');S.key=st.get('uh_vol_key');S.team=st.get('uh_chat_team')||qs.get('t')||''}
+S.name=st.get('uh_chat_name');
+const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
+const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'})).json();
+const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})})).json();
 const hhmm=t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),day=t=>new Date(t).toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
-function show(chat){$('#login').hidden=chat;['#top','#msgs','#quick','#send'].forEach(s=>$(s).hidden=!chat);if(chat){$('#tname').textContent=S.team;poll(true);clearInterval(S.timer);S.timer=setInterval(()=>poll(),document.hidden?20000:5000)}}
-async function login(e){e&&e.preventDefault();const k=$('#code').value.trim()||S.key,t=$('#team').value.trim(),n=$('#name').value.trim();if(!k||!t)return;
-  $('#go').disabled=true;$('#err').textContent='กำลังตรวจรหัส…';S.key=k;
-  try{const r=await api({action:'chat',team:t});if(r&&r.ok){S.team=t;S.name=n;st.set('uh_vol_key',k);st.set('uh_chat_team',t);st.set('uh_chat_name',n);$('#err').textContent='';show(true)}
-    else{$('#err').textContent=r&&r.error==='not_volunteer'?'รหัสทีมไม่ถูกต้อง':'เข้าไม่ได้ ลองใหม่';S.key=''}}catch(err){$('#err').textContent='เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ต'}finally{$('#go').disabled=false}}
-function draw(){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
+const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
+const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'},LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
+const sev=c=>Math.min(3,Math.max(1,+c.urgency||1)),hasPin=c=>c.lat!==''&&c.lat!=null&&isFinite(+c.lat);
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.append(d);setTimeout(()=>d.remove(),3200)}
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function tone(f=880,ms=180,v=.08){try{const a=S.ac||(S.ac=new (window.AudioContext||window.webkitAudioContext)()),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+ms/1000)}catch(e){}}
+function screen(id){['#login','#bad','#gate','#app'].forEach(s=>$(s).hidden=s!==id)}
+
+/* ---------- เข้าใช้งาน ---------- */
+async function boot(){
+  if(!S.tk&&!(S.key&&S.team)){screen('#login');$('#team').value=S.team;$('#name').value=S.name;return}
+  try{const r=await api({action:'team_me'});
+    if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
+    S.me=r;S.team=r.team.name;document.title=S.team+' · Helpme+';
+    if(!S.name&&r.team.leader)S.name=r.team.leader;
+    if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
+  }catch(e){screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
+function start(){screen('#app');if(TR.want)track(true);render();pollChat(true);refresh();
+  clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
+$('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
+  st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
+$('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/api?'+new URLSearchParams({action:'roster',key:$('#code').value.trim()}))).json();if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
+async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;render()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){}}
+
+/* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
+const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
+const dist=(a,b)=>{const R=6371e3,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+try{navigator.getBattery&&navigator.getBattery().then(b=>{const u=()=>TR.batt=Math.round(b.level*100);u();b.onlevelchange=u})}catch(e){}
+function track(on){
+  if(!on){if(TR.watch!=null)navigator.geolocation.clearWatch(TR.watch);TR.watch=null;TR.want=false;st.set('uh_tm_loc','');post({action:'team_ping',stop:true}).catch(()=>{});locUI();return}
+  if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
+  if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
+  TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,at:Date.now()};
+      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>30000||(dist(TR.sentPos,TR.pos)>25&&now-TR.sentAt>8000))ping();locUI()},
+    e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
+    {enableHighAccuracy:true,maximumAge:10000,timeout:30000})}
+async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
+  const cur=(S.me&&S.me.cases||[]).find(c=>c.status==='going');
+  try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TR.batt,speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});
+    TR.fail=r.ok?0:TR.fail+1}catch(e){TR.fail++}locUI()}
+setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>55000)ping();locUI()},15000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
+function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
+  if(TR.watch==null){b.className='locbar off';t.textContent=TR.err||'ตำแหน่งปิดอยู่ · ศูนย์มองไม่เห็นทีม';btn.textContent='เปิด';btn.hidden=false;return}
+  btn.hidden=true;
+  if(TR.err||!TR.pos){b.className='locbar wait';t.textContent=TR.err||'กำลังหาตำแหน่ง…';return}
+  if(TR.fail>1){b.className='locbar wait';t.textContent='ส่งตำแหน่งไม่ได้ · ไม่มีเน็ต · จะลองใหม่';return}
+  const s=Math.round((Date.now()-TR.sentAt)/1000);b.className='locbar';
+  t.textContent=`ศูนย์เห็นตำแหน่ง · ส่ง ${s<60?s+' วิ':Math.round(s/60)+' นาที'}ก่อน · ±${Math.round(TR.pos.acc||0)} ม.${TR.batt!=null?' · แบต '+TR.batt+'%':''}`}
+$('#loc-btn').onclick=()=>track(true);
+$('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เครื่องนี้หาตำแหน่งไม่ได้';$('#g-skip').hidden=false;return}$('#g-err').textContent='กำลังขออนุญาต…';
+  navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};
+$('#g-skip').onclick=()=>{TR.skip=true;TR.want=false;start()};
+/* จอไม่ดับ */
+async function wake(on){try{if(on&&'wakeLock' in navigator){TR.wl=await navigator.wakeLock.request('screen')}else if(TR.wl){await TR.wl.release();TR.wl=null}}catch(e){}}
+$('#wake').checked=st.get('uh_tm_wake')==='1';$('#wake').onchange=e=>{st.set('uh_tm_wake',e.target.checked?'1':'');wake(e.target.checked)};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wake').checked)wake(true);if(S.me){pollChat();refresh();if(TR.pos)ping()}}});
+
+/* ---------- หน้างาน ---------- */
+function render(){const r=S.me;if(!r)return;const t=r.team;
+  $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
+  const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
+  const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
+  const going=r.cases.filter(c=>c.status==='going'),done=r.cases.filter(c=>c.status==='done');
+  const nb=$('#b-work');nb.hidden=!going.length;nb.textContent=going.length;
+  $('#cases').innerHTML=(going.length?`<p class="sec">งานที่ได้รับ ${going.length} เคส</p>`+going.map(card).join(''):'<p class="empty">ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</p>')
+    +(done.length?`<p class="sec">เสร็จวันนี้ ${done.length}</p>`+done.map(card).join(''):'');
+  $('#supplies').innerHTML=(r.supplies||[]).map(n=>`<button type="button" class="chip" aria-pressed="${S.sup.has(n)}">${esc(n)}</button>`).join('');
+  const p=tel(r.hqPhone);$('#c-tel').hidden=p.length<3;$('#c-tel').href='tel:'+p;$('#c-none').hidden=p.length>=3;
+}
+function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' ');
+  const done=c.status==='done';
+  return `<article class="case u${s}${done?' done':''}"><div><span class="tag u${s}">${URG[s]}</span>${done?'<span class="tag ok">เสร็จแล้ว</span>':''}<small class="meta">#${esc(c.id)}</small></div>
+    <h3>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h3>
+    <div class="meta">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''}${(c.vulnerable||[]).length?' · กลุ่มเปราะบาง':''}${c.name?' · '+esc(c.name):''}</div>
+    <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
+    ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
+    ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
+      <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button><button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเสร็จ</button></div>`}</article>`}
+$('#status').onchange=async e=>{const v=e.target.value;try{const r=await post({action:'team_status',status:v});if(!r.ok)throw 0;S.me.team.status=v;render();toast('อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
+document.addEventListener('click',async e=>{
+  const a=e.target.closest('[data-arrive]');if(a){a.disabled=true;const p=TR.pos;const r=await post({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''}).catch(()=>({}));toast(r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;pollChat();return}
+  const d=e.target.closest('[data-done]');if(d){doneSheet(d.dataset.done);return}
+  const ch=e.target.closest('#supplies .chip');if(ch){const n=ch.textContent;S.sup.has(n)?S.sup.delete(n):S.sup.add(n);ch.setAttribute('aria-pressed',String(S.sup.has(n)));return}
+  const tb=e.target.closest('nav.tabs [data-v]');if(tb){go(tb.dataset.v);return}
+  const cl=e.target.closest('[data-call]');if(cl){callHq(cl.dataset.call);return}
+  const q=e.target.closest('#quick .chip');if(q){send(q.textContent);return}
+});
+function doneSheet(id){sheet(`<h2>ช่วยเคส #${esc(id)} เสร็จ</h2><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> ยืนยันเสร็จ</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+  $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await post({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()}).catch(()=>({}));closeSheet();toast(r.ok?'ปิดเคสแล้ว':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
+$('#sup-send').onclick=async()=>{const items=[...S.sup],note=$('#sup-note').value.trim();if(!items.length&&!note){toast('เลือกของก่อน');return}
+  await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast('ส่งคำขอแล้ว')};
+
+/* ---------- แท็บ ---------- */
+function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);
+  document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
+
+/* ---------- แชท ---------- */
+function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
-    const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง${mine?'ของฉัน':''} · เปิดแผนที่</a></p>`:'';
-    return `${sep}<div class="m ${mine?'me':'hq'}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ · ทักศูนย์ได้เลย หรือกดข้อความด่วนด้านล่าง</p>';
-  if(bottom||S.first){box.scrollTop=box.scrollHeight;S.first=false}}
-async function poll(first){if(!S.key||!S.team)return;try{const r=await api({action:'chat',team:S.team});if(!r.ok){if(r.error==='not_volunteer'){logout('รหัสทีมเปลี่ยนแล้ว กรุณาเข้าใหม่')}return}
-  const last=(r.messages.slice(-1)[0]||{}).n||0,newHq=r.messages.filter(m=>m.sender==='hq'&&m.n>S.lastN).length;
-  if(!first&&newHq){try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}ding();if(document.hidden)document.title='('+newHq+') ข้อความใหม่ · Helpme+'}
-  if(first)S.first=true;S.lastN=last;S.msgs=r.messages;draw();$('#st').textContent='แชทกับศูนย์ · อัปเดต '+hhmm(Date.now());
-  if(!document.hidden&&r.messages.some(m=>m.sender==='hq'&&!m.readTeam))post({action:'chat_read',team:S.team,side:'team'})}catch(e){$('#st').textContent='ออฟไลน์ · จะลองใหม่'}}
-function ding(){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.08;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.18)}catch(e){}}
-async function send(text,extra={}){if(!text&&extra.lat==null)return;S.msgs.push({n:0,sender:'team',name:S.name,text,at:Date.now(),...extra});draw();$('#msgs').scrollTop=1e9;
-  try{const r=await post({action:'chat_send',team:S.team,from:'team',name:S.name,text,...extra});if(!r.ok)throw 0}catch(e){$('#st').textContent='ส่งไม่สำเร็จ ลองใหม่'}poll()}
-function logout(msg){clearInterval(S.timer);st.set('uh_chat_team','');S.team='';show(false);$('#err').textContent=msg||''}
-$('#lf').addEventListener('submit',login);
+    const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
+    const call=m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
+    return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
+  if(bottom||force)box.scrollTop=box.scrollHeight}
+async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;
+    const fresh=msgs.filter(m=>m.sender==='hq'&&m.n>S.lastN);
+    if(!first&&fresh.length){buzz([150,80,150]);tone()}
+    const call=msgs.filter(m=>m.kind==='call'&&m.sender==='hq'&&m.n>S.handledCall&&Date.now()-m.at<90000).pop();if(call)ring(call);
+    const changed=last!==S.lastN||msgs.some((m,i)=>S.msgs[i]&&m.readHq!==S.msgs[i].readHq);S.lastN=last;S.msgs=msgs;
+    const unread=msgs.filter(m=>m.sender==='hq'&&!m.readTeam).length,b=$('#b-chat');b.hidden=!unread||S.view==='chat';b.textContent=unread;
+    document.title=(unread&&document.hidden?'('+unread+') ':'')+(S.team||'ทีม')+' · Helpme+';
+    if(S.view==='chat'){if(changed||first)drawChat(first);if(unread&&!document.hidden)markRead()}}catch(e){}}
+function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam))post({action:'chat_read'}).catch(()=>{})}
+async function send(text,extra={}){if(!text&&extra.lat==null)return;S.msgs.push({n:0,sender:'team',name:S.name,text,at:Date.now(),...extra});if(S.view==='chat')drawChat(true);
+  try{const r=await post({action:'chat_send',text,...extra});if(!r.ok)throw 0}catch(e){toast('ส่งไม่ได้ ลองใหม่')}pollChat()}
 $('#send').addEventListener('submit',e=>{e.preventDefault();const i=$('#in'),t=i.value.trim();if(!t)return;i.value='';send(t)});
-$('#quick').addEventListener('click',e=>{const b=e.target.closest('button');if(b)send(b.textContent)});
-$('#loc').addEventListener('click',()=>{if(!navigator.geolocation){alert('เครื่องนี้หาตำแหน่งไม่ได้');return}$('#st').textContent='กำลังหาตำแหน่ง…';
-  navigator.geolocation.getCurrentPosition(p=>send('',{lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6)}),()=>{$('#st').textContent='เปิดตำแหน่งไม่ได้ · อนุญาตตำแหน่งในการตั้งค่า'},{enableHighAccuracy:true,timeout:15000})});
-$('#out').addEventListener('click',()=>logout('ออกจากแชทแล้ว'));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){document.title='แชทกับศูนย์ · Helpme+';poll()}if(S.team){clearInterval(S.timer);S.timer=setInterval(()=>poll(),document.hidden?20000:5000)}});
-$('#team').value=S.team;$('#name').value=S.name;
-if(S.key&&S.team)login();else show(false);
-/* รายชื่อทีมให้เลือก (ต้องมีรหัสถูกก่อน) */
-$('#code').addEventListener('change',async()=>{S.key=$('#code').value.trim();try{const r=await api({action:'roster'});if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
+$('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',{lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)});return}
+  navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>send('',{lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6)}),()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
+
+/* ---------- โทร: เบอร์ศูนย์ · โทรผ่านเน็ต (ห้องเสียง/วิดีโอ ศูนย์เห็นสายเข้า) ---------- */
+async function callHq(mode){const w=window.open('about:blank','_blank');if(w)w.opener=null;
+  try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;if(w)w.location=r.link;else location.href=r.link;toast('กำลังเรียกศูนย์…')}catch(e){w&&w.close();toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
+function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),video=m.text==='วิดีโอคอล';
+  lay.innerHTML=`<div class="ring" role="alertdialog" aria-label="สายเข้าจากศูนย์"><div><div class="av"><i data-ic="${video?'video':'phone'}"></i></div><h2>ศูนย์โทรมา</h2><p>${esc(m.name||'ศูนย์ประสานงาน')} · ${video?'วิดีโอคอล':'โทรด้วยเสียง'}</p>
+    <div class="row"><div><button class="no" type="button" id="r-no" aria-label="ไม่รับ"><i data-ic="close"></i></button><small>ไม่รับ</small></div><div><a class="yes" id="r-yes" href="${esc(m.link)}" target="_blank" rel="noopener" style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--ok);color:#fff" aria-label="รับสาย"><i data-ic="phone"></i></a><small>รับสาย</small></div></div></div></div>`;
+  
+  const stop=()=>{clearInterval(S.rt);lay.innerHTML='';S.handledCall=m.n;st.set('uh_tm_call',String(m.n))};
+  S.rt=setInterval(()=>{buzz([400,200,400]);tone(660,300,.12);setTimeout(()=>tone(880,300,.12),350);if(Date.now()-m.at>90000){stop();send('ไม่ได้รับสาย · โทรกลับได้')}},1800);
+  $('#r-yes').onclick=()=>stop();$('#r-no').onclick=()=>{stop();send('ไม่สะดวกรับสายตอนนี้')}}
+
+/* ---------- SOS ---------- */
+const SOSWHY=['บาดเจ็บ','เรือ/รถเสีย','ติดน้ำ ออกไม่ได้','ถูกคุกคาม','หลงทาง'];
+$('#sos').onclick=()=>{sheet(`<h2 style="color:var(--red)">ส่ง SOS ถึงศูนย์</h2><p class="hint">ส่งตำแหน่งปัจจุบัน + แจ้งเตือนทุกหน้าจอของศูนย์</p><div class="chips" id="sos-why">${SOSWHY.map(w=>`<button type="button" class="chip" aria-pressed="false">${w}</button>`).join('')}</div>
+  <button class="btn red" id="sos-go" type="button" style="min-height:60px;font-size:18px">ส่ง SOS ทันที</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+  $('#sos-why').onclick=e=>{const c=e.target.closest('.chip');if(c)c.setAttribute('aria-pressed',String(c.getAttribute('aria-pressed')!=='true'))};
+  $('#sos-go').onclick=async()=>{$('#sos-go').disabled=true;const why=$$('#sos-why [aria-pressed="true"]').map(c=>c.textContent).join(', ');
+    const fire=async p=>{const r=await post({action:'team_sos',text:why,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):'',accuracy:p?Math.round(p.acc||0):'',battery:TR.batt}).catch(()=>({}));
+      closeSheet();buzz(300);toast(r.ok?'ส่ง SOS แล้ว':'ส่งไม่ได้ · โทรศูนย์ทันที');if(!r.ok)go('call');refresh();pollChat()};
+    if(TR.pos&&Date.now()-TR.pos.at<60000)fire(TR.pos);
+    else if(navigator.geolocation)navigator.geolocation.getCurrentPosition(q=>fire({lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy}),()=>fire(null),{enableHighAccuracy:true,timeout:8000});else fire(null)}};
+$('#sos-cancel').onclick=async()=>{const r=await post({action:'team_sos',cancel:true}).catch(()=>({}));toast(r.ok?'แจ้งศูนย์ว่าปลอดภัยแล้ว':'ส่งไม่ได้ ลองใหม่');refresh();pollChat()};
+
+/* ---------- แผ่นล่าง ---------- */
+function sheet(html){$('#layer').innerHTML=`<div class="bg" data-x></div><div class="sheet" role="dialog" aria-modal="true">${html}</div>`;$('#layer').onclick=e=>{if(e.target.closest('[data-x]'))closeSheet()}}
+function closeSheet(){$('#layer').innerHTML='';$('#layer').onclick=null}
+/* เพิ่มไปหน้าจอหลัก (Android) */
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();S.inst=e;$('#install').hidden=false});
+$('#install').onclick=()=>{if(S.inst){S.inst.prompt();S.inst=null;$('#install').hidden=true}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pw-toggle]');if(!b)return;const i=b.parentElement.querySelector('input');i.type=i.type==='password'?'text':'password'});
+if($('#wake').checked)wake(true);
+boot();
 </script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

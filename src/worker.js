@@ -41,10 +41,13 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS leads_status ON leads(status, postedAt)`,
   // แชทระหว่างศูนย์ (hq) กับทีม · อ่านแล้ว/ยังไม่อ่าน แยกฝั่ง
   `CREATE TABLE IF NOT EXISTS chat (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, sender TEXT, name TEXT, text TEXT, caseId TEXT, lat REAL, lng REAL, at INTEGER, readHq INTEGER DEFAULT 0, readTeam INTEGER DEFAULT 0)`,
-  `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`
+  `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`,
+  // เส้นทางของทีม (จุดที่ทีมผ่าน) ใช้ดูย้อนหลังในหน้าติดตามทีม · เก็บ 7 วัน
+  `CREATE TABLE IF NOT EXISTS team_track (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, lat REAL, lng REAL, accuracy INTEGER, battery INTEGER, speed REAL, at INTEGER)`,
+  `CREATE INDEX IF NOT EXISTS team_track_team ON team_track(team, n)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
-const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
+const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
 for (const [t, k] of Object.entries(BACKUP_TABLES)) {
   SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_ins AFTER INSERT ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
   if (t !== 'stock_log') SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_upd AFTER UPDATE ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
@@ -55,7 +58,11 @@ async function init(db) {
     await db.batch(SCHEMA.map(s => db.prepare(s)));
     for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
     try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {}
-    try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {} // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
+    try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
+    // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
+    for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
+      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+    await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
       const now = Date.now();
@@ -160,7 +167,8 @@ async function updateCase(db, b) {
 }
 async function readTeams(db) {
   const { results } = await db.prepare('SELECT * FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS).all();
-  return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt }));
+  return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
+    battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading }));
 }
 async function pingTeam(db, b) {
   const team = clean(b.team, MAX.volunteer);
@@ -168,9 +176,23 @@ async function pingTeam(db, b) {
   if (b.stop) { await db.prepare('DELETE FROM teams_live WHERE team=?').bind(team).run(); return { ok: true, stopped: true }; }
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (lat == null || lng == null) return { ok: false, error: 'bad_location' };
-  await db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt) VALUES (?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,caseId=excluded.caseId,updatedAt=excluded.updatedAt')
-    .bind(team, lat, lng, clampInt(b.accuracy, 0, 100000, null), clean(b.caseId, 30), Date.now()).run();
+  const now = Date.now(), acc = clampInt(b.accuracy, 0, 100000, null), batt = clampInt(b.battery, 0, 100, null), speed = num(b.speed, 0, 200), heading = num(b.heading, 0, 360);
+  await db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,caseId=excluded.caseId,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading')
+    .bind(team, lat, lng, acc, clean(b.caseId, 30), now, batt, speed, heading).run();
+  // จุดเส้นทาง: เก็บเมื่อขยับเกิน 20 ม. หรือห่างจุดก่อน 2 นาที
+  const last = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? ORDER BY n DESC LIMIT 1').bind(team).first();
+  if (!last || km(last.lat, last.lng, lat, lng) > 0.02 || now - last.at > 120e3) {
+    await db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(team, lat, lng, acc, batt, speed, now).run();
+    if (Math.random() < 0.02) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 86400e3).run();
+  }
   return { ok: true };
+}
+async function teamTrack(db, p) {
+  const team = clean(p.team, MAX.volunteer);
+  if (!team) return { ok: false, error: 'missing_team' };
+  const { results } = await db.prepare('SELECT lat,lng,accuracy,battery,speed,at FROM team_track WHERE team=? AND at>? ORDER BY n LIMIT 3000')
+    .bind(team, Date.now() - clampInt(p.hours, 1, 168, 6) * 3600e3).all();
+  return { ok: true, team, points: results };
 }
 const areaCache = new Map();
 async function areaName(lat, lng) {
@@ -225,8 +247,82 @@ async function saveRoster(db, b) {
   return { ok: true, id };
 }
 async function listRoster(db) {
-  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt FROM roster WHERE active=1 ORDER BY name').all();
-  return { ok: true, roster: results.map(r => ({ ...r, members: r.members == null ? '' : r.members })), live: await readTeams(db) };
+  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck FROM roster WHERE active=1 ORDER BY name').all();
+  // ทีมที่ยังไม่มีลิงก์เฉพาะทีม: สร้างให้
+  const miss = results.filter(r => !r.token);
+  if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
+  return { ok: true, roster: results.map(r => ({ ...r, members: r.members == null ? '' : r.members })), live: await readTeams(db), hqPhone: await getMeta(db, 'hq_phone') };
+}
+const teamToken = () => { const a = new Uint8Array(12); crypto.getRandomValues(a); return [...a].map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join(''); };
+async function renewTeamLink(db, b) {
+  const id = clean(b.id, 20), token = teamToken();
+  const r = await db.prepare('UPDATE roster SET token=? WHERE id=? AND active=1').bind(token, id).run();
+  return r.meta.changes ? { ok: true, id, token } : { ok: false, error: 'not_found' };
+}
+async function setHqPhone(db, b) { const p = clean(b.phone, 20).replace(/[^\d+\-\s]/g, ''); await setMeta(db, 'hq_phone', p); return { ok: true, hqPhone: p }; }
+async function ackSos(db, b) { await db.prepare('UPDATE roster SET sosAck=? WHERE id=?').bind(Date.now(), clean(b.id, 20)).run(); await chatSend(db, { team: b.team, from: 'hq', name: b.by, text: 'ศูนย์รับทราบ SOS แล้ว กำลังประสานความช่วยเหลือ' }); return { ok: true }; }
+
+/* ---------- ระบบสนับสนุนทีม: หน้ามือถือของทีมเข้าด้วยลิงก์เฉพาะทีม (?id=token) ไม่ต้องใช้รหัสกลาง
+   ทีมทำได้เฉพาะเรื่องของทีมตัวเอง: ตำแหน่ง สถานะ เคสที่ได้รับ แชท SOS โทร */
+const MEET = 'https://meet.ffmuc.net/';
+async function teamFrom(env, db, p) {
+  const tk = String(p.tk || '').replace(/[^a-z0-9]/g, '').slice(0, 40);
+  if (tk.length >= 10) { const row = await db.prepare('SELECT * FROM roster WHERE token=? AND active=1').bind(tk).first(); return row ? { name: row.name, row } : null; }
+  const name = clean(p.team, MAX.volunteer);
+  if (name && isVol(env, p.key)) return { name, row: await db.prepare('SELECT * FROM roster WHERE name=? AND active=1').bind(name).first() };
+  return null;
+}
+async function teamMe(db, t) {
+  const r = t.row || {}, now = Date.now();
+  const { results } = await db.prepare("SELECT * FROM cases WHERE volunteer IN (?,?) AND (status='going' OR (status='done' AND updatedAt>?)) ORDER BY status DESC, urgency DESC, createdAt")
+    .bind(t.name, "'" + t.name, now - 86400e3).all();
+  const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt FROM teams_live WHERE team=?').bind(t.name).first();
+  const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
+  return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
+      status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, inRoster: !!r.id },
+    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => outCase(c, true)), live: live || null, supplies: stock.map(s => s.name), now };
+}
+async function callStart(db, team, from, b) {
+  if (!team) return { ok: false, error: 'missing_team' };
+  const mode = b.mode === 'video' ? 'video' : 'voice';
+  const link = MEET + 'Helpmeplus-' + teamToken() + (mode === 'voice' ? '#config.startWithVideoMuted=true&config.startAudioOnly=true' : '');
+  await chatSend(db, { team, from, name: b.name, text: mode === 'voice' ? 'โทรด้วยเสียง' : 'วิดีโอคอล', kind: 'call', link, caseId: b.caseId });
+  return { ok: true, link, mode };
+}
+const TEAM_POST = {
+  team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
+  team_status: async (db, t, b) => {
+    if (!t.row) return { ok: false, error: 'not_in_roster' };
+    if (!ROSTER_STATUS.includes(b.status)) return { ok: false, error: 'bad_status' };
+    await db.prepare('UPDATE roster SET status=?, updatedAt=? WHERE id=?').bind(b.status, Date.now(), t.row.id).run();
+    return { ok: true, status: b.status };
+  },
+  team_case: async (db, t, b) => {
+    const c = await db.prepare('SELECT id,volunteer,status FROM cases WHERE id=?').bind(clean(b.id, 30)).first();
+    if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== t.name) return { ok: false, error: 'not_your_case' };
+    if (b.step === 'arrived') { await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ถึงจุดเคส #${c.id} แล้ว`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
+    if (b.step !== 'done' || c.status !== 'going') return { ok: false, error: 'bad_step' };
+    const r = await updateCase(db, { id: c.id, status: 'done', volunteer: t.name, bags: b.bags });
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเคส #${c.id} เสร็จแล้ว${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
+    return r;
+  },
+  team_sos: async (db, t, b) => {
+    const now = Date.now();
+    if (t.row) await db.prepare('UPDATE roster SET sosAt=?, sosAck=NULL WHERE id=?').bind(b.cancel ? null : now, t.row.id).run();
+    if (!b.cancel && num(b.lat, -90, 90) != null) await pingTeam(db, { ...b, team: t.name });
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, kind: b.cancel ? '' : 'sos', text: b.cancel ? 'ยกเลิก SOS แล้ว · ปลอดภัย' : 'SOS ขอความช่วยเหลือด่วน' + (b.text ? ' · ' + clean(b.text, 300) : ''), lat: b.cancel ? null : b.lat, lng: b.cancel ? null : b.lng });
+    return { ok: true, sosAt: b.cancel ? null : now };
+  },
+  call_start: (db, t, b) => callStart(db, t.name, 'team', b),
+  chat_send: (db, t, b) => chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }),
+  chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
+};
+/* SOS ที่ยังไม่มีใครรับทราบ + สายที่ทีมโทรเข้ามาภายใน 2 นาที (แสดงทุกหน้าหลังบ้าน) */
+async function alertsList(db) {
+  const now = Date.now();
+  const { results: sos } = await db.prepare('SELECT r.id,r.name,r.phone,r.sosAt,r.sosAck,l.lat,l.lng FROM roster r LEFT JOIN teams_live l ON l.team=r.name WHERE r.active=1 AND r.sosAt>? AND (r.sosAck IS NULL OR r.sosAck<r.sosAt)').bind(now - 12 * 3600e3).all();
+  const { results: calls } = await db.prepare("SELECT n,team,name,text,link,at FROM chat WHERE kind='call' AND sender='team' AND at>? ORDER BY n DESC LIMIT 5").bind(now - 120e3).all();
+  return { sos, calls };
 }
 /* โซน: วงกลม (จุดศูนย์กลาง + รัศมี) ใช้จัดกลุ่มเคสและมอบหมายทีมรับผิดชอบ (roster.zone = ชื่อโซน) */
 async function listZones(db) {
@@ -790,22 +886,23 @@ async function chatSend(db, b) {
   const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (!team || (!text && lat == null)) return { ok: false, error: 'missing' };
-  const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam) VALUES (?,?,?,?,?,?,?,?,?,?)')
-    .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' ? 1 : 0, from === 'team' ? 1 : 0).run();
+  const kind = ['call', 'sos'].includes(b.kind) ? b.kind : '', link = kind === 'call' && String(b.link || '').startsWith(MEET) ? String(b.link).slice(0, 300) : '';
+  const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' ? 1 : 0, from === 'team' ? 1 : 0, kind, link).run();
   await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
   return { ok: true, n: r.meta.last_row_id };
 }
 async function chatList(db, p) {
   const team = clean(p.team, MAX.volunteer), since = Number(p.since) || 0;
   if (!team) return { ok: false, error: 'missing_team' };
-  const { results } = await db.prepare('SELECT n,team,sender,name,text,caseId,lat,lng,at,readHq,readTeam FROM chat WHERE team=? AND n>? ORDER BY n DESC LIMIT 200').bind(team, since).all();
+  const { results } = await db.prepare('SELECT n,team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link FROM chat WHERE team=? AND n>? ORDER BY n DESC LIMIT 200').bind(team, since).all();
   return { ok: true, messages: results.reverse(), rev: await getMeta(db, 'chat_rev') || '0' };
 }
 async function chatThreads(db) {
   const { results } = await db.prepare(`SELECT team, MAX(n) last, SUM(CASE WHEN sender='team' AND readHq=0 THEN 1 ELSE 0 END) unread, MAX(at) at FROM chat GROUP BY team ORDER BY last DESC LIMIT 200`).all();
   const out = [];
-  for (const t of results) { const m = await db.prepare('SELECT sender,name,text,lat,at FROM chat WHERE n=?').bind(t.last).first(); out.push({ team: t.team, unread: t.unread || 0, at: t.at, last: m }); }
-  return { ok: true, threads: out, rev: await getMeta(db, 'chat_rev') || '0' };
+  for (const t of results) { const m = await db.prepare('SELECT sender,name,text,lat,at,kind FROM chat WHERE n=?').bind(t.last).first(); out.push({ team: t.team, unread: t.unread || 0, at: t.at, last: m }); }
+  return { ok: true, threads: out, rev: await getMeta(db, 'chat_rev') || '0', alerts: await alertsList(db) };
 }
 async function chatRead(db, b) {
   const team = clean(b.team, MAX.volunteer); if (!team) return { ok: false, error: 'missing_team' };
@@ -897,7 +994,10 @@ async function api(request, env) {
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
-      case 'chat': return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' });
+      case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
+        return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
+      case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
+      case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat_threads': return json(vol ? await chatThreads(db) : { ok: false, error: 'not_volunteer' });
       case 'chat_rev': return json(vol ? { ok: true, rev: await getMeta(db, 'chat_rev') || '0' } : { ok: false, error: 'not_volunteer' });
       default: return json({ ok: true, service: 'umplus-cloudflare', time: new Date().toISOString() });
@@ -909,7 +1009,14 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
-      lead_add: addLeads, chat_send: chatSend, chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings };
+      lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
+      team_link: renewTeamLink, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+    // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
+      const t = await teamFrom(env, db, b);
+      if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
+      return json(await TEAM_POST[b.action](db, t, b));
+    }
     if (b.action === 'lead_pull') return json(isVol(env, b.key) ? await pullAll(db, b, env) : { ok: false, error: 'not_volunteer' });
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {

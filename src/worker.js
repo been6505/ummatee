@@ -601,9 +601,12 @@ async function pullHelpme(db, env) {
 /* จุดที่องค์กรลงพื้นที่ (outreach) ของ Help Me — ข้อมูลสาธารณะ (ชื่อองค์กร วันที่ พิกัด ลิงก์ข่าว)
    Apps Script ช้า (บางครั้ง 30 วิ) และบางทีตอบเป็นหน้า HTML: แคช 5 นาทีที่ edge และเก็บชุดล่าสุดที่ดีไว้ใน meta ใช้แทนเมื่อดึงไม่ได้ */
 async function helpmeOutreach(db, env) {
+  // ดึงไม่สำเร็จล่าสุดไม่ถึง 10 นาที: ไม่รอ Apps Script ซ้ำ ส่งชุดล่าสุดที่ดีไปเลย (หน้าเว็บจะดึงตรงจาก Help Me เองถ้าไม่มี)
+  const failAt = Number(await getMeta(db, 'helpme_outreach_fail_at')) || 0;
+  if (Date.now() - failAt < 10 * 60e3) { const last = await getMeta(db, 'helpme_outreach_last'); return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] }; }
   try {
     return await cached('helpme-outreach-v1', 300, async () => {
-      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 8000);
       try {
         const r = await fetch((env.HELPME_API || HELPME_API) + '?action=outreach&t=' + Math.floor(Date.now() / 300000), { headers: UA, signal: ctl.signal, redirect: 'follow' });
         const j = await r.json();
@@ -616,9 +619,30 @@ async function helpmeOutreach(db, env) {
       } finally { clearTimeout(tm); }
     });
   } catch (e) {
+    await setMeta(db, 'helpme_outreach_fail_at', Date.now());
     const last = await getMeta(db, 'helpme_outreach_last');
     return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] };
   }
+}
+/* กล้อง CCTV จาก POPNIX Flood (ผ่าน helpme-th.pages.dev/api/cctv ของมูลนิธิ) ~1,400 ตัว: กล้องจราจร กทม. · สำนักการระบายน้ำ · iTIC · นนทบุรี
+   ภาพนิ่งล่าสุดของแต่ละตัวอยู่ที่ flood.pop.in.th · รวมกับกล้อง iTIC ที่มีภาพสด (HLS) จาก Longdo · แคช 2 นาที */
+async function popnixCams() {
+  return cached('popnix-cctv-v1', 120, async () => {
+    const r = await fetch('https://helpme-th.pages.dev/api/cctv', { headers: UA });
+    const j = await r.json();
+    if (!j || !j.ok || !Array.isArray(j.cams)) throw new Error('popnix');
+    const base = /^https:\/\/[a-z0-9.-]+$/.test(j.base || '') ? j.base : 'https://flood.pop.in.th';
+    const cams = j.cams.map(c => { const f = (j.feeds || [])[c[0]] || {}; const path = /^\/[\w/-]*$/.test(f.path || '') ? f.path : '/cctv/';
+      return { id: 'p' + c[0] + '-' + c[1], title: clean(c[2], 120), lat: Number(c[3]), lng: Number(c[4]), img: base + path + encodeURIComponent(c[1]) + '.jpg?t=' + (Number(c[5]) || 0),
+        hls: '', org: clean(f.org, 60) || 'POPNIX', at: Number(c[5]) || 0, src: 'POPNIX Flood' }; }).filter(c => isFinite(c.lat) && isFinite(c.lng));
+    return { ok: true, time: Date.now(), cams };
+  });
+}
+async function allCams() {
+  const [p, l] = await Promise.allSettled([popnixCams(), cctvData()]);
+  const cams = [...(l.status === 'fulfilled' ? l.value.cams.filter(c => c.hls).map(c => ({ ...c, src: 'iTIC' })) : []), ...(p.status === 'fulfilled' ? p.value.cams : [])];
+  if (!cams.length) throw new Error('no_cams');
+  return { ok: true, time: Date.now(), cams, sources: { popnix: p.status === 'fulfilled', itic: l.status === 'fulfilled' } };
 }
 async function pullAll(db, b, env) {
   const [traffy, helpme] = await Promise.all([pullLeads(db).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) })), pullHelpme(db, env).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) }))]);
@@ -685,7 +709,7 @@ async function api(request, env) {
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
-      case 'cctv': try { return json(await cctvData()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
+      case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));

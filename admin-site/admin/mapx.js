@@ -32,7 +32,7 @@ const MX=(()=>{
     if(name==='sat')S.base=L.layerGroup([t(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
     else if(name==='dark')S.base=L.layerGroup([t(ESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri',{maxZoom:16,maxNativeZoom:16}),t(ESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
     else S.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
-    S.base.addTo(m);S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
+    S.base.addTo(m);{const tok=S.baseTok=(S.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==S.baseTok)return;m.removeLayer(S.base);S.base=l;l.addTo(m)})} /* OpenFreeMap (เวกเตอร์ ป้ายไทย) ทับเมื่อโหลดเสร็จ */S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
     map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
     map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC');
@@ -65,7 +65,7 @@ const MX=(()=>{
     if(f){const k=f.dataset.fab;if(k==='layers')menuOpen();else if(k==='locate')locate(f);else if(k==='full')fullscreen();return}
     const bs=e.target.closest('[data-base]');if(bs){setBase(bs.dataset.base);return}
     const m=$('#layer-menu');if(m&&!m.hidden&&!e.target.closest('#layer-menu'))menuOpen(false)});
-  document.addEventListener('change',e=>{const t=e.target;if(!t.dataset||!t.dataset.lyr||!t.closest('#layer-menu'))return;const k=t.dataset.lyr;S.on[k]=t.checked;saveOn();applyVis();if(S.on[k])draw()});
+  document.addEventListener('change',e=>{const t=e.target;if(!t.dataset||!t.dataset.lyr||!t.closest('#layer-menu'))return;const k=t.dataset.lyr;S.on[k]=t.checked;saveOn();applyVis();if(S.on[k]||k==='cams')draw()});
   function group(k){return k==='cases'?A.layer:k==='roads'?A.flood:S.L[k]}
   function applyVis(){LAYERS.forEach(([k])=>{const g=group(k);if(!g)return;if(S.on[k]){if(!S.map.hasLayer(g))g.addTo(S.map)}else if(S.map.hasLayer(g))S.map.removeLayer(g)});legend()}
 
@@ -80,10 +80,9 @@ const MX=(()=>{
       F.stations.forEach(x=>{const [col,lab]=TW[x.situation]||['#78909c','ไม่ทราบ'];
         L.marker([x.lat,x.lng],{icon:L.divIcon({className:'wl-ic',html:`<i style="background:${col}"></i>`,iconSize:[18,18]})})
           .bindTooltip(`🌊 <b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
-    if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;S.L.cams.clearLayers();
-      // ภาพสดเล่นในป๊อปอัป (camlive.js) · ปิดป๊อปอัป = หยุดสตรีม
-      F.cams.forEach(c=>CAMLIVE.bind(L.marker([c.lat,c.lng],{icon:L.divIcon({className:'cam-ic',html:'📷',iconSize:[24,24]})})
-        .bindPopup(()=>CAMLIVE.html(c),{maxWidth:320,minWidth:280})).addTo(S.L.cams))}
+    // กล้อง ~1,400 ตัว (POPNIX + iTIC): วาดบน canvas แสดงเมื่อซูมระดับ 12 ขึ้นไป · ป๊อปอัปเล่นภาพสด/ภาพนิ่งล่าสุด (camlive.js)
+    if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;if(S.camLayer)S.camLayer.remove();S.camLayer=CAMLIVE.layer(S.map,F.cams)}
+    if(!S.on.cams&&S.camLayer){S.camLayer.remove();S.camLayer=null;S.drawn.cams=-1}
     drawZones();legend()}
   function drawZones(){if(!S.map)return;S.L.zones.clearLayers();
     // วงโซนไม่รับคลิก (ไม่บังหมุดเคส) ใช้ป้ายชื่อตรงกลางโซนแทน

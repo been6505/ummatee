@@ -43,7 +43,11 @@ const MAPL=(()=>{
   /* ---------- ทีมกู้ภัยและเครือข่ายช่วยเหลือ ---------- */
   /* outreach ของ Help Me ผ่าน /api (แคชที่ edge) · โหลดช้า/พังก็ยังวาดจุดจากชีต UM+ ไปก่อน แล้วเติมทีหลัง */
   async function outreach(){if(S.outreach&&Date.now()-S.outAt<5*60e3)return S.outreach;
-    try{const r=await fetch('/api?action=outreach',{cache:'no-store'}).then(r=>r.json());if(r&&Array.isArray(r.points)){S.outreach=r.points;S.outAt=Date.now()}}catch(e){}
+    try{const r=await fetch('/api?action=outreach',{cache:'no-store'}).then(r=>r.json());if(r&&Array.isArray(r.points)&&r.points.length){S.outreach=r.points;S.outAt=Date.now()}}catch(e){}
+    // เซิร์ฟเวอร์ดึงจาก Help Me ไม่ได้ (Apps Script ตอบ Cloudflare ช้า): ดึงตรงจากเบราว์เซอร์
+    if(!S.outreach){try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),40000);
+      const r=await fetch(HELPME_API+'?action=outreach&t='+Math.floor(Date.now()/300000),{signal:ctl.signal}).then(r=>r.json());clearTimeout(tm);
+      if(r&&Array.isArray(r.points)){S.outreach=r.points.filter(p=>p.lat&&p.lng);S.outAt=Date.now()}}catch(e){}}
     return S.outreach||[]}
   async function loadNet(){if(S.netRows&&Date.now()-S.netAt<5*60e3)return S.netRows;
     const pts=S.outreach||[];if(!S.outreach&&!S.outLoading){S.outLoading=outreach().then(()=>{S.outLoading=null;S.netRows=null;drawNet()})}
@@ -63,12 +67,13 @@ const MAPL=(()=>{
     const box=document.getElementById('net-chips');if(box)box.innerHTML=chips||'<span class="lchip">ยังไม่มีจุด</span>'}
 
   /* ---------- กล้อง CCTV ---------- */
-  async function drawCams(){if(S.camL){S.camL.remove();S.camL=null}if(!on('mt-cctv'))return;
+  async function drawCams(){if(S.camL){S.camL.remove();S.camL=null}if(!on('mt-cctv')){S.map.attributionControl.removeAttribution(CAM_ATTR);return}
     if(!S.cams){try{const r=await fetch('/api?action=cctv').then(r=>r.json());S.cams=r&&r.ok?r.cams:[]}catch(e){S.cams=[]}}
     if(!on('mt-cctv'))return;
-    S.camL=L.layerGroup(S.cams.map(c=>L.marker([c.lat,c.lng],{icon:L.divIcon({className:'cam-pin',html:'<span>📷</span>',iconSize:[24,22],iconAnchor:[12,11]}),zIndexOffset:-300,keyboard:false})
-      .bindPopup(()=>CAMLIVE.html(c),{maxWidth:320,minWidth:280})).map(CAMLIVE.bind)).addTo(S.map);
-    setSub('mt-cctv',`ภาพสดจากกล้องทั่วกรุงเทพฯ · ${S.cams.length.toLocaleString('th-TH')} ตัว`)}
+    S.map.attributionControl.addAttribution(CAM_ATTR);
+    const n=S.cams.length.toLocaleString('th-TH'),live=S.cams.filter(c=>c.hls).length;
+    S.camL=CAMLIVE.layer(S.map,S.cams,show=>setSub('mt-cctv',show?`${n} ตัว · กล้องสีแดง = ภาพสด (${live}) · ที่เหลือภาพนิ่งล่าสุด`:`${n} ตัว · ซูมเข้าถึงจะแสดงกล้อง`))}
+  const CAM_ATTR='กล้อง CCTV © <a href="https://flood.pop.in.th/" target="_blank" rel="noopener">POPNIX Flood</a> · iTIC';
 
   function setSub(id,t){const e=document.querySelector(`[data-sub="${id}"]`);if(e)e.textContent=t}
   function sync(){save();drawRain();drawNet();drawCams()}

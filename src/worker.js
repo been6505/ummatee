@@ -598,6 +598,28 @@ async function pullHelpme(db, env) {
   }
   return out;
 }
+/* จุดที่องค์กรลงพื้นที่ (outreach) ของ Help Me — ข้อมูลสาธารณะ (ชื่อองค์กร วันที่ พิกัด ลิงก์ข่าว)
+   Apps Script ช้า (บางครั้ง 30 วิ) และบางทีตอบเป็นหน้า HTML: แคช 5 นาทีที่ edge และเก็บชุดล่าสุดที่ดีไว้ใน meta ใช้แทนเมื่อดึงไม่ได้ */
+async function helpmeOutreach(db, env) {
+  try {
+    return await cached('helpme-outreach-v1', 300, async () => {
+      const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+      try {
+        const r = await fetch((env.HELPME_API || HELPME_API) + '?action=outreach&t=' + Math.floor(Date.now() / 300000), { headers: UA, signal: ctl.signal, redirect: 'follow' });
+        const j = await r.json();
+        if (!j || !Array.isArray(j.points)) throw new Error('bad');
+        const points = j.points.filter(p => p && p.lat && p.lng).map(p => ({ org: clean(p.org, 80), date: clean(p.date, 30), lat: num(p.lat, -90, 90), lng: num(p.lng, -180, 180),
+          detail: clean(p.detail, 300), link: /^https?:\/\//.test(p.link || '') ? clean(p.link, 400) : '' })).filter(p => p.lat != null && p.lng != null);
+        const out = { ok: true, time: Date.now(), points };
+        await setMeta(db, 'helpme_outreach_last', JSON.stringify(out));
+        return out;
+      } finally { clearTimeout(tm); }
+    });
+  } catch (e) {
+    const last = await getMeta(db, 'helpme_outreach_last');
+    return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] };
+  }
+}
 async function pullAll(db, b, env) {
   const [traffy, helpme] = await Promise.all([pullLeads(db).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) })), pullHelpme(db, env).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) }))]);
   const n = k => (traffy[k] || 0) + (helpme[k] || 0);
@@ -662,6 +684,7 @@ async function api(request, env) {
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
+      case 'outreach': return json(await helpmeOutreach(db, env));
       case 'cctv': try { return json(await cctvData()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที

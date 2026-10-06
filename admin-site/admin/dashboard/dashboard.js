@@ -90,7 +90,7 @@ async function drawMap(L0){
   if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);
     M.map.zoomControl.setPosition('bottomright');M.map.attributionControl.setPrefix(false);M.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
     L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(M.map);let b='road';try{b=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(DBASES[b]?b:'road');
-    M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable())}
+    M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable());if(typeof MAPL!=='undefined')MAPL.attach(M.map)}
   const showDone=$('#mt-done').checked,list=L0.filter(c=>(showDone||c.status!=='done'));
   M.cases.clearLayers();const pts=[];let nopin=0;
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
@@ -103,10 +103,8 @@ async function drawMap(L0){
   if(F&&M.floodAt!==F.loaded){M.floodAt=F.loaded;M.flood.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return; // แบบ Floodboard: เฉพาะถนนที่มีน้ำ
     r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${escT(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(M.flood))})}
   if($('#mt-flood').checked)M.flood.addTo(M.map);else M.flood.remove();
-  if(typeof COVERED!=='undefined'){if(!M.cov)M.cov=L.layerGroup();if(M.covAt!==COVERED.C.loaded){M.covAt=COVERED.C.loaded;M.cov.clearLayers();
-    COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>{L.circle([r.lat,r.lng],{radius:r.approx?900:600,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.12,dashArray:r.approx?'4 4':null}).addTo(M.cov);
-      L.circleMarker([r.lat,r.lng],{radius:6,color:'#fff',weight:2,fillColor:'#7b3fc4',fillOpacity:1}).bindPopup(`<b>🤝 ${escT(r.org)}</b><br>${escT(r.area)}<br>วันที่ ${escT(r.date)}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${escT(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov)})}
-    if($('#mt-cov').checked)M.cov.addTo(M.map);else M.cov.remove()}
+  // พื้นที่ที่องค์กรอื่นรับแล้ว + จุดลงพื้นที่ของเครือข่าย (Help Me) วาดใน maplayers.js เป็นป้ายสีตามองค์กร
+  if(typeof COVERED!=='undefined'&&typeof MAPL!=='undefined'&&M.covAt!==COVERED.C.loaded){M.covAt=COVERED.C.loaded;MAPL.refreshNet()}
   /* เคสจากโซเชียลที่รอคัด (หน้า เคสจากโซเชียล) + ทีมที่แชร์ตำแหน่งอยู่ */
   if(!M.leads){M.leads=L.layerGroup();M.live=L.layerGroup()}
   M.leads.clearLayers();M.live.clearLayers();

@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./dashboard.css?v=98">
 <link rel="stylesheet" href="../theme.css?v=1">
-<link rel="stylesheet" href="../helpme-skin.css?v=1">
+<link rel="stylesheet" href="../helpme-skin.css?v=3">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -43,20 +43,23 @@
     <p class="status" id="status" role="status" hidden></p>
     <article class="card mapcard"><div class="map-h"><div><h2>แผนที่เคส</h2><p class="sub" id="map-sub">จุดเคสในช่วงที่เลือก · เส้นสี = ถนนน้ำท่วมจาก Floodboard</p></div></div>
       <div class="dmap-wrap"><div id="dmap" class="dmap" role="region" aria-label="แผนที่เคส"></div>
-        <div class="mx-legend" id="dleg" aria-label="คำอธิบายสีบนแผนที่"><span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span class="lg-done"><i class="lp done"></i>ช่วยแล้ว</span><span class="lg-sep"></span><span class="lg-x lg-flood"><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span><span class="lg-x lg-leads" hidden><i class="lead-lg"></i>เคสจากโซเชียลรอคัด</span><span class="lg-x lg-live" hidden><i style="background:#2E9E57"></i>ทีมแชร์ตำแหน่ง</span><span class="lg-x lg-cov"><i style="background:#7b3fc4;border-radius:3px"></i>องค์กรอื่นรับแล้ว</span></div>
+        <div class="mx-legend" id="dleg" aria-label="คำอธิบายสีบนแผนที่"><span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span class="lg-done"><i class="lp done"></i>ช่วยแล้ว</span><span class="lg-sep"></span><span class="lg-x lg-flood"><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span><span class="lg-x lg-leads" hidden><i class="lead-lg"></i>เคสจากโซเชียลรอคัด</span><span class="lg-x lg-live" hidden><i style="background:#2E9E57"></i>ทีมแชร์ตำแหน่ง</span><span class="lg-x lg-cov"><i style="background:#7C3AED;border-radius:3px"></i>เครือข่ายลงพื้นที่</span></div>
         <div class="mx-fabs">
           <button type="button" class="fab" id="fs-lay" aria-label="แบบแผนที่และชั้นข้อมูล" title="แบบแผนที่และชั้นข้อมูล" aria-haspopup="dialog" aria-expanded="false" aria-controls="dlayer"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
           <button type="button" class="fab" id="fs-loc" aria-label="ตำแหน่งของฉัน" title="ตำแหน่งของฉัน"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></button>
           <button type="button" class="fab" id="fs-btn" aria-label="ขยายแผนที่เต็มจอ" title="ขยายแผนที่เต็มจอ"></button>
         </div>
-        <div class="layer-menu" id="dlayer" role="dialog" aria-label="แบบแผนที่และชั้นข้อมูล" hidden>
-          <div class="lm-bases"><button type="button" data-dbase="road">ถนน</button><button type="button" data-dbase="sat">ดาวเทียม</button><button type="button" data-dbase="dark">มืด</button></div><hr>
-          <label class="tg"><input type="checkbox" id="mt-done"><span>แสดงเคสที่ช่วยแล้ว</span></label>
-          <label class="tg"><input type="checkbox" id="mt-flood" checked><span>🛣 ถนนน้ำท่วม</span></label>
-          <div class="flood-key"><span><i style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span><i style="background:#f57c00"></i>เสี่ยง</span><span><i style="background:#fbc02d"></i>น้ำขัง ผ่านได้</span></div>
-          <label class="tg"><input type="checkbox" id="mt-cov" checked><span>🤝 พื้นที่องค์กรอื่นรับแล้ว</span></label>
-          <label class="tg"><input type="checkbox" id="mt-leads" checked><span>📣 เคสจากโซเชียลรอคัด</span></label>
-          <label class="tg"><input type="checkbox" id="mt-live" checked><span>🟢 ทีมที่แชร์ตำแหน่ง</span></label>
+        <div class="layer-menu hm-layers" id="dlayer" role="dialog" aria-label="แบบแผนที่และชั้นข้อมูล" hidden>
+          <div class="lm-bases"><button type="button" data-dbase="road"><span aria-hidden="true">🛣</span>ถนน</button><button type="button" data-dbase="sat"><span aria-hidden="true">🛰</span>ดาวเทียม</button><button type="button" data-dbase="dark"><span aria-hidden="true">🌙</span>มืด</button></div>
+          <label class="lcard"><span class="lic" style="--c:#2D45C8">🌧</span><span class="ltx"><b>เรดาร์ฝน</b><small data-sub="mt-rain">ฝนตกตรงไหน · ดูย้อนหลัง 2 ชม. ได้</small><span class="lchips"><span class="lchip rain-grad"><i></i>ฝนเบา → ฝนหนัก</span><span class="lchip">กด ▶ บนแผนที่เพื่อดูทิศทางฝน</span></span></span><input type="checkbox" class="sw" id="mt-rain"></label>
+          <label class="lcard"><span class="lic" style="--c:#E5383B">💧</span><span class="ltx"><b>ถนนน้ำท่วม</b><small>ระดับน้ำบนถนนล่าสุด · Floodboard</small><span class="lchips"><span class="lchip"><i class="ln" style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span class="lchip"><i class="ln" style="background:#f57c00"></i>เสี่ยง</span><span class="lchip"><i class="ln" style="background:#fbc02d"></i>น้ำขัง · รถสูงผ่านได้</span></span></span><input type="checkbox" class="sw" id="mt-flood" checked></label>
+          <a class="lcard" href="https://water.longdo.com/" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490">🌊</span><span class="ltx"><b>ระดับน้ำคลองและแม่น้ำ</b><small>Longdo Water · ข้อมูลสำนักการระบายน้ำ กทม. และคลังข้อมูลน้ำแห่งชาติ</small></span><span class="lext" aria-hidden="true">↗</span></a>
+          <a class="lcard" href="https://flood.pop.in.th/#overview" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490">💧</span><span class="ltx"><b>แผนที่จุดวัดน้ำ กทม.</b><small>POPNIX Flood · ระดับน้ำคลองเทียบระดับเตือนภัย</small></span><span class="lext" aria-hidden="true">↗</span></a>
+          <label class="lcard"><span class="lic" style="--c:#7C3AED">🤝</span><span class="ltx"><b>ทีมกู้ภัยและเครือข่ายช่วยเหลือ</b><small>จุดที่องค์กรต่าง ๆ ลงพื้นที่แล้ว (Help Me + พื้นที่มอบแล้ว)</small><span class="lchips" id="net-chips"></span></span><input type="checkbox" class="sw" id="mt-cov" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#2E9E57">🟢</span><span class="ltx"><b>ทีมที่แชร์ตำแหน่ง</b><small>ตำแหน่งสดของทีม UM+ ภายใน 3 ชม.</small></span><input type="checkbox" class="sw" id="mt-live" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#E5383B">📣</span><span class="ltx"><b>เคสจากโซเชียลรอคัด</b><small>Traffy · Help Me · Hermes ที่ยังไม่ได้รับเป็นเคส</small></span><input type="checkbox" class="sw" id="mt-leads" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#161B3D">📷</span><span class="ltx"><b>กล้อง CCTV</b><small data-sub="mt-cctv">ภาพสดจากกล้องทั่วกรุงเทพฯ</small></span><input type="checkbox" class="sw" id="mt-cctv"></label>
+          <label class="lcard"><span class="lic" style="--c:#2E9E57">✓</span><span class="ltx"><b>เคสที่ช่วยแล้ว</b><small>แสดงหมุดเคสที่ปิดแล้วด้วย</small></span><input type="checkbox" class="sw" id="mt-done"></label>
         </div>
       </div>
       <p class="map-note" id="map-nopin"></p>
@@ -91,6 +94,8 @@
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="../verify.js?v=4"></script>
 <script src="../covered.js?v=9"></script>
-<script src="./dashboard.js?v=16"></script>
+<script src="../camlive.js?v=3"></script>
+<script src="../maplayers.js?v=3"></script>
+<script src="./dashboard.js?v=17"></script>
 </body>
 </html>

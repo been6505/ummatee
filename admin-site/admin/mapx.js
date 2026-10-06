@@ -81,8 +81,9 @@ const MX=(()=>{
         L.marker([x.lat,x.lng],{icon:L.divIcon({className:'wl-ic',html:`<i style="background:${col}"></i>`,iconSize:[18,18]})})
           .bindTooltip(`🌊 <b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
     if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;S.L.cams.clearLayers();
-      F.cams.forEach(c=>L.marker([c.lat,c.lng],{icon:L.divIcon({className:'cam-ic',html:'📷',iconSize:[24,24]})})
-        .bindPopup(()=>`<div class="cam-pop"><b>${esc(c.title)}</b>${c.img?`<a href="${esc(c.img)}" target="_blank" rel="noopener"><img src="${esc(c.img)}&t=${Date.now()}" alt="ภาพกล้อง ${esc(c.title)}"></a>`:''}${c.hls?`<a href="${esc(c.hls)}" target="_blank" rel="noopener">▶ เปิดภาพสด</a>`:''}<small>${esc(c.org)} · ภาพนิ่งอัปเดตทุกไม่กี่นาที</small></div>`,{maxWidth:320}).addTo(S.L.cams))}
+      // ภาพสดเล่นในป๊อปอัป (camlive.js) · ปิดป๊อปอัป = หยุดสตรีม
+      F.cams.forEach(c=>CAMLIVE.bind(L.marker([c.lat,c.lng],{icon:L.divIcon({className:'cam-ic',html:'📷',iconSize:[24,24]})})
+        .bindPopup(()=>CAMLIVE.html(c),{maxWidth:320,minWidth:280})).addTo(S.L.cams))}
     drawZones();legend()}
   function drawZones(){if(!S.map)return;S.L.zones.clearLayers();
     // วงโซนไม่รับคลิก (ไม่บังหมุดเคส) ใช้ป้ายชื่อตรงกลางโซนแทน

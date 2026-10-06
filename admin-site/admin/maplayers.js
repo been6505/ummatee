@@ -13,7 +13,7 @@ const MAPL=(()=>{
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const S={map:null,rain:null,rainAt:0,rainL:null,rainI:0,anim:null,ctl:null,net:null,netRows:null,cams:null,camL:null};
   const on=id=>{const e=document.getElementById(id);return !!(e&&e.checked)};
-  const save=()=>{try{localStorage.setItem('uh_dlay',JSON.stringify(['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-flood','mt-done','mt-leads','mt-live'].reduce((o,k)=>{const e=document.getElementById(k);if(e)o[k]=e.checked;return o},{})))}catch(e){}};
+  const save=()=>{try{localStorage.setItem('uh_dlay',JSON.stringify(['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-places','mt-flood','mt-done','mt-leads','mt-live'].reduce((o,k)=>{const e=document.getElementById(k);if(e)o[k]=e.checked;return o},{})))}catch(e){}};
   function restore(){try{const o=JSON.parse(localStorage.getItem('uh_dlay')||'{}');for(const k in o){const e=document.getElementById(k);if(e)e.checked=!!o[k]}}catch(e){}}
 
   /* ---------- เรดาร์ฝน ---------- */
@@ -61,7 +61,7 @@ const MAPL=(()=>{
     S.net=L.layerGroup(rows.flatMap(h=>{const o=orgOf(h.org);
       return [L.circle([h.lat,h.lng],{radius:350,color:o.color,weight:1,opacity:.35,fillColor:o.color,fillOpacity:.13,interactive:false}),
         L.marker([h.lat,h.lng],{icon:L.divIcon({className:'org-pin',html:`<span style="background:${o.color}">${esc(o.short)}</span>`,iconSize:null}),opacity:.92,zIndexOffset:-200,keyboard:false})
-          .bindPopup(`<b style="color:${o.color}">${esc(o.name)}</b>${h.date?'<br>วันที่ '+esc(h.date):''}${h.detail?'<br>'+esc(h.detail):''}${h.approx?'<br><small>ตำแหน่งโดยประมาณ</small>':''}${h.link?`<br><a href="${esc(h.link)}" target="_blank" rel="noopener">ที่มา ↗</a>`:''}<br><small>ข้อมูลจาก ${esc(h.src)}</small>`)]})).addTo(S.map);
+          .bindPopup(`<b style="color:${o.color}">${esc(o.name)}</b>${h.date?'<br>วันที่ '+esc(h.date):''}${h.detail?'<br>'+esc(h.detail):''}${h.approx?'<br><small>ตำแหน่งโดยประมาณ</small>':''}${h.link?`<br><a href="${esc(h.link)}" target="_blank" rel="noopener">ที่มา ↗</a>`:''}<br><small>ข้อมูลจาก ${esc(h.src==='Help Me'?'Google Sheet ของ Help Me':h.src)}</small>`)]})).addTo(S.map);
     const used=new Map();rows.forEach(r=>{const o=orgOf(r.org);used.set(o.short,(used.get(o.short)||{o,n:0}));used.get(o.short).n++});
     const chips=[...used.values()].sort((a,b)=>b.n-a.n).slice(0,7).map(({o,n})=>`<span class="lchip"><i style="background:${o.color}"></i>${esc(o.short)} ${n}</span>`).join('');
     const box=document.getElementById('net-chips');if(box)box.innerHTML=chips||'<span class="lchip">ยังไม่มีจุด</span>'}
@@ -89,10 +89,21 @@ const MAPL=(()=>{
     S.map.attributionControl.addAttribution(GIS_ATTR);setSub('mt-gistda','GISTDA · '+GIS_TXT[gisRange]+' (สีฟ้า = น้ำท่วม)')}
   document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gr]');if(!b)return;e.preventDefault();gisRange=b.dataset.gr;try{localStorage.setItem('uh_gistda',gisRange)}catch(err){}
     const sw=document.getElementById('mt-gistda');if(sw&&!sw.checked){sw.checked=true;save()}drawGistda()});
+  /* ---------- ศูนย์พักพิง / จุดเครือข่าย (Google Sheet ของ Help Me) ---------- */
+  async function drawPlaces(){if(S.places){S.places.remove();S.places=null}if(!on('mt-places'))return;
+    let r=null;try{r=await fetch('/api?action=sheet_places').then(r=>r.json())}catch(e){}
+    if(!on('mt-places')||!r||!r.ok)return;
+    const pin=(p,k)=>{const t=k==='s'?(p['ชื่อจุด']||'ศูนย์พักพิง'):(p['ชื่อ']||'จุดเครือข่าย'),c=k==='s'?'#C2410C':'#0E7490';
+      const rows=k==='s'?[['ประเภท',p['ประเภท']],['สถานะ',p['สถานะ']],['รับได้',p['รับได้ (คน)']?p['รับได้ (คน)']+' คน':''],['มีให้',p['มีให้ / บริการ']],['ต้องการรับบริจาค',p['ต้องการรับบริจาค']],['ที่อยู่',p['ที่อยู่ / จุดสังเกต']],['โทร',p['เบอร์ติดต่อ']],['อัปเดต',p['อัปเดตล่าสุด']]]
+        :[['ประเภท',p['ประเภท']],['รายละเอียด',p['รายละเอียด']],['เวลาทำการ',p['เวลาทำการ']],['โทร',p['เบอร์โทร']]];
+      return L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',iconSize:null,html:`<span class="place-pin" style="--c:${c}">${ic(k==='s'?'home':'users')}<b>${esc(t)}</b></span>`}),zIndexOffset:600,keyboard:false})
+        .bindPopup(`<b style="color:${c}">${esc(t)}</b>${rows.filter(x=>x[1]).map(([a,b])=>`<br><small>${esc(a)}:</small> ${a==='โทร'?`<a href="tel:${esc(String(b).replace(/[^\d+]/g,''))}">${esc(b)}</a>`:esc(b)}`).join('')}${p['ลิงก์ที่มา']?`<br><a href="${esc(p['ลิงก์ที่มา'])}" target="_blank" rel="noopener">ที่มา ↗</a>`:''}`)};
+    S.places=L.layerGroup([...r.shelters.map(p=>pin(p,'s')),...r.network.map(p=>pin(p,'n'))]).addTo(S.map);
+    setSub('mt-places',r.shelters.length+r.network.length?`ศูนย์พักพิง ${r.shelters.length} · จุดเครือข่าย ${r.network.length} (จาก Google Sheet)`:'ยังไม่มีจุดในชีต (แท็บ ศูนย์พักพิง · เครือข่าย)')}
   function setSub(id,t){const e=document.querySelector(`[data-sub="${id}"]`);if(e)e.textContent=t}
-  function sync(){save();drawRain();drawNet();drawCams();drawGistda()}
+  function sync(){save();drawRain();drawNet();drawCams();drawGistda();drawPlaces()}
   function attach(map){if(S.map)return;S.map=map;restore();
-    ['mt-rain','mt-cov','mt-cctv','mt-gistda'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{save();({'mt-rain':drawRain,'mt-cov':drawNet,'mt-cctv':drawCams,'mt-gistda':drawGistda})[id]()})});
+    ['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-places'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{save();({'mt-rain':drawRain,'mt-cov':drawNet,'mt-cctv':drawCams,'mt-gistda':drawGistda,'mt-places':drawPlaces})[id]()})});
     ['mt-flood','mt-done','mt-leads','mt-live'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',save)});
     sync();setInterval(()=>{if(!document.hidden&&on('mt-rain')&&!S.anim){S.rainAt=0;drawRain()}},10*60e3)}
   /* ข้อมูลพื้นที่มอบแล้วโหลดเสร็จทีหลัง: วาดชั้นเครือข่ายใหม่ */

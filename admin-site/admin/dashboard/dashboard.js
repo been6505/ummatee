@@ -198,7 +198,7 @@ function renderHelpme(){
   const sec=$('#hm-sec'),h=D.hm;if(!sec)return;if(!h){sec.hidden=true;return}sec.hidden=false;
   const dur=ms=>{if(!ms)return '–';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
   const I=n=>typeof ic==='function'?ic(n):'';
-  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · อัปเดตทุก 2 นาที${h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;
+  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · จาก Google Sheet ของ Help Me · อัปเดตทุก 1 นาที${h.source==='sheet'||h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;
   /* สัดส่วนสถานะ */
   const parts=[['open','รอช่วย',h.open],['going','ทีมกำลังไป',h.going],['done','ช่วยแล้ว',h.done]],sum=Math.max(1,h.open+h.going+h.done);
   $('#hm-bar').setAttribute('aria-label',parts.map(p=>p[1]+' '+p[2]).join(' · '));
@@ -216,7 +216,7 @@ function renderHelpme(){
     <div class="hm-legend sm"><span><i class="b-new"></i>เคสใหม่</span><span><i class="b-done"></i>ช่วยเสร็จ</span></div>`:'<p class="empty">ยังไม่มีข้อมูล</p>';
   /* ความเร็ว */
   const w=h.waits;
-  $('#hm-speed').innerHTML=`<div class="hm-metric"><span>แจ้ง → ช่วยเสร็จ (ค่ากลาง)</span><b>${dur(h.times.doneMed)}</b><small>จาก ${nf(h.times.doneN)} เคส</small></div>
+  $('#hm-speed').innerHTML=(h.times.pickupN?`<div class="hm-metric"><span>แจ้ง → ทีมรับเคส (ค่ากลาง)</span><b>${dur(h.times.pickupMed)}</b><small>จาก ${nf(h.times.pickupN)} เคส</small></div>`:'')+`<div class="hm-metric"><span>แจ้ง → ช่วยเสร็จ (ค่ากลาง)</span><b>${dur(h.times.doneMed)}</b><small>จาก ${nf(h.times.doneN)} เคส</small></div>
     <div class="hm-metric"><span>90% ช่วยเสร็จภายใน</span><b>${dur(h.times.doneP90)}</b></div>
     <div class="hm-waits"><span>รอช่วยนานเกิน</span><div><b class="${w.over6?'warn':''}">${nf(w.over6)}</b><small>6 ชม.</small></div><div><b class="${w.over24?'bad':''}">${nf(w.over24)}</b><small>24 ชม.</small></div><div><b class="${w.over72?'bad':''}">${nf(w.over72)}</b><small>3 วัน</small></div></div>`;
   hbars('#c-hm-needs',h.needs.map(n=>[n.key,n.total]));

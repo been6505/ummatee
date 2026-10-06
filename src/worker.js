@@ -556,14 +556,67 @@ async function pullLeads(db) {
    ไม่มีรหัส: ได้รายการสาธารณะ (ไม่มีชื่อ/เบอร์ พิกัดโดยประมาณ) · ตั้ง secret HELPME_KEY = รหัสทีมของ Help Me เพื่อได้ข้อมูลเต็ม
    เคสที่ Help Me ปิดแล้ว (done) จะถูกเอาออกจากคิวรอคัดเอง */
 const HELPME_API = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
+/* Google Sheet ของ Help Me = แหล่งข้อมูลหลัก (เร็วและนิ่งกว่า Apps Script)
+   แท็บ: เคส · ลงพื้นที่ · ทีม · ศูนย์พักพิง · เครือข่าย — อ่านทาง export CSV ฝั่งเซิร์ฟเวอร์ แคช 1 นาที
+   ชีตนี้มีชื่อและเบอร์ผู้แจ้ง: ส่งต่อให้หน้าเว็บเฉพาะคนที่มีรหัสทีม · ตัวเลขสถิติไม่มีข้อมูลส่วนตัว */
+const HM_SHEET = '1GkGL0PrjuADwMmuSSj0KjW9WLH180eATD1RkmzEqGMs';
+const HM_TABS = { cases: '689944118', outreach: '1011033103', teams: '1249688184', shelters: '1258451052', network: '1402005274' };
+async function sheetTab(env, tab) {
+  return cached('hmsheet-' + tab + '-v1', 60, async () => {
+    const r = await fetch(`https://docs.google.com/spreadsheets/d/${env.HM_SHEET || HM_SHEET}/export?format=csv&gid=${HM_TABS[tab]}`, { headers: UA, redirect: 'follow' });
+    if (!r.ok) throw new Error('sheet_' + r.status);
+    const rows = parseCSV((await r.text()).replace(/^\uFEFF/, ''));
+    if (!rows.length) throw new Error('sheet_empty');
+    return { header: rows[0].map(x => String(x || '').trim()), rows: rows.slice(1).filter(r => r.some(v => String(v || '').trim())) };
+  });
+}
+/* "27/9/2026, 19:10:13" หรือ "4/10/2026 15:43" (เวลาไทย) → ms · ปี พ.ศ. แปลงให้ */
+function sheetTime(v) {
+  const m = String(v || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (!m) return 0; let y = +m[3]; if (y > 2400) y -= 543;
+  return Date.UTC(y, +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)) - 7 * 3600e3;
+}
+/* 50 เขตของกรุงเทพฯ — ใช้หาเขตจากที่อยู่ที่ไม่ได้เขียนคำว่า "เขต" (ชื่อยาวก่อน กัน "บางกะปิ" ไปจับ "บาง") */
+const BKK_DISTRICTS = ['พระนคร','ดุสิต','หนองจอก','บางรัก','บางเขน','บางกะปิ','ปทุมวัน','ป้อมปราบศัตรูพ่าย','พระโขนง','มีนบุรี','ลาดกระบัง','ยานนาวา','สัมพันธวงศ์','พญาไท','ธนบุรี','บางกอกใหญ่','ห้วยขวาง','คลองสาน','ตลิ่งชัน','บางกอกน้อย','บางขุนเทียน','ภาษีเจริญ','หนองแขม','ราษฎร์บูรณะ','บางพลัด','ดินแดง','บึงกุ่ม','สาทร','บางซื่อ','จตุจักร','บางคอแหลม','ประเวศ','คลองเตย','สวนหลวง','จอมทอง','ดอนเมือง','ราชเทวี','ลาดพร้าว','วัฒนา','บางแค','หลักสี่','สายไหม','คันนายาว','สะพานสูง','วังทองหลาง','คลองสามวา','บางนา','ทวีวัฒนา','ทุ่งครุ','บางบอน'].sort((a, b) => b.length - a.length);
+const HM_STATUS = { 'รอช่วย': 'open', 'รอความช่วยเหลือ': 'open', 'ทีมกำลังไป': 'going', 'กำลังไป': 'going', 'กำลังช่วย': 'going', 'ช่วยแล้ว': 'done', 'เสร็จแล้ว': 'done' };
+const HM_URG = { 'ด่วนมาก': 3, 'วิกฤต': 3, 'เร่งด่วน': 2, 'ทั่วไป': 1 };
+async function sheetCases(env) {
+  const t = await sheetTab(env, 'cases'), h = t.header, col = n => h.indexOf(n), all = n => h.map((x, i) => x === n ? i : -1).filter(i => i >= 0);
+  const v = (r, n) => { const i = col(n); return i < 0 ? '' : String(r[i] || '').trim(); };
+  return t.rows.map(r => {
+    const address = v(r, 'ที่อยู่'), dm = address.match(/เขต\s*([ก-๙]+)/) || [null, BKK_DISTRICTS.find(d => address.includes(d)) || ''];
+    return { id: v(r, 'รหัสเคส'), createdAt: sheetTime(v(r, 'เวลาแจ้ง')), updatedAt: sheetTime(v(r, 'อัปเดตล่าสุด')),
+      status: HM_STATUS[v(r, 'สถานะ')] || 'open', urgency: HM_URG[v(r, 'ความเร่งด่วน')] || 1, name: v(r, 'ชื่อ'), phone: v(r, 'เบอร์โทร').replace(/^'/, ''),
+      notes: all('รายละเอียด').map(i => String(r[i] || '').trim()).filter(Boolean).join(' · '), people: Number(v(r, 'จำนวนคน')) || 1, address,
+      district: dm ? dm[1] : '', lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
+      needs: v(r, 'ต้องการ').split(/\s*,\s*/).filter(Boolean), volunteer: v(r, 'ทีมอาสา'), org: v(r, 'หน่วยงาน'), pinSrc: v(r, 'ที่มาของหมุด'),
+      pickedAt: sheetTime(v(r, 'เวลารับเคส')), doneAt: sheetTime(v(r, 'เวลาช่วยเสร็จ')) };
+  }).filter(c => c.id);
+}
+/* แท็บที่มีคอลัมน์พิกัด (ลิงก์ Google Maps หรือ "lat, lng") และ "แสดงบนแผนที่" */
+async function sheetPoints(env, db, tab) {
+  const t = await sheetTab(env, tab), h = t.header, pc = h.findIndex(x => x.startsWith('พิกัด')), show = h.indexOf('แสดงบนแผนที่');
+  const out = [];
+  for (const r of t.rows) {
+    if (show >= 0 && /^(ไม่|no|false)/i.test(String(r[show] || '').trim())) continue;
+    const loc = String(r[pc] || '').trim(), ll = coordsFromUrl('@' + loc.replace(/\s+/g, '')) || (/^https?:\/\//.test(loc) ? await resolveMapLink(db, loc) : null);
+    const o = {}; h.forEach((k, i) => { if (k && i !== pc) o[k] = String(r[i] || '').trim(); });
+    out.push({ ...o, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null });
+  }
+  return out;
+}
 const HELPME_LEVEL = { ankle: 'ข้อเท้า', knee: 'เข่า', waist: 'เอว', chest: 'อก', roof: 'มิดหัว/หลังคา' };
 async function pullHelpme(db, env) {
-  const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 15000)) });
-  if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
-  const r = await fetch((env.HELPME_API || HELPME_API) + '?' + q, { headers: UA, redirect: 'follow' });
-  if (!r.ok) return { ok: false, error: 'helpme_' + r.status };
-  let j; try { j = await r.json(); } catch (e) { return { ok: false, error: 'helpme_bad_json' }; }
-  if (!j.ok) return { ok: false, error: 'helpme_' + (j.error || 'error') };
+  let j = null;
+  try { j = { ok: true, volunteer: true, cases: (await sheetCases(env)).map(c => ({ ...c, approx: false })), source: 'sheet' }; } catch (e) {}
+  if (!j) {
+    const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 15000)) });
+    if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
+    const r = await fetch((env.HELPME_API || HELPME_API) + '?' + q, { headers: UA, redirect: 'follow' });
+    if (!r.ok) return { ok: false, error: 'helpme_' + r.status };
+    try { j = await r.json(); } catch (e) { return { ok: false, error: 'helpme_bad_json' }; }
+    if (!j.ok) return { ok: false, error: 'helpme_' + (j.error || 'error') };
+  }
   const st = await leadSettings(db), out = { ok: true, full: !!j.volunteer, scanned: 0, added: 0, rejected: 0, duplicate: 0, closed: 0, filled: 0 };
   for (const c of j.cases || []) {
     out.scanned++;
@@ -604,6 +657,15 @@ async function pullHelpme(db, env) {
 /* จุดที่องค์กรลงพื้นที่ (outreach) ของ Help Me — ข้อมูลสาธารณะ (ชื่อองค์กร วันที่ พิกัด ลิงก์ข่าว)
    Apps Script ช้า (บางครั้ง 30 วิ) และบางทีตอบเป็นหน้า HTML: แคช 5 นาทีที่ edge และเก็บชุดล่าสุดที่ดีไว้ใน meta ใช้แทนเมื่อดึงไม่ได้ */
 async function helpmeOutreach(db, env) {
+  try {
+    const pts = await sheetPoints(env, db, 'outreach');
+    const points = pts.filter(p => p.lat != null).map(p => ({ org: p['หน่วยงาน'] || '', date: p['วันที่ลงพื้นที่'] || '', lat: p.lat, lng: p.lng,
+      detail: (p['รายละเอียด'] || '').slice(0, 300), link: /^https?:\/\//.test(p['ลิงก์โพสต์ (Facebook/LINE/อื่น ๆ)'] || '') ? p['ลิงก์โพสต์ (Facebook/LINE/อื่น ๆ)'] : '' }));
+    if (points.length) { const out = { ok: true, time: Date.now(), points, source: 'sheet' }; await setMeta(db, 'helpme_outreach_last', JSON.stringify(out)); return out; }
+  } catch (e) {}
+  return helpmeOutreachApps(db, env);
+}
+async function helpmeOutreachApps(db, env) {
   // ดึงไม่สำเร็จล่าสุดไม่ถึง 10 นาที: ไม่รอ Apps Script ซ้ำ ส่งชุดล่าสุดที่ดีไปเลย (หน้าเว็บจะดึงตรงจาก Help Me เองถ้าไม่มี)
   const failAt = Number(await getMeta(db, 'helpme_outreach_fail_at')) || 0;
   if (Date.now() - failAt < 10 * 60e3) { const last = await getMeta(db, 'helpme_outreach_last'); return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] }; }
@@ -652,7 +714,7 @@ async function allCams() {
 async function helpmeStats(env, db) {
   // Apps Script ของ Help Me บางช่วงตอบช้าเกิน 25 วิ: เก็บชุดล่าสุดที่ดีไว้ใน meta แล้วส่งชุดนั้น (บอกว่าเก่า) แทนการว่างเปล่า
   try {
-    const fresh = await helpmeStatsLive(env);
+    const fresh = await helpmeStatsLive(env, db);
     if (db) await setMeta(db, 'helpme_stats_last', JSON.stringify(fresh));
     return fresh;
   } catch (e) {
@@ -661,20 +723,42 @@ async function helpmeStats(env, db) {
     throw e;
   }
 }
-async function helpmeStatsLive(env) {
-  return cached('helpme-stats-v1', 120, async () => {
-    const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) });
-    if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
-    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
-    let j; try { j = await (await fetch((env.HELPME_API || HELPME_API) + '?' + q, { headers: UA, signal: ctl.signal, redirect: 'follow' })).json(); } finally { clearTimeout(tm); }
-    if (!j || !j.ok) throw new Error('helpme');
+/* เขตจากหมุด (ที่อยู่ใน Help Me เขียนอิสระ ส่วนใหญ่ไม่มีคำว่า "เขต"): ถาม Photon แล้วจำไว้ใน meta ทีละพิกัด (~100 ม.) · สูงสุด 25 จุดต่อรอบ */
+async function fillDistricts(db, cases) {
+  if (!db) return;
+  const need = cases.filter(c => !c.district && c.lat != null && c.lng != null);
+  if (!need.length) return;
+  const key = c => 'hmd:' + c.lat.toFixed(3) + ',' + c.lng.toFixed(3), keys = [...new Set(need.map(key))], known = new Map();
+  for (let i = 0; i < keys.length; i += 90) {
+    const part = keys.slice(i, i + 90), { results } = await db.prepare(`SELECT k,v FROM meta WHERE k IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+    results.forEach(r => known.set(r.k, r.v));
+  }
+  let asked = 0;
+  for (const k of keys) {
+    if (known.has(k) || asked >= 25) continue; asked++;
+    const [lat, lng] = k.slice(4).split(',').map(Number);
+    try {
+      const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=default`, { headers: UA, cf: { cacheTtl: 86400 } });
+      const p = ((await r.json()).features || [])[0]?.properties || {};
+      const d = String(p.district || p.county || p.city || '').replace(/^เขต\s*/, '').trim() || '-';
+      known.set(k, d); await setMeta(db, k, d);
+    } catch (e) {}
+  }
+  need.forEach(c => { const d = known.get(key(c)); if (d && d !== '-') c.district = d; });
+}
+async function helpmeStatsLive(env, db) {
+  return cached('helpme-stats-v3', 60, async () => {
+    const cases = await sheetCases(env); await fillDistricts(db, cases);
+    const j = { ok: true, volunteer: true, cases }; // จาก Google Sheet ของ Help Me (ข้อมูลเต็ม)
     const TEST = /\btest|ทดสอบ|เทส(?!โก้)/i, now = Date.now(), H = 3600e3;
     const all = (j.cases || []).filter(c => !TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
     const P = c => Math.max(1, Number(c.people) || 1), sev = c => Math.min(3, Math.max(1, Number(c.urgency) || 1));
     const open = all.filter(c => c.status === 'open'), going = all.filter(c => c.status === 'going'), done = all.filter(c => c.status === 'done'), act = all.filter(c => c.status !== 'done');
     const med = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
     const p90 = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(.9 * s.length) - 1)]; };
-    const doneT = done.map(c => Number(c.updatedAt) - Number(c.createdAt)).filter(x => x > 0 && x < 60 * 24 * H);
+    // เวลาจริงจากคอลัมน์ "เวลารับเคส / เวลาช่วยเสร็จ" ถ้ามี ไม่มีใช้ "อัปเดตล่าสุด" (ค่าประมาณ)
+    const doneT = done.map(c => (c.doneAt || Number(c.updatedAt)) - Number(c.createdAt)).filter(x => x > 0 && x < 60 * 24 * H);
+    const pickT = all.filter(c => c.pickedAt).map(c => c.pickedAt - c.createdAt).filter(x => x > 0 && x < 60 * 24 * H);
     const day0 = Math.floor((now + 7 * H) / 864e5) * 864e5 - 7 * H;
     const bump = (o, k, c) => { const x = o[k] || (o[k] = { open: 0, urg: 0, going: 0, done: 0, ppl: 0, total: 0 }); x.total++; x[c.status === 'done' ? 'done' : c.status === 'going' ? 'going' : 'open']++; if (c.status !== 'done' && sev(c) === 3) x.urg++; if (c.status !== 'done') x.ppl += P(c); };
     const districts = {}, needs = {}, levels = {}, orgs = {}, teams = {};
@@ -688,9 +772,9 @@ async function helpmeStatsLive(env) {
     const rows = (o, n) => Object.entries(o).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => b.total - a.total).slice(0, n);
     const days = []; for (let i = 13; i >= 0; i--) { const s = day0 - i * 864e5; days.push({ day: s, n: all.filter(c => c.createdAt >= s && c.createdAt < s + 864e5).length, k: done.filter(c => c.updatedAt >= s && c.updatedAt < s + 864e5).length }); }
     return { ok: true, time: now, full: !!j.volunteer, total: all.length, open: open.length, going: going.length, done: done.length,
-      urgent: act.filter(c => sev(c) === 3).length, today: all.filter(c => c.createdAt >= day0).length, doneToday: done.filter(c => c.updatedAt >= day0).length,
+      urgent: act.filter(c => sev(c) === 3).length, today: all.filter(c => c.createdAt >= day0).length, doneToday: done.filter(c => (c.doneAt || c.updatedAt) >= day0).length,
       people: { act: act.reduce((s, c) => s + P(c), 0), urgent: act.filter(c => sev(c) === 3).reduce((s, c) => s + P(c), 0), done: done.reduce((s, c) => s + P(c), 0) },
-      times: { doneN: doneT.length, doneMed: med(doneT), doneP90: p90(doneT) },
+      times: { doneN: doneT.length, doneMed: med(doneT), doneP90: p90(doneT), pickupN: pickT.length, pickupMed: med(pickT) }, source: 'sheet',
       waits: { over6: open.filter(c => now - c.createdAt > 6 * H).length, over24: open.filter(c => now - c.createdAt > 24 * H).length, over72: open.filter(c => now - c.createdAt > 72 * H).length },
       districts: rows(districts, 40), needs: rows(needs, 15), levels: rows(levels, 8), orgs: rows(orgs, 20), teams: rows(teams, 20), days };
   });
@@ -802,6 +886,9 @@ async function api(request, env) {
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
+      // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)
+      case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
+        return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }

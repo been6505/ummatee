@@ -10,9 +10,9 @@
 <link rel="icon" href="../../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=99">
+<link rel="stylesheet" href="./dashboard.css?v=100">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=10">
+<link rel="stylesheet" href="../helpme-skin.css?v=11">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -20,7 +20,7 @@
     <img src="../../assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
     <h1>แดชบอร์ด Helpme+</h1>
     <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อดูภาพรวม</p>
-    <label class="fld"><span>รหัสทีม</span><input id="login-key" type="password" required autocomplete="current-password"></label>
+    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส">👁</button></span></label>
     <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
     <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
     <p class="err" id="login-err" role="alert"></p>
@@ -88,6 +88,17 @@
         </div>
       </section>
       <article class="card span2"><h2>ทีมอาสา</h2><p class="sub">เคสที่แต่ละทีมรับไว้</p><div id="teams"></div></article>
+      <section class="hm-sec span2" id="hm-sec" hidden aria-label="สถิติจาก Help Me">
+        <h2 class="sec-h">📊 สถิติจาก Help Me <small id="hm-upd"></small></h2>
+        <div class="kpis" id="hm-kpis"></div>
+        <div class="grid">
+          <article class="card"><h2>ความเร็วในการช่วย</h2><p class="sub">จากเคสใน Help Me (ค่าประมาณจากเวลาอัปเดตล่าสุด)</p><div id="hm-speed"></div></article>
+          <article class="card"><h2>ความต้องการ</h2><p class="sub">จำนวนเคสที่ขอแต่ละอย่าง</p><div class="chart" id="c-hm-needs"></div></article>
+          <article class="card span2"><h2>รายเขต</h2><p class="sub">เรียงตามจำนวนเคสทั้งหมด</p><div id="hm-dist"></div></article>
+          <article class="card"><h2>องค์กรที่รับเคส</h2><p class="sub">ใน Help Me</p><div id="hm-orgs"></div></article>
+          <article class="card"><h2>ทีมที่รับเคส</h2><p class="sub">ใน Help Me</p><div id="hm-teams"></div></article>
+        </div>
+      </section>
       <article class="card span2" id="leads-card" hidden><h2>📣 เคสจากโซเชียลรอคัด</h2><p class="sub" id="leads-sub"></p><div id="leads"></div></article>
       <article class="card span2"><h2>เคสวิกฤตที่ยังรอนานที่สุด</h2><p class="sub">ยังไม่มีทีมรับ เรียงจากรอนานสุด</p><div id="waiting"></div></article>
     </div>
@@ -99,7 +110,8 @@
 <script src="../ofm.js?v=1"></script>
 <script src="../camlive.js?v=6"></script>
 <script src="../maplayers.js?v=5"></script>
-<script src="./dashboard.js?v=20"></script>
+<script src="./dashboard.js?v=21"></script>
 <script src="../chat.js?v=2"></script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.textContent=show?"🙈":"👁";i.focus()});</script>
 </body>
 </html>

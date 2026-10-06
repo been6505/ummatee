@@ -33,6 +33,7 @@ function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.n
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
   try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
+    api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;renderHelpme()}).catch(()=>{});
     D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
@@ -189,6 +190,27 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
     t.append(tb);const a=el('a',null,'ไปที่หน้าจัดการเคส →');a.href='../../admin.html';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
   renderLeads();
   renderStock();
+  renderHelpme();
+}
+
+/* ---------- สถิติจาก Help Me (แบบหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
+function renderHelpme(){
+  const sec=$('#hm-sec'),h=D.hm;if(!sec)return;if(!h){sec.hidden=true;return}sec.hidden=false;
+  const dur=ms=>{if(!ms)return '-';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
+  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.${h.full?'':' · ข้อมูลสาธารณะ (ยังไม่ได้ตั้ง HELPME_KEY)'}`;
+  const k=[[nf(h.open),'รอช่วย',`วิกฤต ${nf(h.urgent)} เคส`,'var(--crit)'],[nf(h.going),'ทีมกำลังไป','','var(--going)'],[nf(h.done),'ช่วยแล้ว',`วันนี้ ${nf(h.doneToday)} เคส`,'var(--good)'],
+    [nf(h.total),'เคสทั้งหมด',`ใหม่วันนี้ ${nf(h.today)} เคส`],[nf(h.people.act),'คนที่ยังรอ',`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],[nf(h.people.done),'คนที่ช่วยแล้ว','']];
+  $('#hm-kpis').replaceChildren(...k.map(([v,t,s,col])=>{const d=el('a','kpi');d.href='https://helpme-th.pages.dev/#stats';d.target='_blank';d.rel='noopener';d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
+  const line=(t,v,red)=>`<div class="hm-line${red?' red':''}"><span>${t}</span><b>${v}</b></div>`;
+  $('#hm-speed').innerHTML=line('แจ้ง → ช่วยเสร็จ (ค่ากลาง)',h.times.doneN?dur(h.times.doneMed)+` <small>จาก ${nf(h.times.doneN)} เคส</small>`:'-')
+    +line('90% ของเคสช่วยเสร็จภายใน',h.times.doneN?dur(h.times.doneP90):'-')
+    +line('รอช่วยเกิน 6 ชม. / 24 ชม. / 3 วัน',`${nf(h.waits.over6)} / ${nf(h.waits.over24)} / ${nf(h.waits.over72)} เคส`,h.waits.over24>0);
+  hbars('#c-hm-needs',h.needs.map(n=>[n.key,n.total]));
+  const tbl=(rows,cols)=>{if(!rows.length)return el('p','empty','ยังไม่มีข้อมูล');const t=el('table','tlist');t.innerHTML=`<thead><tr>${cols.map((c,i)=>`<th${i?' class="n"':''}>${c[0]}</th>`).join('')}</tr></thead>`;
+    const tb=el('tbody');rows.forEach(r=>{const tr=el('tr');cols.forEach((c,i)=>{const td=el('td',i?'n':'',typeof c[1](r)==='number'?nf(c[1](r)):c[1](r));if(c[2]&&c[2](r))td.classList.add('is-red');tr.append(td)});tb.append(tr)});t.append(tb);return t};
+  $('#hm-dist').replaceChildren(tbl(h.districts.slice(0,15),[['เขต',r=>r.key],['รอช่วย',r=>r.open],['วิกฤต',r=>r.urg,r=>r.urg>0],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done],['คนที่ยังรอ',r=>r.ppl]]));
+  $('#hm-orgs').replaceChildren(tbl(h.orgs,[['องค์กร',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
+  $('#hm-teams').replaceChildren(tbl(h.teams,[['ทีม',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
 }
 
 /* ---------- เคสจากโซเชียลรอคัด (เรียงวิกฤตก่อน) + ทีมแชร์ตำแหน่งที่ใกล้ที่สุด ---------- */

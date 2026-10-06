@@ -241,3 +241,11 @@ html[data-theme="dark"]:not(.dash) .chat-root{filter:none}
 html.dash[data-theme="dark"] .chat-win{background:#1B1F33;color:var(--ink)}html.dash[data-theme="dark"] .chat-msgs{background:#0F1222}
 html.dash[data-theme="dark"] .chat-m.them,html.dash[data-theme="dark"] .chat-in{background:#24294A;color:var(--ink);border-color:rgba(255,255,255,.1)}
 html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="dark"] .chat-row:hover{background:rgba(255,255,255,.06)}
+/* กล้องในลิ้นชักเคส: ภาพสด/ภาพนิ่งเล่นในหน้าเลย */
+.vr-cam-grid.live{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.vr-cam-grid.live figure{margin:0;background:var(--bg);border-radius:14px;padding:8px}
+.vr-cam-grid.live .cam-pop{min-width:0}.vr-cam-grid.live figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ปุ่มแสดงรหัสในช่องเข้าระบบ */
+.pw-wrap{position:relative;display:block}.pw-wrap input{width:100%;padding-right:52px!important}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:18px;width:40px;height:40px;cursor:pointer;border-radius:50%}.pw-eye:hover{background:var(--tint)}

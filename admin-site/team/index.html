@@ -40,6 +40,7 @@ form.send input{border-radius:999px;padding:11px 16px}
 form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:18px;cursor:pointer}
 .loc{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--tint);font-size:18px;cursor:pointer}
 [hidden]{display:none!important}
+.pw-wrap{position:relative;display:block}.pw-wrap input{padding-right:52px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:18px;width:40px;height:40px;cursor:pointer;border-radius:50%}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ form.send button{flex:none;width:46px;height:46px;border-radius:50%;border:0;bac
   <h1>แชทกับศูนย์ประสานงาน</h1>
   <p>สำหรับทีมอาสา · ใส่รหัสทีม แล้วเลือกชื่อทีมของคุณ</p>
   <form id="lf" style="display:grid;gap:12px">
-    <label>รหัสทีม<input id="code" type="password" autocomplete="current-password" required></label>
+    <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส">👁</button></span></label>
     <label>ชื่อทีม<input id="team" list="teams" required maxlength="60" placeholder="เช่น ทีมเรือ 1"><datalist id="teams"></datalist></label>
     <label>ชื่อคุณ (ไม่บังคับ)<input id="name" maxlength="60" placeholder="เช่น หัวหน้าทีม"></label>
     <button class="primary" type="submit" id="go">เข้าแชท</button>
@@ -100,5 +101,6 @@ if(S.key&&S.team)login();else show(false);
 /* รายชื่อทีมให้เลือก (ต้องมีรหัสถูกก่อน) */
 $('#code').addEventListener('change',async()=>{S.key=$('#code').value.trim();try{const r=await api({action:'roster'});if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
 </script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.textContent=show?"🙈":"👁";i.focus()});</script>
 </body>
 </html>

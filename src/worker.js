@@ -647,6 +647,42 @@ async function allCams() {
   if (!cams.length) throw new Error('no_cams');
   return { ok: true, time: Date.now(), cams, sources: { popnix: p.status === 'fulfilled', itic: l.status === 'fulfilled' } };
 }
+/* สถิติแบบหน้า #stats ของ Help Me — คำนวณจากรายการเคสเต็ม (HELPME_KEY) ส่งกลับเฉพาะตัวเลขรวม ไม่มีชื่อ/เบอร์ · แคช 2 นาที
+   ตัดเคสทดสอบ (test / ทดสอบ / เทส) · เวลาช่วยเสร็จใช้ updatedAt ของเคสที่ปิดแล้ว (ค่าประมาณ แบบเดียวกับ Help Me) */
+async function helpmeStats(env) {
+  return cached('helpme-stats-v1', 120, async () => {
+    const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) });
+    if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+    let j; try { j = await (await fetch((env.HELPME_API || HELPME_API) + '?' + q, { headers: UA, signal: ctl.signal, redirect: 'follow' })).json(); } finally { clearTimeout(tm); }
+    if (!j || !j.ok) throw new Error('helpme');
+    const TEST = /\btest|ทดสอบ|เทส(?!โก้)/i, now = Date.now(), H = 3600e3;
+    const all = (j.cases || []).filter(c => !TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
+    const P = c => Math.max(1, Number(c.people) || 1), sev = c => Math.min(3, Math.max(1, Number(c.urgency) || 1));
+    const open = all.filter(c => c.status === 'open'), going = all.filter(c => c.status === 'going'), done = all.filter(c => c.status === 'done'), act = all.filter(c => c.status !== 'done');
+    const med = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+    const p90 = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(.9 * s.length) - 1)]; };
+    const doneT = done.map(c => Number(c.updatedAt) - Number(c.createdAt)).filter(x => x > 0 && x < 60 * 24 * H);
+    const day0 = Math.floor((now + 7 * H) / 864e5) * 864e5 - 7 * H;
+    const bump = (o, k, c) => { const x = o[k] || (o[k] = { open: 0, urg: 0, going: 0, done: 0, ppl: 0, total: 0 }); x.total++; x[c.status === 'done' ? 'done' : c.status === 'going' ? 'going' : 'open']++; if (c.status !== 'done' && sev(c) === 3) x.urg++; if (c.status !== 'done') x.ppl += P(c); };
+    const districts = {}, needs = {}, levels = {}, orgs = {}, teams = {};
+    for (const c of all) {
+      bump(districts, String(c.district || '').replace(/^เขต/, '').trim() || 'ไม่ทราบเขต', c);
+      for (const n of new Set((c.needs || []).map(x => String(x).replace(/:.*$/, '').trim()).filter(Boolean))) bump(needs, n, c);
+      bump(levels, c.level || 'none', c);
+      if (c.org) bump(orgs, c.org, c);
+      if (c.volunteer && c.status !== 'open') bump(teams, String(c.volunteer).replace(/^'/, '').trim(), c);
+    }
+    const rows = (o, n) => Object.entries(o).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => b.total - a.total).slice(0, n);
+    const days = []; for (let i = 13; i >= 0; i--) { const s = day0 - i * 864e5; days.push({ day: s, n: all.filter(c => c.createdAt >= s && c.createdAt < s + 864e5).length, k: done.filter(c => c.updatedAt >= s && c.updatedAt < s + 864e5).length }); }
+    return { ok: true, time: now, full: !!j.volunteer, total: all.length, open: open.length, going: going.length, done: done.length,
+      urgent: act.filter(c => sev(c) === 3).length, today: all.filter(c => c.createdAt >= day0).length, doneToday: done.filter(c => c.updatedAt >= day0).length,
+      people: { act: act.reduce((s, c) => s + P(c), 0), urgent: act.filter(c => sev(c) === 3).reduce((s, c) => s + P(c), 0), done: done.reduce((s, c) => s + P(c), 0) },
+      times: { doneN: doneT.length, doneMed: med(doneT), doneP90: p90(doneT) },
+      waits: { over6: open.filter(c => now - c.createdAt > 6 * H).length, over24: open.filter(c => now - c.createdAt > 24 * H).length, over72: open.filter(c => now - c.createdAt > 72 * H).length },
+      districts: rows(districts, 40), needs: rows(needs, 15), levels: rows(levels, 8), orgs: rows(orgs, 20), teams: rows(teams, 20), days };
+  });
+}
 async function pullAll(db, b, env) {
   const [traffy, helpme] = await Promise.all([pullLeads(db).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) })), pullHelpme(db, env).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) }))]);
   const n = k => (traffy[k] || 0) + (helpme[k] || 0);
@@ -754,6 +790,7 @@ async function api(request, env) {
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
+      case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });

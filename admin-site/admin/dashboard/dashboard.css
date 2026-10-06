@@ -150,3 +150,7 @@ a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.
 .lead-pin.u3 span{border-color:#d03b3b;background:radial-gradient(circle,#d03b3b 0 4px,#fff 5px)}.lead-pin.u2 span{border-color:#ec835a;background:radial-gradient(circle,#ec835a 0 4px,#fff 5px)}
 .lead-lg{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px dashed #d03b3b;background:#fff}
 .live-tm span{display:inline-block;white-space:nowrap;background:#fff;border:2px solid #2E9E57;color:#161B3D;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-12px,-12px)}
+
+/* สถิติจาก Help Me */
+.hm-sec{display:grid;gap:12px}.hm-line{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}.hm-line:last-child{border:0}.hm-line b{text-align:right}.hm-line small{color:var(--muted);font-weight:400}.hm-line.red b{color:var(--crit)}
+.tlist td.is-red{color:var(--crit);font-weight:700}

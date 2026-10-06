@@ -164,7 +164,11 @@ function vrSection(c){
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
     ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
-    ${hasPin(c)&&VERIFY.F.cams.length?(()=>{const cams=VERIFY.nearCams(+c.lat,+c.lng,3);return cams.length?`<div class="vr-cams"><span>กล้องใกล้จุด (iTIC)</span><div class="vr-cam-grid">${cams.map(k=>`<figure>${k.img?`<a href="${esc(k.img)}&t=${Date.now()}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(k.img)}&t=${Math.floor(Date.now()/60000)}" alt="ภาพกล้อง ${esc(k.title)}"></a>`:k.hls?`<a class="vr-cam-live" href="${esc(k.hls)}" target="_blank" rel="noopener">▶ ภาพสด (วิดีโอ)</a>`:''}<figcaption>${esc(k.title)} · ${k.d<1000?Math.round(k.d)+' ม.':(k.d/1000).toFixed(1)+' กม.'}</figcaption></figure>`).join('')}</div></div>`:`<p class="vr-src">ไม่มีกล้อง iTIC ในรัศมี 6 กม.</p>`})():''}
+    ${hasPin(c)&&VERIFY.F.cams.length?(()=>{ /* ตรวจจากกล้องได้เลยในหน้านี้: กล้องภาพสดใกล้สุด (8 กม.) + กล้องที่ยังส่งภาพอยู่ 2 ตัวใกล้สุด (ข้ามกล้องที่ไม่อัปเดตเกิน 3 ชม.) */
+      const fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600,near=VERIFY.nearCams(+c.lat,+c.lng,40,8000).filter(fresh);
+      const live=near.find(k=>k.hls),still=near.filter(k=>!k.hls).slice(0,live?2:3),cams=[...(live?[live]:[]),...still].sort((a,b)=>a.d-b.d);
+      const dist=k=>k.d<1000?Math.round(k.d)+' ม.':(k.d/1000).toFixed(1)+' กม.';
+      return cams.length?`<div class="vr-cams"><span>ดูกล้องใกล้จุดได้เลย · ${cams.length} ตัว</span><div class="vr-cam-grid live">${cams.map(k=>`<figure>${typeof CAMLIVE!=='undefined'?CAMLIVE.html(k):''}<figcaption>ห่าง ${dist(k)}</figcaption></figure>`).join('')}</div></div>`:`<p class="vr-src">ไม่มีกล้องที่ยังส่งภาพในรัศมี 8 กม.</p>`})():''}
     <div class="vr-cctv"><span>ตรวจจากกล้อง CCTV:</span> <b>${cc?(cc.s==='flood'?'เห็นน้ำท่วม':'ไม่เห็นน้ำท่วม')+(cc.t?' · '+esc(cc.t):''):'ยังไม่ได้ตรวจ'}</b>
       <div class="vr-cctv-btns"><button class="btn ${cc&&cc.s==='flood'?'primary':'ghost'} sm" data-cctv="flood">กล้องเห็นน้ำท่วม</button><button class="btn ${cc&&cc.s==='clear'?'primary':'ghost'} sm" data-cctv="clear">กล้องไม่เห็นน้ำ</button>${cc?'<button class="btn ghost sm" data-cctv="">ล้างผล</button>':''}</div>
       <div class="vr-links"><a href="https://world.tehx.dyndns.info/flood#tab=roads" target="_blank" rel="noopener">เปิดกล้อง CCTV ถนน (JK World) ↗</a><a href="https://world.tehx.dyndns.info/flood#tab=area" target="_blank" rel="noopener">แถวนี้ท่วมมั้ย ↗</a><a href="https://www.floodboard.org/#map" target="_blank" rel="noopener">แผนที่น้ำท่วม Floodboard ↗</a>${ll?`<button type="button" class="linkish" data-copyll="${ll}">คัดลอกพิกัด ${ll}</button>`:''}</div>
@@ -183,9 +187,11 @@ async function saveCctv(id,val){
 
 /* ---------- รายละเอียด ---------- */
 function openDrawer(id){A.openId=String(id);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
-function closeDrawer(){A.openId=null;$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
+function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
+/* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
+function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
@@ -248,3 +254,6 @@ $('#export').addEventListener('click',()=>{const list=filtered();
 
 /* ---------- เริ่ม ---------- */
 if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}else showLogin();
+
+/* ลิ้นชักเคสวาดใหม่ทุกครั้งที่ข้อมูลอัปเดต: หยุดสตรีมเดิมแล้วเริ่มกล้องในลิ้นชักใหม่ */
+{const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}

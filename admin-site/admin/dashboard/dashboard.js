@@ -33,7 +33,7 @@ function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.n
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
   try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
-    api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;renderHelpme()}).catch(()=>{});
+    api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
     D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
@@ -66,18 +66,20 @@ function hbars(id,rows,opt={}){const box=$(id);if(!rows.length||!rows.some(r=>r[
 
 /* ---------- column chart (SVG) ---------- */
 function columns(id,buckets){const box=$(id);const W=Math.max(320,box.clientWidth||600),H=220,pl=34,pr=8,pt=18,pb=26;
-  const max=Math.max(...buckets.map(b=>b.v),0);if(!max){box.replaceChildren(el('p','empty','ยังไม่มีเคสในช่วงนี้'));return}
+  const dual=buckets.some(b=>b.k!=null),max=Math.max(...buckets.map(b=>Math.max(b.v,b.k||0)),0);if(!max){box.replaceChildren(el('p','empty','ยังไม่มีเคสในช่วงนี้'));return}
   const step=max<=5?1:max<=10?2:Math.ceil(max/4/5)*5,top=Math.ceil(max/step)*step;
   const s=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'กราฟเคสใหม่'}),iw=W-pl-pr,ih=H-pt-pb,y=v=>pt+ih-(v/top)*ih;
   for(let v=0;v<=top;v+=step){s.append(svgEl('line',{x1:pl,x2:W-pr,y1:y(v),y2:y(v),stroke:v?'var(--grid)':'var(--axis)','stroke-width':1}));const t=svgEl('text',{x:pl-6,y:y(v)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'});t.textContent=nf(v);s.append(t)}
-  const n=buckets.length,band=iw/n,bw=Math.min(24,Math.max(3,band-2));
+  const n=buckets.length,band=iw/n,bw=Math.min(dual?16:24,Math.max(dual?2:3,(band-2)/(dual?2.2:1)));
   const every=Math.ceil(n/(W<500?6:12));let peak=buckets.reduce((a,b)=>b.v>a.v?b:a,buckets[0]);
-  buckets.forEach((b,i)=>{const x=pl+band*i+(band-bw)/2,h=(b.v/top)*ih;
-    if(b.v){const r=Math.min(4,bw/2,h),y0=pt+ih,p=`M${x},${y0}V${y0-h+r}Q${x},${y0-h} ${x+r},${y0-h}H${x+bw-r}Q${x+bw},${y0-h} ${x+bw},${y0-h+r}V${y0}Z`;s.append(svgEl('path',{d:p,fill:'var(--s1)'}))}
-    const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih,fill:'transparent'});hover(hit,nf(b.v)+' เคส',b.full);s.append(hit);
+  const bar=(x,v,fill)=>{const h=(v/top)*ih;if(!v)return;const r=Math.min(4,bw/2,h),y0=pt+ih;s.append(svgEl('path',{d:`M${x},${y0}V${y0-h+r}Q${x},${y0-h} ${x+r},${y0-h}H${x+bw-r}Q${x+bw},${y0-h} ${x+bw},${y0-h+r}V${y0}Z`,fill}))};
+  buckets.forEach((b,i)=>{const x=pl+band*i+(band-bw*(dual?2:1)-(dual?2:0))/2;
+    bar(x,b.v,dual?'#2D45C8':'var(--s1)');if(dual)bar(x+bw+2,b.k,'#2E9E57');
+    const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih,fill:'transparent'});hover(hit,dual?`ใหม่ ${nf(b.v)} · ช่วยเสร็จ ${nf(b.k)}`:nf(b.v)+' เคส',b.full);s.append(hit);
     if(i%every===0||i===n-1){const t=svgEl('text',{x:pl+band*i+band/2,y:H-8,'text-anchor':'middle','font-size':11,fill:'var(--muted)'});t.textContent=b.lab;s.append(t)}
-    if(b===peak&&b.v){const t=svgEl('text',{x:pl+band*i+band/2,y:y(b.v)-5,'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:'var(--ink-2)'});t.textContent=nf(b.v);s.append(t)}});
-  box.replaceChildren(s)}
+    if(b===peak&&b.v){const t=svgEl('text',{x:dual?x+bw/2:pl+band*i+band/2,y:y(b.v)-5,'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:'var(--ink-2)'});t.textContent=nf(b.v);s.append(t)}});
+  if(!dual){box.replaceChildren(s);return}
+  const lg=el('div','hm-legend sm');lg.innerHTML='<span><i class="b-new"></i>เคสใหม่</span><span><i class="b-done"></i>ช่วยเสร็จ</span>';box.replaceChildren(s,lg)}
 
 /* ---------- แผนที่ ---------- */
 let leafletP=null;const M={map:null,cases:null,flood:null,fitted:false,floodAt:-1};
@@ -155,14 +157,19 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
     k.splice(1,0,[nf(nw.length),'เคสจากโซเชียลรอคัด',`วิกฤต ${nf(nw.filter(l=>+l.urgency===3).length)} · ติดธง ${nf(nw.filter(l=>(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))).length)}`,'var(--crit)','../../admin.html#leads'])}
   $('#kpis').replaceChildren(...k.map(([v,t,s,col,href])=>{const d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
-  /* trend */
+  /* trend: เคสใหม่ (และช่วยเสร็จ) จาก Google Sheet ของ Help Me ถ้าโหลดได้ ไม่ได้ใช้เคสในระบบ Helpme+ */
+  const HM=D.hm&&Array.isArray(D.hm.created)?D.hm:null,inR=t=>t>=from;
+  const cr=HM?HM.created.filter(inR):L.map(c=>c.createdAt),fin=HM?(HM.finished||[]).filter(inR):null;
   let buckets=[];
-  if(D.range==='today'){const s0=startOfDay(Date.now()),h=new Date().getHours();for(let i=0;i<=h;i++)buckets.push({t:s0+i*36e5,v:0,lab:i+':00',full:`${i}:00–${i}:59 น.`});L.forEach(c=>{const i=Math.floor((c.createdAt-s0)/36e5);if(buckets[i])buckets[i].v++});$('#t-trend').textContent='เคสใหม่รายชั่วโมง (วันนี้)'}
-  else{const first=from||startOfDay(Math.min(...L.map(c=>c.createdAt).filter(Boolean),Date.now())),days=Math.max(1,Math.round((startOfDay(Date.now())-first)/864e5)+1);
-    for(let i=0;i<days;i++){const t=startOfDay(first+i*864e5+36e5);const d=new Date(t);buckets.push({t,v:0,lab:d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}),full:d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'})})}
-    L.forEach(c=>{const i=buckets.findIndex(b=>b.t===startOfDay(c.createdAt));if(i>=0)buckets[i].v++});$('#t-trend').textContent='เคสใหม่ต่อวัน'}
-  const peak=buckets.reduce((a,b)=>b.v>a.v?b:a,{v:0});$('#s-trend').textContent=peak.v?`มากที่สุด ${nf(peak.v)} เคส · ${peak.full}`:'';
-  columns('#c-trend',buckets);table('#tb-trend',['ช่วงเวลา','เคสใหม่'],buckets.map(b=>[b.full,b.v]));
+  if(D.range==='today'){const s0=startOfDay(Date.now()),h=new Date().getHours();for(let i=0;i<=h;i++)buckets.push({t:s0+i*36e5,v:0,k:fin?0:null,lab:i+':00',full:`${i}:00–${i}:59 น.`});
+    cr.forEach(t=>{const b=buckets[Math.floor((t-s0)/36e5)];if(b)b.v++});(fin||[]).forEach(t=>{const b=buckets[Math.floor((t-s0)/36e5)];if(b)b.k++});$('#t-trend').textContent='เคสใหม่รายชั่วโมง (วันนี้)'}
+  else{const first=from||startOfDay(Math.min(...cr.filter(Boolean),Date.now())),days=Math.max(1,Math.round((startOfDay(Date.now())-first)/864e5)+1);
+    for(let i=0;i<days;i++){const t=startOfDay(first+i*864e5+36e5);const d=new Date(t);buckets.push({t,v:0,k:fin?0:null,lab:d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}),full:d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'})})}
+    const byDay=new Map(buckets.map(b=>[b.t,b]));cr.forEach(t=>{const b=byDay.get(startOfDay(t));if(b)b.v++});(fin||[]).forEach(t=>{const b=byDay.get(startOfDay(t));if(b)b.k++});
+    $('#t-trend').textContent=fin?'เคสใหม่ และเคสที่ช่วยเสร็จต่อวัน':'เคสใหม่ต่อวัน'}
+  if(HM){const tg=el('small','hm-tag','Help Me');$('#t-trend').append(' ',tg)}
+  const peak=buckets.reduce((a,b)=>b.v>a.v?b:a,{v:0});$('#s-trend').textContent=(peak.v?`มากที่สุด ${nf(peak.v)} เคส · ${peak.full}`:'')+(HM?(peak.v?' · ':'')+'จาก Google Sheet ของ Help Me':'');
+  columns('#c-trend',buckets);table('#tb-trend',fin?['ช่วงเวลา','เคสใหม่','ช่วยเสร็จ']:['ช่วงเวลา','เคสใหม่'],buckets.map(b=>fin?[b.full,b.v,b.k]:[b.full,b.v]));
 
   const st=['open','going','done'].map(s=>[ST[s],n(s),ST_COL[s]]);hbars('#c-status',st,{total:L.length});table('#tb-status',['สถานะ','เคส'],st.map(r=>[r[0],r[1]]));
   const ur=[3,2,1].map(u=>[URG[u],act.filter(c=>sev(c)===u).length,URG_COL[u]]);hbars('#c-urg',ur,{total:act.length});table('#tb-urg',['ระดับ','เคส'],ur.map(r=>[r[0],r[1]]));
@@ -208,7 +215,8 @@ function renderHelpme(){
   const T=[['alert','red','รอช่วย',h.open,`วิกฤต ${nf(h.urgent)} เคส`],['route','blue','ทีมกำลังไป',h.going,'กำลังเดินทาง / อยู่หน้างาน'],['check','green','ช่วยแล้ว',h.done,`วันนี้ ${nf(h.doneToday)} เคส`],
     ['list','navy','เคสทั้งหมด',h.total,`ใหม่วันนี้ ${nf(h.today)} เคส`],['users','orange','คนที่ยังรอ',h.people.act,`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],['heart','green','คนที่ช่วยแล้ว',h.people.done,'ได้รับความช่วยเหลือ']];
   $('#hm-kpis').innerHTML=T.map(([icn,c,l,v,sub])=>`<div class="kpi hm-k t-${c}"><b>${nf(v)}</b><span>${l} <small class="hm-tag">Help Me</small></span><small><i></i>${esc2(sub)}</small></div>`).join('');
-  /* 14 วัน: เคสใหม่ (น้ำเงิน) เทียบช่วยเสร็จ (เขียว) */
+  /* 14 วัน: เคสใหม่ (น้ำเงิน) เทียบช่วยเสร็จ (เขียว) — กราฟหลักใช้ข้อมูลนี้แล้ว ใช้การ์ดนี้เฉพาะเซิร์ฟเวอร์รุ่นเก่าที่ยังไม่ส่ง created */
+  if($('#hm-days'))$('#hm-days').closest('article').hidden=Array.isArray(h.created);
   const d=h.days||[],mx=Math.max(1,...d.map(x=>Math.max(x.n,x.k))),W=560,H=150,pb=22,bw=W/Math.max(1,d.length);
   $('#hm-days').innerHTML=d.length?`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="เคสใหม่และเคสที่ช่วยเสร็จ 14 วัน">${d.map((x,i)=>{const x0=i*bw+bw*.18,w=bw*.3,hn=(x.n/mx)*(H-pb-14),hk=(x.k/mx)*(H-pb-14);
       const lab=new Date(x.day).toLocaleDateString('th-TH',{day:'numeric',month:'short'});

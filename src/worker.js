@@ -843,7 +843,7 @@ async function fillDistricts(db, cases) {
   need.forEach(c => { const d = known.get(key(c)); if (d && d !== '-') c.district = d; });
 }
 async function helpmeStatsLive(env, db) {
-  return cached('helpme-stats-v3', 60, async () => {
+  return cached('helpme-stats-v4', 60, async () => {
     const cases = await sheetCases(env); await fillDistricts(db, cases);
     const j = { ok: true, volunteer: true, cases }; // จาก Google Sheet ของ Help Me (ข้อมูลเต็ม)
     const TEST = /\btest|ทดสอบ|เทส(?!โก้)/i, now = Date.now(), H = 3600e3;
@@ -872,7 +872,9 @@ async function helpmeStatsLive(env, db) {
       people: { act: act.reduce((s, c) => s + P(c), 0), urgent: act.filter(c => sev(c) === 3).reduce((s, c) => s + P(c), 0), done: done.reduce((s, c) => s + P(c), 0) },
       times: { doneN: doneT.length, doneMed: med(doneT), doneP90: p90(doneT), pickupN: pickT.length, pickupMed: med(pickT) }, source: 'sheet',
       waits: { over6: open.filter(c => now - c.createdAt > 6 * H).length, over24: open.filter(c => now - c.createdAt > 24 * H).length, over72: open.filter(c => now - c.createdAt > 72 * H).length },
-      districts: rows(districts, 40), needs: rows(needs, 15), levels: rows(levels, 8), orgs: rows(orgs, 20), teams: rows(teams, 20), days };
+      districts: rows(districts, 40), needs: rows(needs, 15), levels: rows(levels, 8), orgs: rows(orgs, 20), teams: rows(teams, 20), days,
+      // เวลาแจ้ง / เวลาช่วยเสร็จรายเคส (ตัวเลขเวลาอย่างเดียว) ให้กราฟเคสใหม่ต่อวันของแดชบอร์ดแบ่งตามช่วงเวลาที่เลือกได้
+      created: all.map(c => c.createdAt).filter(Boolean), finished: done.map(c => c.doneAt || c.updatedAt).filter(Boolean) };
   });
 }
 async function pullAll(db, b, env) {

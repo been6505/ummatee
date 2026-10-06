@@ -20,7 +20,8 @@ function covDate(s){s=String(s||'').trim();if(!s)return null;let t=Date.parse(s)
 
 async function loadAll(){
   $('#sync').textContent='กำลังโหลด…';
-  try{const [l,t,p,c]=await Promise.all([apiGet({action:'leads'}),apiGet({action:'teams'}).catch(()=>null),apiGet({action:'places'}).catch(()=>null),apiGet({action:'covered'}).catch(()=>null)]);
+  try{const [l,t,p,c,ro]=await Promise.all([apiGet({action:'leads'}),apiGet({action:'teams'}).catch(()=>null),apiGet({action:'places'}).catch(()=>null),apiGet({action:'covered'}).catch(()=>null),apiGet({action:'roster'}).catch(()=>null)]);
+    if(ro&&ro.ok)LD.roster=ro.roster||[];
     if(l&&l.ok){LD.leads=l.leads||[];LD.settings=l.settings;LD.pulledAt=l.pulledAt}
     if(t&&t.ok)LD.live=t.teams||[];
     if(p&&p.ok)LD.places=(p.places||[]).filter(x=>x.type==='rescue');
@@ -38,6 +39,8 @@ function nearby(l){
   const cov=LD.covered.map(c=>({c,km:d(c),t:covDate(c.date)})).filter(x=>x.km<=3).sort((a,b)=>a.km-b.km).slice(0,3);
   return {live,places,cov}}
 
+/* ข้อความแจ้งเคสสำหรับ SMS/LINE ถึงทีม */
+function leadText(l){return `Helpme+ เคสจากโซเชียล: ${l.title||''}${l.address||l.district?' · '+[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' '):''}${pin(l)?` แผนที่ https://maps.google.com/?q=${+l.lat},${+l.lng}`:''} · ที่มา ${l.url}`}
 function card(l){
   const n=nearby(l),flags=(l.flags||[]).map(f=>f.split(':')[0]),st=l.status;
   const head=[`<span class="urg urg-${sev(l)}">${URG[sev(l)]}</span>`,`<span class="src">${esc(SRC[l.source]||l.source)}</span>`,
@@ -47,7 +50,7 @@ function card(l){
     `<small>โพสต์ ${esc(ago(l.postedAt))}</small>`].join('');
   const where=[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · ');
   const near=n?[
-    n.live.length?`<div><b>ทีมที่แชร์ตำแหน่ง</b>${n.live.map(x=>`<div class="row">🟢 ${esc(x.t.team)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(ago(x.t.updatedAt))}</span>${x.t.caseId?' <span class="km">(ถือเคสอยู่)</span>':''}</div>`).join('')}</div>`:'',
+    n.live.length?`<div><b>ทีมที่แชร์ตำแหน่ง</b>${n.live.map(x=>`<div class="row">🟢 ${esc(x.t.team)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(ago(x.t.updatedAt))}</span>${x.t.caseId?' <span class="km">(ถือเคสอยู่)</span>':''}${(()=>{const r=(LD.roster||[]).find(r=>String(r.name).trim()===String(x.t.team).trim());return typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(r||{name:x.t.team},{caseText:leadText(l)}):''})()}</div>`).join('')}</div>`:'',
     n.places.length?`<div><b>จุดกู้ภัยใกล้สุด</b>${n.places.map(x=>`<div class="row">🚑 ${esc(x.p.name)} <span class="km">${x.km.toFixed(1)} กม.</span>${x.p.phone?` <a href="tel:${esc(String(x.p.phone).replace(/[^\d+]/g,''))}" onclick="event.stopPropagation()">${esc(x.p.phone)}</a>`:''}</div>`).join('')}</div>`:'',
     n.cov.length?`<div><b>องค์กรอื่นที่ลงพื้นที่ใกล้ ๆ</b>${n.cov.map(x=>`<div class="row">🤝 ${esc(x.c.org)} <span class="km">${x.km.toFixed(1)} กม. · ${esc(x.c.date||'')}</span>${x.t&&l.postedAt&&x.t<l.postedAt-12*3600e3?' <span class="before">ไปก่อนโพสต์นี้ — ยังไม่นับว่าช่วยแล้ว</span>':''}</div>`).join('')}</div>`:'',
   ].filter(Boolean).join('')||'<span class="muted">ไม่พบทีมหรือจุดกู้ภัยในระยะ '+NEAR_KM+' กม.</span>':'<span class="muted">ไม่มีพิกัด — เปิดโพสต์ต้นทางเพื่อหาที่อยู่</span>';

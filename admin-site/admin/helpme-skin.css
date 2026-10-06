@@ -184,3 +184,21 @@ html[data-theme="dark"]:not(.dash) :is(img,video,iframe,canvas,.leaflet-containe
 html[data-theme="dark"]:not(.dash) .leaflet-container :is(img,video,canvas,.cam-live){filter:none}
 .cam-golive{display:block;width:100%;text-align:left;border:0;border-radius:12px;background:var(--tint);color:var(--primary);font:inherit;font-size:12.5px;font-weight:600;padding:8px 10px;cursor:pointer}
 .cam-golive:hover{background:var(--tint-2)}
+
+/* ---------- โทรหาทีม (teamcall.js) ---------- */
+.call-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.call-btn{display:inline-flex;align-items:center;gap:4px;border:0;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none!important;background:var(--tint);color:var(--primary)}
+.call-btn:hover{background:var(--tint-2)}
+.call-btn.tel{background:var(--ok,#2E9E57);color:#fff}.call-btn.tel:hover{filter:brightness(.95)}
+.call-btn.vid{background:var(--primary);color:#fff}
+.call-none{font-size:12.5px;color:var(--muted);align-self:center}
+.call-sheet{display:grid;gap:10px;padding:18px 20px}.call-msg{background:var(--bg);border-radius:14px;padding:10px 12px;font-size:14px;white-space:pre-wrap}
+.call-sheet .call-btn{font-size:15px;padding:10px 16px}
+.tc-bg{position:fixed;inset:0;background:rgba(16,22,48,.35);z-index:3000}
+.tc-sheet{position:fixed;z-index:3001;left:50%;top:50%;transform:translate(-50%,-50%);width:min(460px,calc(100% - 24px));background:#fff;border-radius:24px;box-shadow:0 18px 48px rgba(22,27,61,.25);padding:18px 20px;display:grid;gap:10px}
+.tc-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.tc-h b{font-size:17px}
+.tc-x{border:0;background:var(--bg);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px}
+.tc-sub{margin:0;color:var(--muted);font-size:13.5px}
+.tc-link{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:13.5px;background:var(--bg)}
+.tc-acts{display:flex;flex-wrap:wrap;gap:8px}.tc-acts .btn{flex:1 1 auto;justify-content:center;text-align:center}
+@media(max-width:760px){.tc-sheet{top:auto;bottom:calc(var(--tab-h,64px) + 16px);transform:translateX(-50%)}}

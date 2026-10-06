@@ -4,8 +4,8 @@
    ใช้ตัวแปรจาก admin.js: A, api, post, sev, URG, ST, hasPin, esc, toast, render, openDrawer */
 const MX=(()=>{
   const S={map:null,zones:[],roster:[],L:{},on:{},side:'zones',zoneId:null,form:null,preview:null,route:null,start:null,picking:false,drawn:{}};
-  const LAYERS=[['cases','📍 เคส'],['roads','🛣 ถนนน้ำท่วม'],['sensors','💧 น้ำบนถนน (กทม.)'],['stations','🌊 ระดับน้ำคลอง'],['cams','📷 กล้อง CCTV'],['zones','⭕ โซน']];
-  const DEF={cases:1,roads:1,sensors:1,stations:1,cams:0,zones:1};
+  const LAYERS=[['cases','📍 เคส'],['roads','🛣 ถนนน้ำท่วม'],['sensors','💧 น้ำบนถนน (กทม.)'],['stations','🌊 ระดับน้ำคลอง'],['cams','📷 กล้อง CCTV'],['gistda','🛰 น้ำท่วมจากดาวเทียม 7 วัน (GISTDA)'],['zones','⭕ โซน']];
+  const DEF={cases:1,roads:1,sensors:1,stations:1,cams:0,gistda:0,zones:1};
   const ZCOL=['#2a78d6','#0ca30c','#8e44ad','#e67e22','#16a085','#c0392b','#d81b60','#546e7a'];
   const TW={5:['#e53935','ล้นตลิ่ง'],4:['#1e40ff','น้ำมาก'],3:['#00a651','ปกติ'],2:['#ffb300','น้ำน้อย'],1:['#b5651d','น้อยวิกฤต']};
   const VEH={boat:'เรือ',truck:'รถสูง',pickup:'กระบะ',car:'รถเก๋ง/ตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
@@ -34,6 +34,8 @@ const MX=(()=>{
     else S.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
     S.base.addTo(m);{const tok=S.baseTok=(S.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==S.baseTok)return;m.removeLayer(S.base);S.base=l;l.addTo(m)})} /* OpenFreeMap (เวกเตอร์ ป้ายไทย) ทับเมื่อโหลดเสร็จ */S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
+    // ภาพพื้นที่น้ำท่วมจากดาวเทียม GISTDA ผ่าน /api/gistda (ต้องตั้ง GISTDA_KEY ที่เซิร์ฟเวอร์)
+    S.L.gistda=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'});
     map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
     map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC');
     if(map.zoomControl)map.zoomControl.setPosition('bottomright');L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);

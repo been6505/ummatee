@@ -685,8 +685,21 @@ async function saveLeadSettings(db, b) {
   return { ok: true, settings: await leadSettings(db) };
 }
 
+/* พื้นที่น้ำท่วมจากดาวเทียม GISTDA (api-gateway.gistda.or.th) — ภาพแผนที่ (TMS ลำดับแบบ XYZ) ผ่านเซิร์ฟเวอร์นี้ ไม่เปิดเผย key
+   ตั้ง secret GISTDA_KEY (สมัครฟรีที่ api-gateway.gistda.or.th) · แคชที่ edge 30 นาที */
+const GISTDA_LAYERS = { '1day': 'flood/1day', '3days': 'flood/3days', '7days': 'flood/7days', '30days': 'flood/30days', freq: 'flood-freq' };
+async function gistdaTile(env, layer, z, x, y) {
+  if (!env.GISTDA_KEY) return new Response(null, { status: 404, headers: { 'x-gistda': 'no-key' } });
+  const r = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/maps/${GISTDA_LAYERS[layer]}/tms/${z}/${x}/${y}?api_key=${encodeURIComponent(env.GISTDA_KEY)}`,
+    { headers: UA, cf: { cacheTtl: 1800, cacheEverything: true } });
+  if (!r.ok || !String(r.headers.get('content-type') || '').startsWith('image/')) return new Response(null, { status: 502 });
+  return new Response(r.body, { headers: { 'content-type': r.headers.get('content-type'), 'cache-control': 'public, max-age=1800' } });
+}
+
 async function api(request, env) {
   const db = env.DB;
+  const gm = new URL(request.url).pathname.match(/^\/api\/gistda\/(1day|3days|7days|30days|freq)\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})(?:\.png)?$/);
+  if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
   await init(db);
   const url = new URL(request.url);
@@ -709,6 +722,7 @@ async function api(request, env) {
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
+      case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที

@@ -13,7 +13,7 @@ const MAPL=(()=>{
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const S={map:null,rain:null,rainAt:0,rainL:null,rainI:0,anim:null,ctl:null,net:null,netRows:null,cams:null,camL:null};
   const on=id=>{const e=document.getElementById(id);return !!(e&&e.checked)};
-  const save=()=>{try{localStorage.setItem('uh_dlay',JSON.stringify(['mt-rain','mt-cov','mt-cctv','mt-flood','mt-done','mt-leads','mt-live'].reduce((o,k)=>{const e=document.getElementById(k);if(e)o[k]=e.checked;return o},{})))}catch(e){}};
+  const save=()=>{try{localStorage.setItem('uh_dlay',JSON.stringify(['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-flood','mt-done','mt-leads','mt-live'].reduce((o,k)=>{const e=document.getElementById(k);if(e)o[k]=e.checked;return o},{})))}catch(e){}};
   function restore(){try{const o=JSON.parse(localStorage.getItem('uh_dlay')||'{}');for(const k in o){const e=document.getElementById(k);if(e)e.checked=!!o[k]}}catch(e){}}
 
   /* ---------- เรดาร์ฝน ---------- */
@@ -75,10 +75,24 @@ const MAPL=(()=>{
     S.camL=CAMLIVE.layer(S.map,S.cams,show=>setSub('mt-cctv',show?`${n} ตัว · กล้องสีแดง = ภาพสด (${live}) · ที่เหลือภาพนิ่งล่าสุด`:`${n} ตัว · ซูมเข้าถึงจะแสดงกล้อง`))}
   const CAM_ATTR='กล้อง CCTV © <a href="https://flood.pop.in.th/" target="_blank" rel="noopener">POPNIX Flood</a> · iTIC';
 
+  /* ---------- พื้นที่น้ำท่วมจากดาวเทียม (GISTDA) ---------- */
+  const GIS_ATTR='น้ำท่วมจากดาวเทียม © <a href="https://disaster.gistda.or.th/" target="_blank" rel="noopener">GISTDA</a>';
+  const GIS_TXT={'1day':'ย้อนหลัง 1 วัน','3days':'3 วันล่าสุด','7days':'7 วันล่าสุด','30days':'30 วันล่าสุด',freq:'พื้นที่น้ำท่วมซ้ำซาก'};
+  let gisRange='7days';try{gisRange=localStorage.getItem('uh_gistda')||'7days'}catch(e){}
+  async function drawGistda(){if(S.gis){S.map.removeLayer(S.gis);S.gis=null}S.map.attributionControl.removeAttribution(GIS_ATTR);
+    document.querySelectorAll('[data-gr]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.gr===gisRange)));
+    if(!on('mt-gistda'))return;
+    if(S.gisOn==null){try{const r=await fetch('/api?action=gistda_status').then(r=>r.json());S.gisOn=!!(r&&r.enabled)}catch(e){S.gisOn=false}}
+    if(!S.gisOn){setSub('mt-gistda','ยังใช้ไม่ได้: ผู้ดูแลต้องตั้ง GISTDA_KEY (สมัครฟรีที่ api-gateway.gistda.or.th)');return}
+    if(!S.map.getPane('gistda')){const p=S.map.createPane('gistda');p.style.zIndex=340;p.style.pointerEvents='none'}
+    S.gis=L.tileLayer('/api/gistda/'+gisRange+'/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18}).addTo(S.map);
+    S.map.attributionControl.addAttribution(GIS_ATTR);setSub('mt-gistda','GISTDA · '+GIS_TXT[gisRange]+' (สีฟ้า = น้ำท่วม)')}
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gr]');if(!b)return;e.preventDefault();gisRange=b.dataset.gr;try{localStorage.setItem('uh_gistda',gisRange)}catch(err){}
+    const sw=document.getElementById('mt-gistda');if(sw&&!sw.checked){sw.checked=true;save()}drawGistda()});
   function setSub(id,t){const e=document.querySelector(`[data-sub="${id}"]`);if(e)e.textContent=t}
-  function sync(){save();drawRain();drawNet();drawCams()}
+  function sync(){save();drawRain();drawNet();drawCams();drawGistda()}
   function attach(map){if(S.map)return;S.map=map;restore();
-    ['mt-rain','mt-cov','mt-cctv'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{save();({'mt-rain':drawRain,'mt-cov':drawNet,'mt-cctv':drawCams})[id]()})});
+    ['mt-rain','mt-cov','mt-cctv','mt-gistda'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{save();({'mt-rain':drawRain,'mt-cov':drawNet,'mt-cctv':drawCams,'mt-gistda':drawGistda})[id]()})});
     ['mt-flood','mt-done','mt-leads','mt-live'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',save)});
     sync();setInterval(()=>{if(!document.hidden&&on('mt-rain')&&!S.anim){S.rainAt=0;drawRain()}},10*60e3)}
   /* ข้อมูลพื้นที่มอบแล้วโหลดเสร็จทีหลัง: วาดชั้นเครือข่ายใหม่ */

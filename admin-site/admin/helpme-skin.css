@@ -202,3 +202,7 @@ html[data-theme="dark"]:not(.dash) .leaflet-container :is(img,video,canvas,.cam-
 .tc-link{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:13.5px;background:var(--bg)}
 .tc-acts{display:flex;flex-wrap:wrap;gap:8px}.tc-acts .btn{flex:1 1 auto;justify-content:center;text-align:center}
 @media(max-width:760px){.tc-sheet{top:auto;bottom:calc(var(--tab-h,64px) + 16px);transform:translateX(-50%)}}
+
+/* ปุ่มช่วงเวลา GISTDA ในแผงชั้นข้อมูล */
+.gistda-range .lchip{border:0;cursor:pointer;font:inherit;font-size:12px}
+.gistda-range .lchip[aria-pressed=true]{background:var(--primary);color:#fff}

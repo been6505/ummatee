@@ -12,7 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./dashboard.css?v=99">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=8">
+<link rel="stylesheet" href="../helpme-skin.css?v=9">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -54,6 +54,7 @@
           <div class="lm-bases"><button type="button" data-dbase="road"><span aria-hidden="true">🛣</span>ถนน</button><button type="button" data-dbase="sat"><span aria-hidden="true">🛰</span>ดาวเทียม</button><button type="button" data-dbase="dark"><span aria-hidden="true">🌙</span>มืด</button></div>
           <label class="lcard"><span class="lic" style="--c:#2D45C8">🌧</span><span class="ltx"><b>เรดาร์ฝน</b><small data-sub="mt-rain">ฝนตกตรงไหน · ดูย้อนหลัง 2 ชม. ได้</small><span class="lchips"><span class="lchip rain-grad"><i></i>ฝนเบา → ฝนหนัก</span><span class="lchip">กด ▶ บนแผนที่เพื่อดูทิศทางฝน</span></span></span><input type="checkbox" class="sw" id="mt-rain"></label>
           <label class="lcard"><span class="lic" style="--c:#E5383B">💧</span><span class="ltx"><b>ถนนน้ำท่วม</b><small>ระดับน้ำบนถนนล่าสุด · Floodboard</small><span class="lchips"><span class="lchip"><i class="ln" style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span class="lchip"><i class="ln" style="background:#f57c00"></i>เสี่ยง</span><span class="lchip"><i class="ln" style="background:#fbc02d"></i>น้ำขัง · รถสูงผ่านได้</span></span></span><input type="checkbox" class="sw" id="mt-flood" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#0E7490">🛰</span><span class="ltx"><b>พื้นที่น้ำท่วมจากดาวเทียม</b><small data-sub="mt-gistda">GISTDA · ขอบเขตน้ำท่วมจากภาพดาวเทียม</small><span class="lchips gistda-range" role="group" aria-label="ช่วงเวลา"><button type="button" class="lchip" data-gr="1day">1 วัน</button><button type="button" class="lchip" data-gr="3days">3 วัน</button><button type="button" class="lchip" data-gr="7days">7 วัน</button><button type="button" class="lchip" data-gr="30days">30 วัน</button><button type="button" class="lchip" data-gr="freq">ท่วมซ้ำซาก</button></span></span><input type="checkbox" class="sw" id="mt-gistda"></label>
           <a class="lcard" href="https://water.longdo.com/" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490">🌊</span><span class="ltx"><b>ระดับน้ำคลองและแม่น้ำ</b><small>Longdo Water · ข้อมูลสำนักการระบายน้ำ กทม. และคลังข้อมูลน้ำแห่งชาติ</small></span><span class="lext" aria-hidden="true">↗</span></a>
           <a class="lcard" href="https://flood.pop.in.th/#overview" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490">💧</span><span class="ltx"><b>แผนที่จุดวัดน้ำ กทม.</b><small>POPNIX Flood · ระดับน้ำคลองเทียบระดับเตือนภัย</small></span><span class="lext" aria-hidden="true">↗</span></a>
           <label class="lcard"><span class="lic" style="--c:#7C3AED">🤝</span><span class="ltx"><b>ทีมกู้ภัยและเครือข่ายช่วยเหลือ</b><small>จุดที่องค์กรต่าง ๆ ลงพื้นที่แล้ว (Help Me + พื้นที่มอบแล้ว)</small><span class="lchips" id="net-chips"></span></span><input type="checkbox" class="sw" id="mt-cov" checked></label>
@@ -97,7 +98,7 @@
 <script src="../covered.js?v=9"></script>
 <script src="../ofm.js?v=1"></script>
 <script src="../camlive.js?v=6"></script>
-<script src="../maplayers.js?v=4"></script>
+<script src="../maplayers.js?v=5"></script>
 <script src="./dashboard.js?v=20"></script>
 </body>
 </html>

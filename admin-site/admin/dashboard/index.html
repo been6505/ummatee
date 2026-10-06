@@ -9,7 +9,7 @@
 <link rel="icon" href="../../assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=97">
+<link rel="stylesheet" href="./dashboard.css?v=98">
 <link rel="stylesheet" href="../theme.css?v=1">
 </head>
 <body>
@@ -42,7 +42,7 @@
     <p class="status" id="status" role="status" hidden></p>
     <article class="card mapcard"><div class="map-h"><div><h2>แผนที่เคส</h2><p class="sub" id="map-sub">จุดเคสในช่วงที่เลือก · เส้นสี = ถนนน้ำท่วมจาก Floodboard</p></div></div>
       <div class="dmap-wrap"><div id="dmap" class="dmap" role="region" aria-label="แผนที่เคส"></div>
-        <div class="mx-legend" id="dleg" aria-label="คำอธิบายสีบนแผนที่"><span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span class="lg-done"><i class="lp done"></i>ช่วยแล้ว</span><span class="lg-sep"></span><span class="lg-x lg-flood"><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span><span class="lg-x lg-cov"><i style="background:#7b3fc4;border-radius:3px"></i>องค์กรอื่นรับแล้ว</span></div>
+        <div class="mx-legend" id="dleg" aria-label="คำอธิบายสีบนแผนที่"><span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span class="lg-done"><i class="lp done"></i>ช่วยแล้ว</span><span class="lg-sep"></span><span class="lg-x lg-flood"><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span><span class="lg-x lg-leads" hidden><i class="lead-lg"></i>เคสจากโซเชียลรอคัด</span><span class="lg-x lg-live" hidden><i style="background:#2E9E57"></i>ทีมแชร์ตำแหน่ง</span><span class="lg-x lg-cov"><i style="background:#7b3fc4;border-radius:3px"></i>องค์กรอื่นรับแล้ว</span></div>
         <div class="mx-fabs">
           <button type="button" class="fab" id="fs-lay" aria-label="แบบแผนที่และชั้นข้อมูล" title="แบบแผนที่และชั้นข้อมูล" aria-haspopup="dialog" aria-expanded="false" aria-controls="dlayer"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
           <button type="button" class="fab" id="fs-loc" aria-label="ตำแหน่งของฉัน" title="ตำแหน่งของฉัน"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></button>
@@ -54,6 +54,8 @@
           <label class="tg"><input type="checkbox" id="mt-flood" checked><span>🛣 ถนนน้ำท่วม</span></label>
           <div class="flood-key"><span><i style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span><i style="background:#f57c00"></i>เสี่ยง</span><span><i style="background:#fbc02d"></i>น้ำขัง ผ่านได้</span></div>
           <label class="tg"><input type="checkbox" id="mt-cov" checked><span>🤝 พื้นที่องค์กรอื่นรับแล้ว</span></label>
+          <label class="tg"><input type="checkbox" id="mt-leads" checked><span>📣 เคสจากโซเชียลรอคัด</span></label>
+          <label class="tg"><input type="checkbox" id="mt-live" checked><span>🟢 ทีมที่แชร์ตำแหน่ง</span></label>
         </div>
       </div>
       <p class="map-note" id="map-nopin"></p>
@@ -80,6 +82,7 @@
         </div>
       </section>
       <article class="card span2"><h2>ทีมอาสา</h2><p class="sub">เคสที่แต่ละทีมรับไว้</p><div id="teams"></div></article>
+      <article class="card span2" id="leads-card" hidden><h2>📣 เคสจากโซเชียลรอคัด</h2><p class="sub" id="leads-sub"></p><div id="leads"></div></article>
       <article class="card span2"><h2>เคสวิกฤตที่ยังรอนานที่สุด</h2><p class="sub">ยังไม่มีทีมรับ เรียงจากรอนานสุด</p><div id="waiting"></div></article>
     </div>
   </main>
@@ -87,6 +90,6 @@
 <div class="tip" id="tip" role="tooltip" hidden></div>
 <script src="../verify.js?v=4"></script>
 <script src="../covered.js?v=9"></script>
-<script src="./dashboard.js?v=12"></script>
+<script src="./dashboard.js?v=13"></script>
 </body>
 </html>

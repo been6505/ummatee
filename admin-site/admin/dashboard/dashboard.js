@@ -32,8 +32,8 @@ $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set(
 function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean),createdAt:Number(c.createdAt)||0,updatedAt:Number(c.updatedAt)||0}));D.loaded=Date.now()}
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
-  try{const [r,sk]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
-    D.stock=sk&&sk.ok?sk:null;
+  try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
+    D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
 let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key)return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
@@ -107,7 +107,17 @@ async function drawMap(L0){
     COVERED.C.rows.filter(r=>r.lat!=null).forEach(r=>{L.circle([r.lat,r.lng],{radius:r.approx?900:600,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:.12,dashArray:r.approx?'4 4':null}).addTo(M.cov);
       L.circleMarker([r.lat,r.lng],{radius:6,color:'#fff',weight:2,fillColor:'#7b3fc4',fillOpacity:1}).bindPopup(`<b>🤝 ${escT(r.org)}</b><br>${escT(r.area)}<br>วันที่ ${escT(r.date)}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${escT(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov)})}
     if($('#mt-cov').checked)M.cov.addTo(M.map);else M.cov.remove()}
-  const dl=$('#dleg');if(dl){dl.querySelector('.lg-done').hidden=!showDone;dl.querySelector('.lg-flood').hidden=!$('#mt-flood').checked;dl.querySelector('.lg-cov').hidden=typeof COVERED==='undefined'||!$('#mt-cov').checked}
+  /* เคสจากโซเชียลที่รอคัด (หน้า เคสจากโซเชียล) + ทีมที่แชร์ตำแหน่งอยู่ */
+  if(!M.leads){M.leads=L.layerGroup();M.live=L.layerGroup()}
+  M.leads.clearLayers();M.live.clearLayers();
+  (D.leads||[]).filter(l=>l.status==='new'&&l.lat!=null&&l.lng!=null).forEach(l=>{const u=Math.min(3,Math.max(1,+l.urgency||1));
+    L.marker([+l.lat,+l.lng],{icon:L.divIcon({className:'lead-pin u'+u,html:'<span></span>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]}),zIndexOffset:300+u*100,keyboard:false})
+      .bindPopup(`<b>📣 ${escT(URG[u])} · รอคัด</b><br>${escT(l.title||'')}<br>${escT([l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · '))}${(l.flags||[]).length?'<br>⚠️ ติดธง ตรวจก่อนรับ':''}<br><a href="../leads/">คัดเคสนี้ที่หน้าเคสจากโซเชียล →</a>`).addTo(M.leads)});
+  (D.live||[]).forEach(t=>L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'live-tm',html:`<span>🟢 ${escT(t.team)}</span>`,iconSize:null}),zIndexOffset:1500,keyboard:false})
+    .bindPopup(`<b>🟢 ${escT(t.team)}</b><br>แชร์ตำแหน่ง ${escT(ago(t.updatedAt))}${t.caseId?'<br>ถือเคส #'+escT(t.caseId):''}`).addTo(M.live));
+  if($('#mt-leads').checked)M.leads.addTo(M.map);else M.leads.remove();
+  if($('#mt-live').checked)M.live.addTo(M.map);else M.live.remove();
+  const dl=$('#dleg');if(dl){dl.querySelector('.lg-leads').hidden=!$('#mt-leads').checked||!D.leads;dl.querySelector('.lg-live').hidden=!$('#mt-live').checked;dl.querySelector('.lg-done').hidden=!showDone;dl.querySelector('.lg-flood').hidden=!$('#mt-flood').checked;dl.querySelector('.lg-cov').hidden=typeof COVERED==='undefined'||!$('#mt-cov').checked}
   setTimeout(()=>M.map.invalidateSize(),60);
 }
 /* แบบแผนที่ (เหมือนหน้าเว็บหลักและหน้าจัดการเคส): ถนน / ดาวเทียม / มืด */
@@ -122,7 +132,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-dbase]');i
 $('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigator.geolocation||!M.map){if(typeof toast==='function')toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}btn.classList.add('busy');
   navigator.geolocation.getCurrentPosition(p=>{btn.classList.remove('busy');const ll=[p.coords.latitude,p.coords.longitude];if(!M.me)M.me=L.marker(ll,{icon:L.divIcon({className:'me-dot',html:'<span></span>',iconSize:[22,22]}),interactive:false,zIndexOffset:2000}).addTo(M.map);M.me.setLatLng(ll);M.map.flyTo(ll,Math.max(M.map.getZoom(),15),{duration:.6})},
     ()=>{btn.classList.remove('busy')},{enableHighAccuracy:true,timeout:15000})});
-['#mt-done','#mt-flood','#mt-cov'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
+['#mt-done','#mt-flood','#mt-cov','#mt-leads','#mt-live'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
 /* ---------- render ---------- */
 function render(){
@@ -142,6 +152,8 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
     const dup=cr.length?act.filter(c=>COVERED.match(c)).length:0;
     k.push([cr.length?nf(cr.length):(COVERED.C.loading||!COVERED.C.loaded?'…':'0'),'พื้นที่ที่องค์กรอื่นช่วยแล้ว',cr.length?`${nf(orgs.size)} องค์กร${sets?' · '+nf(sets)+' ชุด':''}`:(COVERED.C.error||'กำลังโหลดจากชีต'),'#7b3fc4','../covered/'],
       [cr.length?nf(dup):'…','เคสรอช่วยในพื้นที่ที่มีคนช่วยแล้ว','ตรวจก่อนส่งทีม (อาจซ้ำ)','#7b3fc4','../covered/']);}
+  if(D.leads){const nw=D.leads.filter(l=>l.status==='new');
+    k.splice(1,0,[nf(nw.length),'เคสจากโซเชียลรอคัด',`วิกฤต ${nf(nw.filter(l=>+l.urgency===3).length)} · ติดธง ${nf(nw.filter(l=>(l.flags||[]).length).length)}`,'var(--crit)','../leads/'])}
   $('#kpis').replaceChildren(...k.map(([v,t,s,col,href])=>{const d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
   /* trend */
@@ -177,8 +189,25 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
   else{const t=el('table','tlist');t.innerHTML='<thead><tr><th>รอมาแล้ว</th><th>ความต้องการ</th><th class="hide-s">ที่อยู่</th><th class="n">คน</th></tr></thead>';const tb=el('tbody');
     w.forEach(c=>{const r=el('tr'),m=Math.round((Date.now()-c.createdAt)/60000);r.append(el('td',null,m<60?m+' นาที':m<1440?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':Math.floor(m/1440)+' วัน'),el('td',null,[...new Set(c.needs)].join(', ')||'-'),el('td','hide-s',[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'-'),el('td','n',nf(c.people||1)));tb.append(r)});
     t.append(tb);const a=el('a',null,'ไปที่หน้าจัดการเคส →');a.href='../../admin.html';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
+  renderLeads();
   renderStock();
 }
+
+/* ---------- เคสจากโซเชียลรอคัด (เรียงวิกฤตก่อน) + ทีมแชร์ตำแหน่งที่ใกล้ที่สุด ---------- */
+function ago(t){const m=Math.round((Date.now()-Number(t))/60000);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.round(m/60)+' ชม.ที่แล้ว':Math.round(m/1440)+' วันที่แล้ว'}
+const kmD=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+function renderLeads(){
+  const box=$('#leads-card');if(!D.leads){box.hidden=true;return}box.hidden=false;
+  const nw=D.leads.filter(l=>l.status==='new').sort((a,b)=>(b.urgency-a.urgency)||(b.postedAt-a.postedAt)),acc=D.leads.filter(l=>l.status==='accepted').length,rej=D.leads.filter(l=>l.status==='rejected').length;
+  $('#leads-sub').textContent=`รอคัด ${nf(nw.length)} · รับเป็นเคสแล้ว ${nf(acc)} · ตัดทิ้ง ${nf(rej)} (30 วันล่าสุด)`;
+  if(!nw.length){$('#leads').replaceChildren(el('p','empty','ไม่มีเคสรอคัด 👍 กด "ดึงเคสใหม่จาก Traffy" ที่หน้าเคสจากโซเชียลเพื่อหาเพิ่ม'));return}
+  const t=el('table','tlist');t.innerHTML='<thead><tr><th>ระดับ</th><th>เคส</th><th class="hide-s">พื้นที่</th><th>ทีมใกล้สุด</th><th class="n hide-s">โพสต์</th></tr></thead>';const tb=el('tbody');
+  nw.slice(0,8).forEach(l=>{const tr=el('tr'),u=Math.min(3,Math.max(1,+l.urgency||1));
+    const near=l.lat!=null?(D.live||[]).map(x=>({x,d:kmD(+l.lat,+l.lng,+x.lat,+x.lng)})).sort((a,b)=>a.d-b.d)[0]:null;
+    const lv=el('td');const i=el('i','dot');i.style.background=URG_COL[u];lv.append(i,URG[u]+((l.flags||[]).length?' ⚠️':''));
+    tr.append(lv,el('td',null,l.title||'-'),el('td','hide-s',[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · ')||'-'),
+      el('td',null,near?`${near.x.team} · ${near.d.toFixed(1)} กม.`:'ยังไม่มีทีมแชร์ตำแหน่ง'),el('td','n hide-s',ago(l.postedAt)));tb.append(tr)});
+  t.append(tb);const a=el('a',null,'คัดเคสที่หน้าเคสจากโซเชียล →');a.href='../leads/';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#leads').replaceChildren(t,p)}
 
 /* ---------- สต็อก (ยอดปัจจุบัน ไม่ขึ้นกับช่วงเวลา) ---------- */
 // หน่วยของแต่ละรายการไม่เหมือนกัน (ห่อ แผง ขวด) จึงเทียบกันด้วย % ของที่เคยรับเข้า ไม่ใช่จำนวนดิบ

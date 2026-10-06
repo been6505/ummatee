@@ -193,25 +193,41 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
   renderHelpme();
 }
 
-/* ---------- สถิติจาก Help Me (แบบหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
+/* ---------- ภาพรวมจาก Help Me (ตัวเลขชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
 function renderHelpme(){
   const sec=$('#hm-sec'),h=D.hm;if(!sec)return;if(!h){sec.hidden=true;return}sec.hidden=false;
-  const dur=ms=>{if(!ms)return '-';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
-  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})} น.${h.full?'':' · ข้อมูลสาธารณะ (ยังไม่ได้ตั้ง HELPME_KEY)'}`;
-  const k=[[nf(h.open),'รอช่วย',`วิกฤต ${nf(h.urgent)} เคส`,'var(--crit)'],[nf(h.going),'ทีมกำลังไป','','var(--going)'],[nf(h.done),'ช่วยแล้ว',`วันนี้ ${nf(h.doneToday)} เคส`,'var(--good)'],
-    [nf(h.total),'เคสทั้งหมด',`ใหม่วันนี้ ${nf(h.today)} เคส`],[nf(h.people.act),'คนที่ยังรอ',`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],[nf(h.people.done),'คนที่ช่วยแล้ว','']];
-  $('#hm-kpis').replaceChildren(...k.map(([v,t,s,col])=>{const d=el('a','kpi');d.href='https://helpme-th.pages.dev/#stats';d.target='_blank';d.rel='noopener';d.append(el('b',null,v),el('span',null,t));if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
-  const line=(t,v,red)=>`<div class="hm-line${red?' red':''}"><span>${t}</span><b>${v}</b></div>`;
-  $('#hm-speed').innerHTML=line('แจ้ง → ช่วยเสร็จ (ค่ากลาง)',h.times.doneN?dur(h.times.doneMed)+` <small>จาก ${nf(h.times.doneN)} เคส</small>`:'-')
-    +line('90% ของเคสช่วยเสร็จภายใน',h.times.doneN?dur(h.times.doneP90):'-')
-    +line('รอช่วยเกิน 6 ชม. / 24 ชม. / 3 วัน',`${nf(h.waits.over6)} / ${nf(h.waits.over24)} / ${nf(h.waits.over72)} เคส`,h.waits.over24>0);
+  const dur=ms=>{if(!ms)return '–';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
+  const I=n=>typeof ic==='function'?ic(n):'';
+  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · อัปเดตทุก 2 นาที${h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;
+  /* สัดส่วนสถานะ */
+  const parts=[['open','รอช่วย',h.open],['going','ทีมกำลังไป',h.going],['done','ช่วยแล้ว',h.done]],sum=Math.max(1,h.open+h.going+h.done);
+  $('#hm-bar').setAttribute('aria-label',parts.map(p=>p[1]+' '+p[2]).join(' · '));
+  $('#hm-bar').innerHTML=`<div class="hm-seg">${parts.filter(p=>p[2]).map(p=>`<span class="s-${p[0]}" style="flex:${p[2]}"></span>`).join('')}</div>
+    <div class="hm-legend">${parts.map(p=>`<span><i class="s-${p[0]}"></i>${p[1]} <b>${nf(p[2])}</b> <small>${Math.round(p[2]/sum*100)}%</small></span>`).join('')}</div>`;
+  /* การ์ดตัวเลข */
+  const T=[['alert','red','รอช่วย',h.open,`วิกฤต ${nf(h.urgent)} เคส`],['route','blue','ทีมกำลังไป',h.going,'กำลังเดินทาง / อยู่หน้างาน'],['check','green','ช่วยแล้ว',h.done,`วันนี้ ${nf(h.doneToday)} เคส`],
+    ['list','navy','เคสทั้งหมด',h.total,`ใหม่วันนี้ ${nf(h.today)} เคส`],['users','orange','คนที่ยังรอ',h.people.act,`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],['heart','green','คนที่ช่วยแล้ว',h.people.done,'ได้รับความช่วยเหลือ']];
+  $('#hm-kpis').innerHTML=T.map(([icn,c,l,v,sub])=>`<div class="hm-tile t-${c}"><span class="hm-ic">${I(icn)}</span><span class="hm-l">${l}</span><b class="hm-v">${nf(v)}</b><small>${esc2(sub)}</small></div>`).join('');
+  /* 14 วัน: เคสใหม่ (น้ำเงิน) เทียบช่วยเสร็จ (เขียว) */
+  const d=h.days||[],mx=Math.max(1,...d.map(x=>Math.max(x.n,x.k))),W=560,H=150,pb=22,bw=W/Math.max(1,d.length);
+  $('#hm-days').innerHTML=d.length?`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="เคสใหม่และเคสที่ช่วยเสร็จ 14 วัน">${d.map((x,i)=>{const x0=i*bw+bw*.18,w=bw*.3,hn=(x.n/mx)*(H-pb-14),hk=(x.k/mx)*(H-pb-14);
+      const lab=new Date(x.day).toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+      return `<g><title>${lab}: ใหม่ ${x.n} · ช่วยเสร็จ ${x.k}</title><rect x="${x0}" y="${H-pb-hn}" width="${w}" height="${Math.max(hn,x.n?2:0)}" rx="3" class="b-new"/><rect x="${x0+w+2}" y="${H-pb-hk}" width="${w}" height="${Math.max(hk,x.k?2:0)}" rx="3" class="b-done"/>${i%2===d.length%2?'':`<text x="${i*bw+bw/2}" y="${H-6}" text-anchor="middle">${lab}</text>`}</g>`}).join('')}</svg>
+    <div class="hm-legend sm"><span><i class="b-new"></i>เคสใหม่</span><span><i class="b-done"></i>ช่วยเสร็จ</span></div>`:'<p class="empty">ยังไม่มีข้อมูล</p>';
+  /* ความเร็ว */
+  const w=h.waits;
+  $('#hm-speed').innerHTML=`<div class="hm-metric"><span>แจ้ง → ช่วยเสร็จ (ค่ากลาง)</span><b>${dur(h.times.doneMed)}</b><small>จาก ${nf(h.times.doneN)} เคส</small></div>
+    <div class="hm-metric"><span>90% ช่วยเสร็จภายใน</span><b>${dur(h.times.doneP90)}</b></div>
+    <div class="hm-waits"><span>รอช่วยนานเกิน</span><div><b class="${w.over6?'warn':''}">${nf(w.over6)}</b><small>6 ชม.</small></div><div><b class="${w.over24?'bad':''}">${nf(w.over24)}</b><small>24 ชม.</small></div><div><b class="${w.over72?'bad':''}">${nf(w.over72)}</b><small>3 วัน</small></div></div>`;
   hbars('#c-hm-needs',h.needs.map(n=>[n.key,n.total]));
   const tbl=(rows,cols)=>{if(!rows.length)return el('p','empty','ยังไม่มีข้อมูล');const t=el('table','tlist');t.innerHTML=`<thead><tr>${cols.map((c,i)=>`<th${i?' class="n"':''}>${c[0]}</th>`).join('')}</tr></thead>`;
-    const tb=el('tbody');rows.forEach(r=>{const tr=el('tr');cols.forEach((c,i)=>{const td=el('td',i?'n':'',typeof c[1](r)==='number'?nf(c[1](r)):c[1](r));if(c[2]&&c[2](r))td.classList.add('is-red');tr.append(td)});tb.append(tr)});t.append(tb);return t};
-  $('#hm-dist').replaceChildren(tbl(h.districts.slice(0,15),[['เขต',r=>r.key],['รอช่วย',r=>r.open],['วิกฤต',r=>r.urg,r=>r.urg>0],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done],['คนที่ยังรอ',r=>r.ppl]]));
-  $('#hm-orgs').replaceChildren(tbl(h.orgs,[['องค์กร',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
-  $('#hm-teams').replaceChildren(tbl(h.teams,[['ทีม',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
+    const tb=el('tbody');rows.forEach(r=>{const tr=el('tr');cols.forEach((c,i)=>{const v=c[1](r),td=el('td',i?'n':'',typeof v==='number'?(v?nf(v):'–'):v);if(c[2]&&c[2](r))td.classList.add('is-red');tr.append(td)});tb.append(tr)});t.append(tb);return t};
+  $('#hm-dist').replaceChildren(tbl(h.districts.slice(0,12),[['เขต',r=>r.key],['รอช่วย',r=>r.open],['วิกฤต',r=>r.urg,r=>r.urg>0],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done],['คนที่ยังรอ',r=>r.ppl]]));
+  $('#hm-orgs').replaceChildren(tbl(h.orgs.slice(0,10),[['องค์กร',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
+  $('#hm-teams').replaceChildren(tbl(h.teams.slice(0,10),[['ทีม',r=>r.key],['กำลังไป',r=>r.going],['ช่วยแล้ว',r=>r.done]]));
 }
+const esc2=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 
 /* ---------- เคสจากโซเชียลรอคัด (เรียงวิกฤตก่อน) + ทีมแชร์ตำแหน่งที่ใกล้ที่สุด ---------- */
 function ago(t){const m=Math.round((Date.now()-Number(t))/60000);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.round(m/60)+' ชม.ที่แล้ว':Math.round(m/1440)+' วันที่แล้ว'}

@@ -649,7 +649,19 @@ async function allCams() {
 }
 /* สถิติแบบหน้า #stats ของ Help Me — คำนวณจากรายการเคสเต็ม (HELPME_KEY) ส่งกลับเฉพาะตัวเลขรวม ไม่มีชื่อ/เบอร์ · แคช 2 นาที
    ตัดเคสทดสอบ (test / ทดสอบ / เทส) · เวลาช่วยเสร็จใช้ updatedAt ของเคสที่ปิดแล้ว (ค่าประมาณ แบบเดียวกับ Help Me) */
-async function helpmeStats(env) {
+async function helpmeStats(env, db) {
+  // Apps Script ของ Help Me บางช่วงตอบช้าเกิน 25 วิ: เก็บชุดล่าสุดที่ดีไว้ใน meta แล้วส่งชุดนั้น (บอกว่าเก่า) แทนการว่างเปล่า
+  try {
+    const fresh = await helpmeStatsLive(env);
+    if (db) await setMeta(db, 'helpme_stats_last', JSON.stringify(fresh));
+    return fresh;
+  } catch (e) {
+    const last = db ? await getMeta(db, 'helpme_stats_last') : '';
+    if (last) return { ...JSON.parse(last), stale: true };
+    throw e;
+  }
+}
+async function helpmeStatsLive(env) {
   return cached('helpme-stats-v1', 120, async () => {
     const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) });
     if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
@@ -790,7 +802,7 @@ async function api(request, env) {
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
-      case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
+      case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });

@@ -1,0 +1,109 @@
+/* UM+ หลังบ้าน · หน้าตาแบบ Help Me ช่วยด้วย (helpme-th.pages.dev) — "Liquid Glass"
+   โหลดเป็นไฟล์สุดท้ายของทุกหน้า (หลัง theme.css) ใช้สีชุดเดียวกับ theme.css: น้ำเงิน --primary · กรมท่า --navy · พื้น --bg
+   - หัวเว็บ: แคปซูลกระจกลอย (โลโก้ / เมนู / ปุ่ม) แทนแถบขาวเต็มกว้าง
+   - การ์ด: มุมโค้ง 22–24 ไม่มีเส้นขอบ เงานุ่ม · ปุ่มและสวิตช์เป็นแคปซูล (999px)
+   - มือถือ: เมนูย้ายลงเป็นแถบแท็บลอยด้านล่างแบบ Help Me */
+:root{
+  --glass:rgba(255,255,255,.72);--glass-b:rgba(255,255,255,.7);--glass-blur:saturate(1.8) blur(18px);
+  --pill:999px;--r-card:22px;--r-field:14px;
+  --shadow-soft:0 1px 2px rgba(22,27,61,.04),0 8px 24px rgba(22,27,61,.06);
+  --shadow-float:0 8px 28px rgba(22,27,61,.12),0 1px 3px rgba(22,27,61,.08);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","IBM Plex Sans Thai",system-ui,sans-serif;
+  --tab-h:64px;--safe-b:env(safe-area-inset-bottom,0px)
+}
+body,button,input,select,textarea{font-family:var(--font)}
+body{background:var(--bg)}
+
+/* ---------- หัวเว็บ: แคปซูลกระจก ---------- */
+.top{background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  padding:12px clamp(12px,2.4vw,28px)!important;gap:10px;pointer-events:none}
+.top>*{pointer-events:auto}
+.top::before{content:"";position:absolute;inset:0 0 -14px;z-index:-1;pointer-events:none;
+  background:linear-gradient(var(--bg) 0,var(--bg) 55%,rgba(242,243,247,0))}
+.brand{background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-b);
+  border-radius:var(--pill);padding:6px 16px 6px 8px;box-shadow:var(--shadow-float);font-size:16px;white-space:nowrap}
+.brand img{height:32px!important;width:auto}
+.tabs{background:var(--glass)!important;-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-b);
+  border-radius:var(--pill)!important;padding:5px!important;box-shadow:var(--shadow-float)}
+.tabs a{border-radius:var(--pill)!important;padding:8px 16px!important;color:var(--muted)!important}
+.tabs a:hover{background:rgba(255,255,255,.8)!important;color:var(--ink)!important}
+.tabs a[aria-current=page]{background:var(--tint)!important;color:var(--primary)!important;box-shadow:none!important}
+.top-r{background:var(--glass);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-b);
+  border-radius:var(--pill);padding:5px 5px 5px 14px;box-shadow:var(--shadow-float)}
+.top .btn.ghost{border-radius:var(--pill)!important;box-shadow:none!important;background:transparent!important}
+.top .btn.ghost:hover{background:var(--tint)!important}
+.bar{background:transparent!important}
+
+/* ---------- ปุ่ม / สวิตช์ / ช่องกรอก ---------- */
+.btn{border-radius:var(--pill)!important}
+.btn.primary{box-shadow:0 6px 16px rgba(45,69,200,.3)!important}
+.btn.ghost{background:#fff;box-shadow:0 1px 2px rgba(22,27,61,.06),inset 0 0 0 1px var(--line)!important}
+.seg,.tabs-seg,.filters[role=group]{border-radius:var(--pill)!important;background:#fff;box-shadow:var(--shadow-soft)!important;padding:4px!important}
+.seg button,.filters[role=group] button{border-radius:var(--pill)!important}
+.seg button[aria-selected=true]{background:var(--primary)!important;color:#fff!important;box-shadow:0 4px 12px rgba(45,69,200,.28)}
+.filters[role=group] button[aria-pressed=true]{background:var(--primary)!important;color:#fff!important}
+input[type=search],input[type=text],input[type=number],input[type=date],input[type=password],select,textarea,.search input,.ld-q{border-radius:var(--r-field)!important}
+.search{border-radius:var(--pill)}
+.search input,.ld-q{border-radius:var(--pill)!important;background:#fff;border:0!important;box-shadow:var(--shadow-soft);min-height:46px;padding-left:18px}
+.chip{border-radius:var(--pill)!important}
+
+/* ---------- การ์ด ---------- */
+.stat,.kpi,.card,.panel,.lead,.qcase,.team,.case,.item{border:0!important;border-radius:var(--r-card)!important;box-shadow:var(--shadow-soft)!important;background:#fff}
+.stat,.kpi{padding:16px 18px!important}
+.stat b,.kpi b{letter-spacing:-.02em}
+.lead,.qcase{border-left:0!important;position:relative;overflow:hidden}
+.lead::before,.qcase::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:5px;border-radius:0 5px 5px 0;background:#e0a800}
+.lead.u3::before,.qcase.u3::before{background:var(--red)}.lead.u2::before,.qcase.u2::before{background:var(--orange)}
+.lead.st-accepted::before{background:var(--ok)}.lead.st-rejected::before{background:var(--line)}
+.lead.sel{box-shadow:0 0 0 2px var(--primary),var(--shadow-soft)!important}
+.urg,.src,.flag,.rej,.acc,.cov,.vr,.pill{border-radius:var(--pill)!important;padding:2px 10px!important}
+.mapcard,.map-wrap,.map-cell,#map,.dmap,.ld-map,.dmap-wrap{border-radius:var(--r-card)!important}
+.leaflet-container{border-radius:inherit}
+
+/* ---------- ปุ่มลอยบนแผนที่ / คำอธิบายสี ---------- */
+.fab{border-radius:50%!important;background:var(--glass)!important;-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-b)!important;box-shadow:var(--shadow-float)!important;color:var(--navy)!important}
+.mx-legend,.layer-menu,.ld-leg{border-radius:18px!important}
+.mx-legend,.layer-menu{background:var(--glass)!important;-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid var(--glass-b);box-shadow:var(--shadow-float)!important}
+
+/* ---------- หน้าเข้าระบบ / ลิ้นชักรายละเอียด / แจ้งเตือน ---------- */
+.login{background:radial-gradient(120% 80% at 50% 0%,var(--tint) 0,var(--bg) 60%)!important}
+.login-card{border-radius:28px!important;background:var(--glass)!important;-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-b);box-shadow:var(--shadow-float)!important}
+.drawer{border-radius:28px 0 0 28px}
+.toast{border-radius:var(--pill)!important;box-shadow:var(--shadow-float)!important}
+
+/* ---------- มือถือ: เมนูเป็นแถบแท็บลอยด้านล่าง (แบบ Help Me) ---------- */
+@media(max-width:760px){
+  .top{flex-wrap:nowrap}
+  .tabs{position:fixed!important;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b) + 10px);top:auto;
+    width:min(440px,calc(100% - 20px));margin:0!important;display:flex!important;justify-content:space-between;gap:2px!important;
+    overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs a{flex:1 0 auto;text-align:center;padding:10px 10px!important;font-size:13px!important}
+  .brand span{display:none}
+  .brand{padding:6px}
+  .top-r{margin-left:auto}
+  .wrap,main{padding-bottom:calc(var(--tab-h) + var(--safe-b) + 28px)!important}
+  .drawer{border-radius:0}
+  .toasts{bottom:calc(var(--tab-h) + var(--safe-b) + 20px)!important}
+}
+/* แผนที่เต็มจอ: ซ่อนแถบแท็บลอย */
+body.map-fs .tabs,body.noscroll .tabs{display:none!important}
+/* หน้าคิวที่ฝังในหน้าจัดการเคส ไม่ต้องมีแถบลอยซ้ำ */
+html.embed .tabs,html.embed .top{display:none!important}
+html.embed .wrap,html.embed main{padding-bottom:20px!important}
+
+/* ---------- แดชบอร์ดโหมดมืด (ตามเครื่อง): กระจกสีกรมท่าแทนกระจกขาว ---------- */
+@media (prefers-color-scheme:dark){
+  html.dash:where(:not([data-theme="light"])){--glass:rgba(27,31,51,.72);--glass-b:rgba(255,255,255,.08);
+    --shadow-soft:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);--shadow-float:0 8px 28px rgba(0,0,0,.45)}
+  html.dash:where(:not([data-theme="light"])) .top::before{background:linear-gradient(var(--bg) 0,var(--bg) 55%,rgba(15,18,34,0))}
+  html.dash:where(:not([data-theme="light"])) .tabs{background:var(--glass)!important}
+  html.dash:where(:not([data-theme="light"])) .tabs a{color:var(--muted)!important}
+  html.dash:where(:not([data-theme="light"])) .tabs a[aria-current=page]{background:var(--tint-2)!important;color:#C7CFFF!important}
+  html.dash:where(:not([data-theme="light"])) .top .btn.ghost{color:var(--ink)!important}
+  html.dash:where(:not([data-theme="light"])) .stat,html.dash:where(:not([data-theme="light"])) .kpi,html.dash:where(:not([data-theme="light"])) .card,
+  html.dash:where(:not([data-theme="light"])) .filters[role=group],html.dash:where(:not([data-theme="light"])) .seg{background:var(--surface)!important}
+  html.dash:where(:not([data-theme="light"])) .filters[role=group] button:not([aria-pressed=true]){background:transparent!important;color:var(--ink-2)!important}
+}

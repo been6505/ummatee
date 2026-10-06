@@ -8,6 +8,8 @@ const REASON={old_post_before_event:'โพสต์ก่อนเกิดเ�
   rejected_by_staff:'แอดมินตัดทิ้ง',resolved_at_source:'ปิดเคสแล้วที่ Help Me',duplicate:'ซ้ำกับเคสอื่น',not_people:'ไม่ใช่คนเดือดร้อน',suspicious:'น่าสงสัย',resolved:'ได้รับความช่วยเหลือแล้ว'};
 const FLAG={approx_location:'ตำแหน่งโดยประมาณ',asks_money:'ขอเงิน',account_reused:'เลขบัญชีซ้ำเคสอื่น',past_year_text:'อ้างถึงปีเก่า'};
 const NEAR_KM=15;
+const EMBED=document.documentElement.classList.contains('embed');
+const toParent=m=>{if(EMBED&&parent!==window)parent.postMessage({src:'uh-leads',...m},location.origin)};
 const RISK=f=>/^(asks_money|account_reused|past_year_text)/.test(f); // ธงที่ต้องระวัง (ตำแหน่งโดยประมาณไม่ใช่ความเสี่ยง)
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const pin=l=>l&&l.lat!=null&&l.lng!=null&&isFinite(+l.lat)&&isFinite(+l.lng);
@@ -23,7 +25,7 @@ async function loadAll(){
     if(t&&t.ok)LD.live=t.teams||[];
     if(p&&p.ok)LD.places=(p.places||[]).filter(x=>x.type==='rescue');
     if(c&&c.ok)LD.covered=(c.items||[]).filter(pin);
-    LD.loaded=Date.now();render()}
+    LD.loaded=Date.now();render();toParent({type:'count',n:LD.leads.filter(l=>l.status==='new').length})}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},90000);
@@ -53,7 +55,7 @@ function card(l){
       <button class="btn primary sm" data-accept="${esc(l.id)}">✓ รับเป็นเคส</button>
       <select data-rej="${esc(l.id)}" aria-label="ตัดทิ้งเพราะ"><option value="">✕ ตัดทิ้งเพราะ…</option><option value="duplicate">ซ้ำกับเคสอื่น</option><option value="not_people">ไม่ใช่คนเดือดร้อน</option><option value="resolved">ได้รับความช่วยเหลือแล้ว</option><option value="suspicious">น่าสงสัย / มิจฉาชีพ</option><option value="rejected_by_staff">อื่น ๆ</option></select>`
     :st==='rejected'?`<button class="btn ghost sm" data-reopen="${esc(l.id)}">↩ คืนเข้าคิว</button>`
-    :`<a href="../../admin.html#${esc(l.caseId)}">เปิดเคส #${esc(l.caseId)} →</a>`;
+    :`<a href="../../admin.html#${esc(l.caseId)}" target="_top" data-case="${esc(l.caseId)}">เปิดเคส #${esc(l.caseId)} →</a>`;
   return `<article class="lead u${sev(l)} st-${esc(st)}${LD.sel===l.id?' sel':''}${LD.open.has(l.id)?' open':''}" data-id="${esc(l.id)}">
     <div class="l-h">${head}</div>
     <h3>${esc(l.title||'(ไม่มีหัวข้อ)')}</h3>
@@ -100,8 +102,9 @@ $('#list').addEventListener('click',async e=>{
     try{let r=await apiPost({action:'lead_decide',id,decision:'accept',urgency:u,by:staffName()});
       if(r&&r.error==='flagged'){if(!confirm('เคสนี้ติดธง: '+r.flags.map(f=>FLAG[f.split(':')[0]]||f).join(', ')+'\nตรวจกับแหล่งที่สองแล้ว และยืนยันจะรับเป็นเคส?')){b.disabled=false;return}
         r=await apiPost({action:'lead_decide',id,decision:'accept',urgency:u,by:staffName(),confirmRisk:true})}
-      if(r&&r.ok){toast('รับเป็นเคส #'+r.caseId+' แล้ว',true);loadAll()}else{toast('ไม่สำเร็จ: '+(r&&r.error||''));b.disabled=false}}catch(err){b.disabled=false}return}
+      if(r&&r.ok){toast('รับเป็นเคส #'+r.caseId+' แล้ว',true);toParent({type:'accepted',caseId:r.caseId});loadAll()}else{toast('ไม่สำเร็จ: '+(r&&r.error||''));b.disabled=false}}catch(err){b.disabled=false}return}
   if(b&&b.dataset.reopen){const r=await apiPost({action:'lead_decide',id:b.dataset.reopen,decision:'reopen',by:staffName()});if(r&&r.ok){toast('คืนเข้าคิวแล้ว',true);loadAll()}return}
+  const oc=e.target.closest('a[data-case]');if(oc&&EMBED){e.preventDefault();toParent({type:'openCase',id:oc.dataset.case});return}
   if(e.target.closest('select,a'))return;
   if(art){const id=art.dataset.id;LD.open.has(id)?LD.open.delete(id):LD.open.add(id);select(id,true)}});
 $('#list').addEventListener('change',async e=>{const s=e.target.closest('select[data-rej]');if(!s||!s.value)return;
@@ -111,7 +114,7 @@ $('#ld-filter').addEventListener('click',e=>{const b=e.target.closest('button');
 $('#ld-q').addEventListener('input',e=>{LD.q=e.target.value.trim().toLowerCase();render()});
 $('#pull').addEventListener('click',async()=>{const b=$('#pull');b.disabled=true;b.textContent='กำลังดึง…';
   try{const r=await apiPost({action:'lead_pull'});
-    if(r&&r.ok){toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))});if(r.helpme&&r.helpme.ok)toast(r.helpme.full?'Help Me: รหัสถูกต้อง ได้ข้อมูลเต็ม (ชื่อ เบอร์ พิกัดจริง)':'Help Me: ได้แค่ข้อมูลสาธารณะ — HELPME_KEY ไม่ถูกต้องหรือยังไม่ได้ตั้ง',r.helpme.full)}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
+    if(r&&r.ok){if(r.filled)toast(`Help Me: เติมข้อมูลเต็มให้ ${r.filled} เคสที่รอคัด`,true);toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))});if(r.helpme&&r.helpme.ok)toast(r.helpme.full?'Help Me: รหัสถูกต้อง ได้ข้อมูลเต็ม (ชื่อ เบอร์ พิกัดจริง)':'Help Me: ได้แค่ข้อมูลสาธารณะ — HELPME_KEY ไม่ถูกต้องหรือยังไม่ได้ตั้ง',r.helpme.full)}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
     await loadAll()}finally{b.disabled=false;b.textContent='⤓ ดึงเคสใหม่ (Traffy + Help Me)'}});
 $('#set-btn').addEventListener('click',()=>{const f=$('#settings');f.hidden=!f.hidden;$('#set-btn').setAttribute('aria-expanded',String(!f.hidden))});
 $('#settings').addEventListener('submit',async e=>{e.preventDefault();

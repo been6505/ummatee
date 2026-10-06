@@ -243,3 +243,11 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
   .ms-handle i{width:40px;height:5px;border-radius:3px;background:#C5CAE0}
   .map-wrap.fs .leaflet-bottom{bottom:96px}
 }
+
+/* สลับมุมมอง: เคสในระบบ / เคสจากโซเชียลรอคัด (admin/leadsview.js) */
+.view-sw{margin:0 0 12px}.view-sw button{font-size:15px;padding:8px 16px}
+.vbadge{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:99px;background:var(--red,#E5383B);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.view-sw button[aria-selected=true] .vbadge{background:#fff;color:var(--red,#E5383B)}
+.leads-view{margin:0 calc(-1 * clamp(0px,1vw,8px))}
+.leads-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:16px;background:transparent}
+@media(max-width:900px){.leads-frame{height:calc(100vh - 130px)}}

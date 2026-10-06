@@ -561,15 +561,24 @@ async function pullHelpme(db, env) {
   if (!r.ok) return { ok: false, error: 'helpme_' + r.status };
   let j; try { j = await r.json(); } catch (e) { return { ok: false, error: 'helpme_bad_json' }; }
   if (!j.ok) return { ok: false, error: 'helpme_' + (j.error || 'error') };
-  const st = await leadSettings(db), out = { ok: true, full: !!j.volunteer, scanned: 0, added: 0, rejected: 0, duplicate: 0, closed: 0 };
+  const st = await leadSettings(db), out = { ok: true, full: !!j.volunteer, scanned: 0, added: 0, rejected: 0, duplicate: 0, closed: 0, filled: 0 };
   for (const c of j.cases || []) {
     out.scanned++;
     const url = 'https://helpme-th.pages.dev/?case=' + encodeURIComponent(c.id);
-    const old = await db.prepare('SELECT id, status FROM leads WHERE url=?').bind(url).first();
+    const old = await db.prepare('SELECT id, status, flags, names, phone FROM leads WHERE url=?').bind(url).first();
     if (old) {
       if (old.status === 'new' && c.status === 'done') {
         await db.prepare("UPDATE leads SET status='rejected', reason='resolved_at_source', by_='Help Me', updatedAt=? WHERE id=?").bind(Date.now(), old.id).run();
         out.closed++;
+      } else if (old.status === 'new' && j.volunteer && !c.approx) {
+        // ได้รายการเต็ม (HELPME_KEY): เติมชื่อ เบอร์ ที่อยู่ พิกัดจริง ให้เคสที่ยังรอคัด และเอาป้าย "ตำแหน่งโดยประมาณ" ออก
+        const flags = String(old.flags || '').split(',').filter(f => f && f !== 'approx_location').join(',');
+        const r2 = await db.prepare(`UPDATE leads SET names=?, phone=?, address=CASE WHEN ?<>'' THEN ? ELSE address END, lat=COALESCE(?,lat), lng=COALESCE(?,lng),
+          text=CASE WHEN ?<>'' THEN ? ELSE text END, flags=?, updatedAt=? WHERE id=? AND (IFNULL(names,'')<>? OR IFNULL(phone,'')<>? OR flags<>? OR IFNULL(lat,0)<>IFNULL(?,IFNULL(lat,0)))`)
+          .bind(clean(c.name, MAX.name), clean(c.phone, MAX.phone).replace(/[^\d+\-\s,]/g, ''), clean(c.address, MAX.address), clean(c.address, MAX.address),
+            num(c.lat, -90, 90), num(c.lng, -180, 180), clean(c.notes, 2000), clean(c.notes, 2000), flags, Date.now(), old.id,
+            clean(c.name, MAX.name), clean(c.phone, MAX.phone).replace(/[^\d+\-\s,]/g, ''), flags, num(c.lat, -90, 90)).run();
+        if (r2.meta.changes) out.filled++; else out.duplicate++;
       } else out.duplicate++;
       continue;
     }
@@ -592,7 +601,7 @@ async function pullHelpme(db, env) {
 async function pullAll(db, b, env) {
   const [traffy, helpme] = await Promise.all([pullLeads(db).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) })), pullHelpme(db, env).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) }))]);
   const n = k => (traffy[k] || 0) + (helpme[k] || 0);
-  return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, traffy, helpme };
+  return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, filled: helpme.filled || 0, traffy, helpme };
 }
 
 async function listLeads(db, p) {

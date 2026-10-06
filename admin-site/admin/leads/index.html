@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#F2F3F7">
 <title>เคสจากโซเชียล · UM+ หลังบ้าน</title>
 <link rel="icon" href="../../assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,10 @@
 <link rel="stylesheet" href="../../admin.css?v=6">
 <link rel="stylesheet" href="../pages.css?v=4">
 <link rel="stylesheet" href="../theme.css?v=1">
-<link rel="stylesheet" href="./leads.css?v=1">
+<link rel="stylesheet" href="./leads.css?v=2">
+<script>/* หน้านี้อยู่ในแท็บ "จัดการเคส" แล้ว (admin.html#leads) — เปิดตรง ๆ จะพาไปที่นั่น */
+if(!/[?&]embed=1/.test(location.search))location.replace('../../admin.html#leads');else document.documentElement.classList.add('embed')</script>
+<link rel="stylesheet" href="../helpme-skin.css?v=1">
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -31,7 +34,7 @@
 <div id="app" hidden>
   <header class="top">
     <a class="brand" href="../../admin.html"><img src="../../assets/ummatee-logo.png" alt="" width="60" height="36"><span>UM+ <b>หลังบ้าน</b></span></a>
-    <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="./" aria-current="page">เคสจากโซเชียล</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a></nav>
+    <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a></nav>
     <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh">⟳ โหลดใหม่</button><button class="btn ghost sm" id="logout">ออกจากระบบ</button></div>
   </header>
   <main class="wrap" id="main">
@@ -61,6 +64,6 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="../common.js?v=1"></script>
-<script src="./leads.js?v=5"></script>
+<script src="./leads.js?v=6"></script>
 </body>
 </html>

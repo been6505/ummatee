@@ -680,7 +680,7 @@ async function sheetCases(env) {
   const t = await sheetTab(env, 'cases'), h = t.header, col = n => h.indexOf(n), all = n => h.map((x, i) => x === n ? i : -1).filter(i => i >= 0);
   const v = (r, n) => { const i = col(n); return i < 0 ? '' : String(r[i] || '').trim(); };
   return t.rows.map(r => {
-    const address = v(r, 'ที่อยู่'), dm = address.match(/เขต\s*([ก-๙]+)/) || [null, BKK_DISTRICTS.find(d => address.includes(d)) || ''];
+    const address = v(r, 'ที่อยู่'), dm = address.match(/เขต\s*([ก-๙]+)/) || [null, BKK_DISTRICTS.find(d => address.replace(/พระนครศรีอยุธยา/g, '').includes(d)) || '']; // "พระนคร" ไม่ใช่ อยุธยา
     return { id: v(r, 'รหัสเคส'), createdAt: sheetTime(v(r, 'เวลาแจ้ง')), updatedAt: sheetTime(v(r, 'อัปเดตล่าสุด')),
       status: HM_STATUS[v(r, 'สถานะ')] || 'open', urgency: HM_URG[v(r, 'ความเร่งด่วน')] || 1, name: v(r, 'ชื่อ'), phone: v(r, 'เบอร์โทร').replace(/^'/, ''),
       notes: all('รายละเอียด').map(i => String(r[i] || '').trim()).filter(Boolean).join(' · '), people: Number(v(r, 'จำนวนคน')) || 1, address,
@@ -844,10 +844,14 @@ async function fillDistricts(db, cases) {
 }
 const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i; // เคสทดสอบในชีต ไม่นับในสถิติ
 /* เคส Help Me รายเคสสำหรับการ์ดตัวเลขของแดชบอร์ด (เฉพาะรหัสทีม) · ไม่ส่งชื่อ/เบอร์ */
-async function helpmeCases(env) {
-  const all = (await sheetCases(env)).filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
+// ระดับน้ำในชีต Help Me → รหัสของ Helpme+ (ช่วงใช้ค่าบน) ให้ผลตรวจพื้นที่คิดคะแนนได้ · "แห้ง" ไม่มีรหัส
+const HM_LEVEL_CODE = { 'ข้อเท้า': 'ankle', 'ข้อเท้า–เข่า': 'knee', 'เข่า': 'knee', 'เข่า–เอว': 'waist', 'เอว': 'waist', 'เอว–อก': 'chest', 'อก': 'chest', 'อกขึ้นไป': 'chest', 'มิดหัว': 'roof' };
+async function helpmeCases(env, db) {
+  const cases = await sheetCases(env); await fillDistricts(db, cases);
+  const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
   return { ok: true, time: Date.now(), cases: all.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
-    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer })) };
+    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer,
+    level: HM_LEVEL_CODE[String(c.level || '').split(' (')[0].trim()] || '', levelText: c.level || '' })) };
 }
 async function helpmeStatsLive(env, db) {
   return cached('helpme-stats-v4', 60, async () => {
@@ -995,7 +999,7 @@ async function api(request, env) {
       // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
-      case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
+      case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }

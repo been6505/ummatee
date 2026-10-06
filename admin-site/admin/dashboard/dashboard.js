@@ -1,4 +1,4 @@
-/* แดชบอร์ด UM+: ภาพรวมเคสและสต็อกจากฐานข้อมูล D1 (ใช้รหัสทีมเดียวกับหน้าจัดการเคส · ไม่เก็บข้อมูลเคสไว้ในเครื่อง) */
+/* แดชบอร์ด Helpme+: ภาพรวมเคสและสต็อกจากฐานข้อมูล D1 (ใช้รหัสทีมเดียวกับหน้าจัดการเคส · ไม่เก็บข้อมูลเคสไว้ในเครื่อง) */
 const API_URL='/api';
 const $=s=>document.querySelector(s);
 const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',done:'ช่วยเหลือแล้ว'};
@@ -255,3 +255,15 @@ const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
   document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const m=$('#dlayer');if(m&&!m.hidden){m.hidden=true;lay.setAttribute('aria-expanded','false');lay.classList.remove('on');return}if(card.classList.contains('fs'))set(false)});
   window.addEventListener('resize',()=>{if(card.classList.contains('fs'))fix()});
 })();
+
+/* ปุ่มธีมมุมขวาบน: สว่าง (ค่าเริ่มต้น) ↔ มืด · แผนที่ฐานเปลี่ยนตามถ้ายังเป็นแบบถนน/มืด */
+(()=>{const b=$('#theme-btn');if(!b)return;const root=document.documentElement;
+  const sync=()=>{const dark=root.dataset.theme==='dark';b.textContent=dark?'☀️':'🌙';b.setAttribute('aria-pressed',String(dark));
+    const t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.setAttribute('aria-label',t);b.title=t;
+    const mc=document.querySelector('meta[name=theme-color]');if(mc)mc.content=dark?'#0F1222':'#F2F3F7'};
+  b.addEventListener('click',()=>{const dark=root.dataset.theme!=='dark';if(dark)root.dataset.theme='dark';else delete root.dataset.theme;
+    try{localStorage.setItem('uh_theme',dark?'dark':'light')}catch(e){}sync();
+    let base='road';try{base=localStorage.getItem('uh_base')||'road'}catch(e){}
+    if(M.map&&base!=='sat')setBase(dark?'dark':'road');
+    if(D.loaded)render()});
+  sync()})();

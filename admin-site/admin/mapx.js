@@ -200,7 +200,7 @@ const MX=(()=>{
     let ok=0;for(const id of ids){try{const x=await post({action:'update',key:A.key,id,status:'going',volunteer:team});if(x&&x.ok)ok++}catch(e){}}
     toast(`มอบหมายให้ ${team} แล้ว ${ok}/${ids.length} เคส`,ok===ids.length);if(typeof load==='function')load()}
   function copyRoute(){const r=S.route;if(!r)return;const links=gmLinks(r);
-    const txt=`🧭 เส้นทาง UM+${r.zone?' โซน '+r.zone.name:''} · ${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที\n`+r.stops.map((p,i)=>{const c=p.c;return `${i+1}. [${URG[p.sv]}] #${c.id} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน\n   ${[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')}${c.name?'\n   ติดต่อ: '+c.name:''}${c.phone?' '+c.phone:''}\n   https://www.google.com/maps?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`}).join('\n')+
+    const txt=`🧭 เส้นทาง Helpme+${r.zone?' โซน '+r.zone.name:''} · ${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที\n`+r.stops.map((p,i)=>{const c=p.c;return `${i+1}. [${URG[p.sv]}] #${c.id} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน\n   ${[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')}${c.name?'\n   ติดต่อ: '+c.name:''}${c.phone?' '+c.phone:''}\n   https://www.google.com/maps?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`}).join('\n')+
       ([...new Set(r.hits.map(h=>h.name))].length?`\n⚠ ระวังน้ำท่วม: ${[...new Set(r.hits.map(h=>h.name))].slice(0,6).join(', ')}`:'')+`\n\nนำทางทั้งเส้น:\n${links.join('\n')}`;
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ได้เลย (มีเบอร์โทรผู้แจ้ง ส่งเฉพาะกลุ่มทีม)',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))}
 

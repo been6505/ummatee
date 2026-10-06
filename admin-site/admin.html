@@ -5,20 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#F2F3F7">
-<title>หลังบ้าน · UM+ ช่วยเหลือฉุกเฉิน</title>
-<link rel="icon" href="./assets/icon-192.png">
+<title>หลังบ้าน · Helpme+ ช่วยเหลือฉุกเฉิน</title>
+<link rel="icon" href="./assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./admin.css?v=16">
-<link rel="stylesheet" href="./admin/theme.css?v=1">
-<link rel="stylesheet" href="./admin/helpme-skin.css?v=3">
+<link rel="stylesheet" href="./admin/theme.css?v=2">
+<link rel="stylesheet" href="./admin/helpme-skin.css?v=6">
 </head>
 <body>
 <!-- ===== เข้าสู่ระบบ ===== -->
 <section id="login" class="login" hidden>
   <form id="login-form" class="login-card" autocomplete="off">
-    <img src="./assets/ummatee-logo.png" alt="UMMATEE" width="120" height="72">
-    <h1>หลังบ้าน UM+</h1>
+    <img src="./assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
+    <h1>หลังบ้าน Helpme+</h1>
     <p>สำหรับทีมอาสาและแอดมิน ใส่รหัสทีมเพื่อดูและจัดการเคส</p>
     <label class="fld"><span>รหัสทีม</span><input id="login-key" type="password" required autocomplete="current-password"></label>
     <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
@@ -31,7 +31,7 @@
 <!-- ===== หลังบ้าน ===== -->
 <div id="app" class="app" hidden>
   <header class="top">
-    <a class="brand" href="./admin.html"><img src="./assets/ummatee-logo.png" alt="" width="60" height="36"><span>UM+ <b>หลังบ้าน</b></span></a>
+    <a class="brand" href="./admin.html"><img class="brand-logo" src="./assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>หลังบ้าน</b></span></a>
     <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="./admin/dashboard/">แดชบอร์ด</a><a href="./admin.html" aria-current="page">จัดการเคส</a><a href="./admin/teams/">จัดทีม</a><a href="./admin/stock/">สต็อก</a><a href="./admin/covered/">พื้นที่มอบแล้ว</a></nav>
     <div class="top-r">
       <span class="sync" id="sync"></span>
@@ -87,7 +87,7 @@
 <script src="./admin.js?v=9"></script>
 <script src="./admin/ofm.js?v=1"></script>
 <script src="./admin/camlive.js?v=5"></script>
-<script src="./admin/mapx.js?v=8"></script>
+<script src="./admin/mapx.js?v=9"></script>
 <script src="./admin/leadsview.js?v=1"></script>
 </body>
 </html>

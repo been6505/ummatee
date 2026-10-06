@@ -85,11 +85,12 @@ input[type=checkbox],input[type=range]{accent-color:var(--primary)}
 .leaflet-bar a{color:var(--navy)}
 
 /* ---------- แดชบอร์ด: โหมดมืดตามเครื่อง ---------- */
-@media (prefers-color-scheme:dark){
-  html.dash:where(:not([data-theme="light"])){--surface:#1B1F33;--page:#0F1222;--bg:#0F1222;--ink:#EEF0FA;--ink-2:#B5BAD6;--muted:#8E94B5;--line:rgba(255,255,255,.10);--grid:#2A2F48;--axis:#3A4060;--s1:#6F83F0;--tint:#24294A;--tint-2:#2F3560}
-  html.dash:where(:not([data-theme="light"])) .top{background:rgba(27,31,51,.92);box-shadow:0 1px 0 rgba(255,255,255,.06)}
-  html.dash:where(:not([data-theme="light"])) .tabs{background:#0F1222}
-  html.dash:where(:not([data-theme="light"])) .tabs a[aria-current=page]{background:#24294A;color:#C7CFFF}
-  html.dash:where(:not([data-theme="light"])) .top .btn.ghost{background:transparent;color:#EEF0FA;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
-  html.dash:where(:not([data-theme="light"])) .kpi,html.dash:where(:not([data-theme="light"])) .card{background:var(--surface)}
-}
+/* โหมดมืด: เปิดเองจากปุ่มธีม (ค่าเริ่มต้นสว่าง ไม่ตามเครื่อง) */
+
+  html.dash[data-theme="dark"]{--surface:#1B1F33;--page:#0F1222;--bg:#0F1222;--ink:#EEF0FA;--ink-2:#B5BAD6;--muted:#8E94B5;--line:rgba(255,255,255,.10);--grid:#2A2F48;--axis:#3A4060;--s1:#6F83F0;--tint:#24294A;--tint-2:#2F3560}
+  html.dash[data-theme="dark"] .top{background:rgba(27,31,51,.92);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+  html.dash[data-theme="dark"] .tabs{background:#0F1222}
+  html.dash[data-theme="dark"] .tabs a[aria-current=page]{background:#24294A;color:#C7CFFF}
+  html.dash[data-theme="dark"] .top .btn.ghost{background:transparent;color:#EEF0FA;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  html.dash[data-theme="dark"] .kpi,html.dash[data-theme="dark"] .card{background:var(--surface)}
+

@@ -2,7 +2,8 @@
   --surface:#fcfcfb;--page:#f4f7f8;--ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--line:rgba(11,11,11,.10);
   --s1:#2a78d6;--crit:#d03b3b;--serious:#ec835a;--warn:#fab219;--good:#0ca30c;--going:#2a78d6;
   font-family:Prompt,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--page);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;--ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--line:rgba(255,255,255,.10);--s1:#3987e5;--going:#3987e5;--tint:#173a3c}}
+/* โหมดมืด: เปิดเองจากปุ่มธีม (ค่าเริ่มต้นสว่าง ไม่ตามเครื่อง) */
+:root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;--ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--line:rgba(255,255,255,.10);--s1:#3987e5;--going:#3987e5;--tint:#173a3c}
 :root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;--ink-2:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--line:rgba(255,255,255,.10);--s1:#3987e5;--going:#3987e5;--tint:#173a3c}
 *{box-sizing:border-box}body{margin:0;background:var(--page)}[hidden]{display:none!important}
 button,input{font:inherit}button{cursor:pointer}

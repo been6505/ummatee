@@ -200,3 +200,12 @@ html.dash[data-theme="dark"] .hm-metric,html.dash[data-theme="dark"] .hm-waits,h
 html.dash[data-theme="dark"] .hm-v{color:var(--ink)}html.dash[data-theme="dark"] .t-red .hm-v{color:#FF6B6E}html.dash[data-theme="dark"] .t-green .hm-v{color:#4FD083}html.dash[data-theme="dark"] .t-orange .hm-v{color:#FFA24D}
 html.dash[data-theme="dark"] .hm-ic{background:rgba(255,255,255,.08)}
 .hm-grid{align-items:start}
+
+/* ตัวเลข Help Me อยู่ในส่วน "เคสในระบบ Helpme+" ใช้การ์ดแบบเดียวกัน · ป้าย Help Me บอกแหล่งข้อมูล */
+.hm-src{margin:-4px 0 8px;font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}.hm-src a{color:var(--primary);font-weight:600;text-decoration:none;display:inline-flex;gap:4px;align-items:center}
+.hm-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--primary);background:var(--tint);border-radius:999px;padding:1px 8px;vertical-align:middle;margin-left:4px}
+.kpi .hm-tag{display:inline-block;font-size:10.5px;margin:0 0 0 4px;color:var(--primary)}
+.kpi.hm-k i{background:var(--c)}.kpi.t-red b{color:#E5383B}.kpi.t-green b{color:#2E9E57}.kpi.t-orange b{color:#C25E06}
+.card .hm-bar{background:none;box-shadow:none;padding:0}
+html.dash[data-theme="dark"] .card .hm-bar{background:none}html.dash[data-theme="dark"] .hm-tag{background:rgba(255,255,255,.08)}
+html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="dark"] .kpi.t-green b{color:#4FD083}

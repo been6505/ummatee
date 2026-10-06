@@ -195,10 +195,10 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=L.red
 
 /* ---------- ภาพรวมจาก Help Me (ตัวเลขชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
 function renderHelpme(){
-  const sec=$('#hm-sec'),h=D.hm;if(!sec)return;if(!h){sec.hidden=true;return}sec.hidden=false;
+  const h=D.hm;document.querySelectorAll('.hm-part').forEach(e=>e.hidden=!h);if(!h)return;
   const dur=ms=>{if(!ms)return '–';const x=ms/36e5;return x<1?Math.max(1,Math.round(ms/6e4))+' นาที':x<48?(Math.round(x*10)/10)+' ชม.':(Math.round(x/24*10)/10)+' วัน'};
   const I=n=>typeof ic==='function'?ic(n):'';
-  $('#hm-upd').textContent=`ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · จาก Google Sheet ของ Help Me · อัปเดตทุก 1 นาที${h.source==='sheet'||h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;
+  $('#hm-upd').textContent=`Help Me ช่วยด้วย · ข้อมูล ณ ${new Date(h.time).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} น. · จาก Google Sheet ของ Help Me · อัปเดตทุก 1 นาที${h.source==='sheet'||h.full?'':' · ข้อมูลสาธารณะ'}${h.stale?' · Help Me ตอบช้า แสดงชุดล่าสุดที่ดึงได้':''}`;
   /* สัดส่วนสถานะ */
   const parts=[['open','รอช่วย',h.open],['going','ทีมกำลังไป',h.going],['done','ช่วยแล้ว',h.done]],sum=Math.max(1,h.open+h.going+h.done);
   $('#hm-bar').setAttribute('aria-label',parts.map(p=>p[1]+' '+p[2]).join(' · '));
@@ -207,7 +207,7 @@ function renderHelpme(){
   /* การ์ดตัวเลข */
   const T=[['alert','red','รอช่วย',h.open,`วิกฤต ${nf(h.urgent)} เคส`],['route','blue','ทีมกำลังไป',h.going,'กำลังเดินทาง / อยู่หน้างาน'],['check','green','ช่วยแล้ว',h.done,`วันนี้ ${nf(h.doneToday)} เคส`],
     ['list','navy','เคสทั้งหมด',h.total,`ใหม่วันนี้ ${nf(h.today)} เคส`],['users','orange','คนที่ยังรอ',h.people.act,`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],['heart','green','คนที่ช่วยแล้ว',h.people.done,'ได้รับความช่วยเหลือ']];
-  $('#hm-kpis').innerHTML=T.map(([icn,c,l,v,sub])=>`<div class="hm-tile t-${c}"><span class="hm-ic">${I(icn)}</span><span class="hm-l">${l}</span><b class="hm-v">${nf(v)}</b><small>${esc2(sub)}</small></div>`).join('');
+  $('#hm-kpis').innerHTML=T.map(([icn,c,l,v,sub])=>`<div class="kpi hm-k t-${c}"><b>${nf(v)}</b><span>${l} <small class="hm-tag">Help Me</small></span><small><i></i>${esc2(sub)}</small></div>`).join('');
   /* 14 วัน: เคสใหม่ (น้ำเงิน) เทียบช่วยเสร็จ (เขียว) */
   const d=h.days||[],mx=Math.max(1,...d.map(x=>Math.max(x.n,x.k))),W=560,H=150,pb=22,bw=W/Math.max(1,d.length);
   $('#hm-days').innerHTML=d.length?`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="เคสใหม่และเคสที่ช่วยเสร็จ 14 วัน">${d.map((x,i)=>{const x0=i*bw+bw*.18,w=bw*.3,hn=(x.n/mx)*(H-pb-14),hk=(x.k/mx)*(H-pb-14);

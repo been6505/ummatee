@@ -10,9 +10,9 @@
 <link rel="icon" href="../../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=103">
+<link rel="stylesheet" href="./dashboard.css?v=104">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=13">
+<link rel="stylesheet" href="../helpme-skin.css?v=14">
 <script src="../icons.js?v=1"></script>
 </head>
 <body>
@@ -36,21 +36,6 @@
     <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm theme-btn" id="theme-btn" type="button" aria-pressed="false" aria-label="เปลี่ยนเป็นโหมดมืด" title="เปลี่ยนเป็นโหมดมืด"><i data-ic="moon"></i></button><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i></button><button class="btn ghost sm" id="logout">ออก</button></div>
   </header>
   <main class="wrap" id="main">
-    <!-- ภาพรวมหลักจาก Help Me ช่วยด้วย (ตัวเลขชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) -->
-    <section class="hm-hero" id="hm-sec" hidden aria-labelledby="hm-title">
-      <div class="hm-head"><div><p class="hm-eyebrow"><i data-ic="chart"></i> ภาพรวมจาก Help Me ช่วยด้วย</p><h2 id="hm-title">สถานการณ์ตอนนี้</h2><p class="hm-upd" id="hm-upd"></p></div>
-        <a class="hm-link" href="https://helpme-th.pages.dev/#stats" target="_blank" rel="noopener">เปิดหน้าสถิติ Help Me <i data-ic="ext"></i></a></div>
-      <div class="hm-bar" id="hm-bar" role="img"></div>
-      <div class="hm-tiles" id="hm-kpis"></div>
-      <div class="hm-grid">
-        <article class="hm-card span2"><h3>เคสใหม่ และเคสที่ช่วยเสร็จ · 14 วัน</h3><div id="hm-days" class="hm-days"></div></article>
-        <article class="hm-card"><h3>ความเร็วในการช่วย</h3><div id="hm-speed" class="hm-speed"></div></article>
-        <article class="hm-card"><h3>ความต้องการ</h3><div class="chart" id="c-hm-needs"></div></article>
-        <article class="hm-card span2"><h3>รายเขต</h3><div id="hm-dist" class="hm-table"></div></article>
-        <article class="hm-card"><h3>องค์กรที่รับเคส</h3><div id="hm-orgs" class="hm-table"></div></article>
-        <article class="hm-card"><h3>ทีมที่รับเคส</h3><div id="hm-teams" class="hm-table"></div></article>
-      </div>
-    </section>
     <h2 class="sec-h dash-sec"><i data-ic="board"></i> เคสในระบบ Helpme+</h2>
     <div class="filters" role="group" aria-label="ช่วงเวลา">
       <span class="f-lab">ช่วงเวลา</span>
@@ -85,16 +70,26 @@
       <p class="map-note" id="map-nopin"></p>
     </article>
     <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
+    <!-- ตัวเลขจาก Help Me ช่วยด้วย (ชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) -->
+    <p class="hm-src hm-part" hidden><span id="hm-upd"></span> <a href="https://helpme-th.pages.dev/#stats" target="_blank" rel="noopener">เปิดหน้าสถิติ Help Me <i data-ic="ext"></i></a></p>
+    <section class="kpis hm-part" id="hm-kpis" hidden aria-label="ตัวเลขจาก Help Me"></section>
 
     <div class="grid">
       <article class="card span2"><h2 id="t-trend">เคสใหม่ต่อวัน</h2><p class="sub" id="s-trend"></p><div class="chart" id="c-trend"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-trend"></div></details></article>
+      <article class="card span2 hm-part" hidden><h2>เคสใหม่ และเคสที่ช่วยเสร็จ · 14 วัน <small class="hm-tag">Help Me</small></h2><p class="sub">ไม่ขึ้นกับช่วงเวลาที่เลือก</p><div id="hm-days" class="hm-days"></div></article>
       <article class="card"><h2>สถานะเคส</h2><p class="sub">สัดส่วนเคสในช่วงที่เลือก</p><div class="chart" id="c-status"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-status"></div></details></article>
+      <article class="card hm-part" hidden><h2>สถานะเคส <small class="hm-tag">Help Me</small></h2><p class="sub">ทุกเคสในระบบ Help Me</p><div class="hm-bar" id="hm-bar" role="img"></div></article>
       <article class="card"><h2>ผลตรวจพื้นที่</h2><p class="sub">เคสที่ยังไม่เสร็จ เทียบกับแผนที่น้ำท่วม Floodboard + กล้อง CCTV</p><div class="chart" id="c-vr"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-vr"></div></details></article>
       <article class="card"><h2>ระดับความเร่งด่วน</h2><p class="sub">เฉพาะเคสที่ยังไม่เสร็จ</p><div class="chart" id="c-urg"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-urg"></div></details></article>
       <article class="card"><h2>ความต้องการ</h2><p class="sub">จำนวนเคสที่ขอแต่ละอย่าง (เคสหนึ่งขอได้หลายอย่าง)</p><div class="chart" id="c-needs"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-needs"></div></details></article>
+      <article class="card hm-part" hidden><h2>ความต้องการ <small class="hm-tag">Help Me</small></h2><p class="sub">จำนวนเคสที่ขอแต่ละอย่าง</p><div class="chart" id="c-hm-needs"></div></article>
+      <article class="card hm-part" hidden><h2>ความเร็วในการช่วย <small class="hm-tag">Help Me</small></h2><p class="sub">ค่ากลางของเวลาที่ใช้</p><div id="hm-speed" class="hm-speed"></div></article>
       <article class="card"><h2>บุคคลที่ต้องดูแลเป็นพิเศษ</h2><p class="sub">จำนวนเคสที่มีแต่ละกลุ่ม</p><div class="chart" id="c-vul"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-vul"></div></details></article>
       <article class="card"><h2>ระดับน้ำ</h2><p class="sub">ตามที่ผู้แจ้งเลือก</p><div class="chart" id="c-level"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-level"></div></details></article>
       <article class="card"><h2>พื้นที่ที่แจ้งมากที่สุด</h2><p class="sub">10 เขตแรก (เคสที่ระบุเขต)</p><div class="chart" id="c-district"></div><details><summary>ดูเป็นตาราง</summary><div id="tb-district"></div></details></article>
+      <article class="card span2 hm-part" hidden><h2>รายเขต <small class="hm-tag">Help Me</small></h2><p class="sub">12 เขตแรก</p><div id="hm-dist" class="hm-table"></div></article>
+      <article class="card hm-part" hidden><h2>องค์กรที่รับเคส <small class="hm-tag">Help Me</small></h2><div id="hm-orgs" class="hm-table"></div></article>
+      <article class="card hm-part" hidden><h2>ทีมที่รับเคส <small class="hm-tag">Help Me</small></h2><div id="hm-teams" class="hm-table"></div></article>
       <section class="stock-sec span2" id="stock-sec" hidden aria-label="สต็อก">
         <h2 class="sec-h">สต็อก <small>ยอดปัจจุบัน ไม่ขึ้นกับช่วงเวลา</small></h2>
         <div class="kpis" id="stock-kpis"></div>
@@ -117,8 +112,8 @@
 <script src="../ofm.js?v=1"></script>
 <script src="../camlive.js?v=7"></script>
 <script src="../maplayers.js?v=7"></script>
-<script src="./dashboard.js?v=24"></script>
-<script src="../chat.js?v=3"></script>
+<script src="./dashboard.js?v=25"></script>
+<script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

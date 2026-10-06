@@ -549,6 +549,52 @@ async function pullLeads(db) {
   await setMeta(db, 'leads_pulled_at', Date.now());
   return out;
 }
+/* Help Me ช่วยด้วย (helpme-th.pages.dev · มูลนิธิอุมมะตี) — Apps Script แบบเดียวกับ Code.gs เดิม
+   ไม่มีรหัส: ได้รายการสาธารณะ (ไม่มีชื่อ/เบอร์ พิกัดโดยประมาณ) · ตั้ง secret HELPME_KEY = รหัสทีมของ Help Me เพื่อได้ข้อมูลเต็ม
+   เคสที่ Help Me ปิดแล้ว (done) จะถูกเอาออกจากคิวรอคัดเอง */
+const HELPME_API = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
+const HELPME_LEVEL = { ankle: 'ข้อเท้า', knee: 'เข่า', waist: 'เอว', chest: 'อก', roof: 'มิดหัว/หลังคา' };
+async function pullHelpme(db, env) {
+  const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 15000)) });
+  if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
+  const r = await fetch((env.HELPME_API || HELPME_API) + '?' + q, { headers: UA, redirect: 'follow' });
+  if (!r.ok) return { ok: false, error: 'helpme_' + r.status };
+  let j; try { j = await r.json(); } catch (e) { return { ok: false, error: 'helpme_bad_json' }; }
+  if (!j.ok) return { ok: false, error: 'helpme_' + (j.error || 'error') };
+  const st = await leadSettings(db), out = { ok: true, full: !!j.volunteer, scanned: 0, added: 0, rejected: 0, duplicate: 0, closed: 0 };
+  for (const c of j.cases || []) {
+    out.scanned++;
+    const url = 'https://helpme-th.pages.dev/?case=' + encodeURIComponent(c.id);
+    const old = await db.prepare('SELECT id, status FROM leads WHERE url=?').bind(url).first();
+    if (old) {
+      if (old.status === 'new' && c.status === 'done') {
+        await db.prepare("UPDATE leads SET status='rejected', reason='resolved_at_source', by_='Help Me', updatedAt=? WHERE id=?").bind(Date.now(), old.id).run();
+        out.closed++;
+      } else out.duplicate++;
+      continue;
+    }
+    if (c.status === 'done') continue;
+    const needs = (Array.isArray(c.needs) ? c.needs : String(c.needs || '').split(/\s*,\s*/)).filter(Boolean);
+    const lvl = HELPME_LEVEL[c.level] || '';
+    const l = { url, source: 'helpme', postedAt: Number(c.createdAt) || 0,
+      title: [needs.join(', ') || 'ขอความช่วยเหลือ', c.people ? c.people + ' คน' : '', lvl ? 'น้ำระดับ' + lvl : ''].filter(Boolean).join(' · '),
+      text: [c.notes || '', c.status === 'going' && c.volunteer ? 'ทีมที่รับใน Help Me: ' + c.volunteer : '', c.org ? 'องค์กรที่รับใน Help Me: ' + c.org : '',
+        c.approx ? 'ตำแหน่งโดยประมาณ (Help Me ไม่เปิดเผยพิกัดจริงแบบสาธารณะ)' : ''].filter(Boolean).join('\n').slice(0, 2000),
+      district: clean(c.district, MAX.district), address: clean(c.address, MAX.address), lat: num(c.lat, -90, 90), lng: num(c.lng, -180, 180),
+      needs: list(needs), urgency: clampInt(c.urgency, 1, 3, 1), people: c.people ? String(c.people) + ' คน' : '',
+      names: j.volunteer ? clean(c.name, MAX.name) : '', phone: j.volunteer ? clean(c.phone, MAX.phone).replace(/[^\d+\-\s,]/g, '') : '' };
+    const res = await insertLead(db, l, st);
+    if (res.ok && res.id && c.approx) await db.prepare("UPDATE leads SET flags = CASE WHEN flags='' THEN 'approx_location' ELSE flags || ',approx_location' END WHERE id=?").bind(res.id).run();
+    if (res.duplicate) out.duplicate++; else if (res.status === 'new') out.added++; else if (res.status === 'rejected') out.rejected++;
+  }
+  return out;
+}
+async function pullAll(db, b, env) {
+  const [traffy, helpme] = await Promise.all([pullLeads(db).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) })), pullHelpme(db, env).catch(e => ({ ok: false, error: String(e.message || e).slice(0, 80) }))]);
+  const n = k => (traffy[k] || 0) + (helpme[k] || 0);
+  return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, traffy, helpme };
+}
+
 async function listLeads(db, p) {
   const since = Date.now() - clampInt(p.days, 1, 120, 30) * 86400e3;
   const { results } = await db.prepare('SELECT * FROM leads WHERE foundAt>? ORDER BY postedAt DESC LIMIT 600').bind(since).all();
@@ -622,7 +668,8 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
-      lead_add: addLeads, lead_pull: pullLeads, lead_decide: decideLead, lead_settings: saveLeadSettings };
+      lead_add: addLeads, lead_decide: decideLead, lead_settings: saveLeadSettings };
+    if (b.action === 'lead_pull') return json(isVol(env, b.key) ? await pullAll(db, b, env) : { ok: false, error: 'not_volunteer' });
     if (b.action === 'backup_now') return json(isVol(env, b.key) ? await backupToSheet(env) : { ok: false, error: 'not_volunteer' });
     if (needKey[b.action]) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });

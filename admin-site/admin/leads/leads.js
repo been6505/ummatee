@@ -3,11 +3,12 @@
    - ทีมใกล้เคส: ทีมที่แชร์ตำแหน่ง (teams_live) · จุดกู้ภัย (places) · องค์กรอื่นที่รับพื้นที่แล้ว (covered) */
 const LD={leads:[],live:[],places:[],covered:[],settings:null,pulledAt:null,filter:'new',q:'',sel:null,open:new Set(),loaded:0,map:null,layer:null,marks:{}};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
-const SRC={traffy:'Traffy Fondue',facebook:'Facebook',x:'X',tiktok:'TikTok',news:'ข่าว',social:'โซเชียล',hermes:'Hermes'};
+const SRC={traffy:'Traffy Fondue',helpme:'Help Me',facebook:'Facebook',x:'X',tiktok:'TikTok',news:'ข่าว',social:'โซเชียล',hermes:'Hermes'};
 const REASON={old_post_before_event:'โพสต์ก่อนเกิดเหตุ',old_post_too_old:'โพสต์เก่าเกินกำหนด',old_post_previous_year:'โพสต์ปีก่อน',money_no_place:'ขอเงินแต่ไม่บอกสถานที่',
-  rejected_by_staff:'แอดมินตัดทิ้ง',duplicate:'ซ้ำกับเคสอื่น',not_people:'ไม่ใช่คนเดือดร้อน',suspicious:'น่าสงสัย',resolved:'ได้รับความช่วยเหลือแล้ว'};
-const FLAG={asks_money:'ขอเงิน',account_reused:'เลขบัญชีซ้ำเคสอื่น',past_year_text:'อ้างถึงปีเก่า'};
+  rejected_by_staff:'แอดมินตัดทิ้ง',resolved_at_source:'ปิดเคสแล้วที่ Help Me',duplicate:'ซ้ำกับเคสอื่น',not_people:'ไม่ใช่คนเดือดร้อน',suspicious:'น่าสงสัย',resolved:'ได้รับความช่วยเหลือแล้ว'};
+const FLAG={approx_location:'ตำแหน่งโดยประมาณ',asks_money:'ขอเงิน',account_reused:'เลขบัญชีซ้ำเคสอื่น',past_year_text:'อ้างถึงปีเก่า'};
 const NEAR_KM=15;
+const RISK=f=>/^(asks_money|account_reused|past_year_text)/.test(f); // ธงที่ต้องระวัง (ตำแหน่งโดยประมาณไม่ใช่ความเสี่ยง)
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const pin=l=>l&&l.lat!=null&&l.lng!=null&&isFinite(+l.lat)&&isFinite(+l.lng);
 const sev=l=>Math.min(3,Math.max(1,Number(l.urgency)||1));
@@ -38,7 +39,7 @@ function nearby(l){
 function card(l){
   const n=nearby(l),flags=(l.flags||[]).map(f=>f.split(':')[0]),st=l.status;
   const head=[`<span class="urg urg-${sev(l)}">${URG[sev(l)]}</span>`,`<span class="src">${esc(SRC[l.source]||l.source)}</span>`,
-    ...flags.map(f=>`<span class="flag">⚠️ ${esc(FLAG[f]||f)}</span>`),
+    ...flags.map(f=>RISK(f)?`<span class="flag">⚠️ ${esc(FLAG[f]||f)}</span>`:`<span class="src">📍 ${esc(FLAG[f]||f)}</span>`),
     st==='rejected'?`<span class="rej">ตัดทิ้ง · ${esc(REASON[l.reason]||l.reason||'')}</span>`:'',
     st==='accepted'?`<span class="acc">✓ เป็นเคส #${esc(l.caseId)}</span>`:'',
     `<small>โพสต์ ${esc(ago(l.postedAt))}</small>`].join('');
@@ -69,13 +70,13 @@ function visible(){const q=LD.q;return LD.leads.filter(l=>(LD.filter==='all'||l.
 function render(){
   $('#sync').textContent=LD.loaded?'อัปเดต '+new Date(LD.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
   const c=s=>LD.leads.filter(l=>l.status===s).length,nw=LD.leads.filter(l=>l.status==='new');
-  $('#stats').innerHTML=[['รอคัด',nw.length,''],['วิกฤตรอคัด',nw.filter(l=>sev(l)===3).length,'red'],['ติดธง ⚠️',nw.filter(l=>(l.flags||[]).length).length,''],['รับเป็นเคสแล้ว',c('accepted'),'done'],['ตัดทิ้ง',c('rejected'),'']]
+  $('#stats').innerHTML=[['รอคัด',nw.length,''],['วิกฤตรอคัด',nw.filter(l=>sev(l)===3).length,'red'],['ติดธง ⚠️',nw.filter(l=>(l.flags||[]).some(RISK)).length,''],['รับเป็นเคสแล้ว',c('accepted'),'done'],['ตัดทิ้ง',c('rejected'),'']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
   $('#pulled').textContent=LD.pulledAt?'ดึงล่าสุด '+ago(LD.pulledAt):'';
   if(LD.settings){$('#set-start').value=LD.settings.eventStart;$('#set-age').value=LD.settings.maxAgeDays}
   $$('#ld-filter button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===LD.filter)));
   const v=visible();
-  $('#list').innerHTML=v.length?v.slice(0,200).map(card).join(''):`<p class="empty">${LD.filter==='new'?'ไม่มีเคสรอคัด<br><small>กด "ดึงเคสใหม่จาก Traffy" หรือรอ Hermes ส่งเคสเข้ามา</small>':'ไม่มีรายการ'}</p>`;
+  $('#list').innerHTML=v.length?v.slice(0,200).map(card).join(''):`<p class="empty">${LD.filter==='new'?'ไม่มีเคสรอคัด<br><small>กด "ดึงเคสใหม่" หรือรอ Hermes ส่งเคสเข้ามา</small>':'ไม่มีรายการ'}</p>`;
   drawMap(v)}
 
 function drawMap(v){
@@ -110,8 +111,8 @@ $('#ld-filter').addEventListener('click',e=>{const b=e.target.closest('button');
 $('#ld-q').addEventListener('input',e=>{LD.q=e.target.value.trim().toLowerCase();render()});
 $('#pull').addEventListener('click',async()=>{const b=$('#pull');b.disabled=true;b.textContent='กำลังดึง…';
   try{const r=await apiPost({action:'lead_pull'});
-    if(r&&r.ok)toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate} (จาก ${r.scanned} คำร้อง)`,true);else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
-    await loadAll()}finally{b.disabled=false;b.textContent='⤓ ดึงเคสใหม่จาก Traffy'}});
+    if(r&&r.ok){toast(`ดึงแล้ว: ใหม่ ${r.added} · ตัดทิ้ง ${r.rejected} · มีอยู่แล้ว ${r.duplicate}${r.closed?` · Help Me ปิดแล้ว ${r.closed}`:''}`,true);[['Traffy',r.traffy],['Help Me',r.helpme]].forEach(([n,x])=>{if(x&&!x.ok)toast(n+' ดึงไม่สำเร็จ: '+(x.error||''))})}else toast('ดึงไม่สำเร็จ: '+(r&&r.error||''));
+    await loadAll()}finally{b.disabled=false;b.textContent='⤓ ดึงเคสใหม่ (Traffy + Help Me)'}});
 $('#set-btn').addEventListener('click',()=>{const f=$('#settings');f.hidden=!f.hidden;$('#set-btn').setAttribute('aria-expanded',String(!f.hidden))});
 $('#settings').addEventListener('submit',async e=>{e.preventDefault();
   const r=await apiPost({action:'lead_settings',eventStart:$('#set-start').value,maxAgeDays:$('#set-age').value});

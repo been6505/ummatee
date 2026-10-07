@@ -112,7 +112,8 @@ function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Help
     <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div>
       <input class="tc-link" readonly value="${esc(url)}" aria-label="ลิงก์ทีม" onclick="this.select()">
       <div class="tc-acts"><button class="btn primary" type="button" id="l-copy"><i data-ic="copy"></i> คัดลอก</button>${p.length>=9?`<a class="btn ghost" href="${esc(sms)}"><i data-ic="chat"></i> ส่ง SMS</a>`:''}<a class="btn ghost" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">เปิดดู ↗</a></div>
-      <p class="muted small">ลิงก์หลุดหรือคนออกจากทีม: สร้างลิงก์ใหม่ ลิงก์เดิมจะใช้ไม่ได้ทันที</p>
+      <p class="muted small">ติดตามได้แม้ทีมปิดหน้าเว็บ: ให้ทีมเปิดลิงก์นี้ → ตั้งค่า → "ให้ศูนย์ติดตามได้แม้ปิดหน้านี้" แล้วติดตั้งแอปฟรี Traccar Client ตามขั้นตอน</p>
+      <p class="muted small">ลิงก์หลุดหรือคนออกจากทีม: สร้างลิงก์ใหม่ ลิงก์เดิมจะใช้ไม่ได้ทันที (แอปติดตามต้องใส่รหัสใหม่ด้วย)</p>
       <button class="btn ghost" type="button" id="l-new"><i data-ic="refresh"></i> สร้างลิงก์ใหม่</button></div>`;
   d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm;
   loadQR().then(()=>{const q=$('#qr');if(q){q.innerHTML='';new QRCode(q,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}}).catch(()=>{const q=$('#qr');if(q)q.hidden=true});

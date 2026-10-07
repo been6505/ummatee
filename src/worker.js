@@ -174,6 +174,51 @@ async function readTeams(db) {
   return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
     battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading }));
 }
+/* ---------- ติดตามตำแหน่งทีมแม้ไม่ได้เปิดหน้าเว็บ: แอปติดตามฟรีที่ทำงานเบื้องหลัง ----------
+   Traccar Client (iOS/Android): Server URL = https://<โดเมน>/api/track · Device identifier = รหัสลิงก์ทีม (?id=… ในลิงก์ทีม)
+   รองรับทั้งแบบเก่า (OsmAnd: ?id=&lat=&lon=&timestamp=&speed=นอต&batt=) และแบบใหม่ (JSON {device_id, location:{coords,battery,timestamp}})
+   OwnTracks (โหมด HTTP): URL = https://<โดเมน>/api/track/<รหัสลิงก์ทีม> · JSON {_type:'location',lat,lon,acc,vel(กม./ชม.),batt,tst}
+   จุดที่แอปเก็บไว้ตอนไม่มีเน็ตแล้วส่งย้อนหลัง: เก็บเข้าเส้นทางตามเวลาจริง และอัปเดตตำแหน่งล่าสุดเฉพาะจุดที่ใหม่กว่า */
+async function trackApp(db, request, url, pathTk) {
+  const q = Object.fromEntries(url.searchParams);
+  let body = {};
+  if (request.method === 'POST') {
+    const txt = await request.text();
+    try { body = JSON.parse(txt || '{}'); } catch (e) { for (const [k, v] of new URLSearchParams(txt)) q[k] = v; }
+  }
+  const loc = body.location || (Array.isArray(body.locations) ? body.locations[body.locations.length - 1] : null);
+  let tk = pathTk || q.id || q.deviceid || q.device_id || body.device_id || body.deviceId || (loc && loc.extras && loc.extras.device_id) || '';
+  tk = String(tk).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const out = (o, st = 200) => json(o, st);
+  if (tk.length < 10) return out({ ok: false, error: 'missing_id' }, 400);
+  const row = await db.prepare('SELECT name FROM roster WHERE token=? AND active=1').bind(tk).first();
+  if (!row) return out({ ok: false, error: 'bad_link' }, 403);
+  let p;
+  if (loc && loc.coords) {
+    const c = loc.coords, lv = loc.battery && loc.battery.level;
+    p = { lat: c.latitude, lng: c.longitude, acc: c.accuracy, speed: c.speed >= 0 ? c.speed * 3.6 : null, heading: c.heading >= 0 ? c.heading : null,
+      batt: lv >= 0 && lv <= 1 ? Math.round(lv * 100) : null, t: Date.parse(loc.timestamp) };
+  } else if (body._type === 'location') {
+    p = { lat: body.lat, lng: body.lon, acc: body.acc, speed: body.vel, heading: body.cog, batt: body.batt, t: Number(body.tst) * 1000 };
+  } else if (body._type) {
+    return json([]); // OwnTracks ข้อความอื่น (waypoint, transition ฯลฯ) ไม่ใช้
+  } else {
+    const ts = q.timestamp;
+    p = { lat: q.lat, lng: q.lon ?? q.lng, acc: q.accuracy ?? q.hdop, speed: q.speed != null && q.speed !== '' ? Number(q.speed) * 1.852 : null, heading: q.bearing ?? q.heading,
+      batt: q.batt ?? q.battery, t: /^\d{9,10}$/.test(ts || '') ? ts * 1000 : /^\d{12,13}$/.test(ts || '') ? Number(ts) : Date.parse(ts || '') };
+  }
+  const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180);
+  if (lat == null || lng == null || (lat === 0 && lng === 0)) return out({ ok: false, error: 'bad_location' }, 400);
+  const now = Date.now(), t = isFinite(p.t) && p.t > now - 7 * 864e5 && p.t <= now + 60e3 ? Math.min(p.t, now) : now;
+  const acc = clampInt(p.acc, 0, 100000, null), batt = clampInt(p.batt, 0, 100, null), speed = num(p.speed, 0, 300), heading = num(p.heading, 0, 360);
+  await db.batch([
+    db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading WHERE excluded.updatedAt>=teams_live.updatedAt')
+      .bind(row.name, lat, lng, acc, '', t, batt, speed, heading),
+    db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(row.name, lat, lng, acc, batt, speed, t),
+  ]);
+  if (Math.random() < 0.01) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 864e5).run();
+  return body._type ? json([]) : out({ ok: true });
+}
 async function pingTeam(db, b) {
   const team = clean(b.team, MAX.volunteer);
   if (!team) return { ok: false, error: 'missing_team' };
@@ -194,7 +239,7 @@ async function pingTeam(db, b) {
 async function teamTrack(db, p) {
   const team = clean(p.team, MAX.volunteer);
   if (!team) return { ok: false, error: 'missing_team' };
-  const { results } = await db.prepare('SELECT lat,lng,accuracy,battery,speed,at FROM team_track WHERE team=? AND at>? ORDER BY n LIMIT 3000')
+  const { results } = await db.prepare('SELECT lat,lng,accuracy,battery,speed,at FROM team_track WHERE team=? AND at>? ORDER BY at, n LIMIT 3000')
     .bind(team, Date.now() - clampInt(p.hours, 1, 168, 6) * 3600e3).all();
   return { ok: true, team, points: results };
 }
@@ -1256,9 +1301,11 @@ async function api(request, env) {
   if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
   // ข่าว/เตือนภัยเป็นข้อมูลสาธารณะ ไม่ต้องใช้ฐานข้อมูล
   if (request.method === 'GET' && new URL(request.url).searchParams.get('action') === 'news') { try { return json(await newsData()); } catch (e) { return json({ ok: false, error: 'news_unavailable' }); } }
+  const trk = new URL(request.url).pathname.match(/^\/api\/track(?:\/([A-Za-z0-9]{10,40}))?\/?$/);
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
   await init(db);
   const url = new URL(request.url);
+  if (trk && ['GET', 'POST'].includes(request.method)) return trackApp(db, request, url, trk[1]);
   if (request.method === 'GET') {
     const p = Object.fromEntries(url.searchParams), vol = isVol(env, p.key);
     switch (p.action) {

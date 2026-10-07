@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0f1330">
+<title>โทร · Helpme+</title>
+<link rel="icon" href="../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1330;--bg2:#1b2150;--ink:#fff;--muted:rgba(255,255,255,.72);--red:#E5383B;--ok:#2E9E57;--btn:rgba(255,255,255,.14);--btn-on:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans Thai",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{overflow:hidden}
+.stage{position:fixed;inset:0;background:radial-gradient(120% 90% at 50% 0%,var(--bg2),var(--bg))}
+#remote{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;display:none}
+.has-rv #remote{display:block}
+#local{position:absolute;right:14px;top:calc(env(safe-area-inset-top) + 14px);width:min(28vw,180px);aspect-ratio:3/4;object-fit:cover;border-radius:14px;background:#222;box-shadow:0 6px 20px rgba(0,0,0,.45);transform:scaleX(-1);display:none;z-index:3}
+.has-lv #local{display:block}
+#local.back{transform:none}
+.who{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;z-index:2;pointer-events:none}
+.has-rv .who{place-items:start start;text-align:left;padding:calc(env(safe-area-inset-top) + 16px) calc(min(28vw,180px) + 30px) 0 18px}
+.has-rv .who .av{display:none}
+.has-rv .who h1{font-size:18px;text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.has-rv .who p{text-shadow:0 1px 6px rgba(0,0,0,.7)}
+.av{width:112px;height:112px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:rgba(255,255,255,.12);position:relative}
+.av svg{width:52px;height:52px}
+.waiting .av::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid rgba(255,255,255,.35);animation:ring 1.6s ease-out infinite}
+@keyframes ring{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.35);opacity:0}}
+@media(prefers-reduced-motion:reduce){.waiting .av::after{animation:none}}
+h1{margin:0 0 6px;font-size:24px;font-weight:700}
+.st{margin:0;color:var(--muted);font-size:16px;font-variant-numeric:tabular-nums}
+.bar{position:absolute;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:center;gap:18px;padding:18px 16px calc(env(safe-area-inset-bottom) + 22px);background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.bar button{width:64px;height:64px;border-radius:50%;border:0;background:var(--btn);color:#fff;display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.bar button svg{width:28px;height:28px}
+.bar button[aria-pressed=true]{background:var(--btn-on);color:#111}
+.bar button:focus-visible{outline:3px solid #9fb0ff;outline-offset:3px}
+.bar .end{background:var(--red)}
+.bar .lbl{display:block;font-size:12px;margin-top:6px;color:var(--muted);text-align:center}
+.bar>div{display:flex;flex-direction:column;align-items:center}
+.bar [hidden]{display:none!important}
+.note{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 130px);z-index:5;max-width:min(92vw,460px);background:rgba(0,0,0,.72);border-radius:14px;padding:12px 16px;text-align:center;font-size:15px;line-height:1.5}
+.note a,.note button{color:#fff;font-weight:700}
+.note button{background:var(--ok);border:0;border-radius:10px;padding:10px 18px;font:inherit;font-weight:700;margin-top:8px;cursor:pointer}
+.note[hidden]{display:none}
+.ended .bar{display:none}
+.ended .who .av{opacity:.5}
+</style>
+</head>
+<body>
+<div class="stage waiting" id="stage">
+  <video id="remote" autoplay playsinline></video>
+  <video id="local" autoplay playsinline muted></video>
+  <audio id="ra" autoplay></audio>
+  <div class="who"><div><div class="av" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></div>
+    <h1 id="title">Helpme+ โทร</h1><p class="st" id="st" role="status" aria-live="polite">กำลังเตรียมสาย…</p></div></div>
+  <p class="note" id="note" hidden></p>
+  <div class="bar" id="bar">
+    <div><button type="button" id="b-mic" aria-pressed="false" aria-label="ปิดไมค์"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/><path class="x" d="M3 3l18 18" style="display:none"/></svg></button><span class="lbl" id="l-mic">ปิดไมค์</span></div>
+    <div id="w-cam" hidden><button type="button" id="b-cam" aria-pressed="false" aria-label="ปิดกล้อง"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/><path class="x" d="M3 3l18 18" style="display:none"/></svg></button><span class="lbl" id="l-cam">ปิดกล้อง</span></div>
+    <div id="w-flip" hidden><button type="button" id="b-flip" aria-label="สลับกล้องหน้า/หลัง"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3l-2-3H9L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M9 13a3 3 0 0 1 5-2.2M15 13a3 3 0 0 1-5 2.2M14 9v2h-2M10 17v-2h2"/></svg></button><span class="lbl">สลับกล้อง</span></div>
+    <div><button type="button" class="end" id="b-end" aria-label="วางสาย"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15.5c5.5-5 12.5-5 18 0l-2.3 2.6-3.4-1.6v-2.6a12 12 0 0 0-6.6 0v2.6l-3.4 1.6z"/></svg></button><span class="lbl">วางสาย</span></div>
+  </div>
+</div>
+<script>
+/* โทรในระบบ Helpme+ (WebRTC 1 ต่อ 1) · ลิงก์ /call/#<id>.<secret>
+   ส่งข้อความนัดเชื่อมต่อผ่าน /api (call_send / call_poll) · เสียงและภาพวิ่งตรงระหว่างเครื่อง
+   ผู้ที่มีรหัสเครื่อง (peer) น้อยกว่าเป็นฝ่ายส่ง offer · เข้าใหม่/รีเฟรช = ส่ง hello ใหม่แล้วเชื่อมต่อใหม่ */
+const $=s=>document.querySelector(s);
+const C={id:location.hash.slice(1).replace(/[^0-9a-f.]/g,''),me:[...crypto.getRandomValues(new Uint8Array(6))].map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,12),
+  other:null,gone:new Set(),oid:0,pc:null,local:null,since:0,mode:'voice',ice:[],turn:false,pending:[],t0:0,timer:null,poll:null,ended:false,facing:'user',startedAt:Date.now(),connectedOnce:false,makingOffer:false,wake:null};
+const api=async b=>{const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,c:C.id,peer:C.me}),cache:'no-store'});return r.json()};
+const send=(kind,data,to)=>api({action:'call_send',kind,data:data==null?'':JSON.stringify(data),to:to||''}).catch(()=>{});
+const stage=$('#stage');
+function status(t){$('#st').textContent=t}
+function note(html){const n=$('#note');n.hidden=!html;n.innerHTML=html||''}
+const mmss=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+
+async function start(){
+  if(!/^[0-9a-f]{12}\.[0-9a-f]{24}$/.test(C.id)){status('ลิงก์สายไม่ถูกต้อง');stage.classList.add('ended');return}
+  let r;try{r=await api({action:'call_poll',since:0})}catch(e){}
+  if(!r||!r.ok){status(r&&r.error==='bad_call'?'สายนี้หมดอายุหรือลิงก์ไม่ถูกต้อง':'เชื่อมต่อระบบไม่ได้ ตรวจอินเทอร์เน็ตแล้วรีเฟรช');stage.classList.add('ended');return}
+  C.mode=r.mode==='video'?'video':'voice';C.ice=(r.ice&&r.ice.servers)||[];C.turn=!!(r.ice&&r.ice.turn);
+  const other=r.caller==='team'?'ศูนย์ประสานงาน':'ทีม '+r.team;
+  $('#title').textContent=(C.mode==='video'?'วิดีโอคอล':'โทร')+' · '+r.team;document.title=$('#title').textContent+' · Helpme+';
+  $('#w-cam').hidden=$('#w-flip').hidden=C.mode!=='video';
+  status('กำลังขอใช้ไมค์'+(C.mode==='video'?'และกล้อง':'')+'…');
+  try{C.local=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:C.mode==='video'?{facingMode:C.facing,width:{ideal:1280},height:{ideal:720}}:false})}
+  catch(e){
+    if(C.mode==='video'){try{C.local=await navigator.mediaDevices.getUserMedia({audio:true});C.mode='voice';$('#w-cam').hidden=$('#w-flip').hidden=true;note('เปิดกล้องไม่ได้ · ต่อสายด้วยเสียงอย่างเดียว')}catch(e2){}}
+    if(!C.local){status('ใช้ไมค์ไม่ได้');note('อนุญาตให้เว็บนี้ใช้ไมโครโฟน'+(C.mode==='video'?'/กล้อง':'')+' แล้ว<br><button type="button" onclick="location.reload()">ลองใหม่</button>');return}}
+  if(C.mode==='video'){$('#local').srcObject=C.local;stage.classList.add('has-lv')}
+  try{C.wake=await navigator.wakeLock?.request('screen')}catch(e){}
+  status('กำลังรออีกฝ่ายเข้าสาย…');
+  await send('hello');
+  handle(r.sigs||[]);
+  loop();
+  setTimeout(()=>{if(!C.connectedOnce&&!C.ended)fallbackHint()},45000);
+}
+function fallbackHint(){note(`ยังต่อสายไม่ได้${C.other?' (เครือข่ายอาจปิดกั้น)':' · อีกฝ่ายยังไม่เข้าสาย'}<br>${C.other?'':'ส่งลิงก์นี้ให้อีกฝ่าย หรือ'}โทรศัพท์ปกติแทนได้`)}
+
+function loop(){clearTimeout(C.poll);if(C.ended)return;
+  const fast=!C.pc||C.pc.connectionState!=='connected';
+  C.poll=setTimeout(async()=>{try{const r=await api({action:'call_poll',since:C.since});if(r&&r.ok)await handle(r.sigs||[])}catch(e){}loop()},fast?(document.hidden?2500:1000):3000)}
+
+async function handle(sigs){
+  sigs.forEach(s=>{if(s.kind==='bye')C.gone.add(s.peer)}); // เครื่องที่ออกไปแล้ว (รีเฟรช/ปิดหน้า/วางสาย) ไม่ต้องต่อหา
+  for(const s of sigs){C.since=Math.max(C.since,s.n);let d=null;try{d=s.data?JSON.parse(s.data):null}catch(e){}
+    if(s.kind==='bye'){if(s.peer===C.other){
+        if(d==='end'&&Date.now()-s.at<120e3)end('อีกฝ่ายวางสายแล้ว',false);
+        else{C.other=null;reset();stage.classList.add('waiting');status('อีกฝ่ายหลุดจากสาย · กำลังรอเข้าใหม่…')}}
+      continue}
+    if(C.gone.has(s.peer))continue;
+    if(s.kind==='hello'){
+      if(s.peer!==C.other){C.other=s.peer;reset();if(C.me<C.other)await offer();else send('hello',null,C.other)}
+      else if(C.me<C.other&&(!C.pc||['failed','closed'].includes(C.pc.connectionState)))await offer();
+    }else if(s.kind==='offer'&&d&&d.sdp){
+      if(s.peer!==C.other){C.other=s.peer;reset()}
+      const pc=ensurePc();
+      try{if(pc.signalingState!=='stable')await pc.setLocalDescription({type:'rollback'}).catch(()=>{});
+        await pc.setRemoteDescription(d.sdp);await flushIce();await pc.setLocalDescription(await pc.createAnswer());send('answer',{sdp:pc.localDescription,o:d.o},C.other)}catch(e){console.warn(e)}
+    }else if(s.kind==='answer'&&d&&d.sdp&&d.o===C.oid&&s.peer===C.other&&C.pc&&C.pc.signalingState==='have-local-offer'){
+      try{await C.pc.setRemoteDescription(d.sdp);await flushIce()}catch(e){console.warn(e)}
+    }else if(s.kind==='ice'&&d&&s.peer===C.other){
+      if(C.pc&&C.pc.remoteDescription)C.pc.addIceCandidate(d).catch(()=>{});else C.pending.push(d)
+    }
+  }
+}
+async function flushIce(){const q=C.pending.splice(0);for(const c of q)await C.pc.addIceCandidate(c).catch(()=>{})}
+function reset(){if(C.pc){C.pc.onconnectionstatechange=null;C.pc.close()}C.pc=null;C.pending=[];stage.classList.remove('has-rv')}
+function ensurePc(){if(C.pc)return C.pc;
+  const pc=C.pc=new RTCPeerConnection({iceServers:C.ice});
+  C.local.getTracks().forEach(t=>pc.addTrack(t,C.local));
+  pc.onicecandidate=e=>{if(e.candidate)send('ice',e.candidate,C.other)};
+  pc.ontrack=e=>{const st=e.streams[0]||new MediaStream([e.track]);
+    if(e.track.kind==='video'){$('#remote').srcObject=st;stage.classList.add('has-rv');$('#remote').play().catch(()=>{})}
+    $('#ra').srcObject=st;$('#ra').play().catch(()=>note('<button type="button" id="b-snd">แตะเพื่อเปิดเสียง</button>'))};
+  pc.onconnectionstatechange=()=>{const s=pc.connectionState;if(pc!==C.pc)return;
+    if(s==='connected'){C.connectedOnce=true;stage.classList.remove('waiting');note('');if(!C.t0)C.t0=Date.now();tick()}
+    else if(s==='connecting')status('กำลังเชื่อมต่อ…');
+    else if(s==='disconnected')status('สัญญาณขาด กำลังต่อใหม่…');
+    else if(s==='failed'){status('สายหลุด กำลังต่อใหม่…');if(C.me<C.other)offer(true);else send('hello',null,C.other);if(!C.turn&&!C.connectedOnce)fallbackHint()}};
+  return pc}
+async function offer(restart){const pc=restart&&C.pc?C.pc:(reset(),ensurePc());
+  try{C.makingOffer=true;await pc.setLocalDescription(await pc.createOffer({iceRestart:!!restart}));send('offer',{sdp:pc.localDescription,o:++C.oid},C.other);status('กำลังเชื่อมต่อ…')}catch(e){console.warn(e)}finally{C.makingOffer=false}}
+function tick(){clearInterval(C.timer);C.timer=setInterval(()=>{if(C.pc&&C.pc.connectionState==='connected')status('เชื่อมต่อแล้ว · '+mmss(Math.round((Date.now()-C.t0)/1000)))},1000);status('เชื่อมต่อแล้ว · 00:00')}
+function end(msg,notify=true){if(C.ended)return;C.ended=true;if(notify)send('bye','end');clearTimeout(C.poll);clearInterval(C.timer);
+  reset();C.local&&C.local.getTracks().forEach(t=>t.stop());try{C.wake&&C.wake.release()}catch(e){}
+  stage.classList.remove('has-lv','waiting');stage.classList.add('ended');
+  status((msg||'วางสายแล้ว')+(C.t0?' · คุย '+mmss(Math.round((Date.now()-C.t0)/1000)):''));note('ปิดหน้านี้ได้เลย');}
+
+function setBtn(id,off,lblOn,lblOff){const b=$(id);b.setAttribute('aria-pressed',String(off));b.setAttribute('aria-label',off?lblOff:lblOn);b.querySelector('.x').style.display=off?'':'none';const l=$(id.replace('b-','l-'));if(l)l.textContent=off?lblOff:lblOn}
+$('#b-mic').onclick=()=>{const t=C.local&&C.local.getAudioTracks()[0];if(!t)return;t.enabled=!t.enabled;setBtn('#b-mic',!t.enabled,'ปิดไมค์','เปิดไมค์')};
+$('#b-cam').onclick=()=>{const t=C.local&&C.local.getVideoTracks()[0];if(!t)return;t.enabled=!t.enabled;setBtn('#b-cam',!t.enabled,'ปิดกล้อง','เปิดกล้อง');stage.classList.toggle('has-lv',t.enabled)};
+$('#b-flip').onclick=async()=>{const old=C.local&&C.local.getVideoTracks()[0];if(!old)return;C.facing=C.facing==='user'?'environment':'user';
+  try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:C.facing}}});const nt=s.getVideoTracks()[0];
+    const snd=C.pc&&C.pc.getSenders().find(x=>x.track&&x.track.kind==='video');if(snd)await snd.replaceTrack(nt);
+    C.local.removeTrack(old);old.stop();C.local.addTrack(nt);$('#local').srcObject=C.local;$('#local').classList.toggle('back',C.facing!=='user')}catch(e){C.facing=C.facing==='user'?'environment':'user'}};
+$('#b-end').onclick=()=>end('วางสายแล้ว');
+document.addEventListener('click',e=>{if(e.target.id==='b-snd'){$('#ra').play().catch(()=>{});$('#remote').play().catch(()=>{});note('')}});
+addEventListener('pagehide',()=>{if(!C.ended)navigator.sendBeacon?.('/api',new Blob([JSON.stringify({action:'call_send',c:C.id,peer:C.me,kind:'bye',data:JSON.stringify('leave')})],{type:'text/plain'}))});
+document.addEventListener('visibilitychange',async()=>{if(!document.hidden&&!C.ended&&C.wake===null)try{C.wake=await navigator.wakeLock?.request('screen')}catch(e){}});
+start();
+</script>
+</body>
+</html>

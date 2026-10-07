@@ -1,5 +1,6 @@
 /* โทรหาทีม: <i data-ic="phone"></i> โทร (โทรศัพท์) · <i data-ic="chat"></i> SMS (พร้อมรายละเอียดเคส) · โทรเสียง / วิดีโอคอลผ่านเน็ต (ห้องประชุมเว็บ)
-   - โทรผ่านเน็ต: ระบบสร้างห้องแล้วส่ง "สายเข้า" ไปหน้าทีม (/team/) ทีมกดรับได้ทันที · ทีมไม่ได้เปิดหน้า ส่งลิงก์ทาง SMS / LINE ได้
+   - โทรผ่านเน็ต: ระบบสร้างสายในระบบเอง (/call/ · WebRTC ไม่ต้องลงแอป ไม่ต้องใส่ชื่อ) แล้วส่ง "สายเข้า" ไปหน้าทีม (/team/) ทีมกดรับได้ทันที
+     ทีมไม่ได้เปิดหน้า ส่งลิงก์ทาง SMS / LINE ได้ · ห้อง Jitsi ด้านล่างใช้สำรองเมื่อสร้างสายในระบบไม่ได้เท่านั้น
    - วิดีโอคอลใช้ Jitsi สาธารณะ meet.ffmuc.net (ไม่ต้องล็อกอิน ไม่จำกัดเวลา) เปิดในแท็บใหม่ ชื่อห้องสุ่มเดาไม่ได้
      (meet.jit.si ต้องล็อกอินผู้สร้างห้อง และถ้าฝังในหน้าเว็บจะตัดสายที่ 5 นาที · ffmuc ฝังในหน้าเว็บไม่ได้)
    - ทีมไม่มีแอปรับสาย: ระบบส่งลิงก์ห้องให้ทาง SMS / LINE / คัดลอก
@@ -27,8 +28,8 @@ const TEAMCALL=(()=>{
   /* เปิดห้องวิดีโอคอลแล้วให้ส่งลิงก์ให้ทีม */
   async function video(t,opt={},mode='video'){
     const w=window.open('about:blank','_blank');if(w)w.opener=null;let url='';
-    try{const r=await(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hq_call',key:KEY(),team:t.name,mode,name:who()})})).json();if(r.ok)url=r.link}catch(e){}
-    const rang=!!url;if(!url)url=MEET+'Helpmeplus-'+rnd(12)+(mode==='voice'?'#config.startWithVideoMuted=true&config.startAudioOnly=true':'');
+    try{const r=await(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hq_call',key:KEY(),team:t.name,mode,name:who()})})).json();if(r.ok)url=new URL(r.link,location.origin).href}catch(e){}
+    const rang=!!url;if(!url)url=MEET+'Helpmeplus-'+rnd(12)+'#config.defaultLanguage=%22th%22&config.prejoinConfig.enabled=false&userInfo.displayName=%22'+encodeURIComponent(who())+'%22'+(mode==='voice'?'&config.startWithVideoMuted=true&config.startAudioOnly=true':''); // สำรองเมื่อระบบโทรในระบบใช้ไม่ได้
     if(w)w.location=url;else window.open(url,'_blank','noopener');
     const label=mode==='voice'?'โทรเสียง':'วิดีโอคอล';
     const p=tel(t.phone),msg=`Helpme+ ${label}จากศูนย์${opt.caseText?' เรื่อง '+opt.caseText:''} · กดเข้าห้อง: ${url}`;

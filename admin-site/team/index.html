@@ -282,7 +282,7 @@ $('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',
 
 /* ---------- โทร: เบอร์ศูนย์ · โทรผ่านเน็ต (ห้องเสียง/วิดีโอ ศูนย์เห็นสายเข้า) ---------- */
 async function callHq(mode){const w=window.open('about:blank','_blank');if(w)w.opener=null;
-  try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;if(w)w.location=r.link;else location.href=r.link;toast('กำลังเรียกศูนย์…')}catch(e){w&&w.close();toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
+  try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;const u=new URL(r.link,location.href).href;if(w)w.location=u;else location.href=u;toast('กำลังเรียกศูนย์…')}catch(e){w&&w.close();toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
 function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),video=m.text==='วิดีโอคอล';
   lay.innerHTML=`<div class="ring" role="alertdialog" aria-label="สายเข้าจากศูนย์"><div><div class="av"><i data-ic="${video?'video':'phone'}"></i></div><h2>ศูนย์โทรมา</h2><p>${esc(m.name||'ศูนย์ประสานงาน')} · ${video?'วิดีโอคอล':'โทรด้วยเสียง'}</p>
     <div class="row"><div><button class="no" type="button" id="r-no" aria-label="ไม่รับ"><i data-ic="close"></i></button><small>ไม่รับ</small></div><div><a class="yes" id="r-yes" href="${esc(m.link)}" target="_blank" rel="noopener" style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--ok);color:#fff" aria-label="รับสาย"><i data-ic="phone"></i></a><small>รับสาย</small></div></div></div></div>`;

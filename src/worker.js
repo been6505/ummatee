@@ -44,7 +44,11 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`,
   // เส้นทางของทีม (จุดที่ทีมผ่าน) ใช้ดูย้อนหลังในหน้าติดตามทีม · เก็บ 7 วัน
   `CREATE TABLE IF NOT EXISTS team_track (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, lat REAL, lng REAL, accuracy INTEGER, battery INTEGER, speed REAL, at INTEGER)`,
-  `CREATE INDEX IF NOT EXISTS team_track_team ON team_track(team, n)`
+  `CREATE INDEX IF NOT EXISTS team_track_team ON team_track(team, n)`,
+  // โทรในระบบ (WebRTC): ห้องสาย 1 ต่อ 1 + ข้อความนัดเชื่อมต่อ (offer/answer/ice) · เก็บ 1 วัน
+  `CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, secret TEXT, mode TEXT, team TEXT, caller TEXT, name TEXT, createdAt INTEGER, endedAt INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
+  `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
@@ -285,10 +289,61 @@ async function teamMe(db, t) {
 async function callStart(db, team, from, b) {
   if (!team) return { ok: false, error: 'missing_team' };
   const mode = b.mode === 'video' ? 'video' : 'voice';
-  const link = MEET + 'Helpmeplus-' + teamToken() + (mode === 'voice' ? '#config.startWithVideoMuted=true&config.startAudioOnly=true' : '');
+  const link = await callCreate(db, { team, from, mode, name: b.name });
   await chatSend(db, { team, from, name: b.name, text: mode === 'voice' ? 'โทรด้วยเสียง' : 'วิดีโอคอล', kind: 'call', link, caseId: b.caseId });
   return { ok: true, link, mode };
 }
+/* ---------- โทรในระบบ (WebRTC ตรงระหว่างเครื่อง) ----------
+   ห้องสาย = id + รหัสลับในลิงก์ (/call/#id.secret) · ใครมีลิงก์เข้าได้ (แบบเดียวกับลิงก์ห้องประชุม) · สายละ 2 คน
+   Worker ทำหน้าที่ส่งต่อข้อความนัดเชื่อมต่อ (offer/answer/ice) ผ่าน D1 · เสียง/ภาพวิ่งตรงระหว่างเครื่อง
+   ต่อผ่านเครือข่ายที่ปิดกั้น (4G บางเครือข่าย) ต้องมี TURN: ตั้ง TURN_KEY_ID + TURN_KEY_API_TOKEN (Cloudflare Realtime TURN) */
+const CALL_KINDS = ['hello', 'offer', 'answer', 'ice', 'bye'];
+async function callCreate(db, { team, from, mode, name }) {
+  const id = rand(6), secret = rand(12), now = Date.now();
+  await db.batch([
+    db.prepare('INSERT INTO calls (id,secret,mode,team,caller,name,createdAt) VALUES (?,?,?,?,?,?,?)').bind(id, secret, mode, team, from, clean(name, 60), now),
+    db.prepare('DELETE FROM call_sig WHERE at<?').bind(now - 864e5),
+    db.prepare('DELETE FROM calls WHERE createdAt<?').bind(now - 7 * 864e5),
+  ]);
+  return `/call/#${id}.${secret}`;
+}
+async function callAuth(db, b) {
+  const [id, secret] = String(b.c || '').split('.');
+  if (!/^[0-9a-f]{12}$/.test(id || '') || !/^[0-9a-f]{24}$/.test(secret || '')) return null;
+  const c = await db.prepare('SELECT * FROM calls WHERE id=?').bind(id).first();
+  if (!c || c.secret.length !== secret.length) return null;
+  let d = 0; for (let i = 0; i < secret.length; i++) d |= c.secret.charCodeAt(i) ^ secret.charCodeAt(i);
+  return d === 0 && Date.now() - c.createdAt < 864e5 ? c : null;
+}
+async function iceServers(env) {
+  const stun = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+  if (!env.TURN_KEY_ID || !env.TURN_KEY_API_TOKEN) return { servers: stun, turn: false };
+  try {
+    const r = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${env.TURN_KEY_ID}/credentials/generate-ice-servers`, {
+      method: 'POST', headers: { authorization: 'Bearer ' + env.TURN_KEY_API_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ ttl: 6 * 3600 }), signal: AbortSignal.timeout(5000) });
+    const j = await r.json();
+    if (r.ok && j.iceServers) return { servers: [].concat(j.iceServers), turn: true };
+  } catch (e) {}
+  return { servers: stun, turn: false };
+}
+const CALL_POST = {
+  // เข้าห้อง/ดึงข้อความใหม่: ส่ง since=0 ครั้งแรกจะได้ข้อมูลห้อง + ICE servers
+  call_poll: async (db, c, b, env) => {
+    const since = Math.max(0, Number(b.since) || 0), peer = clean(b.peer, 20);
+    const { results } = await db.prepare('SELECT n,peer,dest,kind,data,at FROM call_sig WHERE call=? AND n>? AND peer<>? AND (dest=? OR dest=\'\') ORDER BY n LIMIT 200').bind(c.id, since, peer, peer).all();
+    const out = { ok: true, now: Date.now(), sigs: results };
+    if (!since) Object.assign(out, { mode: c.mode, team: c.team, caller: c.caller, name: c.name, createdAt: c.createdAt, ice: await iceServers(env) });
+    return out;
+  },
+  call_send: async (db, c, b) => {
+    const kind = CALL_KINDS.includes(b.kind) ? b.kind : '', peer = clean(b.peer, 20), data = typeof b.data === 'string' ? b.data : JSON.stringify(b.data ?? '');
+    if (!kind || !/^[a-z0-9]{6,20}$/.test(peer) || data.length > 30000) return { ok: false, error: 'bad_signal' };
+    const cnt = await db.prepare('SELECT COUNT(*) n FROM call_sig WHERE call=?').bind(c.id).first();
+    if (cnt.n > 3000) return { ok: false, error: 'too_many' };
+    const r = await db.prepare('INSERT INTO call_sig (call,peer,dest,kind,data,at) VALUES (?,?,?,?,?,?)').bind(c.id, peer, clean(b.to, 20), kind, data, Date.now()).run();
+    return { ok: true, n: r.meta.last_row_id };
+  },
+};
 const TEAM_POST = {
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   team_status: async (db, t, b) => {
@@ -1124,7 +1179,7 @@ async function chatSend(db, b) {
   const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (!team || (!text && lat == null)) return { ok: false, error: 'missing' };
-  const kind = ['call', 'sos'].includes(b.kind) ? b.kind : '', link = kind === 'call' && String(b.link || '').startsWith(MEET) ? String(b.link).slice(0, 300) : '';
+  const kind = ['call', 'sos'].includes(b.kind) ? b.kind : '', link = kind === 'call' && (String(b.link || '').startsWith(MEET) || /^\/call\/#[0-9a-f]{12}\.[0-9a-f]{24}$/.test(String(b.link || ''))) ? String(b.link).slice(0, 300) : '';
   const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' ? 1 : 0, from === 'team' ? 1 : 0, kind, link).run();
   await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
@@ -1251,6 +1306,7 @@ async function api(request, env) {
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
+    if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };

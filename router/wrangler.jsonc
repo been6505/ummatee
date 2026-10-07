@@ -1,0 +1,10 @@
+{
+  "name": "helpme4u-router",
+  "main": "worker.js",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "helpme4u.com", "custom_domain": true },
+    { "pattern": "www.helpme4u.com", "custom_domain": true }
+  ]
+}

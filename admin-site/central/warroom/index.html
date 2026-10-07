@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <script>/* ธีม: ค่าเริ่มต้นสว่าง · ปุ่มมุมขวาบน (theme-toggle.js) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
 <meta name="theme-color" content="#F2F3F7">
-<title>War Room · Helpme+ Center</title>
+<title>War Room · Helpme+ CENTRAL</title>
 <link rel="icon" href="../../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="../pages.css?v=12">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=29">
-<link rel="stylesheet" href="./warroom.css?v=3">
+<link rel="stylesheet" href="./warroom.css?v=4">
 <script src="../icons.js?v=3"></script>
 </head>
 <body>
@@ -32,14 +32,14 @@
 </section>
 <div id="app" hidden>
   <header class="top">
-    <a class="brand" href="../../center.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>Center</b></span></a>
-    <nav class="tabs" aria-label="เมนู Center"><a href="../dashboard/">แดชบอร์ด</a><a href="../../center.html">จัดการเคส</a><a href="../warroom/" aria-current="page">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a></nav>
+    <a class="brand" href="../../central.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/" aria-current="page">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a></nav>
     <div class="top-r"><span class="sync" id="sync"></span><span class="wr-clock" id="clock"></span><button class="btn ghost sm" id="fs" type="button"><i data-ic="expand"></i> เต็มจอ</button><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
   </header>
   <main class="wrap wr" id="main">
-    <div class="wr-rooms"><div class="wr-roomtabs" id="rooms" role="tablist" aria-label="เลือก War Room"></div><button class="btn primary sm" id="wr-new" type="button">+ สร้าง War Room</button></div>
-    <div class="wr-sub" id="subtabs" role="tablist" aria-label="เมนู War Room" hidden>
-      <button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
+    <div class="wr-rooms"><div class="wr-roomtabs" id="rooms" role="tablist" aria-label="เลือก War Room"></div><button class="btn primary sm" id="wr-new" type="button">+ สร้างศูนย์จังหวัด / War Room</button></div>
+    <div class="wr-sub" id="subtabs" role="tablist" aria-label="เมนู War Room">
+      <button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="struct" aria-selected="false"><i data-ic="users"></i> โครงสร้าง</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
     </div>
     <div class="wr-pane wr-over" id="p-over">
     <section class="wr-kpis" id="kpis" aria-label="สรุปสถานการณ์"></section>
@@ -57,6 +57,11 @@
       </div>
     </div>
     </div>
+    <section class="wr-pane" id="p-struct" hidden>
+      <div class="wr-tools"><h2 style="margin:0;font-size:18px">HELP ME CENTRAL · โครงสร้างการสั่งการ</h2><span class="muted small">CENTRAL → ศูนย์ประสานงานจังหวัด → War Room โซน → ทีม</span></div>
+      <div class="wr-sum" id="st-sum"></div>
+      <div class="wr-tree" id="st-tree"></div>
+    </section>
     <section class="wr-pane" id="p-cases" hidden>
       <div class="wr-tools"><div class="seg" id="c-st" role="tablist" aria-label="กรองสถานะ"></div><input id="c-q" type="search" placeholder="ค้นหา ความต้องการ เขต ที่อยู่ ทีม" aria-label="ค้นหาเคส"></div>
       <div class="wr-tw"><table class="wr-tbl"><thead><tr><th>รูป</th><th>ระดับ</th><th>ความต้องการ</th><th>พื้นที่</th><th>รอ</th><th>ทีม / สถานะ</th><th></th></tr></thead><tbody id="c-body"></tbody></table></div>
@@ -82,7 +87,7 @@
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="./warroom.js?v=2"></script>
+<script src="./warroom.js?v=3"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>

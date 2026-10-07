@@ -1,24 +1,24 @@
-/* helpme4u.com — Help Me homepage + Center (ศูนย์สั่งการ) under one domain name (Cloudflare Worker, Custom Domains)
+/* helpme4u.com — Help Me homepage + HELP ME CENTRAL (ศูนย์สั่งการ) under one domain name (Cloudflare Worker, Custom Domains)
      helpme4u.com, www.helpme4u.com  → umplus-help.pages.dev (หน้าบ้าน Help Me)
-     center.helpme4u.com             → admin-helpme.pages.dev (Center · เดิมชื่อหลังบ้าน)
-     admin.helpme4u.com              → ชื่อเดิม: หน้าเว็บย้ายไป center (301) · แต่ /api /team /call ยังตอบตรง
+     central.helpme4u.com            → admin-helpme.pages.dev (HELP ME CENTRAL · เดิมชื่อหลังบ้าน / Center)
+     admin. / center.helpme4u.com    → ชื่อเดิม: หน้าเว็บย้ายไป central (301) · แต่ /api /team /call ยังตอบตรง
                                        เพราะลิงก์ทีม แอปติดตาม (Traccar) และลิงก์สายที่ส่งไปแล้วใช้โดเมนนี้อยู่ (บางแอปไม่ตามการย้าย)
    Center อยู่โดเมนย่อยแยกโดยตั้งใจ: แอปหน้าบ้านลง service worker ขอบเขต "/" บน helpme4u.com ที่แคชทุก GET ในโดเมน
    (ยกเว้นใต้ /api/) ถ้าหน้า Center อยู่บน helpme4u.com จะถูกแคชค้างบนเครื่องที่ใช้ร่วมกัน
-   ลิงก์ Center บน helpme4u.com (/admin… /center… /team… /call… /api) ส่งต่อไป center.helpme4u.com แบบ 308 (คง method + body) */
+   ลิงก์ CENTRAL บน helpme4u.com (/admin… /center… /central… /team… /call… /api) ส่งต่อไป central.helpme4u.com แบบ 308 (คง method + body) */
 const PUBLIC = 'https://umplus-help.pages.dev';
 const ADMIN = 'https://admin-helpme.pages.dev';
-const CENTER_HOST = 'center.helpme4u.com', OLD_HOST = 'admin.helpme4u.com';
+const CENTER_HOST = 'central.helpme4u.com', OLD_HOSTS = ['admin.helpme4u.com', 'center.helpme4u.com'];
 const under = (p, b) => p === b || p.startsWith(b + '/') || p.startsWith(b + '.');
-const isCenterPath = p => ['/api', '/admin', '/center', '/team', '/call'].some(b => under(p, b));
+const isCenterPath = p => ['/api', '/admin', '/center', '/central', '/team', '/call'].some(b => under(p, b));
 const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 
 export default {
   async fetch(req) {
     const url = new URL(req.url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }
-    if (url.hostname === OLD_HOST && !keepOnOld(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 301); }
-    const center = url.hostname === CENTER_HOST || url.hostname === OLD_HOST;
+    if (OLD_HOSTS.includes(url.hostname) && !keepOnOld(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 301); }
+    const center = url.hostname === CENTER_HOST || OLD_HOSTS.includes(url.hostname);
     if (!center && isCenterPath(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 308); }
     const origin = center ? ADMIN : PUBLIC;
     const up = new URL(url.pathname + url.search, origin);

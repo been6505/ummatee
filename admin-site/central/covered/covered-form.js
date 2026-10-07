@@ -126,7 +126,7 @@ async function save(f){
     setTimeout(()=>{COVERED.C.loaded=0;load()},4000);return}
   // ระบบหลังบ้านยังไม่รองรับ / ส่งไม่ได้: ให้คัดลอกแถวไปวางในชีตเอง
   const tsv=[row.org,row.date,row.items,row.qty,row.place,row.location].join('\t');
-  err.innerHTML=(r&&r.error&&r.error!=='unknown_action'?'บันทึกไม่สำเร็จ ('+esc(r.error)+')':r?'ระบบ Center ยังไม่เปิดให้บันทึกจากฟอร์ม':'ส่งข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต')+
+  err.innerHTML=(r&&r.error&&r.error!=='unknown_action'?'บันทึกไม่สำเร็จ ('+esc(r.error)+')':r?'ระบบ CENTRAL ยังไม่เปิดให้บันทึกจากฟอร์ม':'ส่งข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต')+
     ' · ใช้วิธีสำรอง: <button type="button" class="linkish" id="cf-copy">คัดลอกแถวนี้</button> แล้ว <a href="'+esc(COVERED.SHEET_URL)+'" target="_blank" rel="noopener">เปิดชีต ↗</a> วางที่ช่อง A ของแถวว่างล่างสุด';
   $('#cf-copy').onclick=async()=>{try{await navigator.clipboard.writeText(tsv);toast('คัดลอกแล้ว ไปวางในชีตได้เลย')}catch(e){prompt('คัดลอกข้อความนี้',tsv)}};
 }

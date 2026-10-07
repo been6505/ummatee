@@ -1,4 +1,7 @@
-/* War Room: จอศูนย์บัญชาการ · ภาพรวมทั้งหมด หรือ War Room ย่อยแต่ละพื้นที่
+/* War Room: โครงสร้าง HELP ME CENTRAL → ศูนย์ประสานงานจังหวัด → War Room โซน → ทีม
+   - CENTRAL: ภาพรวมทั้งหมด (Common Operating Picture) + แท็บโครงสร้าง
+   - ศูนย์ประสานงานจังหวัด (kind=province): เห็นเคส/ทีม/โซนทั้งจังหวัด
+   - War Room โซน (kind=zone): ขอบเขตในจังหวัด = รายชื่อเขต/อำเภอ และ/หรือ วงกลม · ทีมสังกัดโซน
    - War Room ย่อย: ขอบเขต = รายชื่อเขต และ/หรือ วงกลม (จุดกลาง + รัศมี) · มีทีมประจำ (roster.warroom) · คลังของเอง (stock.warroom) · ทีมงานประจำห้อง
    - แท็บในห้อง: ภาพรวม · เคส (มอบทีม/เปลี่ยนสถานะเคสในระบบ · เคส Help Me เปิดที่ Help Me) · ทีม · สต็อก · โปรไฟล์
    ข้อมูล: เคส Help Me (หลัก) + เคสในระบบ · ทีม/ตำแหน่งสด (roster) · SOS/สายเข้า/แชท (chat_threads) · ประกาศกรมอุตุฯ (news)
@@ -18,21 +21,34 @@ const waitTxt=t=>{const m=mins(t);if(m==null)return '';if(m<60)return m+' นา
 const vol=c=>String(c.volunteer||'').replace(/^'/,'').trim();
 const photos=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 const thumb=(id,w=96)=>`https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w${w}`;
-const caseLink=c=>'../../center.html#'+encodeURIComponent(c.src==='hm'?'hm-'+c.id:c.id);
+const caseLink=c=>'../../central.html#'+encodeURIComponent(c.src==='hm'?'hm-'+c.id:c.id);
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,s=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(s))};
 const normD=d=>String(d||'').replace(/^เขต\s*/,'').replace(/\s+/g,'');
 const telOf=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 const room=()=>W.rooms.find(r=>r.id===W.room)||null;
+const PROVINCES='กรุงเทพมหานคร กระบี่ กาญจนบุรี กาฬสินธุ์ กำแพงเพชร ขอนแก่น จันทบุรี ฉะเชิงเทรา ชลบุรี ชัยนาท ชัยภูมิ ชุมพร เชียงราย เชียงใหม่ ตรัง ตราด ตาก นครนายก นครปฐม นครพนม นครราชสีมา นครศรีธรรมราช นครสวรรค์ นนทบุรี นราธิวาส น่าน บึงกาฬ บุรีรัมย์ ปทุมธานี ประจวบคีรีขันธ์ ปราจีนบุรี ปัตตานี พระนครศรีอยุธยา พะเยา พังงา พัทลุง พิจิตร พิษณุโลก เพชรบุรี เพชรบูรณ์ แพร่ ภูเก็ต มหาสารคาม มุกดาหาร แม่ฮ่องสอน ยโสธร ยะลา ร้อยเอ็ด ระนอง ระยอง ราชบุรี ลพบุรี ลำปาง ลำพูน เลย ศรีสะเกษ สกลนคร สงขลา สตูล สมุทรปราการ สมุทรสงคราม สมุทรสาคร สระแก้ว สระบุรี สิงห์บุรี สุโขทัย สุพรรณบุรี สุราษฎร์ธานี สุรินทร์ หนองคาย หนองบัวลำภู อ่างทอง อำนาจเจริญ อุดรธานี อุตรดิตถ์ อุทัยธานี อุบลราชธานี'.split(' ');
+const BKK='พระนคร ดุสิต หนองจอก บางรัก บางเขน บางกะปิ ปทุมวัน ป้อมปราบศัตรูพ่าย พระโขนง มีนบุรี ลาดกระบัง ยานนาวา สัมพันธวงศ์ พญาไท ธนบุรี บางกอกใหญ่ ห้วยขวาง คลองสาน ตลิ่งชัน บางกอกน้อย บางขุนเทียน ภาษีเจริญ หนองแขม ราษฎร์บูรณะ บางพลัด ดินแดง บึงกุ่ม สาทร บางซื่อ จตุจักร บางคอแหลม ประเวศ คลองเตย สวนหลวง จอมทอง ดอนเมือง ราชเทวี ลาดพร้าว วัฒนา บางแค หลักสี่ สายไหม คันนายาว สะพานสูง วังทองหลาง คลองสามวา บางนา ทวีวัฒนา ทุ่งครุ บางบอน'.split(' ');
+// จังหวัดของเคส: จากระบบ (Help Me) หรือเดาจากที่อยู่/เขต
+const provOf=c=>{if(c.province)return c.province;const a=String(c.address||''),m=a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
+  if(m){const n=m[1];return /^(กรุงเทพ|กทม)/.test(n)?'กรุงเทพมหานคร':(PROVINCES.find(p=>n.startsWith(p))||n)}
+  if(/กรุงเทพ|กทม/.test(a)||BKK.includes(normD(c.district)))return 'กรุงเทพมหานคร';
+  const am=String(c.district||'').match(/^อำเภอเมือง\s*([ก-๙]+)/);return am?(PROVINCES.find(p=>am[1].startsWith(p))||''):''};
+const isProv=r=>r&&r.kind==='province';
+const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
 /* ---------- ขอบเขตของ War Room ---------- */
 function inRoom(c,r){if(!r)return true;
-  if(r.districts.length&&c.district&&r.districts.some(d=>normD(d)===normD(c.district)))return true;
+  const pv=provOf(c);
+  if(isProv(r))return pv===r.province;
+  if(r.province&&pv&&pv!==r.province)return false;
+  if(r.districts.length&&c.district&&r.districts.some(d=>normD(d).replace(/^อำเภอ/,'')===normD(c.district).replace(/^อำเภอ/,'')))return true;
   if(r.radius&&r.lat!=null&&hasPin(c))return km(r.lat,r.lng,+c.lat,+c.lng)*1000<=r.radius;
   return false}
 function view(){const r=room();
   const cases=W.cases.filter(c=>inRoom(c,r));
-  const roster=r?W.roster.filter(t=>t.warroom===r.id):W.roster,names=new Set(roster.map(t=>t.name));
+  const zids=isProv(r)?new Set(zonesOf(r.province).map(z=>z.id)):null;
+  const roster=!r?W.roster:isProv(r)?W.roster.filter(t=>zids.has(t.warroom)):W.roster.filter(t=>t.warroom===r.id),names=new Set(roster.map(t=>t.name));
   const live=W.live.filter(l=>names.has(l.team));
   const alerts={sos:(W.alerts.sos||[]).filter(s=>names.has(s.name)),calls:(W.alerts.calls||[]).filter(c=>names.has(c.team))};
   const threads=W.threads.filter(t=>names.has(t.team));
@@ -58,16 +74,20 @@ async function loadWarn(){try{const n=await apiGet({action:'news'});if(n&&n.ok)W
 
 /* ---------- เลือกห้อง / แท็บ ---------- */
 function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
-  const chip=(id,name,color)=>{const r=W.rooms.find(x=>x.id===id),act=r?all.filter(c=>inRoom(c,r)):all,crit=act.filter(c=>sev(c)===3&&c.status!=='going').length;
-    return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}">${color?`<i class="rdot" style="background:${esc(color)}"></i>`:'<i data-ic="board"></i>'}${esc(name)} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
-  $('#rooms').innerHTML=chip('','ภาพรวมทั้งหมด','')+W.rooms.map(r=>chip(r.id,r.name,r.color)).join('');
-  $('#subtabs').hidden=!W.room;if(!W.room&&W.tab!=='over')W.tab='over';
-  $$('#subtabs [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===W.tab)));
-  ['over','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
+  const chip=(r,label)=>{const act=r?all.filter(c=>inRoom(c,r)):all,crit=act.filter(c=>sev(c)===3&&c.status!=='going').length,id=r?r.id:'';
+    return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i>'}${esc(label||r.name)} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
+  // จัดกลุ่มตามจังหวัด: ศูนย์ประสานงานจังหวัด แล้วตามด้วย War Room โซนในจังหวัดนั้น
+  const provs=[...new Set(W.rooms.map(r=>r.province||''))].sort((a,b)=>!a-!b||(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:a.localeCompare(b,'th')));
+  $('#rooms').innerHTML=chip(null,'HELP ME CENTRAL · ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
+    return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
+  const r=room();$('#subtabs').hidden=false;
+  const tabs=!r?['over','struct']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab='over';
+  $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
+  ['over','struct','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
   document.body.classList.toggle('wr-overview',W.tab==='over')}
 $('#rooms').addEventListener('click',e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
-$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='stock')await loadStock();render()});
+$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
 /* ---------- ภาพรวม ---------- */
 function kpis(V){
@@ -150,6 +170,34 @@ async function drawMap(V){
   setTimeout(()=>W.map.invalidateSize(),60);
 }
 
+/* ---------- CENTRAL: โครงสร้างการสั่งการ ---------- */
+function stats(cs,names){const act=cs.filter(c=>c.status!=='done');const live=new Set(W.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
+  return {act:act.length,crit:act.filter(c=>sev(c)===3&&c.status!=='going').length,going:act.filter(c=>c.status==='going').length,teams:names.length,on:names.filter(n=>live.has(n)).length,
+    low:W.items.filter(i=>i.warroom&&i.min!==''&&Number(i.qty)<=Number(i.min)).length}}
+function chipsOf(st){return `<span class="k">${st.act} เคสค้าง</span>${st.crit?`<span class="k cr">${st.crit} วิกฤต</span>`:''}<span class="k">${st.going} กำลังไป</span><span class="k">ทีม ${st.on}/${st.teams} ออนไลน์</span>`}
+function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.rooms.filter(r=>!isProv(r));
+  const covered=c=>W.rooms.some(r=>inRoom(c,r)),orphan=open.filter(c=>!covered(c)),freeTeams=W.roster.filter(t=>!t.warroom||!zones.some(z=>z.id===t.warroom));
+  const provs=[...new Set(W.rooms.map(r=>r.province||'').concat(open.map(provOf).filter(Boolean)))].sort((a,b)=>(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:0)||a.localeCompare(b,'th'));
+  $('#st-sum').innerHTML=[[W.rooms.filter(isProv).length,'ศูนย์ประสานงานจังหวัด'],[zones.length,'War Room โซน'],[W.roster.length,'ทีมทั้งหมด'],[orphan.length,'เคสค้างที่ยังไม่มี War Room ดูแล',orphan.length?'crit':''],[freeTeams.length,'ทีมยังไม่สังกัดโซน',freeTeams.length?'warn':'']]
+    .map(([v,l,c])=>`<div class="wr-kpi ${c||''}"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('#st-tree').innerHTML=`<div class="node central"><b>HELP ME CENTRAL</b><span class="muted small">Common Operating Picture · ข้อมูล / มาตรฐาน / สนับสนุน</span><div class="kk">${chipsOf(stats(W.cases,W.roster.map(t=>t.name)))}</div></div>
+    <div class="lvl">${provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv),pc=W.cases.filter(c=>pv?provOf(c)===pv:!provOf(c));
+      const pnames=W.roster.filter(t=>zs.some(z=>z.id===t.warroom)).map(t=>t.name),po=pc.filter(c=>c.status!=='done'&&!zs.some(z=>inRoom(c,z))).length;
+      return `<div class="branch"><div class="node prov${pr?'':' missing'}">${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
+          <span class="muted small">${pv?'Provincial Coordination':'เคส/โซนที่ยังไม่ระบุจังหวัด'}${pr&&pr.lead?' · '+esc(pr.lead):''}${pr&&pr.phone?` · <a href="tel:${esc(telOf(pr.phone))}">${esc(pr.phone)}</a>`:''}</span>
+          <div class="kk">${chipsOf(stats(pc,pnames))}${po?`<span class="k warn">${po} เคสนอกโซน</span>`:''}</div>
+          ${!pr&&pv?`<button type="button" class="btn ghost sm" data-newprov="${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>`:''}</div>
+        <div class="lvl">${zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="branch"><div class="node zone"><button type="button" class="lnk ttl" data-go="${esc(z.id)}"><i class="rdot" style="background:${esc(z.color)}"></i> ${esc(z.name)}</button>
+            <span class="muted small">War Room โซน${z.lead?' · '+esc(z.lead):''}${z.districts.length?' · '+esc(z.districts.slice(0,4).join(', '))+(z.districts.length>4?'…':''):''}</span>
+            <div class="kk">${chipsOf(stats(W.cases.filter(c=>inRoom(c,z)),tn.map(t=>t.name)))}</div>
+            <div class="tms">${tn.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')||'<span class="muted small">ยังไม่มีทีม</span>'}</div></div></div>`}).join('')}
+          ${pv?`<button type="button" class="btn ghost sm addz" data-newzone="${esc(pv)}">+ เพิ่ม War Room โซนใน${esc(pv==='กรุงเทพมหานคร'?'กรุงเทพฯ':'จ.'+pv)}</button>`:''}</div></div>`}).join('')}</div>
+    ${freeTeams.length?`<div class="node free"><b>ทีมยังไม่สังกัด War Room โซน</b><div class="tms">${freeTeams.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')}</div><span class="muted small">เลือก War Room โซน → แท็บ "ทีม" เพื่อเพิ่มทีมเข้าโซน</span></div>`:''}`;
+}
+$('#p-struct').addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){W.room=g.dataset.go;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
+  const np=e.target.closest('[data-newprov]');if(np){roomForm({kind:'province',province:np.dataset.newprov,districts:[]});return}
+  const nz=e.target.closest('[data-newzone]');if(nz)roomForm({kind:'zone',province:nz.dataset.newzone,districts:[]})});
+
 /* ---------- แท็บ เคส ---------- */
 function casesTab(V){
   const cnt=k=>V.cases.filter(c=>k==='all'||c.status===k).length;
@@ -179,6 +227,12 @@ $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-
 
 /* ---------- แท็บ ทีม ---------- */
 function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
+  if(isProv(r)){const zs=zonesOf(r.province);
+    $('#t-hint').textContent=`ทีมในจังหวัด${r.province}: ${V.roster.length} ทีม ใน ${zs.length} War Room โซน · จัดทีมเข้าโซนได้ที่ War Room โซนนั้น`;
+    $('#t-list').innerHTML=zs.length?zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="wr-tcard"><div class="h"><i class="rdot" style="background:${esc(z.color)}"></i><b>${esc(z.name)}</b><span class="st">${tn.length} ทีม</span></div>
+      ${tn.map(t=>{const l=live.get(t.name),on=l&&mins(l.updatedAt)<10;return `<small><i class="dot ${on?'on':''}" style="display:inline-block;margin-right:6px"></i>${esc(t.name)} · ${esc(ST[t.status]||'')}${l?'':' · ไม่แชร์ตำแหน่ง'}</small>`}).join('')||'<small>ยังไม่มีทีม</small>'}
+      <div class="a"><button type="button" class="btn ghost sm" data-gozone="${esc(z.id)}">ไปที่ War Room โซน</button></div></div>`}).join(''):'<p class="muted">ยังไม่มี War Room โซนในจังหวัดนี้ · สร้างได้ที่ปุ่ม "+ สร้างศูนย์จังหวัด / War Room"</p>';
+    return}
   $('#t-hint').textContent=`ทีมใน ${r.name}: ${V.roster.length} ทีม · กด "เพิ่มเข้า War Room นี้" เพื่อย้ายทีมมาประจำห้องนี้ (ทีมอยู่ได้ทีละ 1 ห้อง) · แก้รายละเอียดทีมที่หน้า "จัดทีม"`;
   const all=W.roster.slice().sort((a,b)=>(b.warroom===r.id)-(a.warroom===r.id)||a.name.localeCompare(b.name,'th'));
   $('#t-list').innerHTML=all.map(t=>{const mine=t.warroom===r.id,other=!mine&&t.warroom&&rn.get(t.warroom),l=live.get(t.name),on=l&&mins(l.updatedAt)<10;
@@ -187,7 +241,8 @@ function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new 
       <small>${l?(on?'ออนไลน์':'ตำแหน่งเมื่อ '+esc(ago(l.updatedAt))):'ไม่แชร์ตำแหน่ง'}${other?` · อยู่ใน <b>${esc(other.name)}</b>`:''}</small>
       <div class="a">${t.phone?`<a class="btn ghost sm" href="tel:${esc(telOf(t.phone))}"><i data-ic="phone"></i> โทร</a>`:''}${mine?`<button type="button" class="btn ghost sm" data-tw="${esc(t.name)}" data-to="">นำออก</button>`:`<button type="button" class="btn primary sm" data-tw="${esc(t.name)}" data-to="${esc(r.id)}">เพิ่มเข้า War Room นี้</button>`}</div></div>`}).join('')||'<p class="muted">ยังไม่มีทีมในระบบ · เพิ่มทีมที่หน้า "จัดทีม"</p>';
 }
-$('#t-list').addEventListener('click',async e=>{const b=e.target.closest('[data-tw]');if(!b)return;b.disabled=true;
+$('#t-list').addEventListener('click',async e=>{const gz=e.target.closest('[data-gozone]');if(gz){W.room=gz.dataset.gozone;W.tab='teams';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
+  const b=e.target.closest('[data-tw]');if(!b)return;b.disabled=true;
   try{const r=await apiPost({action:'team_warroom',team:b.dataset.tw,warroom:b.dataset.to});if(r.ok){const t=W.roster.find(x=>x.name===b.dataset.tw);if(t)t.warroom=b.dataset.to;toast(b.dataset.to?'เพิ่มทีมเข้า War Room แล้ว':'นำทีมออกแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
@@ -225,15 +280,16 @@ function itemForm(it){const r=room();if(!r)return;it=it||{};
 function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
   const crit=V.cases.filter(c=>c.status!=='done'&&sev(c)===3).length,act=V.cases.filter(c=>c.status!=='done').length;
   $('#pf-info').innerHTML=`<div class="wr-tools"><h2 style="margin:0"><i class="rdot" style="background:${esc(r.color)}"></i> ${esc(r.name)}</h2><button type="button" class="btn ghost sm" id="pf-edit">แก้ไขข้อมูล War Room</button></div>
-    <dl class="wr-dl"><dt>หัวหน้า War Room</dt><dd>${esc(r.lead||'—')}</dd><dt>เบอร์ติดต่อ</dt><dd>${r.phone?`<a href="tel:${esc(telOf(r.phone))}">${esc(r.phone)}</a>`:'—'}</dd>
+    <dl class="wr-dl"><dt>ประเภท</dt><dd>${isProv(r)?'ศูนย์ประสานงานจังหวัด (Provincial Coordination)':'War Room โซน'}${r.province?' · จังหวัด'+esc(r.province):''}</dd>${isProv(r)?`<dt>War Room โซน</dt><dd>${zonesOf(r.province).map(z=>`<button type="button" class="lnk" data-gozone2="${esc(z.id)}">${esc(z.name)}</button>`).join(' · ')||'ยังไม่มี'}</dd>`:''}<dt>หัวหน้า</dt><dd>${esc(r.lead||'—')}</dd><dt>เบอร์ติดต่อ</dt><dd>${r.phone?`<a href="tel:${esc(telOf(r.phone))}">${esc(r.phone)}</a>`:'—'}</dd>
       <dt>ที่ตั้ง</dt><dd>${esc(r.address||'—')}${r.lat!=null?` · <button type="button" class="lnk" data-fly2="${+r.lat},${+r.lng}">ดูบนแผนที่</button>`:''}</dd>
-      <dt>พื้นที่รับผิดชอบ</dt><dd>${r.districts.length?'เขต '+esc(r.districts.join(', ')):''}${r.districts.length&&r.radius?' และ ':''}${r.radius?`รัศมี ${esc((r.radius/1000).toLocaleString('th-TH',{maximumFractionDigits:1}))} กม. จากจุดที่ตั้ง`:''}${!r.districts.length&&!r.radius?'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>':''}</dd>
+      <dt>พื้นที่รับผิดชอบ</dt><dd>${isProv(r)?'ทั้งจังหวัด'+esc(r.province):''}${!isProv(r)&&r.districts.length?'เขต '+esc(r.districts.join(', ')):''}${r.districts.length&&r.radius?' และ ':''}${r.radius?`รัศมี ${esc((r.radius/1000).toLocaleString('th-TH',{maximumFractionDigits:1}))} กม. จากจุดที่ตั้ง`:''}${!isProv(r)&&!r.districts.length&&!r.radius?'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>':''}</dd>
       <dt>สถานการณ์</dt><dd>เคสค้าง ${act} · วิกฤต ${crit} · ทีม ${V.roster.length} · ทีมงานประจำ ${staff.length} คน</dd>${r.note?`<dt>หมายเหตุ</dt><dd>${esc(r.note)}</dd>`:''}</dl>`;
   $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
   $('#pf-edit').onclick=()=>roomForm(r);
 }
-$('#p-prof').addEventListener('click',async e=>{const ed=e.target.closest('[data-pedit]');if(ed){staffForm(W.staff.find(s=>s.id===ed.dataset.pedit));return}
+$('#p-prof').addEventListener('click',async e=>{const gz=e.target.closest('[data-gozone2]');if(gz){W.room=gz.dataset.gozone2;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
+  const ed=e.target.closest('[data-pedit]');if(ed){staffForm(W.staff.find(s=>s.id===ed.dataset.pedit));return}
   const del=e.target.closest('[data-pdel]');if(del&&confirm('ลบรายชื่อนี้?')){const r=await apiPost({action:'warroom_staff',staff:{id:del.dataset.pdel,active:false}}).catch(()=>({}));if(r.ok){await loadRooms();render()}else toast('ลบไม่สำเร็จ')}
   const f=e.target.closest('[data-fly2]');if(f){W.tab='over';render();const [a,o]=f.dataset.fly2.split(',').map(Number);setTimeout(()=>W.map&&W.map.flyTo([a,o],14),300)}});
 $('#pf-add').onclick=()=>staffForm(null);
@@ -243,27 +299,31 @@ function staffForm(s){const r=room();if(!r)return;s=s||{};
     <div class="row"><label>เวร / กะ<input name="shift" maxlength="40" value="${esc(s.shift||'')}" placeholder="เช่น 08:00–20:00"></label><label>หมายเหตุ<input name="note" maxlength="200" value="${esc(s.note||'')}"></label></div>`,async f=>{
     const res=await apiPost({action:'warroom_staff',staff:{id:s.id||'',wr:r.id,name:f.name.value,role:f.role.value,phone:f.phone.value,shift:f.shift.value,note:f.note.value}});
     if(!res.ok){toast('บันทึกไม่สำเร็จ: '+(res.error||''));return false}toast('บันทึกแล้ว',true);await loadRooms();render()})}
-function roomForm(r){r=r||{};const c=W.map?W.map.getCenter():null;
-  dlg(`<h2>${r.id?'แก้ไข War Room':'สร้าง War Room ย่อย'}</h2>
-    <label>ชื่อ War Room<input name="name" required maxlength="60" value="${esc(r.name||'')}" placeholder="เช่น War Room ลาดกระบัง"></label>
+function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.province:'',districts:[]};const c=W.map?W.map.getCenter():null;
+  dlg(`<h2>${r.id?'แก้ไขข้อมูล':'สร้างศูนย์ประสานงานจังหวัด / War Room โซน'}</h2>
+    <div class="row"><label>ประเภท<select name="kind"><option value="zone"${r.kind!=='province'?' selected':''}>War Room โซน</option><option value="province"${r.kind==='province'?' selected':''}>ศูนย์ประสานงานจังหวัด</option></select></label>
+      <label>จังหวัด<input name="province" list="provs" maxlength="40" value="${esc(r.province||'')}" placeholder="เช่น กรุงเทพมหานคร"><datalist id="provs">${PROVINCES.map(p=>`<option value="${p}">`).join('')}</datalist></label></div>
+    <label>ชื่อ<input name="name" maxlength="60" value="${esc(r.name||'')}" placeholder="เช่น War Room โซนตะวันออก (ศูนย์จังหวัดเว้นว่างได้)"></label>
     <div class="row"><label>หัวหน้า War Room<input name="lead" maxlength="60" value="${esc(r.lead||'')}"></label><label>เบอร์ติดต่อ<input name="phone" inputmode="tel" maxlength="20" value="${esc(r.phone||'')}"></label></div>
     <label>ที่ตั้ง (ที่อยู่ / จุดสังเกต)<input name="address" maxlength="200" value="${esc(r.address||'')}"></label>
     <fieldset><legend>พื้นที่รับผิดชอบ (ใส่อย่างใดอย่างหนึ่งหรือทั้งสอง)</legend>
-      <label>เขต (คั่นด้วยจุลภาค)<input name="districts" maxlength="600" value="${esc((r.districts||[]).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
+      <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
       <div class="row"><label>จุดที่ตั้ง (ละติจูด, ลองจิจูด)<input name="ll" maxlength="40" value="${r.lat!=null?esc(r.lat+', '+r.lng):''}" placeholder="13.7563, 100.5018"></label><label>รัศมี (กม.)<input name="radius" type="number" min="0" step="0.5" inputmode="decimal" value="${r.radius?esc(r.radius/1000):''}"></label></div>
       <div class="acts"><button type="button" class="btn ghost sm" id="ll-map">ใช้จุดกลางแผนที่ตอนนี้</button><button type="button" class="btn ghost sm" id="ll-me">ใช้ตำแหน่งของฉัน</button></div></fieldset>
     <label>สี<span class="colors">${COLORS.map(x=>`<label class="sw"><input type="radio" name="color" value="${x}"${x===(r.color||COLORS[W.rooms.length%COLORS.length])?' checked':''}><i style="background:${x}"></i></label>`).join('')}</span></label>
     <label>หมายเหตุ<input name="note" maxlength="500" value="${esc(r.note||'')}"></label>
-    ${r.id?'<button type="button" class="btn ghost sm danger" id="wr-del">ปิด War Room นี้</button>':''}`,async f=>{
+    ${r.id?'<button type="button" class="btn ghost sm danger" id="wr-del">ปิดศูนย์ / War Room นี้</button>':''}`,async f=>{
     const m=String(f.ll.value).match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/),rad=Math.round(Number(f.radius.value||0)*1000);
     if(rad&&!m){toast('ใส่จุดที่ตั้งก่อนกำหนดรัศมี');return false}
-    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,districts:f.districts.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
-    if(!res.ok){toast('บันทึกไม่สำเร็จ: '+(res.error||''));return false}
+    const kind=f.kind.value,pv=f.province.value.trim();if(kind==='province'&&!pv){toast('ศูนย์ประสานงานจังหวัดต้องระบุจังหวัด');return false}
+    if(kind==='zone'&&!f.name.value.trim()){toast('ใส่ชื่อ War Room โซน');return false}
+    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,districts:f.districts.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
+    if(!res.ok){toast(res.error==='province_exists'?'จังหวัดนี้มีศูนย์ประสานงานแล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     toast('บันทึกแล้ว',true);await loadRooms();W.room=res.id;W.fitted='';if(!r.id)W.tab='prof';try{history.replaceState(null,'','?wr='+encodeURIComponent(res.id))}catch(e){}render()});
   const f=$('#dlg-f');
   $('#ll-map').onclick=()=>{if(c)f.ll.value=c.lat.toFixed(5)+', '+c.lng.toFixed(5);else toast('เปิดแท็บภาพรวมเพื่อโหลดแผนที่ก่อน')};
   $('#ll-me').onclick=()=>navigator.geolocation&&navigator.geolocation.getCurrentPosition(p=>{f.ll.value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5)},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:10000});
-  const del=$('#wr-del');if(del)del.onclick=async()=>{if(!confirm(`ปิด ${r.name}? ทีมในห้องนี้จะกลับไปไม่สังกัดห้องใด (ข้อมูลเคสไม่หาย)`))return;
+  const del=$('#wr-del');if(del)del.onclick=async()=>{if(!confirm(`ปิด ${r.name}? ${isProv(r)?'War Room โซนในจังหวัดยังอยู่':'ทีมในห้องนี้จะกลับไปไม่สังกัดห้องใด'} (ข้อมูลเคสไม่หาย)`))return;
     const res=await apiPost({action:'warroom_save',warroom:{id:r.id,active:false}}).catch(()=>({}));if(res.ok){$('#dlg').close();W.room='';W.tab='over';try{history.replaceState(null,'',location.pathname)}catch(e){}await Promise.all([loadRooms(),loadTeams()]);render()}else toast('ปิดไม่สำเร็จ')};
 }
 $('#wr-new').onclick=()=>roomForm(null);
@@ -278,6 +338,7 @@ function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
 /* ---------- วาดทั้งหมด ---------- */
 function render(){roomsBar();const V=view();
   if(W.tab==='over'){kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
+  else if(!V.r&&W.tab==='struct')structTab();
   else if(V.r&&W.tab==='cases')casesTab(V);else if(V.r&&W.tab==='teams')teamsTab(V);else if(V.r&&W.tab==='stock')stockTab(V);else if(V.r&&W.tab==='prof')profTab(V);
   $("#status").textContent=`${V.r?V.r.name+' · ':''}อัปเดต ${new Date(W.at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · เคส ${V.cases.length} · อัปเดตเองทุก 30 วินาที`;}
 

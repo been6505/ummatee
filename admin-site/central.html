@@ -6,21 +6,21 @@
 <meta name="robots" content="noindex,nofollow">
 <script>/* ธีม: ค่าเริ่มต้นสว่าง · ปุ่มมุมขวาบน (theme-toggle.js) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
 <meta name="theme-color" content="#F2F3F7">
-<title>Center · Helpme+ ช่วยเหลือฉุกเฉิน</title>
+<title>CENTRAL · Helpme+ ช่วยเหลือฉุกเฉิน</title>
 <link rel="icon" href="./assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./admin.css?v=16">
-<link rel="stylesheet" href="./center/theme.css?v=2">
-<link rel="stylesheet" href="./center/helpme-skin.css?v=29">
-<script src="./center/icons.js?v=3"></script>
+<link rel="stylesheet" href="./central/theme.css?v=2">
+<link rel="stylesheet" href="./central/helpme-skin.css?v=29">
+<script src="./central/icons.js?v=3"></script>
 </head>
 <body>
 <!-- ===== เข้าสู่ระบบ ===== -->
 <section id="login" class="login" hidden>
   <form id="login-form" class="login-card" autocomplete="off">
     <img src="./assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
-    <h1>Center Helpme+</h1>
+    <h1>HELP ME CENTRAL</h1>
     <p>สำหรับทีมอาสาและแอดมิน ใส่รหัสทีมเพื่อดูและจัดการเคส</p>
     <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
@@ -30,11 +30,11 @@
   </form>
 </section>
 
-<!-- ===== Center ===== -->
+<!-- ===== CENTRAL ===== -->
 <div id="app" class="app" hidden>
   <header class="top">
-    <a class="brand" href="./center.html"><img class="brand-logo" src="./assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>Center</b></span></a>
-    <nav class="tabs" aria-label="เมนู Center"><a href="./center/dashboard/">แดชบอร์ด</a><a href="./center.html" aria-current="page">จัดการเคส</a><a href="./center/warroom/">War Room</a><a href="./center/teams/">จัดทีม</a><a href="./center/stock/">สต็อก</a><a href="./center/covered/">พื้นที่มอบแล้ว</a><a href="./center/news/">ข่าว</a></nav>
+    <a class="brand" href="./central.html"><img class="brand-logo" src="./assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="./central/dashboard/">แดชบอร์ด</a><a href="./central.html" aria-current="page">จัดการเคส</a><a href="./central/warroom/">War Room</a><a href="./central/teams/">จัดทีม</a><a href="./central/stock/">สต็อก</a><a href="./central/covered/">พื้นที่มอบแล้ว</a><a href="./central/news/">ข่าว</a></nav>
     <div class="top-r">
       <span class="sync" id="sync"></span>
       <button class="btn ghost sm" id="refresh" title="โหลดใหม่"><i data-ic="refresh"></i> โหลดใหม่</button>
@@ -84,15 +84,15 @@
 <aside class="drawer" id="drawer" aria-label="รายละเอียดเคส" hidden></aside>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="./center/verify.js?v=5"></script>
-<script src="./center/covered.js?v=9"></script>
+<script src="./central/verify.js?v=5"></script>
+<script src="./central/covered.js?v=9"></script>
 <script src="./admin.js?v=23"></script>
-<script src="./center/ofm.js?v=1"></script>
-<script src="./center/camlive.js?v=8"></script>
-<script src="./center/mapx.js?v=12"></script>
-<script src="./center/leadsview.js?v=3"></script>
-<script src="./center/theme-toggle.js?v=2"></script>
-<script src="./center/chat.js?v=5"></script>
+<script src="./central/ofm.js?v=1"></script>
+<script src="./central/camlive.js?v=8"></script>
+<script src="./central/mapx.js?v=12"></script>
+<script src="./central/leadsview.js?v=3"></script>
+<script src="./central/theme-toggle.js?v=2"></script>
+<script src="./central/chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

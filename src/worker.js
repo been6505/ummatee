@@ -68,7 +68,7 @@ async function init(db) {
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
     // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
-      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -449,7 +449,7 @@ async function listWarrooms(db) {
   const { results: rooms } = await db.prepare('SELECT * FROM warrooms WHERE active=1 ORDER BY createdAt').all();
   const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
   const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
-  return { ok: true, warrooms: rooms.map(r => ({ ...r, districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
+  return { ok: true, warrooms: rooms.map(r => ({ ...r, kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
 }
 async function saveWarroom(db, b) {
   const w = b.warroom || {}, id = clean(w.id, 20).replace(/[^\w-]/g, '') || ('W' + rand(3)), now = Date.now();
@@ -457,13 +457,16 @@ async function saveWarroom(db, b) {
     await db.batch([db.prepare('UPDATE warrooms SET active=0, updatedAt=? WHERE id=?').bind(now, id), db.prepare("UPDATE roster SET warroom='' WHERE warroom=?").bind(id)]);
     return { ok: true, id };
   }
-  const name = clean(w.name, 60);
+  const kind = w.kind === 'province' ? 'province' : 'zone', province = provName(clean(w.province, 40));
+  if (kind === 'province' && !province) return { ok: false, error: 'missing_province' };
+  if (kind === 'province' && await db.prepare("SELECT id FROM warrooms WHERE active=1 AND kind='province' AND province=? AND id<>?").bind(province, id).first()) return { ok: false, error: 'province_exists' };
+  const name = clean(w.name, 60) || (kind === 'province' ? 'ศูนย์ประสานงานจังหวัด' + province : '');
   if (!name) return { ok: false, error: 'missing_name' };
   const lat = num(w.lat, -90, 90), lng = num(w.lng, -180, 180);
   const districts = (Array.isArray(w.districts) ? w.districts : String(w.districts || '').split(/[,\n]/)).map(x => clean(x, 40).replace(/^เขต\s*/, '')).filter(Boolean).slice(0, 60).join(',');
-  await db.prepare(`INSERT INTO warrooms (id,name,color,lat,lng,radius,districts,address,phone,lead,note,active,createdAt,updatedAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET name=excluded.name,color=excluded.color,lat=excluded.lat,lng=excluded.lng,radius=excluded.radius,districts=excluded.districts,address=excluded.address,phone=excluded.phone,lead=excluded.lead,note=excluded.note,active=1,updatedAt=excluded.updatedAt,by_=excluded.by_`)
-    .bind(id, name, /^#[0-9a-f]{6}$/i.test(w.color || '') ? w.color : '#2D45C8', lat, lng, clampInt(w.radius, 0, 200000, 0) || null, districts, clean(w.address, 200),
+  await db.prepare(`INSERT INTO warrooms (id,kind,province,name,color,lat,lng,radius,districts,address,phone,lead,note,active,createdAt,updatedAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET kind=excluded.kind,province=excluded.province,name=excluded.name,color=excluded.color,lat=excluded.lat,lng=excluded.lng,radius=excluded.radius,districts=excluded.districts,address=excluded.address,phone=excluded.phone,lead=excluded.lead,note=excluded.note,active=1,updatedAt=excluded.updatedAt,by_=excluded.by_`)
+    .bind(id, kind, province, name, /^#[0-9a-f]{6}$/i.test(w.color || '') ? w.color : '#2D45C8', lat, lng, clampInt(w.radius, 0, 200000, 0) || null, districts, clean(w.address, 200),
       clean(w.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(w.lead, 60), clean(w.note, 500), now, now, clean(b.by, 60)).run();
   return { ok: true, id };
 }
@@ -481,7 +484,7 @@ async function saveWarroomStaff(db, b) {
 async function setTeamWarroom(db, b) {
   const team = clean(b.team, MAX.volunteer), wr = clean(b.warroom, 20).replace(/[^\w-]/g, '');
   if (!team) return { ok: false, error: 'missing_team' };
-  if (wr && !await db.prepare('SELECT id FROM warrooms WHERE id=? AND active=1').bind(wr).first()) return { ok: false, error: 'no_warroom' };
+  if (wr && !await db.prepare("SELECT id FROM warrooms WHERE id=? AND active=1 AND COALESCE(kind,'zone')='zone'").bind(wr).first()) return { ok: false, error: 'no_warroom' };
   const r = await db.prepare('UPDATE roster SET warroom=?, updatedAt=? WHERE name=? AND active=1').bind(wr, Date.now(), team).run();
   return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' };
 }
@@ -1215,11 +1218,41 @@ function hmLevelCode(text) {
   for (const [re, code] of HM_LEVEL_KEYWORDS) if (re.test(n)) return code;
   return ''; // รวม "แห้ง / ต่ำกว่าข้อเท้า"
 }
+/* จังหวัดของเคส (ใช้แบ่งงานตามโครงสร้าง CENTRAL → จังหวัด → War Room โซน → ทีม)
+   ที่อยู่ระบุ "จ./จังหวัด" → ชื่อนั้น · ระบุกรุงเทพ/เขตใน กทม. → กรุงเทพมหานคร · ไม่งั้นถามจากหมุด (Photon) แล้วจำไว้ใน meta (hmv:) */
+const provName = s => { s = String(s || '').replace(/^จังหวัด\s*/, '').replace(/^จ\.\s*/, '').trim(); return /^(กรุงเทพ|กทม)/.test(s) ? 'กรุงเทพมหานคร' : s; };
+async function fillProvinces(db, cases) {
+  cases.forEach(c => {
+    const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
+    if (m) c.province = provName(m[1]);
+    else if (/กรุงเทพ|กทม/.test(a) || BKK_DISTRICTS.includes(String(c.district || '').replace(/^เขต\s*/, ''))) c.province = 'กรุงเทพมหานคร';
+  });
+  if (!db) return;
+  const need = cases.filter(c => !c.province && c.lat != null && c.lng != null && isFinite(c.lat));
+  if (!need.length) return;
+  const key = c => 'hmv:' + Number(c.lat).toFixed(3) + ',' + Number(c.lng).toFixed(3), keys = [...new Set(need.map(key))], known = new Map();
+  for (let i = 0; i < keys.length; i += 90) {
+    const part = keys.slice(i, i + 90), { results } = await db.prepare(`SELECT k,v FROM meta WHERE k IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+    results.forEach(r => known.set(r.k, r.v));
+  }
+  let asked = 0;
+  for (const k of keys) {
+    if (known.has(k) || asked >= 25) continue; asked++;
+    const [lat, lng] = k.slice(4).split(',').map(Number);
+    try {
+      const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=default`, { headers: UA, cf: { cacheTtl: 86400 } });
+      const p = ((await r.json()).features || [])[0]?.properties || {};
+      const v = provName(p.state || (/กรุงเทพ/.test(p.city || '') ? 'กรุงเทพมหานคร' : '')) || '-';
+      known.set(k, v); await setMeta(db, k, v);
+    } catch (e) {}
+  }
+  need.forEach(c => { const v = known.get(key(c)); if (v && v !== '-') c.province = v; });
+}
 async function helpmeCases(env, db) {
-  const cases = await sheetCases(env); await fillDistricts(db, cases); await checkPins(db, cases);
+  const cases = await sheetCases(env); await fillDistricts(db, cases); await checkPins(db, cases); await fillProvinces(db, cases);
   const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
   return { ok: true, time: Date.now(), cases: all.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
-    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer,
+    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, province: c.province || '', volunteer: c.volunteer,
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
     name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, photos: c.photos || [],
     pinCheck: c.pinCheck || null,
@@ -1428,7 +1461,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.|center\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.|center\.|central\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }
@@ -1436,9 +1469,9 @@ export default {
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }
-    // ลิงก์เก่า (/admin, /admin.html, /admin/…) → ชื่อใหม่ /center
-    const old = url.pathname.match(/^\/admin(\.html|\/.*)?$/);
-    if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/center' + old[1] : '/center'; return Response.redirect(url.toString(), 301); }
+    // ลิงก์เก่า (/admin… และ /center…) → ชื่อใหม่ /central
+    const old = url.pathname.match(/^\/(?:admin|center)(\.html|\/.*)?$/);
+    if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/central' + old[1] : '/central'; return Response.redirect(url.toString(), 301); }
     return env.ASSETS.fetch(request);
   },
   // cron (ตั้งใน wrangler config): ส่งแถวที่เปลี่ยนไป Google Sheet ส่งต่อจนคิวหมด สูงสุด 5 รอบต่อครั้ง

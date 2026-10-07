@@ -846,6 +846,17 @@ const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i; // เคส�
 /* เคส Help Me รายเคสสำหรับการ์ดตัวเลขของแดชบอร์ด (เฉพาะรหัสทีม) · ไม่ส่งชื่อ/เบอร์ */
 // ระดับน้ำในชีต Help Me → รหัสของ Helpme+ (ช่วงใช้ค่าบน) ให้ผลตรวจพื้นที่คิดคะแนนได้ · "แห้ง" ไม่มีรหัส
 const HM_LEVEL_CODE = { 'ข้อเท้า': 'ankle', 'ข้อเท้า–เข่า': 'knee', 'เข่า': 'knee', 'เข่า–เอว': 'waist', 'เอว': 'waist', 'เอว–อก': 'chest', 'อก': 'chest', 'อกขึ้นไป': 'chest', 'มิดหัว': 'roof' };
+// ป้ายระดับน้ำในชีตเปลี่ยนรูปแบบได้ (เช่น "มิดหัว / ท่วมหลังคา (> 180 ซม.)", ขีดสั้น/ยาว, เว้นวรรค)
+// ตรงตัวไม่เจอ → เทียบคำสำคัญ ไล่จากระดับรุนแรงสุดก่อน เพื่อไม่ให้เคสหนักสุดหลุดเป็น "ไม่ระบุ"
+const HM_LEVEL_KEYWORDS = [[/มิดหัว|หลังคา/, 'roof'], [/อกขึ้นไป|เอว.อก|^อก/, 'chest'], [/เข่า.เอว|^เอว/, 'waist'], [/ข้อเท้า.เข่า|^เข่า/, 'knee'], [/^ข้อเท้า/, 'ankle']];
+function hmLevelCode(text) {
+  const t = String(text || '').split('(')[0].replace(/\s+/g, ' ').trim();
+  if (HM_LEVEL_CODE[t]) return HM_LEVEL_CODE[t];
+  const n = t.replace(/[-‐-―−]/g, '–').replace(/\s/g, '');
+  if (HM_LEVEL_CODE[n]) return HM_LEVEL_CODE[n];
+  for (const [re, code] of HM_LEVEL_KEYWORDS) if (re.test(n)) return code;
+  return ''; // รวม "แห้ง / ต่ำกว่าข้อเท้า"
+}
 async function helpmeCases(env, db) {
   const cases = await sheetCases(env); await fillDistricts(db, cases);
   const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
@@ -853,7 +864,7 @@ async function helpmeCases(env, db) {
     people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer,
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
     name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null,
-    level: HM_LEVEL_CODE[String(c.level || '').split(' (')[0].trim()] || '', levelText: c.level || '' })) };
+    level: hmLevelCode(c.level), levelText: c.level || '' })) };
 }
 async function helpmeStatsLive(env, db) {
   return cached('helpme-stats-v4', 60, async () => {

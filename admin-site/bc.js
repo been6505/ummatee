@@ -49,6 +49,8 @@
 @media(prefers-color-scheme:dark){#hmbc .c{color:#1b1f3b}}
 #hmbc.staff{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:16px;transform:none;width:min(440px,calc(100vw - 96px))}
 #hmbc.staff .bar{justify-self:start}
+#hmbc.staff .c{padding:8px 10px 8px 12px}#hmbc.staff .c p,#hmbc.staff .c .f{display:none}#hmbc.staff .c.open p,#hmbc.staff .c.open .f{display:flex}#hmbc.staff .c.open p{display:block}#hmbc.staff strong{font-size:14px;cursor:pointer}
+@media(min-width:761px){#hmbc.staff{width:min(380px,calc(100vw - 96px))}}
 @media(max-width:760px){#hmbc.staff{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)}}`;
   let root=null;
   function mount(){if(root)return root;const st=document.createElement('style');st.textContent=css;document.head.append(st);
@@ -69,7 +71,8 @@
     if(rest>0||S.open)bar+=`<button class="pill${anyDanger&&!S.open?' danger':''}" type="button" data-toggle>${S.open?'ย่อประกาศ':(shown.length?`ประกาศอีก ${rest} รายการ`:`${anyDanger?'🚨 ':'📢 '}ประกาศ ${items.length} รายการ`)}</button>`;
     if(needArea&&(S.open||shown.length||rest))bar+=`<select data-area aria-label="พื้นที่ของฉัน"><option value="">พื้นที่ของฉัน…</option><optgroup label="เขตในกรุงเทพฯ">${BKK.map(d=>`<option${d===myArea()?' selected':''}>${d}</option>`).join('')}</optgroup>${[...new Set(S.items.flatMap(b=>b.provinces||[]))].filter(p=>p!=='กรุงเทพมหานคร').map(p=>`<option${p===myArea()?' selected':''}>${esc(p)}</option>`).join('')}</select>`;
     root.innerHTML=shown.map(x=>card(x.b,x.m)).join('')+(bar?`<div class="bar">${bar}</div>`:'')}
-  function onClick(e){const h=e.target.closest('[data-hide]');if(h){const b=S.items.find(x=>x.id===h.dataset.hide);if(b){const hd=hidden();hd[b.id+'@'+b.createdAt]=Date.now();set('hmbc_hide',hd)}S.open=false;render();return}
+  function onClick(e){if(MODE==='staff'&&e.target.closest('.c strong')){e.target.closest('.c').classList.toggle('open');return}
+    const h=e.target.closest('[data-hide]');if(h){const b=S.items.find(x=>x.id===h.dataset.hide);if(b){const hd=hidden();hd[b.id+'@'+b.createdAt]=Date.now();set('hmbc_hide',hd)}S.open=false;render();return}
     if(e.target.closest('[data-toggle]')){S.open=!S.open;render()}}
   /* ---------- เตือนประกาศใหม่ ---------- */
   function beep(danger){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const a=new C(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';

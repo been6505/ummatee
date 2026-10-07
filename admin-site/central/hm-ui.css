@@ -1,0 +1,94 @@
+/* HELP ME CENTRAL · หน้าตาแบบหน้า "สรุป" ของ helpme4u.com (เรียบ ขาว-เทา ตัวเลขใหญ่ ตัวอักษร SF/IBM Plex Sans Thai)
+   เน้นคอมพิวเตอร์: หัวเว็บแถบเดียวบาง ๆ · ตัวเลขสำคัญอยู่แถวเดียว · หน้าจัดการเคสแบ่งซ้ายแผนที่/ขวารายการ · แดชบอร์ด 3 คอลัมน์ → เลื่อนน้อยลง
+   โหลดเป็นไฟล์สุดท้ายของทุกหน้า CENTRAL (หลัง helpme-skin.css) · โหมดมืดใช้สีเดิมของ theme.css */
+:root:not([data-theme="dark"]){
+  --bg:#F5F5F7;--page:#F5F5F7;--ink:#1d1d1f;--ink-2:#3a3a3c;--muted:#6e6e73;--line:rgba(0,0,0,.08);--surface:#fff;--tint:#ececf0;
+  --shadow-soft:0 1px 2px rgba(0,0,0,.04);--shadow-float:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05)
+}
+:root{--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","IBM Plex Sans Thai",system-ui,sans-serif;--r-card:20px}
+body{-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+h1,h2,h3{letter-spacing:-.01em}
+
+/* การ์ด: ขาวล้วน มุม 20 เงาบางมาก */
+:root:not([data-theme="dark"]) :is(.card,.nw-card,.wr-card,.bc-card,.wr-tcard,.cv-stat,.wr-mapcard,.mapcard,.map-wrap,.wr-tw,.cv-tw,.team,.qcase,.bar-card){background:#fff;box-shadow:var(--shadow-soft)!important;border:0!important}
+:is(.card,.nw-card,.wr-card,.bc-card){border-radius:20px!important}
+:is(.card,.nw-card,.wr-card,.bc-card) h2{font-size:16px;font-weight:700}
+
+/* ตัวเลขสำคัญ: เลขใหญ่หนา ป้ายเล็กสีเทา (แบบการ์ด "สถานะตอนนี้") */
+:is(.kpi,.wr-kpi,.stat,.cv-stat){border-radius:16px!important;border:0!important}
+:root:not([data-theme="dark"]) :is(.kpi,.wr-kpi,.stat,.cv-stat){background:#fff!important;box-shadow:var(--shadow-soft)!important}
+:is(.kpi,.wr-kpi,.cv-stat) b{font-weight:700;letter-spacing:-.02em}
+:is(.kpi,.wr-kpi,.stat,.cv-stat) span{color:var(--muted)}
+/* ตัวเลขแรกของแถว = การ์ดเด่นสีเข้ม (แบบ "ภาพรวมทั้งหมด") */
+:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child){background:#1d1d1f!important;color:#fff}
+:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child) :is(span,small){color:rgba(255,255,255,.7)!important}
+:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child) b{color:#fff!important}
+
+/* ปุ่ม/ตัวเลือกที่เลือกอยู่: สีหมึกเข้ม (เหมือนชิปในหน้าสรุป) */
+:root:not([data-theme="dark"]) :is(.seg button[aria-selected=true],.seg button[aria-pressed=true],.wr-roomtabs button[aria-selected=true]){background:#1d1d1f!important;color:#fff!important;box-shadow:none!important}
+:root:not([data-theme="dark"]) .seg{background:#fff!important;box-shadow:var(--shadow-soft)!important}
+
+/* ---------- คอมพิวเตอร์ (≥ 1024px) ---------- */
+@media(min-width:1024px){
+  /* หัวเว็บ: แถบเดียว สูง ~56px โปร่งแสงเบลอ แทนแคปซูลลอยสามก้อน */
+  .top{position:sticky!important;top:0;z-index:1200;padding:8px clamp(14px,1.6vw,28px)!important;gap:14px!important;pointer-events:auto!important;
+    background:rgba(245,245,247,.82)!important;-webkit-backdrop-filter:saturate(1.8) blur(20px)!important;backdrop-filter:saturate(1.8) blur(20px)!important;border-bottom:1px solid var(--line)}
+  [data-theme="dark"] .top{background:rgba(20,22,40,.82)!important}
+  .top::before{display:none!important}
+  .top :is(.brand,.tabs,.top-r){background:transparent!important;box-shadow:none!important;border:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0!important}
+  .brand img{height:26px!important}.brand span{font-size:15px}
+  .tabs{gap:2px!important;flex:1;justify-content:center}
+  .tabs a{padding:6px 12px!important;font-size:14px!important;font-weight:600;color:var(--muted)!important}
+  .tabs a:hover{background:rgba(0,0,0,.05)!important;color:var(--ink)!important}
+  :root:not([data-theme="dark"]) .tabs a[aria-current=page]{background:#1d1d1f!important;color:#fff!important}
+  .top-r{gap:2px!important}.top-r .btn{min-height:34px!important;padding:4px 10px!important;font-size:13.5px!important}
+  .wrap{padding-top:14px!important}
+
+  /* แดชบอร์ด: การ์ด 3 คอลัมน์ (เดิม 2) → เลื่อนน้อยลงเกือบครึ่ง */
+  #main>.grid,.stock-sec>.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #main>.grid>.span2,.stock-sec>.grid>.span2{grid-column:span 2!important}
+  #main>.grid>.stock-sec{grid-column:1/-1!important}
+}
+@media(min-width:1600px){#main>.grid,.stock-sec>.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+
+/* ---------- หน้าจัดการเคส: "แผนที่ + รายการ" บนจอกว้าง = แผนที่ซ้าย (ค้างไว้) · รายการขวา (เลื่อนเฉพาะรายการ) ---------- */
+@media(min-width:1280px){
+  main.wrap:has(>#map-wrap.compact:not([hidden])){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(460px,1fr);column-gap:16px;align-items:start}
+  main.wrap:has(>#map-wrap.compact:not([hidden]))>*{grid-column:1/-1;min-width:0}
+  main.wrap>#map-wrap.compact:not([hidden]){grid-column:1;position:sticky;top:70px;margin:0!important}
+  main.wrap>#map-wrap.compact .map-body{grid-template-columns:1fr!important}
+  main.wrap>#map-wrap.compact .map-side{display:none!important}
+  main.wrap>#map-wrap.compact #map{height:calc(100vh - 110px)!important;min-height:520px}
+  main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{grid-column:2;margin-top:0}
+  /* สรุปตัวเลขเคส + แถบค้นหา อยู่แถวเดียวกันให้กินที่ด้านบนน้อยลง */
+  main.wrap>.stats{margin-bottom:8px!important}
+}
+@media(min-width:1280px){
+  /* รายการเคสข้างแผนที่: แสดงเป็นการ์ด (ตารางกว้างไม่พอ) */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl thead{display:none}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list :is(.tbl,.tbl tbody,.tbl tr,.tbl td){display:block;width:100%}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl{border-spacing:0}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr{background:#fff;border:0;border-left:5px solid #e0a800;border-radius:16px;margin-bottom:10px;padding:12px 14px;display:grid;grid-template-columns:auto auto 1fr;gap:6px 10px;box-shadow:var(--shadow-soft)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.u3{border-left-color:var(--red)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.u2{border-left-color:var(--orange)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.s-done{opacity:.65}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td{border:0!important;border-radius:0!important;padding:0!important;background:none!important;max-width:none}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl :is(td.needs,td.addr,td[data-l="ผู้ติดต่อ"],td.num){grid-column:1/-1}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs b{font-size:16px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ทีม"]::before{content:"ทีม: ";color:var(--muted)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.act{text-align:right}
+}
+@media(min-width:1024px){
+  /* แดชบอร์ด: ตัวเลขสำคัญขึ้นก่อนแผนที่ · แผนที่สูงพอดีจอ */
+  #main:has(>.mapcard){display:flex;flex-direction:column}
+  #main>.mapcard{order:3}#main>#kpis{order:2}#main>#hm-kpis{order:2}#main>.grid{order:4}
+  #main>.mapcard .dmap,#main>.mapcard #dmap{height:min(52vh,520px)!important;min-height:360px}
+  /* จัดทีม: แผนที่เตี้ยลง · รายชื่อทีมกับคิวเคสเลื่อนในกรอบของตัวเอง (หน้าไม่ยาว) */
+  .trk .trk-map{height:min(40vh,420px)!important;min-height:300px}
+  .cols>.panel{max-height:calc(100vh - 84px);overflow:auto;position:sticky;top:72px;scrollbar-width:thin}
+}
+@media(min-width:1280px){
+  /* รายการเคสเลื่อนในกรอบข้างแผนที่ (ทั้งหน้าไม่ต้องเลื่อนยาว) */
+  main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;scrollbar-width:thin;padding-right:4px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) .bar-row .btn#export{order:9}
+}

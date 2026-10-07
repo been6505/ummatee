@@ -405,3 +405,8 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .um-pin2 .pin-thumb{transition:transform .15s ease;transform-origin:0 100%}
 .um-pin2:hover .pin-thumb{transform:scale(1.9);z-index:5}
 @media(max-width:760px){.um-pin2 .pin-thumb{width:52px;height:52px;top:-34px}}
+/* รูปบนหมุดเต็มกรอบเสมอ (กันกฎ img{width:auto} ของ Leaflet/หน้าอื่นทำให้รูปแนวตั้งเหลือครึ่งกรอบ) */
+.um-pin2 .pin-thumb{overflow:hidden!important;box-sizing:border-box}
+.um-pin2 .pin-thumb img{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:center}
+.um-pin2 .pin-thumb b{z-index:2}
+.um-pin2 .pin-thumb b{right:3px!important;bottom:3px!important;border-width:1.5px}

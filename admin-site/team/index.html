@@ -142,7 +142,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
           <li>เปิดแอป แล้วใส่ค่าตามนี้ (กดคัดลอกแล้ววาง)
             <div class="trk-f"><span>Server URL</span><code id="trk-url"></code><button type="button" class="chip" data-copy="trk-url">คัดลอก</button></div>
             <div class="trk-f"><span>Device identifier</span><code id="trk-id"></code><button type="button" class="chip" data-copy="trk-id">คัดลอก</button></div></li>
-          <li>Location accuracy: <b>High</b> · Frequency / Interval: <b>30</b> วินาที (ประหยัดแบตใช้ 60)</li>
+          <li>Location accuracy: <b>High</b> · Frequency / Interval: <b>10</b> วินาที ให้ศูนย์เห็นทีมขยับแบบเรียลไทม์ (ประหยัดแบตใช้ 30–60)</li>
           <li>เปิดสวิตช์ <b>Service status</b> (หรือ Continuous tracking) แล้วอนุญาตตำแหน่งแบบ <b>"ตลอดเวลา / Always"</b></li>
           <li>Android: ตั้งค่าแบตเตอรี่ของแอปเป็น <b>"ไม่จำกัด / Unrestricted"</b> เพื่อไม่ให้ระบบปิดแอป</li>
         </ol>
@@ -208,7 +208,7 @@ $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/a
 /* ติดตามเบื้องหลังด้วยแอป Traccar Client: ใช้รหัสลิงก์ทีมเป็น Device identifier */
 function bgTrack(){const d=$('#bg-trk');if(!d)return;
   if(!S.tk){d.querySelector('.trk-steps').hidden=true;$('#trk-last').textContent='ต้องเข้าหน้านี้จากลิงก์ทีม (ขอลิงก์ทีมจากศูนย์) จึงจะตั้งค่าแอปได้';return}
-  $('#trk-url').textContent=location.origin+'/api/track';$('#trk-id').textContent=S.tk;
+  $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track'; // โดเมนหลักปัจจุบัน (โดเมนเก่ายังรับได้)$('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
 async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;render()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){}}

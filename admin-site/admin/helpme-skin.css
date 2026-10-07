@@ -311,3 +311,37 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .d-photos>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
 .d-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#dde2e8}
 .has-photo{display:block;color:#5b6670}
+
+/* รายละเอียดเคสบนจอกว้าง: แผงกว้างแบ่ง 2 คอลัมน์ เห็นครบในหน้าจอเดียวไม่ต้องเลื่อน
+   ซ้าย = สถานการณ์ · รูป · ผลตรวจพื้นที่ · ขวา = ข้อมูลเคส · ปุ่ม · สถานะ (มือถือยังเป็นคอลัมน์เดียว) */
+@media (min-width:1100px){
+  .drawer{width:min(1180px,94vw);padding:16px 22px 18px;display:flex;flex-direction:column;overflow:hidden}
+  .drawer>.d-head{flex:none}
+  .drawer .d-head h2{margin:6px 0 0;font-size:19px}
+  .d-grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;margin-top:10px}
+  .d-col{min-height:0;overflow:auto;padding-right:4px;scrollbar-width:thin}
+  .d-col>:first-child{margin-top:0}
+  .d-notes{margin-top:0;padding:10px 12px}.d-notes p{font-size:14px;line-height:1.5}
+  .d-photos{margin:10px 0 0}
+  .d-photos>div{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+  .d-photos img{aspect-ratio:4/3}
+  .vr-box,.cov-box{margin-top:10px;padding:12px}
+  .d-rows{grid-template-columns:118px 1fr;gap:5px 10px;margin:0 0 12px;font-size:13.5px}
+  .d-act{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+  .d-act .btn{min-height:40px;padding:8px 10px}
+  .d-status{margin-top:12px;padding:10px 12px;gap:8px}
+  .d-st-btns{display:flex;flex-wrap:wrap;gap:6px}.d-st-btns .btn{flex:1 1 auto;min-height:38px}
+}
+@media (min-width:1100px) and (max-height:820px){
+  .drawer{padding:12px 20px 12px}
+  .drawer .d-head h2{font-size:17px}
+  .d-grid{margin-top:8px;gap:16px}
+  .d-notes p{font-size:13.5px}
+  .d-photos img{aspect-ratio:auto;height:80px}
+  .vr-box,.cov-box{margin-top:8px;padding:10px}
+  /* ข้อมูลเคสเป็น 2 คู่ต่อแถว (หัวข้อ–ค่า หัวข้อ–ค่า) ลดความสูงครึ่งหนึ่ง */
+  .d-rows{grid-template-columns:96px minmax(0,1fr) 96px minmax(0,1fr);gap:4px 10px;font-size:13px;margin-bottom:10px}
+  .d-act .btn{min-height:36px;padding:6px 10px}
+  .d-status{margin-top:8px;padding:8px 10px;gap:6px}.d-status p{margin:0;font-size:13px}
+  .d-st-btns .btn{min-height:34px}
+}

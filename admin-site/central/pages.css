@@ -155,3 +155,5 @@
 .trk-pin .hd,.wr-team .hd{position:absolute;left:50%;top:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #2D45C8;transform:translate(-50%,-50%) rotate(var(--r)) translateY(-13px);filter:drop-shadow(0 0 1px #fff)}
 .trk-pin small{font-weight:500;opacity:.75}
 .trk-pin.mv i{box-shadow:0 0 0 1px rgba(0,0,0,.15),0 0 0 5px rgba(46,158,87,.25)}
+.trk-auto{display:grid;gap:6px}.trk-auto>span{font-weight:600;font-size:14px}.trk-auto-row{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center}
+.trk-auto-row input{min-width:0;font-size:13.5px}

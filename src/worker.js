@@ -307,6 +307,7 @@ async function listRoster(db) {
   // ทีมที่ยังไม่มีลิงก์เฉพาะทีม: สร้างให้
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
+  for (const r of results) r.view = r.token ? await viewId(r.token) : '';
   return { ok: true, roster: results.map(r => ({ ...r, members: r.members == null ? '' : r.members })), live: await readTeams(db), hqPhone: await getMeta(db, 'hq_phone') };
 }
 const teamToken = () => { const a = new Uint8Array(12); crypto.getRandomValues(a); return [...a].map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join(''); };
@@ -335,7 +336,7 @@ async function teamMe(db, t) {
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
-      status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', inRoster: !!r.id },
+      status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', view: r.token ? await viewId(r.token) : '', inRoster: !!r.id },
     hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => outCase(c, true)), live: live || null, supplies: stock.map(s => s.name), now };
 }
 async function callStart(db, team, from, b) {
@@ -598,6 +599,19 @@ async function cancelBroadcast(db, b) {
   const r = await db.prepare('UPDATE broadcasts SET cancelledAt=? WHERE id=? AND cancelledAt IS NULL').bind(Date.now(), clean(b.id, 20)).run();
   await setMeta(db, 'bc_rev', String(Date.now()));
   return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' };
+}
+/* ลิงก์ติดตามตำแหน่งสดของทีม (สร้างอัตโนมัติ · ดูอย่างเดียว ไม่ต้องเข้าระบบ) : /live/?v=<รหัสดู>
+   รหัสดู = SHA-256(รหัสลิงก์ทีม + ':view') 16 ตัวแรก → ส่งต่อได้โดยไม่เปิดเผยรหัสลิงก์ทีม (ซึ่งใช้ส่งข้อมูลแทนทีมได้) · สร้างลิงก์ทีมใหม่ = ลิงก์ติดตามเดิมใช้ไม่ได้ด้วย */
+async function viewId(token) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token + ':view')); return [...new Uint8Array(d)].slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function liveView(db, v) {
+  v = String(v || '').toLowerCase();
+  if (!/^[0-9a-f]{16}$/.test(v)) return { ok: false, error: 'bad_link' };
+  const { results } = await db.prepare("SELECT name,status,token,vehicle,members FROM roster WHERE active=1 AND token IS NOT NULL AND token<>''").all();
+  let t = null; for (const r of results) if (await viewId(r.token) === v) { t = r; break; }
+  if (!t) return { ok: false, error: 'bad_link' };
+  const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt,speed,heading,battery FROM teams_live WHERE team=?').bind(t.name).first();
+  const { results: pts } = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? AND at>? ORDER BY at, n LIMIT 1500').bind(t.name, Date.now() - 6 * 3600e3).all();
+  return { ok: true, team: t.name, status: t.status || '', vehicle: t.vehicle || '', live: live || null, track: pts, now: Date.now() };
 }
 /* ลิงก์แชร์ตำแหน่งสดจาก Google Maps (ทำงานต่อแม้ล็อกจอ ไม่ต้องลงแอปเพิ่ม) · ว่าง = ลบ */
 const GMAPS_RE = /^https:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|(?:www\.)?google\.(?:com|co\.th)\/maps|maps\.google\.(?:com|co\.th))\/[^\s<>"']{0,300}$/i;
@@ -1586,6 +1600,7 @@ async function api(request, env) {
       case 'warrooms': return json(vol ? await listWarrooms(db) : { ok: false, error: 'not_volunteer' });
       // ประกาศที่ยังมีผล: สาธารณะ (หน้าบ้าน Help Me / หน้าทีม) · ทั้งหมด 30 วัน: เฉพาะ CENTRAL
       case 'broadcasts': return json(await listBroadcasts(db, false));
+      case 'live_view': return json(await liveView(db, p.v));
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที

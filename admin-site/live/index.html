@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F5F5F7">
+<title>ติดตามทีม · Helpme+</title>
+<link rel="icon" href="../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+:root{--ink:#1d1d1f;--muted:#6e6e73;--bg:#F5F5F7;--ok:#2E9E57;--warn:#E08A00;--old:#9AA1B9}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif}
+#map{position:fixed;inset:0}
+.card{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 12px);z-index:500;max-width:420px;background:#fff;border-radius:20px;box-shadow:0 8px 28px rgba(0,0,0,.14);padding:14px 16px;display:grid;gap:4px}
+.card h1{margin:0;font-size:19px;display:flex;align-items:center;gap:8px}.card p{margin:0;color:var(--muted);font-size:14px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--old);flex:none}.dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(46,158,87,.2)}.dot.idle{background:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.row a,.row button{font:inherit;font-size:13.5px;font-weight:600;border:0;border-radius:999px;padding:7px 12px;background:var(--bg);color:#2D45C8;text-decoration:none;cursor:pointer}
+.me{background:none!important;border:0!important}.me span{display:flex;align-items:center;gap:6px;white-space:nowrap;background:#fff;border-radius:999px;padding:4px 10px 4px 5px;font:600 13px/1.3 inherit;box-shadow:0 2px 8px rgba(0,0,0,.25);transform:translate(0,-50%)}
+.me i{width:14px;height:14px;border-radius:50%;background:var(--ok);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.err{position:fixed;inset:0;display:grid;place-items:center;text-align:center;padding:24px;z-index:600;background:var(--bg)}
+</style>
+</head>
+<body>
+<div id="map" aria-label="แผนที่ตำแหน่งทีม"></div>
+<section class="card" aria-live="polite"><h1><i class="dot" id="dot"></i><span id="name">กำลังโหลด…</span></h1><p id="st"></p><p id="meta"></p>
+  <div class="row"><button type="button" id="center">ไปที่ทีม</button><a id="nav" target="_blank" rel="noopener">นำทางไปหาทีม ↗</a></div></section>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+/* หน้าติดตามตำแหน่งสดของทีม (ดูอย่างเดียว · ไม่ต้องเข้าระบบ) · อัปเดตทุก 5 วินาที หมุดเลื่อนลื่น · เส้นทาง 6 ชม.ล่าสุด */
+const v=new URLSearchParams(location.search).get('v')||'',$=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const map=L.map('map',{zoomControl:false}).setView([13.75,100.6],11);L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+let mk=null,line=null,fitted=false,last=null;
+const ago=t=>{const s=Math.round((Date.now()-t)/1000);return s<60?s+' วินาทีที่แล้ว':s<3600?Math.round(s/60)+' นาทีที่แล้ว':Math.round(s/3600)+' ชม.ที่แล้ว'};
+function glide(m,to,ms=4500){const a=m.getLatLng(),b=L.latLng(to);cancelAnimationFrame(m._g);if(a.distanceTo(b)<.3)return;if(a.distanceTo(b)>3000||document.hidden){m.setLatLng(b);return}
+  const t0=performance.now(),f=t=>{const k=Math.min(1,(t-t0)/ms);m.setLatLng([a.lat+(b.lat-a.lat)*k,a.lng+(b.lng-a.lng)*k]);if(k<1)m._g=requestAnimationFrame(f)};m._g=requestAnimationFrame(f)}
+async function tick(){try{const r=await fetch('/api?action=live_view&v='+encodeURIComponent(v),{cache:'no-store'}).then(x=>x.json());
+  if(!r.ok){document.body.insertAdjacentHTML('beforeend','<div class="err"><div><h1>ลิงก์ติดตามใช้ไม่ได้</h1><p>ลิงก์ถูกเปลี่ยนหรือทีมถูกปิด · ขอลิงก์ใหม่จากศูนย์</p></div></div>');clearInterval(T);return}
+  $('#name').textContent=r.team;document.title=r.team+' · ติดตามทีม';const l=r.live;
+  if(!l){$('#st').textContent='ทีมยังไม่ได้แชร์ตำแหน่ง';$('#dot').className='dot';return}
+  const m=(Date.now()-l.updatedAt)/60000;$('#dot').className='dot '+(m<5?'on':m<30?'idle':'');
+  $('#st').textContent=(m<5?'ออนไลน์ · ':'')+'อัปเดต '+ago(l.updatedAt);
+  $('#meta').textContent=[m<5&&l.speed>=3?Math.round(l.speed)+' กม./ชม.':'',l.accuracy?'±'+l.accuracy+' ม.':'',l.battery!=null?'แบต '+l.battery+'%':''].filter(Boolean).join(' · ');
+  $('#nav').href=`https://www.google.com/maps/dir/?api=1&destination=${+l.lat},${+l.lng}`;
+  if(!mk)mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:'me',html:`<span><i></i>${esc(r.team)}</span>`,iconSize:null,iconAnchor:[9,9]})}).addTo(map);else glide(mk,[l.lat,l.lng]);
+  const pts=(r.track||[]).map(p=>[p.lat,p.lng]);pts.push([l.lat,l.lng]);if(line)line.setLatLngs(pts);else line=L.polyline(pts,{color:'#2D45C8',weight:4,opacity:.7}).addTo(map);
+  if(!fitted){fitted=true;map.setView([l.lat,l.lng],15)}last=l}catch(e){$('#st').textContent='เชื่อมต่อไม่ได้ · กำลังลองใหม่'}}
+$('#center').onclick=()=>{if(last)map.setView([last.lat,last.lng],Math.max(map.getZoom(),15))};
+const T=setInterval(()=>{if(!document.hidden)tick()},5000);tick();
+</script>
+</body>
+</html>

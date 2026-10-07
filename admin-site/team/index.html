@@ -138,6 +138,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
     <div class="box"><label style="display:flex;align-items:center;gap:10px;font-weight:600"><input type="checkbox" id="wake" style="width:22px;height:22px"> จอไม่ดับ (ส่งตำแหน่งต่อเนื่อง)</label>
       <p class="hint">ปิดหน้านี้หรือจอดับ ตำแหน่งจะหยุดส่ง · ใช้แอปด้านล่างเพื่อให้ศูนย์เห็นตำแหน่งตลอด</p>
       <button class="btn" id="loc-now" type="button"><i data-ic="pin"></i> ส่งตำแหน่งตอนนี้</button>
+      <p class="hint" id="live-link" hidden></p>
       <details class="bg-trk" id="gm-trk"><summary><i data-ic="live"></i> แชร์ตำแหน่งสดผ่าน Google Maps <small>(ไม่ต้องลงแอปเพิ่ม · ใช้ได้แม้ล็อกจอ)</small></summary>
         <p class="hint">ใช้ Google Maps ที่มีในมือถืออยู่แล้ว ศูนย์กดลิงก์ดูตำแหน่งสดของทีมได้ตลอด แม้ปิดหน้านี้หรือจอดับ</p>
         <ol class="trk-steps">
@@ -220,7 +221,8 @@ $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code')
 $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/api?'+new URLSearchParams({action:'roster',key:$('#code').value.trim()}))).json();if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
 /* ติดตามเบื้องหลังด้วยแอป Traccar Client: ใช้รหัสลิงก์ทีมเป็น Device identifier */
 /* ลิงก์แชร์ตำแหน่งสด Google Maps ของทีม */
-function gmUI(){const g=S.me&&S.me.team&&S.me.team.gmaps;if(document.activeElement!==$('#gm-in'))$('#gm-in').value=g||'';
+function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location.origin+'/live/?v='+vw;$('#live-link').hidden=false;$('#live-link').innerHTML=`ลิงก์ติดตามตำแหน่งสดของทีม (ส่งให้คนอื่นดูได้): <a href="${esc(u)}" target="_blank" rel="noopener">เปิด ↗</a> · <button type="button" class="linkbtn" id="live-copy">คัดลอก</button>`;$('#live-copy').onclick=async()=>{try{await navigator.clipboard.writeText(u);toast('คัดลอกลิงก์ติดตามแล้ว')}catch(e){}}}
+  const g=S.me&&S.me.team&&S.me.team.gmaps;if(document.activeElement!==$('#gm-in'))$('#gm-in').value=g||'';
   $('#gm-st').innerHTML=g?`ศูนย์เห็นลิงก์แล้ว · <a href="${esc(g)}" target="_blank" rel="noopener">เปิดดู ↗</a> · เลิกแชร์: ลบลิงก์แล้วกดบันทึก และหยุดแชร์ใน Google Maps`:'ยังไม่ได้แชร์ลิงก์';
   if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}}
 $('#gm-save').onclick=async()=>{const raw=$('#gm-in').value.trim(),m=raw.match(/https:\/\/\S+/),url=m?m[0].replace(/[)\]"'.,]+$/,''):'';

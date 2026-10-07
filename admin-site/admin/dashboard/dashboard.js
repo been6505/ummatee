@@ -99,7 +99,7 @@ async function drawMap(L0){
   M.cases.clearLayers();const pts=[];let nopin=0;
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
     const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';
-    L.marker(ll,{icon:L.divIcon({className:'um-pin '+k,html:'<span></span>',iconSize:[32,34],iconAnchor:[16,33],popupAnchor:[0,-30]}),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
+    L.marker(ll,{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
       .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   $('#map-nopin').textContent=nopin?`· ${nopin} เคสไม่มีหมุด (ไม่แสดงบนแผนที่)`:'';
   if(pts.length&&!M.fitted){M.map.fitBounds(pts,{padding:[30,30],maxZoom:14});M.fitted=true}

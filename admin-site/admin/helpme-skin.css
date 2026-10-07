@@ -368,3 +368,15 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .cv-leg .lg-c{background:#E5383B!important;border-radius:50% 50% 50% 0!important;transform:rotate(-45deg);width:11px!important;height:11px!important;box-shadow:0 0 0 2px #fff}
 .cv-leg .lg-p{border-radius:50% 50% 50% 0!important;transform:rotate(-45deg)}
 .um-pin.cov span::after{content:"✓";width:auto;height:auto;background:none;color:#fff;font:800 12px/1 system-ui,sans-serif;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg)}
+/* หมุดหยดน้ำแบบ SVG (umPin ใน icons.js) */
+.leaflet-div-icon.um-pin2{background:none;border:0;padding:0;box-shadow:none}
+.um-pin2{--pin:#2D45C8}.um-pin2 svg{display:block;overflow:visible;filter:drop-shadow(0 2px 3px rgba(15,23,60,.35))}
+.um-pin2 .pb{fill:var(--pin);stroke:#fff;stroke-width:2.5}
+.um-pin2 .pd{fill:#fff}.um-pin2 .pm{fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.um-pin2.pin-open{--pin:#2D45C8}.um-pin2.pin-going{--pin:#7B8CEB}.um-pin2.pin-done{--pin:#2E9E57}.um-pin2.pin-urgent{--pin:#F57C00}.um-pin2.pin-danger{--pin:#E5383B}.um-pin2.pin-cov{--pin:#7B3FC4}
+.um-pin2.pin-cov.approx .pb{fill-opacity:.55;stroke-dasharray:3 2.5}
+.um-pin2.pin-danger::before{content:"";position:absolute;left:4px;top:3px;width:24px;height:24px;border-radius:50%;background:rgba(229,56,59,.45);animation:pin2pulse 1.4s ease-out infinite;z-index:-1}
+@keyframes pin2pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2);opacity:0}}
+@media(prefers-reduced-motion:reduce){.um-pin2.pin-danger::before{animation:none;opacity:0}}
+.um-pin2 .pin-ph{position:absolute;right:-6px;top:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#111827;color:#fff;font:700 11px/17px system-ui,sans-serif;text-align:center;border:2px solid #fff;box-sizing:content-box}
+.cv-leg .lg-p,.cv-leg .lg-c{border-radius:50% 50% 50% 0!important;transform:rotate(-45deg)}

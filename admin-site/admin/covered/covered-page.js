@@ -38,13 +38,13 @@ function drawMap(hit){
   const rows=COVERED.C.rows.filter(r=>(!P.org||r.org===P.org)&&(!P.q||[r.org,r.area,r.district,r.note,r.items].join(' ').toLowerCase().includes(P.q.trim().toLowerCase())));
   rows.filter(r=>r.lat!=null).forEach(r=>{const ll=[r.lat,r.lng];pts.push(ll);const cs=(hit.get(r)||[]).length;
     L.circle(ll,{radius:r.approx?900:500,color:'#7b3fc4',weight:1.5,fillColor:'#7b3fc4',fillOpacity:r.approx?.06:.12,dashArray:r.approx?'5 5':null,interactive:false}).addTo(M.cov);
-    const m=L.marker(ll,{icon:L.divIcon({className:'um-pin cov'+(r.approx?' approx':''),html:'<span></span>',iconSize:[32,34],iconAnchor:[16,33],popupAnchor:[0,-30]}),zIndexOffset:r.approx?0:100,keyboard:false}).bindPopup(
+    const m=L.marker(ll,{icon:umPin('cov',{approx:r.approx}),zIndexOffset:r.approx?0:100,keyboard:false}).bindPopup(
       `<b><i data-ic="hand"></i> ${esc(r.org)}</b><br>${esc(r.area)}${r.district?' · เขต'+esc(r.district):''}<br>วันที่ ${esc(r.date)}${r.items?'<br>'+esc(r.items):''}${r.sets?' · '+esc(r.sets)+(/^[\d,]+$/.test(String(r.sets).trim())?' ชุด':''):''}${cs?`<br><b style="color:#5b2d91">เคสที่อาจซ้ำ ${cs} เคส</b>`:''}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov);
     M.mk.set(r,m)});
   if($('#mt-cases').checked)P.cases.filter(c=>c.status!=='done'&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)).forEach(c=>{
     // หมุดหยดน้ำแบบหน้าแดชบอร์ด/จัดการเคส: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป
     const u=Math.min(3,Math.max(1,Number(c.urgency)||1)),k=c.status==='going'?'going':u===3?'danger':u===2?'urgent':'open';
-    L.marker([+c.lat,+c.lng],{icon:L.divIcon({className:'um-pin '+k,html:'<span></span>',iconSize:[32,34],iconAnchor:[16,33],popupAnchor:[0,-30]}),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
+    L.marker([+c.lat,+c.lng],{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   const miss=rows.filter(r=>r.lat==null).length;$('#map-miss').textContent=COVERED.C.loading?'กำลังหาตำแหน่ง…':miss?`ไม่พบตำแหน่ง ${miss} พื้นที่`:'';
   if(!M.fitted&&pts.length&&!COVERED.C.loading){M.fitted=true;M.map.fitBounds(pts,{padding:[30,30],maxZoom:14})}
   setTimeout(()=>M.map.invalidateSize(),50);

@@ -81,3 +81,12 @@ function ic(name,cls){return `<svg class="ic${cls?' '+cls:''}" viewBox="0 0 24 2
 (()=>{const fill=root=>root.querySelectorAll&&root.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic,i.className)});
   const go=()=>{fill(document);new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.matches&&n.matches('i[data-ic]'))n.outerHTML=ic(n.dataset.ic,n.className);else fill(n)}}))).observe(document.documentElement,{childList:true,subtree:true})};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go):go()})();
+
+/* หมุดหยดน้ำบนแผนที่ (SVG คมทุกขนาดจอ · ปลายหมุดตรงตำแหน่งจริงพอดี)
+   umPin('danger'|'urgent'|'open'|'going'|'done'|'cov', {extra, cls, approx}) → L.divIcon */
+function umPin(k,o={}){
+  const mark=k==='cov'?'<path class="pm" d="M11 15.6l3.4 3.4 6.6-6.8"/>':'<circle class="pd" cx="16" cy="15" r="5.2"/>';
+  return L.divIcon({className:'um-pin2 pin-'+k+(o.approx?' approx':'')+(o.cls?' '+o.cls:''),
+    html:`<svg viewBox="0 0 32 42" width="32" height="42" aria-hidden="true"><path class="pb" d="M16 1.5C8 1.5 1.5 7.9 1.5 15.8c0 9.9 11.6 21.9 13.6 23.9a1.3 1.3 0 0 0 1.8 0c2-2 13.6-14 13.6-23.9C30.5 7.9 24 1.5 16 1.5z"/>${mark}</svg>`+(o.extra||''),
+    iconSize:[32,42],iconAnchor:[16,41],popupAnchor:[0,-38],tooltipAnchor:[0,-34]});
+}

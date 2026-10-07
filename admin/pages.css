@@ -66,3 +66,10 @@
 #preview:empty{display:none}
 
 .cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}
+
+/* ตำแหน่งสด Google Maps (หน้าจัดทีม) */
+.team-m a.gm{color:#1a73e8}
+.gm-help{font-size:13px;background:var(--soft,#f3f6f8);border-radius:10px;padding:8px 12px}
+.gm-help summary{cursor:pointer;font-weight:600}
+.gm-help ol{margin:6px 0 8px;padding-left:20px;line-height:1.6}
+.form-grid .wide{grid-column:1/-1}

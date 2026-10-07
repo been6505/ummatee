@@ -73,3 +73,6 @@
 .gm-help summary{cursor:pointer;font-weight:600}
 .gm-help ol{margin:6px 0 8px;padding-left:20px;line-height:1.6}
 .form-grid .wide{grid-column:1/-1}
+
+/* ลิงก์นำทาง Google Maps (หน้าจัดทีม) */
+.nav-go{color:#1a73e8;font-weight:600;text-decoration:none;white-space:nowrap}.qcase .nav-go{display:inline-block;margin-top:6px}

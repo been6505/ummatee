@@ -19,6 +19,9 @@ const notesOf=c=>String(c.notes||'').replace(/^\[ครัวเรือน \d+
 const tel=c=>String(c.phone||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 const hasPin=c=>c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&!isNaN(+c.lat)&&!isNaN(+c.lng);
 const addr=c=>[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
+/* ลิงก์นำทาง Google Maps: มีหมุดใช้พิกัด ไม่มีหมุดใช้ที่อยู่ · dir_action=navigate = เริ่มนำทางทันทีบนมือถือ */
+const navUrl=c=>{const pin=c&&c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng),q=pin?`${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`:[c&&c.address,c&&c.district?'เขต'+c.district:''].filter(Boolean).join(' ');
+  return q?'https://www.google.com/maps/dir/?api=1&dir_action=navigate&destination='+encodeURIComponent(pin?q:q+' กรุงเทพมหานคร'):''};
 function ago(t){t=Number(t);if(!t)return '';const m=Math.round((Date.now()-t)/60000);if(m<1)return 'เมื่อสักครู่';if(m<60)return m+' นาทีที่แล้ว';const h=Math.round(m/60);if(h<24)return h+' ชม.ที่แล้ว';return new Date(t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}
 function fullTime(t){t=Number(t);return t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
 function toast(msg,ok){const t=document.createElement('div');t.className='toast'+(ok?' ok':'');t.textContent=msg;$('#toasts').append(t);setTimeout(()=>t.remove(),4000)}
@@ -192,7 +195,7 @@ function renderDrawer(){
     <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary" href="tel:${esc(t)}">โทรหาผู้แจ้ง</a>`:''}
-      ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
+      ${navUrl(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="${esc(navUrl(c))}">🧭 ${hasPin(c)?'นำทาง Google Maps':'นำทางตามที่อยู่'}</a>`:''}
       <button class="btn ghost" id="d-copy">คัดลอกข้อมูลเคส</button>
     </div>
     <fieldset class="d-status"><legend>เปลี่ยนสถานะ</legend>

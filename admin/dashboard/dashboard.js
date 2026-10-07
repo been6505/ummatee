@@ -93,7 +93,7 @@ async function drawMap(L0){
   M.cases.clearLayers();const pts=[];let nopin=0;
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
     L.circleMarker(ll,{radius:c.status!=='done'&&sev(c)===3?9:7,color:'#fff',weight:2,fillColor:caseColor(c),fillOpacity:.95})
-      .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
+      .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>${c.status!=='done'?` · <a href="https://www.google.com/maps/dir/?api=1&amp;dir_action=navigate&amp;destination=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}" target="_blank" rel="noopener"><b>🧭 นำทาง</b></a>`:''}`).addTo(M.cases)});
   $('#map-nopin').textContent=nopin?`· ${nopin} เคสไม่มีหมุด (ไม่แสดงบนแผนที่)`:'';
   if(pts.length&&!M.fitted){M.map.fitBounds(pts,{padding:[30,30],maxZoom:14});M.fitted=true}
   const F=typeof VERIFY!=='undefined'?VERIFY.F:null;

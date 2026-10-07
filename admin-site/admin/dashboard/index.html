@@ -69,9 +69,9 @@
       </div>
       <p class="map-note" id="map-nopin"></p>
     </article>
-    <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
-    <!-- ตัวเลขจาก Help Me ช่วยด้วย (ชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) -->
     <p class="hm-src hm-part" hidden><span id="hm-upd"></span> <a href="https://helpme-th.pages.dev/#stats" target="_blank" rel="noopener">เปิดหน้าสถิติ Help Me <i data-ic="ext"></i></a></p>
+    <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
+    <!-- การ์ดตัวเลขจาก Help Me แบบสรุปจากเซิร์ฟเวอร์: ใช้แทนเฉพาะตอนโหลดรายการเคส Help Me ไม่ได้ -->
     <section class="kpis hm-part" id="hm-kpis" hidden aria-label="ตัวเลขจาก Help Me"></section>
 
     <div class="grid">
@@ -112,7 +112,7 @@
 <script src="../ofm.js?v=1"></script>
 <script src="../camlive.js?v=8"></script>
 <script src="../maplayers.js?v=7"></script>
-<script src="./dashboard.js?v=25"></script>
+<script src="./dashboard.js?v=26"></script>
 <script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>

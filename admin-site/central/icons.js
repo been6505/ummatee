@@ -93,3 +93,11 @@ function umPin(k,o={}){
 
 /* แถบเมนูล่างบนมือถือเลื่อนข้างได้: เลื่อนให้เห็นเมนูของหน้าปัจจุบัน */
 addEventListener('load',()=>{const t=document.querySelector('.tabs'),a=t&&t.querySelector('[aria-current=page]');if(a&&t.scrollWidth>t.clientWidth)t.scrollLeft=a.offsetLeft-(t.clientWidth-a.offsetWidth)/2});
+
+/* หมุดทีมขยับลื่นแบบเรียลไทม์: เลื่อนจากตำแหน่งเดิมไปตำแหน่งใหม่ตลอดช่วงเวลารอข้อมูลรอบถัดไป (ไม่กระโดด)
+   ระยะไกลเกิน 3 กม. หรือแท็บซ่อนอยู่ = ย้ายทันที */
+function glideTo(m,ll,ms=3000){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
+  if(!a||a.distanceTo(b)<0.3)return;if(a.distanceTo(b)>3000||document.hidden){m.setLatLng(b);return}
+  const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms);m.setLatLng([a.lat+(b.lat-a.lat)*k,a.lng+(b.lng-a.lng)*k]);if(k<1)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)}
+/* ลูกศรทิศทางเมื่อทีมกำลังเคลื่อนที่ (ความเร็ว ≥ 3 กม./ชม. และรู้ทิศ) */
+const headArrow=t=>t&&t.heading!=null&&t.speed!=null&&t.speed>=3?`<s class="hd" style="--r:${Math.round(+t.heading)}deg" aria-hidden="true"></s>`:'';

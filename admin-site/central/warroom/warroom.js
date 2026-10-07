@@ -147,7 +147,7 @@ async function drawMap(V){
   if(!W.map){W.map=L.map('wmap',{zoomControl:true}).setView([13.75,100.6],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(W.map);
     W.map.attributionControl.setPrefix(false);W.lr=L.layerGroup().addTo(W.map);W.lc=L.layerGroup().addTo(W.map);W.lt=L.layerGroup().addTo(W.map)}
-  W.lc.clearLayers();W.lt.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;
+  W.lc.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;
   // ขอบเขต War Room: ห้องที่เลือก หรือทุกห้อง (ภาพรวม)
   (V.r?[V.r]:W.rooms).forEach(r=>{if(r.lat==null||!r.radius)return;
     L.circle([r.lat,r.lng],{radius:r.radius,color:r.color,weight:2,fillColor:r.color,fillOpacity:V.r?.04:.07,dashArray:'6 6',interactive:!V.r}).bindTooltip(esc(r.name),{sticky:true}).on('click',()=>{if(!V.r){W.room=r.id;W.fitted='';render()}}).addTo(W.lr);
@@ -157,10 +157,7 @@ async function drawMap(V){
     L.marker([+c.lat,+c.lng],{icon:umPin(k,{extra:ph.length?`<span class="pin-thumb"><img src="${thumb(ph[0])}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`:''}),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
       .bindTooltip(esc(`${URG[sev(c)]} · ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${vol(c)?' · ทีม '+vol(c):''} · รอ ${waitTxt(c.createdAt)}`),{direction:'top',offset:[0,-4]})
       .on('click',()=>{location.href=caseLink(c)}).addTo(W.lc)});
-  const sos=new Set((W.alerts.sos||[]).map(s=>s.name));
-  V.live.forEach(l=>{const m=mins(l.updatedAt),stale=m>10,s=sos.has(l.team);
-    L.marker([l.lat,l.lng],{icon:L.divIcon({className:'wr-team'+(s?' sos':stale?' stale':''),html:`<i></i><span>${esc(l.team)}</span>`,iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:s?3000:2000,keyboard:false})
-      .bindTooltip(esc(`${l.team} · ${stale?'ตำแหน่งเมื่อ '+ago(l.updatedAt):'ออนไลน์'}${l.battery!=null?' · แบต '+l.battery+'%':''}${l.speed?' · '+Math.round(l.speed)+' กม./ชม.':''}`),{direction:'top',offset:[0,-8]}).addTo(W.lt);pts.push([l.lat,l.lng])});
+  moveTeams(V).forEach(p=>pts.push(p));
   let note=nopin?`ไม่มีหมุด ${nopin} เคส`:'';
   // ซูมไปพื้นที่ที่มีเคสหนาแน่น (ไม่ให้หมุดไกล ๆ ไม่กี่จุดทำให้แผนที่ซูมออกทั้งประเทศ)
   if(W.fitted!==(W.room||'*')&&pts.length){const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],mla=med(pts.map(p=>p[0])),mlo=med(pts.map(p=>p[1]));
@@ -197,6 +194,21 @@ function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.roo
 $('#p-struct').addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){W.room=g.dataset.go;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
   const np=e.target.closest('[data-newprov]');if(np){roomForm({kind:'province',province:np.dataset.newprov,districts:[]});return}
   const nz=e.target.closest('[data-newzone]');if(nz)roomForm({kind:'zone',province:nz.dataset.newzone,districts:[]})});
+
+/* หมุดทีมแบบคงอยู่: ตำแหน่งใหม่ทุก 3 วินาที เลื่อนลื่น (glideTo) แทนการลบแล้ววาดใหม่ */
+W.tm=new Map();
+function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos||[]).map(s=>s.name)),seen=new Set(),pts=[];
+  V.live.forEach(l=>{const m=mins(l.updatedAt),stale=m>10,s=sos.has(l.team),mv=l.speed!=null&&l.speed>=3;seen.add(l.team);pts.push([l.lat,l.lng]);
+    const html=`<i>${headArrow(l)}</i><span>${esc(l.team)}${mv?` · ${Math.round(l.speed)} กม./ชม.`:''}</span>`,cls='wr-team'+(s?' sos':stale?' stale':'')+(mv?' mv':'');
+    const tip=esc(`${l.team} · ${stale?'ตำแหน่งเมื่อ '+ago(l.updatedAt):'ออนไลน์'}${l.battery!=null?' · แบต '+l.battery+'%':''}${l.speed?' · '+Math.round(l.speed)+' กม./ชม.':''}`);
+    let mk=W.tm.get(l.team);
+    if(!mk){mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:cls,html,iconSize:[16,16],iconAnchor:[8,8]}),keyboard:false}).bindTooltip(tip,{direction:'top',offset:[0,-8]}).addTo(W.lt);mk._k=cls+html;W.tm.set(l.team,mk)}
+    else{glideTo(mk,[l.lat,l.lng]);if(mk._k!==cls+html){mk._k=cls+html;mk.setIcon(L.divIcon({className:cls,html,iconSize:[16,16],iconAnchor:[8,8]}))}mk.setTooltipContent(tip)}
+    mk.setZIndexOffset(s?3000:2000)});
+  for(const [k,mk] of W.tm)if(!seen.has(k)){mk.remove();W.tm.delete(k)}
+  return pts}
+async function pollLive(){if(document.hidden||W.tab!=='over'||W.liveBusy)return;W.liveBusy=true;
+  try{const r=await apiGet({action:'teams'});if(r&&r.ok){W.live=r.teams||[];moveTeams(view())}}catch(e){}finally{W.liveBusy=false}}
 
 /* ---------- แท็บ เคส ---------- */
 function casesTab(V){
@@ -355,5 +367,6 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
   setInterval(async()=>{if(busy())return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
+  setInterval(pollLive,3000); // ตำแหน่งทีมแบบเรียลไทม์
   setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},30000);
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});

@@ -150,3 +150,8 @@
 .link-sheet .qr{justify-self:center;padding:10px;background:#fff;border-radius:12px;border:1px solid var(--line)}.link-sheet .qr img,.link-sheet .qr canvas{display:block}
 @media(max-width:900px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.trk-map{height:300px}}
 @media(max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hqp input{width:100%}.hqp{width:100%}}
+/* ทีมกำลังเคลื่อนที่: ลูกศรทิศทาง + ความเร็ว */
+.trk-pin i{position:relative;flex:none}
+.trk-pin .hd,.wr-team .hd{position:absolute;left:50%;top:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #2D45C8;transform:translate(-50%,-50%) rotate(var(--r)) translateY(-13px);filter:drop-shadow(0 0 1px #fff)}
+.trk-pin small{font-weight:500;opacity:.75}
+.trk-pin.mv i{box-shadow:0 0 0 1px rgba(0,0,0,.15),0 0 0 5px rgba(46,158,87,.25)}

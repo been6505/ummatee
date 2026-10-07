@@ -95,7 +95,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
 </style>
-<script src="../central/icons.js?v=3"></script>
+<script src="../central/icons.js?v=4"></script>
 </head>
 <body>
 <!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
@@ -222,9 +222,9 @@ function track(on){
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
   TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,at:Date.now()};
-      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>30000||(dist(TR.sentPos,TR.pos)>25&&now-TR.sentAt>8000))ping();locUI()},
+      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>30000||(dist(TR.sentPos,TR.pos)>8&&now-TR.sentAt>3000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
-    {enableHighAccuracy:true,maximumAge:10000,timeout:30000})}
+    {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
   const cur=(S.me&&S.me.cases||[]).find(c=>c.status==='going');
   try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TR.batt,speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});

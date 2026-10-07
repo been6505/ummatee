@@ -24,3 +24,13 @@
 .nw-news #tags small{opacity:.7}
 .nw-list li{padding:9px 0;border-bottom:1px solid var(--line,#eef3f4);display:flex;flex-direction:column;gap:2px}.nw-list li:last-child{border-bottom:0}
 .nw-list a{font-weight:600;line-height:1.45;text-decoration:none;color:inherit}.nw-list a:hover{text-decoration:underline;color:var(--primary,#2D45C8)}
+/* ภัยพิบัติตอนนี้ */
+.hz-sum{display:flex;flex-wrap:wrap;gap:6px}.hz-sum span{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--bg,#f2f3f7)}.hz-sum span.hot{background:#fdecec;color:#b42318}
+.hz-map{height:300px;border-radius:12px;overflow:hidden;background:#e8ecef;margin-top:4px}
+.hz-form{display:grid;gap:8px;border:1px solid var(--line,#e1e9eb);border-radius:14px;padding:10px 12px}
+.hz-form label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted,#5e7279)}
+.hz-form input,.hz-form select{min-height:40px;border-radius:10px;border:1px solid var(--line,#dce6e9);padding:6px 10px;font:inherit;font-weight:400;background:var(--surface,#fff);color:inherit}
+.hz-form .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hz-form .acts{display:flex;gap:8px;justify-content:flex-end}
+.hz-list{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;max-height:260px;overflow:auto}
+.hz-list li{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line,#eef3f4);font-size:13.5px}.hz-list li:last-child{border-bottom:0}
+.hz-list li>span:first-child{flex:none;width:22px;text-align:center}.hz-list li div{flex:1;min-width:0}.hz-list small{display:block;color:var(--muted,#5e7279)}

@@ -398,3 +398,10 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .vr-chip.k-warn{background:#fff1e0;color:#9a4a00}[data-theme="dark"] .vr-chip.k-warn{background:rgba(245,124,0,.18);color:#ffbf80}
 .vr-chip.sm{font-size:11.5px;padding:2px 8px;margin-left:4px}
 .vr-why{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--ink-2,#3b4652)}.vr-why b{color:var(--ink,#1b1f3b)}
+/* รูปบนหมุดใหญ่ขึ้น (เห็นสภาพหน้างานได้จากแผนที่เลย) · ชี้/แตะแล้วขยายอีก */
+.um-pin2 .pin-thumb{left:22px;top:-40px;width:58px;height:58px;border-radius:14px;border-width:3px}
+.um-pin2 .pin-thumb img{border-radius:11px}
+.um-pin2 .pin-thumb b{min-width:18px;height:18px;font-size:11.5px;line-height:18px;right:-8px;bottom:-7px}
+.um-pin2 .pin-thumb{transition:transform .15s ease;transform-origin:0 100%}
+.um-pin2:hover .pin-thumb{transform:scale(1.9);z-index:5}
+@media(max-width:760px){.um-pin2 .pin-thumb{width:52px;height:52px;top:-34px}}

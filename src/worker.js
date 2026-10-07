@@ -53,6 +53,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
+  // รายงานภัยที่ศูนย์ปักหมุดเอง (หลุมยุบ ดินถล่ม น้ำป่า ฯลฯ ที่ไม่มีแหล่งข้อมูลอัตโนมัติ)
+  `CREATE TABLE IF NOT EXISTS hazard_reports (id TEXT PRIMARY KEY, type TEXT, lat REAL, lng REAL, radiusM INTEGER, note TEXT, level TEXT, createdAt INTEGER, expiresAt INTEGER, closedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
@@ -500,6 +502,68 @@ async function envCheck(env, b) {
   }
   return { ok: true, time: Date.now(), gistda: !!env.GISTDA_KEY, points: out };
 }
+
+/* ---------- ภัยพิบัติหลายชนิด (แสดงเป็นชั้นบนแผนที่) ----------
+   แผ่นดินไหว + สึนามิ: USGS (ไทยและประเทศรอบ ๆ, 7 วัน, ≥2.5) + กรมอุตุฯ · ไฟป่า: จุดความร้อน VIIRS จาก GISTDA (24 ชม.)
+   พายุ/น้ำท่วม/ภูเขาไฟ/ไฟป่าใหญ่: GDACS · ฝนตกรุนแรง/ลูกเห็บ/พายุฝนฟ้าคะนอง/ลมกระโชก: Open-Meteo ที่ตัวเมืองทุกจังหวัด (24 ชม.ที่ผ่านมา + 6 ชม.ข้างหน้า)
+   ดินโคลนถล่ม/น้ำป่าไหลหลาก: ประเมินความเสี่ยงจากฝนในจังหวัดที่มีภูเขา (ไม่ใช่การตรวจพบจริง) · หลุมยุบ ฯลฯ: ศูนย์ปักหมุดรายงานเอง + ข่าว
+   แคช 10 นาที (ข้อมูลสาธารณะ) */
+const PROV_LL = {'กรุงเทพมหานคร':[13.756,100.502],'กระบี่':[8.086,98.906],'กาญจนบุรี':[14.023,99.533],'กาฬสินธุ์':[16.432,103.506],'กำแพงเพชร':[16.483,99.522],'ขอนแก่น':[16.441,102.836],'จันทบุรี':[12.611,102.104],'ฉะเชิงเทรา':[13.69,101.077],'ชลบุรี':[13.361,100.985],'ชัยนาท':[15.186,100.125],'ชัยภูมิ':[15.807,102.032],'ชุมพร':[10.493,99.18],'เชียงราย':[19.91,99.841],'เชียงใหม่':[18.788,98.985],'ตรัง':[7.558,99.611],'ตราด':[12.243,102.515],'ตาก':[16.884,99.126],'นครนายก':[14.206,101.213],'นครปฐม':[13.82,100.062],'นครพนม':[17.392,104.769],'นครราชสีมา':[14.979,102.098],'นครศรีธรรมราช':[8.432,99.963],'นครสวรรค์':[15.704,100.137],'นนทบุรี':[13.862,100.514],'นราธิวาส':[6.426,101.823],'น่าน':[18.783,100.779],'บึงกาฬ':[18.36,103.646],'บุรีรัมย์':[14.993,103.103],'ปทุมธานี':[14.02,100.525],'ประจวบคีรีขันธ์':[11.812,99.797],'ปราจีนบุรี':[14.05,101.372],'ปัตตานี':[6.869,101.25],'พระนครศรีอยุธยา':[14.353,100.568],'พะเยา':[19.166,99.902],'พังงา':[8.451,98.525],'พัทลุง':[7.617,100.078],'พิจิตร':[16.442,100.349],'พิษณุโลก':[16.821,100.265],'เพชรบุรี':[13.112,99.94],'เพชรบูรณ์':[16.419,101.16],'แพร่':[18.145,100.141],'ภูเก็ต':[7.89,98.398],'มหาสารคาม':[16.184,103.301],'มุกดาหาร':[16.545,104.723],'แม่ฮ่องสอน':[19.301,97.969],'ยโสธร':[15.794,104.145],'ยะลา':[6.541,101.281],'ร้อยเอ็ด':[16.053,103.652],'ระนอง':[9.966,98.635],'ระยอง':[12.682,101.278],'ราชบุรี':[13.536,99.817],'ลพบุรี':[14.8,100.653],'ลำปาง':[18.289,99.49],'ลำพูน':[18.574,99.008],'เลย':[17.486,101.722],'ศรีสะเกษ':[15.118,104.322],'สกลนคร':[17.155,104.148],'สงขลา':[7.189,100.595],'สตูล':[6.623,100.067],'สมุทรปราการ':[13.599,100.597],'สมุทรสงคราม':[13.409,100.002],'สมุทรสาคร':[13.547,100.274],'สระแก้ว':[13.824,102.065],'สระบุรี':[14.529,100.911],'สิงห์บุรี':[14.888,100.401],'สุโขทัย':[17.007,99.823],'สุพรรณบุรี':[14.474,100.117],'สุราษฎร์ธานี':[9.14,99.333],'สุรินทร์':[14.882,103.493],'หนองคาย':[17.878,102.742],'หนองบัวลำภู':[17.204,102.44],'อ่างทอง':[14.589,100.455],'อำนาจเจริญ':[15.866,104.626],'อุดรธานี':[17.415,102.787],'อุตรดิตถ์':[17.62,100.099],'อุทัยธานี':[15.383,100.025],'อุบลราชธานี':[15.244,104.847]};
+// จังหวัดที่มีพื้นที่ภูเขา/ลาดชัน (เสี่ยงดินโคลนถล่ม น้ำป่าไหลหลาก เมื่อฝนหนัก)
+const HILLY = new Set('เชียงราย เชียงใหม่ แม่ฮ่องสอน น่าน พะเยา แพร่ ลำปาง ลำพูน อุตรดิตถ์ ตาก สุโขทัย พิษณุโลก เพชรบูรณ์ เลย กาญจนบุรี ราชบุรี เพชรบุรี ประจวบคีรีขันธ์ ชุมพร ระนอง สุราษฎร์ธานี นครศรีธรรมราช กระบี่ พังงา ภูเก็ต ตรัง สตูล ยะลา นราธิวาส จันทบุรี ตราด นครนายก ปราจีนบุรี สระบุรี ชัยภูมิ กำแพงเพชร อุทัยธานี'.split(' '));
+const HZ_TYPES = ['sinkhole', 'landslide', 'flashflood', 'quake', 'tsunami', 'fire', 'storm', 'hail', 'heavyrain', 'flood', 'other'];
+async function hazardsData(env) {
+  return cached('hazards-v1', 600, async () => {
+    const out = { ok: true, time: Date.now(), quakes: [], fires: [], gdacs: [], weather: [], errors: [] };
+    const get = (u, h = UA, ms = 15000) => fetch(u, { headers: h, signal: AbortSignal.timeout(ms) }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r; });
+    const names = Object.keys(PROV_LL), d10 = new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10), today = new Date().toISOString().slice(0, 10);
+    const [usgs, tmdq, fire, gd, om] = await Promise.allSettled([
+      get('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson').then(r => r.json()),
+      get(`https://data.tmd.go.th/api/DailySeismicEvent/v1/?${TMD_KEY}`).then(r => r.text()),
+      env.GISTDA_KEY ? get('https://api-gateway.gistda.or.th/api/2.0/resources/features/viirs/1day?bbox=97.3,5.6,105.7,20.5&limit=1000', { 'API-Key': env.GISTDA_KEY, ...UA }, 20000).then(r => r.json()) : Promise.reject(new Error('no key')),
+      get(`https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=TC;EQ;FL;VO;WF;DR&fromDate=${d10}&toDate=${today}&alertlevel=Green;Orange;Red`).then(r => r.json()),
+      get(`https://api.open-meteo.com/v1/forecast?latitude=${names.map(n => PROV_LL[n][0]).join(',')}&longitude=${names.map(n => PROV_LL[n][1]).join(',')}&hourly=precipitation,weather_code,wind_gusts_10m&past_hours=24&forecast_hours=6&timezone=Asia%2FBangkok`).then(r => r.json()),
+    ]);
+    const inRegion = (lat, lng) => lat > -2 && lat < 28 && lng > 88 && lng < 112;
+    if (usgs.status === 'fulfilled') out.quakes = (usgs.value.features || []).filter(f => inRegion(f.geometry.coordinates[1], f.geometry.coordinates[0])).map(f => ({ src: 'USGS',
+      lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], depth: f.geometry.coordinates[2], mag: f.properties.mag, place: f.properties.place, time: f.properties.time, tsunami: !!f.properties.tsunami, url: f.properties.url }));
+    else out.errors.push('usgs');
+    if (tmdq.status === 'fulfilled') xmlAll(tmdq.value, 'DailyEarthquakes').forEach(x => { const q = { src: 'กรมอุตุฯ', place: xmlOne(x, 'OriginThai'), time: tmdTime(xmlOne(x, 'DateTimeThai')), mag: +xmlOne(x, 'Magnitude'), depth: +xmlOne(x, 'Depth'), lat: +xmlOne(x, 'Latitude'), lng: +xmlOne(x, 'Longitude'), tsunami: false };
+      if (q.time && inRegion(q.lat, q.lng) && !out.quakes.some(u => Math.abs(u.time - q.time) < 120e3 && km(u.lat, u.lng, q.lat, q.lng) < 80)) out.quakes.push(q); });
+    if (fire.status === 'fulfilled') out.fires = (fire.value.features || []).filter(f => f.properties?.ct_en === 'Thailand' || f.properties?.pv_tn).map(f => { const p = f.properties || {};
+      return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], conf: p.confidence || '', frp: p.frp, time: (p.timestamp || 0) * 1000, province: p.pv_tn || '', amphoe: p.ap_tn || '', lu: p.lu_name || '' }; });
+    else out.errors.push('fires');
+    if (gd.status === 'fulfilled') out.gdacs = (gd.value.features || []).filter(f => f.geometry && inRegion(f.geometry.coordinates[1], f.geometry.coordinates[0])).map(f => { const p = f.properties || {};
+      return { type: p.eventtype, level: p.alertlevel, name: p.name || p.eventname || '', lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], from: p.fromdate, to: p.todate, country: p.country || '', url: (p.url || {}).report || '' }; });
+    else out.errors.push('gdacs');
+    if (om.status === 'fulfilled') (Array.isArray(om.value) ? om.value : [om.value]).forEach((x, i) => { const h = x.hourly || {}, pr = h.precipitation || [], wc = h.weather_code || [], gu = h.wind_gusts_10m || [], n = names[i];
+      const sum = a => Math.round(a.reduce((s, v) => s + (Number(v) || 0), 0) * 10) / 10, max = a => Math.max(0, ...a.map(v => Number(v) || 0));
+      const past = pr.slice(0, 24), next = pr.slice(24), wNext = wc.slice(18), w = { province: n, lat: PROV_LL[n][0], lng: PROV_LL[n][1],
+        rain24: sum(past), rain3: sum(pr.slice(21, 24)), next6: sum(next), maxHour: max(pr.slice(18)), gust: Math.round(max(gu.slice(18))),
+        hail: wNext.some(c => c === 96 || c === 99), thunder: wNext.some(c => c >= 95) };
+      w.heavy = w.maxHour >= 20 || w.rain24 >= 90 || w.next6 >= 50; w.storm = w.thunder || w.gust >= 60;
+      const hill = HILLY.has(n), wet = Math.max(w.rain24, w.rain24 - w.rain3 + w.next6);
+      w.slide = hill && wet >= 150 ? 'high' : hill && wet >= 90 ? 'mid' : '';   // ดินโคลนถล่ม / น้ำป่าไหลหลาก (ประเมินจากฝน)
+      if (w.heavy || w.storm || w.hail || w.slide || w.rain24 >= 35) out.weather.push(w); });
+    else out.errors.push('weather');
+    out.quakes.sort((a, b) => b.time - a.time);
+    return out;
+  });
+}
+async function hazardList(db, env) {
+  const [base, rep] = await Promise.all([hazardsData(env).catch(() => ({ ok: true, quakes: [], fires: [], gdacs: [], weather: [], errors: ['hazards'] })),
+    db.prepare('SELECT * FROM hazard_reports WHERE closedAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 200').bind(Date.now()).all()]);
+  return { ...base, reports: rep.results.map(r => ({ id: r.id, type: r.type, lat: r.lat, lng: r.lng, radiusM: r.radiusM, note: r.note || '', level: r.level || 'warn', createdAt: r.createdAt, expiresAt: r.expiresAt })) };
+}
+async function saveHazard(db, b) {
+  const h = b.hazard || {}, lat = num(h.lat, -90, 90), lng = num(h.lng, -180, 180), now = Date.now();
+  if (lat == null || lng == null) return { ok: false, error: 'missing_location' };
+  const id = 'H' + rand(5), hours = Math.min(720, Math.max(1, Number(h.hours) || 48));
+  await db.prepare('INSERT INTO hazard_reports (id,type,lat,lng,radiusM,note,level,createdAt,expiresAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, HZ_TYPES.includes(h.type) ? h.type : 'other', lat, lng, clampInt(h.radiusM, 0, 50000, 0) || null, clean(h.note, 300), ['info', 'warn', 'danger'].includes(h.level) ? h.level : 'warn', now, now + hours * 3600e3, clean(b.by, 60)).run();
+  return { ok: true, id };
+}
+async function closeHazard(db, b) { const r = await db.prepare('UPDATE hazard_reports SET closedAt=? WHERE id=? AND closedAt IS NULL').bind(Date.now(), clean(b.id, 20)).run(); return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' }; }
 
 /* ---------- ประกาศแจ้งเตือนรายพื้นที่ ----------
    scope: all (ทุกพื้นที่) · province (จังหวัด) · district (เขต/อำเภอ) · circle (รัศมีจากจุด)
@@ -1522,6 +1586,7 @@ async function api(request, env) {
       case 'warrooms': return json(vol ? await listWarrooms(db) : { ok: false, error: 'not_volunteer' });
       // ประกาศที่ยังมีผล: สาธารณะ (หน้าบ้าน Help Me / หน้าทีม) · ทั้งหมด 30 วัน: เฉพาะ CENTRAL
       case 'broadcasts': return json(await listBroadcasts(db, false));
+      case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
@@ -1544,7 +1609,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

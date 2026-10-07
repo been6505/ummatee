@@ -32,3 +32,28 @@ $('#tags').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
 $('#q').addEventListener('input',e=>{N.q=e.target.value;render()});
 $('#refresh').addEventListener('click',load);
 adminBoot({action:'chat_rev'},'rev',()=>{load();clearInterval(N.timer);N.timer=setInterval(()=>{if(!document.hidden)load()},10*60000)});
+
+/* ---------- ภัยพิบัติตอนนี้ + รายงานภัยจากศูนย์ ---------- */
+let hzMap=null,hzPick=null;
+function hzLoadLeaflet(){if(window.L)return Promise.resolve();return new Promise((res,rej)=>{const c=document.createElement('link');c.rel='stylesheet';c.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';c.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';c.crossOrigin='';document.head.append(c);
+  const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';s.onload=res;s.onerror=rej;document.head.append(s)})}
+async function hzInit(){try{await hzLoadLeaflet()}catch(e){$('#hz-map').textContent='โหลดแผนที่ไม่ได้';return}
+  hzMap=L.map('hz-map',{scrollWheelZoom:false}).setView([13.2,101],5);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(hzMap);
+  HZ.attach(hzMap);hzMap.on('click',e=>{const f=$('#hz-form');f.hidden=false;f.ll.value=e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+    if(hzPick)hzPick.setLatLng(e.latlng);else hzPick=L.marker(e.latlng).addTo(hzMap)});
+  HZ.onData(hzRender)}
+function hzRender(d){const c=HZ.counts(d),hot=['quake','tsunami','hail','slide','cyclone','report'];
+  $('#hz-sum').innerHTML=Object.entries(HZ.T).filter(([k])=>c[k]).map(([k,t])=>`<span class="${hot.includes(k)?'hot':''}">${t.i} ${t.t} ${c[k]}</span>`).join('')||'<span>ไม่พบภัยที่ต้องเฝ้าระวังตอนนี้</span>';
+  const its=HZ.items(d).filter(x=>x.k!=='fire').sort((a,b)=>(b.lv||1)-(a.lv||1)).slice(0,30);
+  $('#hz-list').innerHTML=its.map(x=>{const tmp=document.createElement('div');tmp.innerHTML=x.html;const t=tmp.textContent;
+    return `<li><span>${x.icon||HZ.T[x.k].i}</span><div>${esc(t.slice(0,160))}</div>${x.k==='report'?'':''}<button type="button" class="linkish" data-hzgo="${+x.lat},${+x.lng}">แผนที่</button></li>`}).join('')+
+    ((d.reports||[]).length?`<li><span>📍</span><div><b>รายงานจากศูนย์ที่ยังมีผล</b>${d.reports.map(r=>`<small>${esc((HZ.RT[r.type]||HZ.RT.other)[0])}${r.note?' · '+esc(r.note):''} <button type="button" class="linkish" data-hzclose="${esc(r.id)}">ปิดรายงาน</button></small>`).join('')}</div></li>`:'')}
+document.addEventListener('click',async e=>{const g=e.target.closest('[data-hzgo]');if(g&&hzMap){const [a,o]=g.dataset.hzgo.split(',').map(Number);hzMap.setView([a,o],9);$('#hz-map').scrollIntoView({block:'nearest',behavior:'smooth'});return}
+  const cl=e.target.closest('[data-hzclose]');if(cl&&confirm('ปิดรายงานภัยนี้?')){const r=await apiPost({action:'hazard_close',id:cl.dataset.hzclose}).catch(()=>({}));if(r.ok){toast('ปิดรายงานแล้ว',true);HZ.load()}else toast('ปิดไม่สำเร็จ')}});
+$('#hz-add').onclick=()=>{$('#hz-form').hidden=false;$('#hz-form').ll.focus();toast('คลิกบนแผนที่เพื่อเลือกจุด',true)};
+$('#hz-cancel').onclick=()=>{$('#hz-form').hidden=true;if(hzPick){hzPick.remove();hzPick=null}};
+$('#hz-form').onsubmit=async e=>{e.preventDefault();const f=e.target,m=String(f.ll.value).match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(!m){toast('ใส่พิกัดหรือคลิกแผนที่');return}
+  const by=staffName();if(!by)return;
+  const r=await apiPost({action:'hazard_save',by,hazard:{type:f.type.value,level:f.level.value,lat:+m[1],lng:+m[2],radiusM:f.radiusM.value,hours:f.hours.value,note:f.note.value}}).catch(()=>({}));
+  if(r.ok){toast('บันทึกรายงานภัยแล้ว',true);f.reset();f.hidden=true;if(hzPick){hzPick.remove();hzPick=null}HZ.load()}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))};
+(function w(){if($("#app").hidden){setTimeout(w,400);return}hzInit()})(); // เริ่มแผนที่เมื่อเข้าระบบแล้ว (กล่องแผนที่ต้องมองเห็นก่อน)

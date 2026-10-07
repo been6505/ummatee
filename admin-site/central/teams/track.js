@@ -15,7 +15,7 @@ const TRACK=(()=>{
     t.caseId?`ถือเคส #${esc(t.caseId)}`:'',isSos(r)?'<b style="color:#E5383B">SOS</b>':'',
     `<a href="https://www.google.com/maps/dir/?api=1&destination=${+t.lat},${+t.lng}" target="_blank" rel="noopener">นำทางไปหาทีม ↗</a>`].filter(Boolean).join('<br>')}
   async function init(el){if(map)return true;try{await loadLeaflet()}catch(e){el.innerHTML='<p class="empty">โหลดแผนที่ไม่ได้</p>';return false}
-    map=L.map(el,{scrollWheelZoom:false}).setView([13.76,100.65],11);
+    map=L.map(el,{scrollWheelZoom:false}).setView([13.76,100.65],11);if(typeof HZ!=='undefined')HZ.attach(map);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
     if(typeof MAPFS!=='undefined')MAPFS.add(map);trail=L.layerGroup().addTo(map);pins=L.layerGroup().addTo(map);return true}
   function update(live,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();

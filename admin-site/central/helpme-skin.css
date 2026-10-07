@@ -394,3 +394,7 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .um-pin2 .pin-thumb{position:absolute;left:20px;top:-14px;width:34px;height:34px;border-radius:50%;border:2.5px solid #fff;background:#dde2e8;box-shadow:0 2px 6px rgba(15,23,60,.4);overflow:visible}
 .um-pin2 .pin-thumb img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
 .um-pin2 .pin-thumb b{position:absolute;right:-7px;bottom:-5px;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:#111827;color:#fff;font:700 10.5px/16px system-ui,sans-serif;text-align:center;border:1.5px solid #fff;box-sizing:content-box}
+/* ผลตรวจ: ที่มาของความวิกฤต + ข้อมูลฝน/ดาวเทียม */
+.vr-chip.k-warn{background:#fff1e0;color:#9a4a00}[data-theme="dark"] .vr-chip.k-warn{background:rgba(245,124,0,.18);color:#ffbf80}
+.vr-chip.sm{font-size:11.5px;padding:2px 8px;margin-left:4px}
+.vr-why{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--ink-2,#3b4652)}.vr-why b{color:var(--ink,#1b1f3b)}

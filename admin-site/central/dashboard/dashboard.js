@@ -328,3 +328,4 @@ const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
     if(M.map&&base!=='sat')setBase(dark?'dark':'road');
     if(D.loaded)render()});
   sync()})();
+if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();

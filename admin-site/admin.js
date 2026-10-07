@@ -134,7 +134,9 @@ const cov=c=>typeof COVERED!=='undefined'?COVERED.match(c):null;
 function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} เคยส่งมอบใกล้เคียง</span>`}
 function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b><i data-ic="hand"></i> มีองค์กรอื่นเคยส่งมอบใกล้เคียง</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
 setInterval(()=>{if(A.key&&!document.hidden)loadFlood()},10*60e3);
-function vrBadge(c){const v=vr(c);return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>`}
+VERIFY.onUpdate=()=>render(); // ฝน/ดาวเทียมรายจุดมาถึงทีหลัง → วาดผลตรวจใหม่
+function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
+  return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
 /* ---------- แสดงผล ---------- */
 function render(){
@@ -206,10 +208,12 @@ function vrSection(c){
   const rd=v.road,reps=v.reports.slice(0,3);
   return `<section class="vr-box vr-b-${v.result.k}">
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
+    <p class="vr-why"><b>วิกฤตเพราะ (ผู้แจ้งบอก):</b> ${esc((v.why||[]).join(' · '))}</p>
+    <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
     ${aiBlock(c)}
     <details class="vr-more"><summary>รายละเอียด / ตรวจเอง</summary>
-    <div class="vr-bars"><div><span>ข้อมูลผู้แจ้ง</span><i style="width:${v.R*2}%"></i><em>${v.R}/50</em></div><div><span>หลักฐานน้ำท่วม + กล้อง</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*2}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/50</em></div></div>
+    <div class="vr-bars"><div><span>ข้อมูลผู้แจ้ง</span><i style="width:${v.R*2}%"></i><em>${v.R}/50</em></div><div><span>ข้อมูลภายนอก (ฝน ดาวเทียม น้ำท่วม กล้อง)</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*2}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/50</em></div></div>
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
     ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}

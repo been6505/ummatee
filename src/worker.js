@@ -446,6 +446,61 @@ async function saveZone(db, b) {
     .bind(id, name, color, lat, lng, clampInt(z.radius, 100, 30000, 1500), clean(z.note, 200), Date.now(), clean(b.by, 60)).run();
   return { ok: true, id };
 }
+/* ---------- ตรวจความวิกฤตด้วยข้อมูลภายนอก (เทียบกับที่ผู้แจ้งบอก) ----------
+   ต่อจุดเคส: ฝน (Open-Meteo: ฝนสะสม 3/24 ชม. ที่ผ่านมา + คาด 3 ชม.ข้างหน้า) · น้ำท่วมจากดาวเทียม (GISTDA 7 วัน: จุดอยู่ในพื้นที่น้ำท่วม/ระยะ/วันที่ภาพ)
+   GISTDA แบ่งค้นเป็นช่อง 0.04° (~4 กม.) แคช 30 นาที · ทีละไม่เกิน 10 ช่องต่อคำขอ (จุดที่เหลือเบราว์เซอร์จะถามรอบถัดไป) */
+const satDate = s => { const d = [...String(s || '').matchAll(/_(20\d{6})_/g)].map(m => m[1]).sort().pop(); return d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : ''; };
+function inRing(lat, lng, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; }
+function inGeom(lat, lng, g) { const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []; return polys.some(p => p.length && inRing(lat, lng, p[0]) && !p.slice(1).some(h => inRing(lat, lng, h))); }
+function geomDist(lat, lng, g) { const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []; let best = Infinity;
+  for (const p of polys) for (const [x, y] of (p[0] || [])) best = Math.min(best, km(lat, lng, y, x) * 1000); return best; }
+async function gistdaCell(env, cx, cy) {
+  return cached(`gd7:${cx},${cy}`, 1800, async () => {
+    const S = 0.04, w = cx * S - 0.01, so = cy * S - 0.01, e = (cx + 1) * S + 0.01, n = (cy + 1) * S + 0.01;
+    const r = await fetch(`https://api-gateway.gistda.or.th/api/2.0/resources/features/flood/7days?bbox=${w.toFixed(3)},${so.toFixed(3)},${e.toFixed(3)},${n.toFixed(3)}&limit=1000`,
+      { headers: { 'API-Key': env.GISTDA_KEY, ...UA }, signal: AbortSignal.timeout(15000) });
+    if (!r.ok) throw new Error('gistda ' + r.status);
+    const j = await r.json();
+    return (j.features || []).filter(f => f.geometry).map(f => ({ g: f.geometry, a: Math.round(f.properties?.f_area || 0), d: satDate(f.properties?.file_name) }));
+  });
+}
+async function envCheck(env, b) {
+  const pts = [...new Map((Array.isArray(b.points) ? b.points : []).map(p => [num(p.lat, -90, 90), num(p.lng, -180, 180)]).filter(([a, o]) => a != null && o != null && (a || o))
+    .map(([a, o]) => [a.toFixed(3) + ',' + o.toFixed(3), { k: a.toFixed(3) + ',' + o.toFixed(3), lat: +a.toFixed(3), lng: +o.toFixed(3) }])).values()].slice(0, 300);
+  const out = {};
+  pts.forEach(p => { out[p.k] = {}; });
+  // ฝน: Open-Meteo รวมจุดใกล้กันเป็นช่อง 0.02° แล้วถามทีละ 100 ช่อง
+  const cells = new Map(); pts.forEach(p => { const c = (Math.round(p.lat / 0.02) * 0.02).toFixed(2) + ',' + (Math.round(p.lng / 0.02) * 0.02).toFixed(2); if (!cells.has(c)) cells.set(c, []); cells.get(c).push(p); });
+  const ck = [...cells.keys()];
+  for (let i = 0; i < ck.length; i += 100) {
+    const part = ck.slice(i, i + 100), la = part.map(c => c.split(',')[0]).join(','), lo = part.map(c => c.split(',')[1]).join(',');
+    try {
+      const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=precipitation&past_hours=24&forecast_hours=3&timezone=Asia%2FBangkok`, { headers: UA, signal: AbortSignal.timeout(12000) });
+      const j = await r.json(), arr = Array.isArray(j) ? j : [j];
+      arr.forEach((x, k) => { const h = (x.hourly || {}).precipitation || [], sum = a => Math.round(a.reduce((s, v) => s + (Number(v) || 0), 0) * 10) / 10;
+        const rain = { h24: sum(h.slice(0, 24)), h3: sum(h.slice(21, 24)), next3: sum(h.slice(24, 27)) };
+        (cells.get(part[k]) || []).forEach(p => { out[p.k].rain = rain; }); });
+    } catch (e) {}
+  }
+  // ดาวเทียม GISTDA
+  if (env.GISTDA_KEY) {
+    const S = 0.04, gc = new Map(); pts.forEach(p => { const c = Math.floor(p.lng / S) + ',' + Math.floor(p.lat / S); if (!gc.has(c)) gc.set(c, []); gc.get(c).push(p); });
+    let n = 0;
+    for (const [c, list] of gc) {
+      if (n++ >= 10) break;
+      const [cx, cy] = c.split(',').map(Number);
+      try {
+        const feats = await gistdaCell(env, cx, cy);
+        list.forEach(p => { let inside = null, best = Infinity, near = 0, date = '';
+          for (const f of feats) { if (f.d > date) date = f.d; if (!inside && inGeom(p.lat, p.lng, f.g)) inside = f;
+            const d = inside === f ? 0 : geomDist(p.lat, p.lng, f.g); if (d < best) best = d; if (d <= 500) near++; }
+          out[p.k].sat = { inside: !!inside, dM: isFinite(best) ? Math.round(best) : null, near, area: inside ? inside.a : 0, date: inside ? inside.d : date, period: '7days', n: feats.length }; });
+      } catch (e) { list.forEach(p => { out[p.k].sat = { error: true }; }); }
+    }
+  }
+  return { ok: true, time: Date.now(), gistda: !!env.GISTDA_KEY, points: out };
+}
+
 /* ---------- ประกาศแจ้งเตือนรายพื้นที่ ----------
    scope: all (ทุกพื้นที่) · province (จังหวัด) · district (เขต/อำเภอ) · circle (รัศมีจากจุด)
    level: info ข่าวสาร · warn เฝ้าระวัง · danger อันตราย/อพยพ · อ่านได้ทุกคน (ข้อมูลสาธารณะ) เขียนได้เฉพาะ CENTRAL */
@@ -1422,7 +1477,9 @@ async function gistdaTile(env, layer, z, x, y) {
   return new Response(r.body, { headers: { 'content-type': r.headers.get('content-type'), 'cache-control': 'public, max-age=1800' } });
 }
 
+let ENV = {};
 async function api(request, env) {
+  ENV = env;
   const db = env.DB;
   const gm = new URL(request.url).pathname.match(/^\/api\/gistda\/(1day|3days|7days|30days|freq)\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})(?:\.png)?$/);
   if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
@@ -1487,7 +1544,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

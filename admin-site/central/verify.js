@@ -1,10 +1,13 @@
+/* ลำดับการตรวจ: 1) ข้อมูลที่ผู้แจ้งบอก (ระดับวิกฤต ระดับน้ำ กลุ่มเปราะบาง) แล้ว 2) ตรวจซ้ำด้วยข้อมูลภายนอก:
+   ฝน (Open-Meteo รายจุด + สถานีวัดฝน ThaiWater) · น้ำท่วมจากดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV
+   ข้อมูลฝน/ดาวเทียมรายจุดขอจาก /api (env_check) ทีละชุดอัตโนมัติ แล้วเรียก VERIFY.onUpdate() ให้หน้าวาดใหม่ */
 /* ตรวจสอบพื้นที่วิกฤต: เทียบข้อมูลผู้แจ้งกับแผนที่น้ำท่วม Floodboard + เซ็นเซอร์น้ำ กทม. + ผลตรวจกล้อง CCTV
    ใช้ร่วมกันระหว่างหน้าจัดการเคส (admin.html) และแดชบอร์ด (admin/dashboard/)
    ผลลัพธ์เป็น "ข้อมูลช่วยตัดสินใจ" — แอดมินเป็นผู้ตัดสินขั้นสุดท้าย */
 const VERIFY=(()=>{
   const ROADS_URL='https://www.floodboard.org/api/export/roads.geojson';
   const REPORTS_URL='https://www.floodboard.org/api/export/reports.csv';
-  const F={roads:[],reports:[],sensors:[],stations:[],cams:[],loaded:0,error:'',loading:null};
+  const F={roads:[],reports:[],sensors:[],stations:[],cams:[],gauges:[],env:new Map(),envAsk:new Map(),envPending:new Set(),envTimer:null,loaded:0,error:'',loading:null};
   const LV_CM={ankle:10,knee:45,waist:90,chest:120,roof:180};
   const LV_PTS={ankle:2,knee:5,waist:10,chest:15,roof:20};
   const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
@@ -38,6 +41,10 @@ const VERIFY=(()=>{
           level:x.waterlevel_msl==null?null:+x.waterlevel_msl,bank:st.min_bank==null?null:+st.min_bank,diff:x.diff_wl_bank==null?null:+x.diff_wl_bank,situation:+x.situation_level||0,
           t:x.waterlevel_datetime?Date.parse(x.waterlevel_datetime.replace(' ','T')+':00+07:00'):0,agency:((x.agency||{}).agency_shortname||{}).th||''}}).filter(x=>isFinite(x.lat)&&isFinite(x.lng))}catch(e){}
       if(cc.status==='fulfilled'&&cc.value&&cc.value.ok)F.cams=cc.value.cams||[];
+      // สถานีวัดฝนจริงทั่วประเทศ (ThaiWater · ฝนสะสม 24 ชม. และ 1 ชม.ล่าสุด) — เบราว์เซอร์ดึงตรงได้
+      try{const rg=await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/rain_24h').then(r=>r.json());
+        F.gauges=(rg.data||[]).map(x=>{const st=x.station||{};return {name:(st.tele_station_name||{}).th||'',lat:+st.tele_station_lat,lng:+st.tele_station_long,h24:+x.rain_24h||0,h1:+x.rain_1h||0,
+          t:x.rainfall_datetime?Date.parse(x.rainfall_datetime.replace(' ','T')+':00+07:00'):0}}).filter(g=>isFinite(g.lat)&&isFinite(g.lng)&&g.t&&Date.now()-g.t<36*36e5)}catch(e){}
       let ok=0;
       if(ro.status==='fulfilled'){ok++;F.roads=[];(ro.value.features||[]).forEach(f=>{const g=f.geometry||{},p=f.properties||{};
         const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
@@ -57,6 +64,17 @@ const VERIFY=(()=>{
       const [x0,y0]=P(line[i-1][1],line[i-1][0],lng),dx=x1-x0,dy=y1-y0,L=dx*dx+dy*dy;let t=L?-(x0*dx+y0*dy)/L:0;t=Math.max(0,Math.min(1,t));best=Math.min(best,Math.hypot(x0+t*dx,y0+t*dy))}});return best}
   function dist(lat,lng,lat2,lng2){const P=proj(lat);const [x,y]=P(lat2,lng2,lng);return Math.hypot(x,y)}
 
+  /* ---------- ฝน + ดาวเทียมรายจุด (ขอจาก Worker ทีละชุด) ---------- */
+  const envKey=(lat,lng)=>(+lat).toFixed(3)+','+(+lng).toFixed(3);
+  function envOf(lat,lng){const k=envKey(lat,lng),v=F.env.get(k),asked=F.envAsk.get(k)||0;
+    if((!v||Date.now()-v._t>30*60e3)&&Date.now()-asked>(v?30*60e3:2*60e3)){F.envPending.add(k);clearTimeout(F.envTimer);F.envTimer=setTimeout(flushEnv,400)}
+    return v||null}
+  async function flushEnv(){const ks=[...F.envPending].slice(0,300);F.envPending.clear();if(!ks.length)return;const now=Date.now();ks.forEach(k=>F.envAsk.set(k,now));
+    let key='';try{key=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}if(!key)return;
+    try{const r=await fetch((typeof API_URL!=='undefined'?API_URL:'/api'),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'env_check',key,points:ks.map(k=>{const [a,o]=k.split(',');return {lat:+a,lng:+o}})})}).then(x=>x.json());
+      if(r&&r.ok){Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat)F.env.set(k,{...v,_t:Date.now()})});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
+  function nearestGauge(lat,lng){let g=null;F.gauges.forEach(x=>{const d=dist(lat,lng,x.lat,x.lng);if(d<=10000&&(!g||d<g.d))g={...x,d}});return g}
+
   /* ---------- ประเมิน ---------- */
   function parseCctv(v){const [s,t]=String(v||'').split('|');return s==='flood'||s==='clear'?{s,t:t||''}:null}
   function sevPts(d,v,closed){if(v==='blocked'||closed||(d!=null&&d>=50))return 40;if(v==='risky'||(d!=null&&d>=30))return 30;if(v==='caution'||(d!=null&&d>=10))return 18;return 8}
@@ -64,11 +82,15 @@ const VERIFY=(()=>{
   function assess(c){
     const sev=Math.min(3,Math.max(1,Number(c.urgency)||1)),vul=(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
     // 1) ข้อมูลจากผู้แจ้ง (0–50)
+    const LV_TH={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว/หลังคา'};
     let R=({3:25,2:15,1:5})[sev]+(LV_PTS[c.level]||0);
     R+=vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?8:vul.length?4:0;R=Math.min(50,R);
+    // ที่มาของคะแนนฝั่งผู้แจ้ง (แสดงให้แอดมินเห็นว่า "วิกฤต" มาจากอะไร)
+    const why=[`ผู้แจ้งเลือกระดับ "${({3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'})[sev]}"`];if(c.level)why.push('น้ำถึง'+(LV_TH[c.level]||c.level));
+    if(vul.length)why.push('มีกลุ่มเปราะบาง'+(vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?' (ติดเตียง/ออกซิเจน/ฟอกไต)':''));if(Number(c.people)>=10)why.push(c.people+' คน');
     const reporterSevere=sev===3||c.level==='chest'||c.level==='roof';
     const cctv=parseCctv(c.cctv);
-    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null};
+    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[]};
     const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
     // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
@@ -98,8 +120,22 @@ const VERIFY=(()=>{
     const recentlyCleared=cleared.length&&!active.some(r=>r.t>cleared[0].t);
     if(recentlyCleared){out.ev.push('มีรายงานล่าสุดว่าน้ำลด / ระบายแล้วใกล้จุดนี้');chip('รายงานล่าสุด: น้ำลด','ok')}
     if(cctv)applyCctv(out,reporterSevere);
+    // 4) ดาวเทียม GISTDA (7 วัน) — เห็นน้ำท่วมในพื้นที่โล่ง/ชุมชนริมน้ำ · ในเมืองหนาแน่นมักมองไม่เห็น จึงไม่หักคะแนนเมื่อไม่พบ
+    const ev2=envOf(lat,lng),sat=ev2&&ev2.sat;
+    if(sat&&!sat.error){const dd=sat.date?new Date(sat.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'',fresh=sat.date&&Date.now()-Date.parse(sat.date)<3*864e5;
+      if(sat.inside){out.E+=fresh?25:15;out.ev.push(`ดาวเทียม GISTDA: จุดนี้อยู่ในพื้นที่น้ำท่วม${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วม'+(dd?' '+dd:''),'bad')}
+      else if(sat.dM!=null&&sat.dM<=300){out.E+=fresh?15:10;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)}${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'bad')}
+      else if(sat.dM!=null&&sat.dM<=1000){out.E+=6;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)} · ${sat.near} จุดใน 500 ม.`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'warn')}
+      else{out.ev.push('ดาวเทียม GISTDA (7 วัน): ไม่พบน้ำท่วมใน 1 กม. · ในเมือง/ใต้หลังคาดาวเทียมอาจมองไม่เห็น');chip('ดาวเทียม: ไม่พบ','na')}}
+    else if(ev2&&!sat)out.ev.push('ดาวเทียม GISTDA: ยังไม่ได้เปิดใช้');
+    // 5) ฝน: ปริมาณฝนรายจุด (Open-Meteo) + สถานีวัดฝนใกล้สุด (ThaiWater ≤ 10 กม.)
+    const rain=ev2&&ev2.rain,g=nearestGauge(lat,lng),r24=Math.max(rain?rain.h24:0,g?g.h24:0);
+    if(rain||g){const pts=r24>=90?12:r24>=50?8:r24>=20?4:0;out.E+=pts;
+      out.ev.push(`ฝน 24 ชม.: ${rain?`~${rain.h24} มม. (3 ชม.ล่าสุด ${rain.h3} มม.)`:''}${rain&&g?' · ':''}${g?`สถานีวัดฝน "${g.name}" ห่าง ${m(g.d)} วัดได้ ${g.h24} มม.`:''}${rain&&rain.next3>=5?` · คาดฝนอีก ${rain.next3} มม. ใน 3 ชม.`:''}`);
+      if(r24>=20)chip(`ฝน 24 ชม. ${Math.round(r24)} มม.`,r24>=50?'bad':'warn');
+      if(rain&&rain.next3>=10){out.E+=4;chip(`ฝนหนักใน 3 ชม. (${rain.next3} มม.)`,'bad')}else if(rain&&rain.next3>=5)chip('ฝนจะตกใน 3 ชม.','warn')}
     if(sensorClear&&!active.length&&!near)out.sensorClear=true;
-    if(!near&&!active.length&&!cctv&&!sn){out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');chip(F.loaded?'ไม่มีข้อมูลใกล้จุด':'กำลังโหลดข้อมูล','na')}
+    if(!near&&!active.length&&!cctv&&!sn&&!(sat&&(sat.inside||sat.dM<=1000))){out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');chip(F.loaded?'ไม่มีข้อมูลใกล้จุด':'กำลังโหลดข้อมูล','na')}
     return finish(out,reporterSevere,recentlyCleared);
   }
   function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: เห็นน้ำ',k:'bad'})}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: ไม่เห็นน้ำ',k:'ok'})}}
@@ -116,5 +152,5 @@ const VERIFY=(()=>{
   }
   // กล้องที่ใกล้จุดที่สุด (เรียงตามระยะ)
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
-  return {F,load,assess,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines};
+  const VERIFY={F,load,assess,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

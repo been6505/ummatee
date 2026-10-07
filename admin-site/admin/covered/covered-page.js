@@ -9,7 +9,7 @@ function render(){
   st.hidden=true;
   // นับเคสที่ยังไม่เสร็จที่ตรงกับแต่ละพื้นที่
   const hit=new Map();P.cases.filter(c=>c.status!=='done').forEach(c=>{const m=COVERED.match(c);if(m)m.all.forEach(h=>{const a=hit.get(h.r)||[];a.push(c);hit.set(h.r,a)})});
-  const orgs=[...new Set(rows.map(r=>r.org).filter(Boolean))];
+  const cnt={};rows.forEach(r=>{if(r.org)cnt[r.org]=(cnt[r.org]||0)+1});const orgs=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||a.localeCompare(b,'th'));
   $('#orgs').innerHTML=['',...orgs].map(o=>`<button data-o="${esc(o)}" aria-selected="${o===P.org}">${o?esc(o):'ทั้งหมด'} <small>${o?rows.filter(r=>r.org===o).length:rows.length}</small></button>`).join('');
   const q=P.q.trim().toLowerCase();
   const v=rows.filter(r=>(!P.org||r.org===P.org)&&(!q||[r.org,r.area,r.district,r.note,r.items].join(' ').toLowerCase().includes(q)));

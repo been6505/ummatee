@@ -463,6 +463,60 @@ async function cached(key, ttl, load) {
   return data;
 }
 const UA = { 'user-agent': 'UMplus-flood-help/1.0 (+https://admin-um-help.pages.dev)' };
+
+/* ---------- ข่าว & เตือนภัย: ประกาศกรมอุตุฯ + แผ่นดินไหวใกล้ไทย (TMD Data API) + หัวข้อข่าว (RSS สำนักข่าว) ----------
+   เก็บแค่หัวข้อ แหล่งข่าว เวลา และลิงก์ไปต้นทาง (ไม่คัดลอกเนื้อข่าว) · แคช 10 นาที */
+const TMD_KEY = 'uid=api&ukey=api12345'; // คีย์สาธารณะที่ TMD เปิดให้ทดลองใช้
+const xmlDec = s => String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
+  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+const xmlAll = (s, tag) => [...String(s).matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'g'))].map(m => m[1]);
+const xmlOne = (s, tag) => xmlDec(xmlAll(s, tag)[0] || '');
+const tmdTime = t => { const m = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(t || ''); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], m[4] - 7, +m[5]) : null; }; // เวลาไทย → ms
+// ฟีดของสำนักข่าวโดยตรง (Google News ตอบ 503 กับ Worker) แล้วคัดเฉพาะข่าวที่เกี่ยวกับภัยธรรมชาติ/เตือนภัย
+const NEWS_FEEDS = [['ไทยรัฐ', 'https://www.thairath.co.th/rss/news'], ['มติชน', 'https://www.matichon.co.th/feed'], ['ข่าวสด', 'https://www.khaosod.co.th/feed'], ['ประชาชาติธุรกิจ', 'https://www.prachachat.net/feed']];
+const NEWS_TAGS = [['flood', /น้ำท่วม|น้ำป่า|ล้นตลิ่ง|น้ำหลาก|ระบายน้ำ|เขื่อน|อพยพ|ท่วมขัง|ท่วมสูง|ระดับน้ำ/], ['storm', /พายุ|ฝนตก|ฝนหนัก|ฝนถล่ม|ลูกเห็บ|ลมกระโชก|มรสุม|ดีเปรสชัน|กรมอุตุ|อุตุฯ|คลื่นลมแรง|พยากรณ์อากาศ|สภาพอากาศ/], ['quake', /แผ่นดินไหว|สึนามิ|ดินถล่ม|โคลนถล่ม/], ['alert', /เตือนภัย|ประกาศเตือน|เฝ้าระวัง|ภัยพิบัติ|ปภ\.|บรรเทาสาธารณภัย|ฉุกเฉิน/]];
+async function newsData() {
+  return cached('news-v7', 600, async () => {
+    const out = { ok: true, time: Date.now(), warnings: [], quakes: [], news: [], errors: [] };
+    const get = (u, ms = 12000, h = UA) => fetch(u, { headers: h, signal: AbortSignal.timeout(ms) }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+    const [w, q, ...n] = await Promise.allSettled([
+      get(`https://data.tmd.go.th/api/WeatherWarningNews/v2/?${TMD_KEY}`),
+      get(`https://data.tmd.go.th/api/DailySeismicEvent/v1/?${TMD_KEY}`),
+      ...NEWS_FEEDS.map(([, u]) => get(u, 10000, { 'user-agent': 'Mozilla/5.0 (compatible; UMplus flood help feed reader)', accept: 'application/rss+xml, application/xml;q=0.9, */*;q=0.8' })),
+    ]);
+    if (w.status === 'fulfilled') out.warnings = xmlAll(w.value, 'Warning').map(x => ({
+      title: xmlOne(x, 'TitleThai').replace(/\s+/g, ' '), text: xmlOne(x, 'DescriptionThai').replace(/\s+/g, ' ').slice(0, 1500),
+      announced: tmdTime(xmlOne(x, 'AnnounceDate')), start: tmdTime(xmlOne(x, 'EffectStartDate')), end: tmdTime(xmlOne(x, 'EffectEndDate')),
+      url: xmlOne(x, 'WebUrlThai'), contact: xmlOne(x, 'ContactThai'),
+    })).filter(x => x.title).sort((a, b) => (b.announced || 0) - (a.announced || 0));
+    else out.errors.push('tmd_warning: ' + String(w.reason && w.reason.message || w.reason).slice(0, 120));
+    if (q.status === 'fulfilled') out.quakes = xmlAll(q.value, 'DailyEarthquakes').map(x => ({
+      place: xmlOne(x, 'OriginThai'), time: tmdTime(xmlOne(x, 'DateTimeThai')), mag: +xmlOne(x, 'Magnitude'), depth: +xmlOne(x, 'Depth'),
+      lat: +xmlOne(x, 'Latitude'), lng: +xmlOne(x, 'Longitude'),
+    })).filter(x => x.time && Date.now() - x.time < 3 * 864e5 && x.lat > -2 && x.lat < 28 && x.lng > 88 && x.lng < 112 /* ไทยและประเทศรอบ ๆ */)
+      .sort((a, b) => b.time - a.time).slice(0, 20);
+    else out.errors.push('tmd_quake: ' + String(q.reason && q.reason.message || q.reason).slice(0, 120));
+    const seen = new Set(), names = NEWS_FEEDS.map(f => f[0]);
+    n.forEach((r, i) => {
+      if (r.status !== 'fulfilled') { out.errors.push(names[i] + ': ' + String(r.reason && r.reason.message || r.reason).slice(0, 80)); return; }
+      xmlAll(r.value, 'item').forEach(it => {
+        const source = names[i];
+        let title = xmlOne(it, 'title').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
+        const tags = NEWS_TAGS.filter(([, re]) => re.test(title)).map(([k]) => k);
+        if (!title || !(tags.some(t => t !== 'alert') || /ภัยพิบัติ|ปภ\.|บรรเทาสาธารณภัย|เตือนภัย/.test(title))) return; // ฟีดสำนักข่าวมีทุกหมวด: เก็บเฉพาะข่าวภัยธรรมชาติ/เตือนภัย
+        const key = title.replace(/[\s"'“”‘’]/g, '').slice(0, 40);
+        if (seen.has(key)) return;
+        const link = xmlOne(it, 'link').trim(), t = Date.parse(xmlOne(it, 'pubDate'));
+        if (!/^https:\/\//.test(link) || (!isNaN(t) && Date.now() - t > 3 * 864e5)) return;
+        seen.add(key);
+        out.news.push({ title, source, link, time: isNaN(t) ? null : t, tags });
+      });
+    });
+    out.news.sort((a, b) => (b.time || 0) - (a.time || 0)); out.news = out.news.slice(0, 80);
+    return out;
+  });
+}
 // ระดับน้ำบนถนน: เซ็นเซอร์สำนักการระบายน้ำ กทม. + ระดับน้ำคลอง: ThaiWater (สสน.)
 async function waterData() {
   return cached('water-v1', 300, async () => {
@@ -1145,6 +1199,8 @@ async function api(request, env) {
   const db = env.DB;
   const gm = new URL(request.url).pathname.match(/^\/api\/gistda\/(1day|3days|7days|30days|freq)\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})(?:\.png)?$/);
   if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
+  // ข่าว/เตือนภัยเป็นข้อมูลสาธารณะ ไม่ต้องใช้ฐานข้อมูล
+  if (request.method === 'GET' && new URL(request.url).searchParams.get('action') === 'news') { try { return json(await newsData()); } catch (e) { return json({ ok: false, error: 'news_unavailable' }); } }
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
   await init(db);
   const url = new URL(request.url);

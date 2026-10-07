@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<script>/* ธีม: ค่าเริ่มต้นสว่าง · ปุ่มมุมขวาบน (theme-toggle.js) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+<meta name="theme-color" content="#F2F3F7">
+<title>ข่าวและเตือนภัย · Helpme+ หลังบ้าน</title>
+<link rel="icon" href="../../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../admin.css?v=7">
+<link rel="stylesheet" href="../pages.css?v=12">
+<link rel="stylesheet" href="../theme.css?v=2">
+<link rel="stylesheet" href="../helpme-skin.css?v=24">
+<link rel="stylesheet" href="./news.css?v=1">
+<script src="../icons.js?v=1"></script>
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <img src="../../assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
+    <h1>ข่าวและเตือนภัย · Helpme+</h1>
+    <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
+    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
+    <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
+    <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
+    <p class="err" id="login-err" role="alert"></p>
+    <a class="back" href="../../">← กลับหน้าเว็บหลัก</a>
+  </form>
+</section>
+<div id="app" hidden>
+  <header class="top">
+    <a class="brand" href="../../admin.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>หลังบ้าน</b></span></a>
+    <nav class="tabs" aria-label="เมนูหลังบ้าน"><a href="../dashboard/">แดชบอร์ด</a><a href="../../admin.html">จัดการเคส</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/" aria-current="page">ข่าว</a></nav>
+    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
+  </header>
+  <main class="wrap" id="main">
+    <div class="nw-head">
+      <div><h1 class="nw-h1">ข่าวและเตือนภัย</h1>
+      <p class="muted">ประกาศเตือนภัยจากกรมอุตุนิยมวิทยา แผ่นดินไหวใกล้ไทย และหัวข้อข่าวล่าสุด · อัปเดตเองทุก 10 นาที</p></div>
+    </div>
+    <p class="status" id="status">กำลังโหลดข่าว…</p>
+    <div class="nw-grid">
+      <div class="nw-col">
+        <section class="nw-card" aria-labelledby="h-warn">
+          <h2 id="h-warn"><i data-ic="alert"></i> ประกาศเตือนภัย กรมอุตุนิยมวิทยา</h2>
+          <div id="warn"></div>
+          <a class="nw-more" href="https://www.tmd.go.th/warning-and-events/warning-storm" target="_blank" rel="noopener">ดูประกาศทั้งหมดที่เว็บกรมอุตุฯ ↗</a>
+        </section>
+        <section class="nw-card" aria-labelledby="h-quake">
+          <h2 id="h-quake">แผ่นดินไหวใกล้ไทย (3 วันล่าสุด)</h2>
+          <div id="quake"></div>
+        </section>
+        <section class="nw-card" aria-labelledby="h-links">
+          <h2 id="h-links">แหล่งข้อมูลและสายด่วน</h2>
+          <ul class="nw-links">
+            <li><a href="https://www.tmd.go.th/" target="_blank" rel="noopener">กรมอุตุนิยมวิทยา ↗</a><span>สายด่วน 1182</span></li>
+            <li><a href="https://www.disaster.go.th/" target="_blank" rel="noopener">กรมป้องกันและบรรเทาสาธารณภัย (ปภ.) ↗</a><span>สายด่วน 1784</span></li>
+            <li><a href="https://www.thaiwater.net/" target="_blank" rel="noopener">คลังข้อมูลน้ำแห่งชาติ ThaiWater ↗</a><span>ระดับน้ำ / ฝน</span></li>
+            <li><a href="https://floodboard.org/" target="_blank" rel="noopener">Floodboard ↗</a><span>น้ำท่วมถนน กทม.</span></li>
+            <li><a href="https://www.prbangkok.com/" target="_blank" rel="noopener">ประชาสัมพันธ์ กทม. ↗</a><span>สายด่วน 1555</span></li>
+          </ul>
+        </section>
+      </div>
+      <section class="nw-card nw-news" aria-labelledby="h-news">
+        <div class="nw-news-top">
+          <h2 id="h-news">ข่าวล่าสุด</h2>
+          <input id="q" type="search" placeholder="ค้นหาข่าว เช่น ชื่อเขต จังหวัด" aria-label="ค้นหาข่าว">
+        </div>
+        <div class="seg" role="tablist" id="tags" aria-label="กรองประเภทข่าว"></div>
+        <ol class="nw-list" id="news"></ol>
+        <p class="muted small">หัวข้อข่าวจากไทยรัฐ มติชน ข่าวสด ประชาชาติธุรกิจ (3 วันล่าสุด เฉพาะข่าวภัยธรรมชาติ/เตือนภัย) · กดหัวข้อเพื่ออ่านที่เว็บต้นทาง · ตรวจสอบกับประกาศทางการก่อนส่งต่อ</p>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="../common.js?v=1"></script>
+<script src="./news.js?v=1"></script>
+<script src="../theme-toggle.js?v=2"></script>
+<script src="../chat.js?v=5"></script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
+</body>
+</html>

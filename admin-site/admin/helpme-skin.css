@@ -81,6 +81,7 @@ input[type=search],input[type=text],input[type=number],input[type=date],input[ty
     overflow-x:auto;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
   .tabs a{flex:1 0 auto;text-align:center;padding:10px 10px!important;font-size:13px!important}
+  @media(max-width:440px){.tabs a{padding:10px 5px!important;font-size:12.5px!important;letter-spacing:-.1px}}
   .brand span{display:none}
   .brand{padding:6px}
   .top-r{margin-left:auto}
@@ -358,3 +359,6 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .tip-photos{display:flex;gap:4px;margin-top:6px}
 .tip-photos img{width:96px;height:96px;object-fit:cover;border-radius:8px;display:block;background:#dde2e8}
 .tip-photos em{display:grid;place-items:center;width:40px;border-radius:8px;background:#dde2e8;color:#3b4650;font-style:normal;font-weight:700}
+/* พื้นที่มอบแล้ว: แสดงชื่อองค์กรครบทุกชื่อ (ขึ้นบรรทัดใหม่แทนการเลื่อนข้าง) */
+.cv-tools #orgs{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%;overflow:visible;border-radius:18px!important}
+.cv-tools #orgs button{flex:none;white-space:nowrap}

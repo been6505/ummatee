@@ -362,3 +362,9 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 /* พื้นที่มอบแล้ว: แสดงชื่อองค์กรครบทุกชื่อ (ขึ้นบรรทัดใหม่แทนการเลื่อนข้าง) */
 .cv-tools #orgs{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%;overflow:visible;border-radius:18px!important}
 .cv-tools #orgs button{flex:none;white-space:nowrap}
+
+/* พื้นที่มอบแล้ว: หมุดหยดน้ำแบบเดียวกับหน้าแรก (สีม่วง = พื้นที่ที่องค์กรอื่นมอบแล้ว · จาง = ตำแหน่งโดยประมาณ) */
+.um-pin.cov span{background:#7b3fc4}.um-pin.cov.approx span{opacity:.6;border-style:dashed}
+.cv-leg .lg-c{background:#E5383B!important;border-radius:50% 50% 50% 0!important;transform:rotate(-45deg);width:11px!important;height:11px!important;box-shadow:0 0 0 2px #fff}
+.cv-leg .lg-p{border-radius:50% 50% 50% 0!important;transform:rotate(-45deg)}
+.um-pin.cov span::after{content:"✓";width:auto;height:auto;background:none;color:#fff;font:800 12px/1 system-ui,sans-serif;left:50%;top:50%;transform:translate(-50%,-50%) rotate(45deg)}

@@ -54,7 +54,7 @@
         <select id="f-status" aria-label="สถานะ"><option value="active">ยังไม่เสร็จ</option><option value="open">รอความช่วยเหลือ</option><option value="going">ทีมกำลังไป</option><option value="done">ช่วยเหลือแล้ว</option><option value="all">ทั้งหมด</option></select>
         <select id="f-urg" aria-label="ความเร่งด่วน"><option value="">ทุกระดับ</option><option value="3">วิกฤต</option><option value="2">เร่งด่วน</option><option value="1">ทั่วไป</option></select>
         <select id="f-need" aria-label="ความต้องการ"><option value="">ทุกความต้องการ</option><option>อพยพ</option><option value="ผู้ป่วย">ผู้ป่วย / ผู้สูงอายุ</option><option value="อาหาร">อาหาร / น้ำดื่ม</option><option>ยา</option><option>ของใช้เด็ก</option><option value="เรือ">เรือ / รถสูง</option><option value="อื่น">อื่น ๆ</option></select>
-        <select id="f-vr" aria-label="ผลตรวจพื้นที่"><option value="">ผลตรวจ: ทั้งหมด</option><option value="verified">ลำบาก + ยืนยันแล้ว</option><option value="confirmed">วิกฤตจริง</option><option value="likely">น่าจะวิกฤต</option><option value="conflict">ข้อมูลขัดแย้ง</option><option value="unverified">รอตรวจเพิ่ม</option><option value="notcrit">ไม่น่าวิกฤต</option><option value="covered">องค์กรอื่นรับแล้ว</option><option value="notcovered">ยังไม่มีองค์กรอื่นรับ</option><option value="nopin">ยืนยันไม่ได้ (ไม่มีพิกัด/ที่อยู่)</option></select>
+        <select id="f-vr" aria-label="ผลตรวจพื้นที่"><option value="">ผลตรวจ: ทั้งหมด</option><option value="verified">ลำบาก + ยืนยันแล้ว</option><option value="confirmed">วิกฤตจริง</option><option value="likely">น่าจะวิกฤต</option><option value="conflict">ข้อมูลขัดแย้ง</option><option value="unverified">รอตรวจเพิ่ม</option><option value="notcrit">ไม่น่าวิกฤต</option><option value="covered">องค์กรอื่นเคยส่งมอบใกล้เคียง</option><option value="notcovered">ยังไม่มีองค์กรอื่นส่งมอบใกล้เคียง</option><option value="nopin">ยืนยันไม่ได้ (ไม่มีพิกัด/ที่อยู่)</option></select>
         <select id="f-zone" aria-label="โซน"><option value="">ทุกโซน</option></select>
         <select id="f-sort" aria-label="เรียงตาม"><option value="urg">เรียง: วิกฤตก่อน</option><option value="new">เรียง: ใหม่สุด</option><option value="old">เรียง: รอนานสุด</option><option value="ppl">เรียง: คนมากสุด</option><option value="score">เรียง: คะแนนวิกฤต (ตรวจพื้นที่)</option></select>
         </div>
@@ -86,7 +86,7 @@
 
 <script src="./admin/verify.js?v=5"></script>
 <script src="./admin/covered.js?v=9"></script>
-<script src="./admin.js?v=14"></script>
+<script src="./admin.js?v=15"></script>
 <script src="./admin/ofm.js?v=1"></script>
 <script src="./admin/camlive.js?v=7"></script>
 <script src="./admin/mapx.js?v=12"></script>

@@ -3,7 +3,7 @@
    - กล้อง: iTIC Foundation · เส้นทาง: Valhalla (FOSSGIS) เลี่ยงจุดน้ำท่วม, สำรองด้วย OSRM
    ใช้ตัวแปรจาก admin.js: A, api, post, sev, URG, ST, hasPin, esc, toast, render, openDrawer */
 const MX=(()=>{
-  const S={map:null,zones:[],roster:[],L:{},on:{},side:'zones',zoneId:null,form:null,preview:null,route:null,start:null,picking:false,drawn:{}};
+  const S={map:null,zones:[],roster:[],L:{},on:{},side:'route',zoneId:null,form:null,preview:null,route:null,start:null,picking:false,drawn:{}};
   const LAYERS=[['cases','<i data-ic="pin"></i> เคส'],['roads','<i data-ic="road"></i> ถนนน้ำท่วม'],['sensors','<i data-ic="drop"></i> น้ำบนถนน (กทม.)'],['stations','<i data-ic="wave"></i> ระดับน้ำคลอง'],['cams','<i data-ic="cam"></i> กล้อง CCTV'],['gistda','<i data-ic="sat"></i> น้ำท่วมจากดาวเทียม 7 วัน (GISTDA)'],['zones','⭕ โซน']];
   const DEF={cases:1,roads:1,sensors:1,stations:1,cams:0,gistda:0,zones:1};
   const ZCOL=['#2a78d6','#0ca30c','#8e44ad','#e67e22','#16a085','#c0392b','#d81b60','#546e7a'];
@@ -21,7 +21,7 @@ const MX=(()=>{
   /* ---------- โหลดโซน + ทีม ---------- */
   async function loadZones(){try{const [z,r]=await Promise.all([api({action:'zones',key:A.key}),api({action:'roster',key:A.key})]);
       if(z&&z.ok)S.zones=z.zones||[];if(r&&r.ok)S.roster=r.roster||[];fillZoneFilter();drawZones();renderSide()}catch(e){}}
-  function fillZoneFilter(){const sel=$('#f-zone');if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">ทุกโซน</option>'+S.zones.map(z=>`<option value="${esc(z.id)}">โซน ${esc(z.name)}</option>`).join('');sel.value=S.zones.some(z=>z.id===v)?v:''}
+  function fillZoneFilter(){const sel=$('#f-zone');if(!sel)return;sel.hidden=!S.zones.length;const v=sel.value;sel.innerHTML='<option value="">ทุกโซน</option>'+S.zones.map(z=>`<option value="${esc(z.id)}">โซน ${esc(z.name)}</option>`).join('');sel.value=S.zones.some(z=>z.id===v)?v:''}
 
   /* ---------- ติดตั้งบนแผนที่: หน้าตาแบบหน้าเว็บหลัก (แผนที่เต็มพื้นที่ + ปุ่มลอยขวาบน + เมนูชั้นข้อมูล + คำอธิบายสีมุมซ้ายบน) ---------- */
   const ICON={layers:'<path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/>',locate:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
@@ -91,7 +91,7 @@ const MX=(()=>{
     S.zones.forEach(z=>{const st=zoneStats(z);L.circle([z.lat,z.lng],{radius:z.radius,color:z.color,weight:2,fillColor:z.color,fillOpacity:S.zoneId===z.id?.16:.06,dashArray:S.zoneId===z.id?null:'6 6',interactive:false}).addTo(S.L.zones);
       L.marker([z.lat,z.lng],{icon:L.divIcon({className:'zlab',html:`<span style="border-color:${esc(z.color)}"><i style="background:${esc(z.color)}"></i>${esc(z.name)}${st.crit?` <b>${st.crit}</b>`:''}</span>`,iconSize:null}),keyboard:false})
         .bindTooltip(`<b>โซน ${esc(z.name)}</b><br>ยังไม่เสร็จ ${st.act} เคส${st.crit?` · วิกฤต ${st.crit}`:''} · ${st.teams.length} ทีม`)
-        .on('click',()=>{if(S.form||S.picking)return;S.side='zone';S.zoneId=z.id;drawZones();renderSide()}).addTo(S.L.zones)})}
+        .on('click',()=>{if(S.picking)return;R.src='zone:'+z.id;renderSide()}).addTo(S.L.zones)})}
   function zoneStats(z){const act=A.cases.filter(c=>c.status!=='done'&&inZone(c,z));return {act:act.length,crit:act.filter(c=>sev(c)===3).length,open:act.filter(c=>c.status==='open').length,ppl:act.reduce((s,c)=>s+(Number(c.people)||1),0),teams:S.roster.filter(t=>t.zone===z.name)}}
   function legend(){const el=$('#map-legend');if(!el)return;const p=[];
     if(S.on.cases)p.push(`<span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span><i class="lp done"></i>ช่วยแล้ว</span>`);
@@ -108,14 +108,10 @@ const MX=(()=>{
   function clearPreview(){if(S.preview){S.map.removeLayer(S.preview);S.preview=null}}
 
   /* ---------- แผงด้านข้าง ---------- */
-  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:S.zones.length?`โซน ${S.zones.length} · จัดเส้นทาง`:'โซน · จัดเส้นทาง'}</span></button><div class="ms-tabs"><button data-side="zones" aria-selected="${S.side==='zones'||S.side==='zone'}">⭕ โซน</button><button data-side="route" aria-selected="${S.side==='route'}"><i data-ic="route"></i> จัดเส้นทาง</button></div>${h}`};
+  const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:'จัดเส้นทาง'}</span></button>${h}`};
+  // หน้า "โซน / เพิ่มโซน" ถูกเอาออก: แผงด้านข้างแสดงจัดเส้นทางอย่างเดียว (โซนเดิมที่มีอยู่ยังใช้เป็น "เคสจาก" ในจัดเส้นทางได้)
   function renderSide(){if(!$('#map-side'))return;
-    if(S.form)return side(zoneForm());
-    if(S.side==='zone'&&zoneOf(S.zoneId))return side(zoneDetail(zoneOf(S.zoneId)));
-    if(S.side==='route')return side(routePanel());
-    side(`<div class="ms-h"><b>โซนทั้งหมด</b><button class="btn primary sm" data-z-add>+ เพิ่มโซน</button></div>`+(S.zones.length?S.zones.map(z=>{const st=zoneStats(z);
-      return `<button class="zcard" data-z-open="${esc(z.id)}"><i style="background:${esc(z.color)}"></i><span><b>${esc(z.name)}</b><small>ยังไม่เสร็จ ${st.act} เคส${st.crit?` · <em>วิกฤต ${st.crit}</em>`:''} · ${st.ppl} คน · ${st.teams.length} ทีม · รัศมี ${(z.radius/1000).toFixed(1)} กม.</small></span></button>`}).join('')
-      :`<p class="muted small">ยังไม่มีโซน แบ่งพื้นที่เป็นโซนเพื่อจัดทีมรับผิดชอบ และกรองเคสตามโซนได้</p>`))}
+    side(routePanel())}
   function zoneForm(){const f=S.form;
     return `<div class="ms-h"><b>${f.id?'แก้ไขโซน':'เพิ่มโซนใหม่'}</b></div>
     <p class="ms-tip ${f.lat==null?'wait':''}">${f.lat==null?'<i data-ic="hand"></i> แตะบนแผนที่เพื่อวางจุดกลางโซน':'<i data-ic="check"></i> วางจุดกลางแล้ว แตะที่อื่นเพื่อย้าย'}</p>

@@ -21,8 +21,8 @@
     const m=e.data;
     if(m.type==='count')setBadge(m.n);
     if(m.type==='accepted'&&typeof load==='function')load();
-    if(m.type==='openCase'){show('cases');const go=()=>{if(A.cases.some(c=>c.id===m.id))openDrawer(m.id)};
-      if(A.cases.some(c=>c.id===m.id))go();else Promise.resolve(load()).then(()=>setTimeout(go,300))}});
+    if(m.type==='openCase'){show('cases');const has=()=>typeof findCase==='function'?!!findCase(m.id):A.cases.some(c=>c.id===m.id),go=()=>{if(has())openDrawer(m.id)};
+      if(has())go();else Promise.resolve(load()).then(()=>setTimeout(go,300))}});
   // จำนวนรอคัดบนปุ่ม (ไม่ต้องเปิดมุมมองก่อน)
   async function count(){if(!A.key)return;try{const r=await api({action:'leads',key:A.key,days:30});if(r&&r.ok)setBadge(r.leads.filter(l=>l.status==='new').length)}catch(e){}}
   count();setInterval(()=>{if(!document.hidden&&box.hidden)count()},120000);

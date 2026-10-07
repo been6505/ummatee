@@ -34,21 +34,34 @@ function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;
   $('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
   try{const r=await api({action:'list',key:k});
-    if(r&&r.ok&&r.volunteer){A.key=k;store.set('uh_vol_key',k,$('#login-remember').checked);store.set('uh_vol_ok','1',$('#login-remember').checked);$('#login-key').value='';setCases(r);showApp();render();startPolling();loadFlood();if(typeof MX!=='undefined')MX.loadZones()}
+    if(r&&r.ok&&r.volunteer){A.key=k;store.set('uh_vol_key',k,$('#login-remember').checked);store.set('uh_vol_ok','1',$('#login-remember').checked);$('#login-key').value='';setCases(r);showApp();render();loadHM();startPolling();loadFlood();if(typeof MX!=='undefined')MX.loadZones()}
     else $('#login-err').textContent='รหัสไม่ถูกต้อง';
   }catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'}
   finally{$('#login-go').disabled=false}});
 $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';A.cases=[];closeDrawer();$('#list').replaceChildren();showLogin('ออกจากระบบแล้ว')});
 
 /* ---------- โหลดข้อมูล ---------- */
-function setCases(r){A.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.loaded=Date.now()}
+function setCases(r){A.own=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.loaded=Date.now();mergeCases()}
+/* ---------- เคสจาก Help Me (Google Sheet) = ข้อมูลหลัก · ชุดเดียวกับหน้าแดชบอร์ด ----------
+   เคส Help Me แก้สถานะที่นี่ไม่ได้ (ต้นทางอยู่ที่ชีตของ Help Me) → แสดงแบบอ่านอย่างเดียว + ปุ่มเปิดใน Help Me
+   เคสขององค์กรที่รับมาจาก Help Me (ในบันทึกมีลิงก์ ?case=) ไม่แสดงซ้ำ ใช้ข้อมูลจาก Help Me แทน */
+const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
+const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
+const isHM=id=>String(id).startsWith('hm-');
+async function loadHM(){if(!A.key)return;
+  try{const r=await api({action:'helpme_cases',key:A.key});
+    if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render()}
+  }catch(e){}}
+function mergeCases(){const own=A.own||[];if(!A.hm){A.cases=own;return}
+  const link=new Map();own.forEach(c=>{const m=String(c.notes||'').match(HM_LINK);if(m)link.set(m[1],c.id)});
+  A.cases=[...A.hm.map(c=>link.has(c.hmId)?{...c,local:link.get(c.hmId)}:c),...own.filter(c=>{const m=String(c.notes||'').match(HM_LINK);return !(m&&A.hm.some(h=>h.hmId===m[1]))})]}
 async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').textContent='กำลังโหลด…';
   try{const r=await api({action:'list',key:A.key});
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
-    setCases(r);render();
+    setCases(r);render();loadHM();
     // ลิงก์ admin.html#<รหัสเคส> (เช่นจากหน้าเคสจากโซเชียล) เปิดเคสนั้นทันที ครั้งเดียว
-    const h=decodeURIComponent(location.hash.slice(1));if(h&&A.cases.some(c=>c.id===h)){history.replaceState(null,'',location.pathname);openDrawer(h)}
+    const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);openDrawer(h)}
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
 let pollT=null;
@@ -99,12 +112,14 @@ function vrBadge(c){const v=vr(c);return covBadge(c)+`<span class="vr vr-${v.res
 
 /* ---------- แสดงผล ---------- */
 function render(){
-  const all=A.cases,n=s=>all.filter(c=>c.status===s).length,act=all.filter(c=>c.status!=='done');
+  // การ์ดสรุปนับจากเคส Help Me (ชุดเดียวกับแดชบอร์ด) ถ้ายังโหลดไม่ได้ใช้เคสในระบบไปก่อน
+  const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>c.status===s).length,act=base.filter(c=>c.status!=='done');
   const ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
-  $('#stats').innerHTML=[['ทั้งหมด',all.length,''],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red'],['รอความช่วยเหลือ',n('open'),'wait'],['ทีมกำลังไป',n('going'),'go'],['ช่วยเหลือแล้ว',n('done'),'done'],['คนที่ยังรอ',ppl,''],['ครัวเรือนที่ยังรอ',hhs||'–',''],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,''],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red'],['รอความช่วยเหลือ',n('open'),'wait'],['ทีมกำลังไป',n('going'),'go'],['ช่วยเหลือแล้ว',n('done'),'done'],['คนที่ยังรอ',ppl,''],['ครัวเรือนที่ยังรอ',hhs||'–',''],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
   const list=filtered();
-  $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`;
+  const ownOnly=all.length-(A.hm?A.hm.length:0);
+  $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`+(A.hm?` · Help Me ${A.hm.length}${ownOnly?` + ขององค์กร ${ownOnly}`:''}`:' · กำลังโหลดเคส Help Me…');
   $('#sync').textContent=(A.loaded?'อัปเดต '+new Date(A.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'')+(VERIFY.F.error?' · '+VERIFY.F.error:VERIFY.F.loaded?' · น้ำท่วม '+new Date(VERIFY.F.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'');
   if(A.mode!=='map'){if(document.activeElement&&document.activeElement.matches('.bag-in')){A.pendingList=true}else renderList(list)}
   if(A.mode!=='list')drawMap(list);
@@ -117,14 +132,14 @@ function renderList(list){
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
-      <td data-l="สถานะ"><select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select></td>
+      <td data-l="สถานะ">${c.hm?`<span class="st st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</span> <small class="hm-tag">Help Me</small>`:`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
-      <td data-l="ถุงยังชีพ" class="bag"><input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small></td>
+      <td data-l="ถุงยังชีพ" class="bag">${c.hm?'<small>—</small>':`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
       <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?'':'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
       <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
-      <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.id)}</small></td>
+      <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
       <td class="act"><button class="btn ghost sm" data-open="${esc(c.id)}">ดู</button></td></tr>`}).join('')+'</tbody></table>';
 }
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
@@ -133,7 +148,7 @@ $('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');
 $('#list').addEventListener('focusout',e=>{if(e.target.matches('.bag-in')&&A.pendingList){A.pendingList=false;setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('.bag-in'))render()},0)}});
 $('#list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.bag-in'))e.target.blur()});
 /* ---------- ถุงยังชีพ ---------- */
-async function saveBags(id,val,inp){
+async function saveBags(id,val,inp){if(isHM(id))return;
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   const v=String(val).trim()===''?'':Math.max(0,Math.min(9999,Math.round(Number(val)||0)));
   if(String(v)===String(c.bags==null?'':c.bags))return;
@@ -146,7 +161,7 @@ async function saveBags(id,val,inp){
   finally{if(inp)inp.disabled=false}}
 
 /* ---------- เปลี่ยนสถานะ ---------- */
-async function changeStatus(id,status,sel,team){
+async function changeStatus(id,status,sel,team){if(isHM(id)){toast('เคส Help Me เปลี่ยนสถานะที่ Help Me');return}
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   if(status===c.status&&!team)return;
   if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
@@ -191,7 +206,9 @@ async function saveCctv(id,val){
   catch(e){c.cctv=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}}
 
 /* ---------- รายละเอียด ---------- */
-function openDrawer(id){A.openId=String(id);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
+// รหัสเคสในระบบที่ถูกรวมเข้ากับเคส Help Me → เปิดเคส Help Me ที่ตรงกันแทน
+const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
+function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
 function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
@@ -202,7 +219,7 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
-  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.id)}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
+  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
     ${covSection(c)}${vrSection(c)}
     <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
@@ -211,13 +228,15 @@ function renderDrawer(){
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
       <button class="btn ghost" id="d-copy">คัดลอกข้อมูลเคส</button>
     </div>
-    <fieldset class="d-status"><legend>เปลี่ยนสถานะ</legend>
+    ${c.hm?`<fieldset class="d-status"><legend>สถานะ (ข้อมูลจาก Help Me)</legend>
+      <p class="small">เคสนี้มาจาก Google Sheet ของ Help Me${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} — เปลี่ยนสถานะ/รับเคสที่ Help Me แล้วหน้านี้จะอัปเดตเอง</p>
+      <a class="btn primary" target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดเคสใน Help Me ↗</a></fieldset>`:`<fieldset class="d-status"><legend>เปลี่ยนสถานะ</legend>
       <input id="d-team" placeholder="ชื่อทีม / อาสา" value="${esc(c.volunteer||store.get('uh_team'))}" maxlength="60">
       <div class="d-st-btns">${Object.entries(ST).map(([k,v])=>`<button class="btn ${c.status===k?'primary':'ghost'}" data-dst="${k}">${v}</button>`).join('')}</div>
-    </fieldset>`;
+    </fieldset>`}`;
   $('#d-close').onclick=closeDrawer;
-  d.querySelectorAll('[data-cctv]').forEach(b=>b.onclick=()=>saveCctv(c.id,b.dataset.cctv));
-  $('#d-copy').onclick=()=>{const txt=[`เคส #${c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
+  d.querySelectorAll('[data-cctv]').forEach(b=>{if(c.hm)b.remove();else b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
+  $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
   d.querySelectorAll('[data-dst]').forEach(b=>b.onclick=()=>{const team=$('#d-team').value.trim();if(b.dataset.dst==='going'&&!team){toast('ใส่ชื่อทีมก่อนรับเคส');$('#d-team').focus();return}changeStatus(c.id,b.dataset.dst,null,b.dataset.dst==='open'?'':team)});
 }

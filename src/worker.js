@@ -851,6 +851,8 @@ async function helpmeCases(env, db) {
   const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
   return { ok: true, time: Date.now(), cases: all.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer,
+    // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null,
     level: HM_LEVEL_CODE[String(c.level || '').split(' (')[0].trim()] || '', levelText: c.level || '' })) };
 }
 async function helpmeStatsLive(env, db) {

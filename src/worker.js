@@ -513,7 +513,7 @@ const PROV_LL = {'กรุงเทพมหานคร':[13.756,100.502],'ก
 const HILLY = new Set('เชียงราย เชียงใหม่ แม่ฮ่องสอน น่าน พะเยา แพร่ ลำปาง ลำพูน อุตรดิตถ์ ตาก สุโขทัย พิษณุโลก เพชรบูรณ์ เลย กาญจนบุรี ราชบุรี เพชรบุรี ประจวบคีรีขันธ์ ชุมพร ระนอง สุราษฎร์ธานี นครศรีธรรมราช กระบี่ พังงา ภูเก็ต ตรัง สตูล ยะลา นราธิวาส จันทบุรี ตราด นครนายก ปราจีนบุรี สระบุรี ชัยภูมิ กำแพงเพชร อุทัยธานี'.split(' '));
 const HZ_TYPES = ['sinkhole', 'landslide', 'flashflood', 'quake', 'tsunami', 'fire', 'storm', 'hail', 'heavyrain', 'flood', 'other'];
 async function hazardsData(env) {
-  return cached('hazards-v1', 600, async () => {
+  return cached('hazards-v2', 600, async () => {
     const out = { ok: true, time: Date.now(), quakes: [], fires: [], gdacs: [], weather: [], errors: [] };
     const get = (u, h = UA, ms = 15000) => fetch(u, { headers: h, signal: AbortSignal.timeout(ms) }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r; });
     const names = Object.keys(PROV_LL), d10 = new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10), today = new Date().toISOString().slice(0, 10);
@@ -529,7 +529,7 @@ async function hazardsData(env) {
       lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], depth: f.geometry.coordinates[2], mag: f.properties.mag, place: f.properties.place, time: f.properties.time, tsunami: !!f.properties.tsunami, url: f.properties.url }));
     else out.errors.push('usgs');
     if (tmdq.status === 'fulfilled') xmlAll(tmdq.value, 'DailyEarthquakes').forEach(x => { const q = { src: 'กรมอุตุฯ', place: xmlOne(x, 'OriginThai'), time: tmdTime(xmlOne(x, 'DateTimeThai')), mag: +xmlOne(x, 'Magnitude'), depth: +xmlOne(x, 'Depth'), lat: +xmlOne(x, 'Latitude'), lng: +xmlOne(x, 'Longitude'), tsunami: false };
-      if (q.time && inRegion(q.lat, q.lng) && !out.quakes.some(u => Math.abs(u.time - q.time) < 120e3 && km(u.lat, u.lng, q.lat, q.lng) < 80)) out.quakes.push(q); });
+      if (q.time && Date.now() - q.time < 7 * 864e5 && q.mag >= 2.5 && inRegion(q.lat, q.lng) && !out.quakes.some(u => Math.abs(u.time - q.time) < 120e3 && km(u.lat, u.lng, q.lat, q.lng) < 80)) out.quakes.push(q); });
     if (fire.status === 'fulfilled') out.fires = (fire.value.features || []).filter(f => f.properties?.ct_en === 'Thailand' || f.properties?.pv_tn).map(f => { const p = f.properties || {};
       return { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], conf: p.confidence || '', frp: p.frp, time: (p.timestamp || 0) * 1000, province: p.pv_tn || '', amphoe: p.ap_tn || '', lu: p.lu_name || '' }; });
     else out.errors.push('fires');

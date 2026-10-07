@@ -684,7 +684,7 @@ async function sheetCases(env) {
     return { id: v(r, 'รหัสเคส'), createdAt: sheetTime(v(r, 'เวลาแจ้ง')), updatedAt: sheetTime(v(r, 'อัปเดตล่าสุด')),
       status: HM_STATUS[v(r, 'สถานะ')] || 'open', urgency: HM_URG[v(r, 'ความเร่งด่วน')] || 1, name: v(r, 'ชื่อ'), phone: v(r, 'เบอร์โทร').replace(/^'/, ''),
       notes: all('รายละเอียด').map(i => String(r[i] || '').trim()).filter(Boolean).join(' · '), people: Number(v(r, 'จำนวนคน')) || 1, address,
-      district: dm ? dm[1] : '', addrDistrict: (address.match(/เขต\s*([ก-๙]+)/) || [])[1] && BKK_DISTRICTS.includes(address.match(/เขต\s*([ก-๙]+)/)[1]) ? address.match(/เขต\s*([ก-๙]+)/)[1] : '', /* เฉพาะที่เขียน "เขต…" ชัด ๆ (ชื่อถนนอย่างลาดพร้าวไม่นับ) */ lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
+      district: dm ? dm[1] : '', addrDistrict: bkkDistrictOf(address), lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
       needs: v(r, 'ต้องการ').split(/\s*,\s*/).filter(Boolean), volunteer: v(r, 'ทีมอาสา'), org: v(r, 'หน่วยงาน'), pinSrc: v(r, 'ที่มาของหมุด'),
       pickedAt: sheetTime(v(r, 'เวลารับเคส')), doneAt: sheetTime(v(r, 'เวลาช่วยเสร็จ')),
       // รูปจากผู้แจ้ง: ลิงก์ Google Drive (คั่นบรรทัด) → เก็บแค่รหัสไฟล์ แบบเดียวกับแอป Help Me
@@ -844,7 +844,7 @@ async function cctvAiCheck(env, p) {
   const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180);
   if (lat == null || lng == null) return { ok: false, error: 'missing' };
   const now = Date.now() / 1000, all = (await allCams()).cams;
-  const near = all.filter(c => c.img && (!c.at || now - c.at < 3 * 3600)) // ไม่มีเวลาภาพ = กล้องภาพสด
+  const near = all.filter(c => c.img && (c.hls || (c.at > 0 && now - c.at < 3 * 3600))) // ภาพสด iTIC หรือภาพนิ่งที่รู้เวลาและไม่เกิน 3 ชม.
     .map(c => ({ ...c, d: Math.round(camDistM(lat, lng, c.lat, c.lng)) })).filter(c => c.d <= 2000)
     .sort((a, b) => a.d - b.d).slice(0, 2);
   const checks = await Promise.all(near.map(async c => {
@@ -903,11 +903,28 @@ async function fillDistricts(db, cases) {
    เจอ → ใช้หมุดใหม่ (เก็บหมุดเดิมไว้ใน pinCheck) · ไม่เจอ → คงหมุดเดิม แต่ติดป้ายว่าหมุดอาจผิด
    ผลค้นทั้งสองทางจำไว้ใน meta (หมุด→เขต: hmd:, ที่อยู่→พิกัด: hmg:) จึงเรียก Photon เฉพาะครั้งแรก */
 const normD = d => String(d || '').replace(/^เขต\s*/, '').replace(/\s+/g, '').trim();
+// เขตที่ "เขียนชัด" ในที่อยู่ (ต้องมีคำว่า เขต) · รับชื่อที่ติดคำต่อท้าย เช่น "เขตบางกะปิกรุงเทพ" · ชื่อถนนอย่าง "ลาดพร้าว 130" ไม่นับ
+function bkkDistrictOf(address) {
+  for (const m of String(address || '').matchAll(/เขต\s*([ก-๙]+)/g)) {
+    const d = [...BKK_DISTRICTS].sort((a, b) => b.length - a.length).find(x => m[1].startsWith(x));
+    if (d) return d;
+  }
+  return '';
+}
+// หมุดอยู่ที่ไหน (จาก Photon reverse): เขตใน กทม. → ชื่อเขต · จังหวัดอื่น → "จังหวัด…" (ผิดแน่) · ไม่รู้เขต (มีแค่ "กรุงเทพมหานคร") → '-' ไม่ตัดสิน
+function pinPlace(p) {
+  const d = String(p.district || '').replace(/^เขต\s*/, '').trim();
+  if (d && BKK_DISTRICTS.includes(d)) return d;
+  const st = String(p.state || '').trim();
+  if (st && !/กรุงเทพ/.test(st)) return st.startsWith('จังหวัด') ? st : 'จังหวัด' + st;
+  return '-';
+}
 async function checkPins(db, cases) {
   if (!db) return;
   const pinned = cases.filter(c => c.addrDistrict && c.lat != null && c.lng != null);
   if (!pinned.length) return;
-  const rkey = c => 'hmd:' + c.lat.toFixed(3) + ',' + c.lng.toFixed(3), known = new Map();
+  // ค้นด้วยพิกัดจริง (ทศนิยม 5 ≈ 1 ม.) แยก cache จาก fillDistricts ที่ปัดพิกัดและใช้ชื่อเมืองแทนได้
+  const rkey = c => 'hmp:' + c.lat.toFixed(5) + ',' + c.lng.toFixed(5), known = new Map();
   const keys = [...new Set(pinned.map(rkey))];
   for (let i = 0; i < keys.length; i += 90) {
     const part = keys.slice(i, i + 90), { results } = await db.prepare(`SELECT k,v FROM meta WHERE k IN (${part.map(() => '?').join(',')})`).bind(...part).all();
@@ -919,8 +936,7 @@ async function checkPins(db, cases) {
     const [lat, lng] = k.slice(4).split(',').map(Number);
     try {
       const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=default`, { headers: UA, cf: { cacheTtl: 86400 } });
-      const p = ((await r.json()).features || [])[0]?.properties || {};
-      const d = String(p.district || p.county || p.city || '').replace(/^เขต\s*/, '').trim() || '-';
+      const d = pinPlace(((await r.json()).features || [])[0]?.properties || {});
       known.set(k, d); await setMeta(db, k, d);
     } catch (e) {}
   }
@@ -968,8 +984,7 @@ async function fixOwnPins(db, rows) {
   const cand = rows.filter(r => r.status !== 'done' && r.lat != null && r.lng != null && r.lat !== '' && /เขต/.test(r.address || ''));
   if (!cand.length) return;
   const objs = cand.map(r => {
-    const m = String(r.address).match(/เขต\s*([ก-๙]+)/), d = m && BKK_DISTRICTS.find(x => m[1].startsWith(x));
-    return { row: r, address: r.address, addrDistrict: d || '', lat: Number(r.lat), lng: Number(r.lng) };
+    return { row: r, address: r.address, addrDistrict: bkkDistrictOf(r.address), lat: Number(r.lat), lng: Number(r.lng) };
   }).filter(o => o.addrDistrict && isFinite(o.lat) && isFinite(o.lng));
   if (!objs.length) return;
   await checkPins(db, objs);
@@ -1206,7 +1221,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }

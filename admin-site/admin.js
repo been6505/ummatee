@@ -53,8 +53,11 @@ async function loadHM(){if(!A.key)return;
     if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render()}
   }catch(e){}}
 function mergeCases(){const own=A.own||[];if(!A.hm){A.cases=own;return}
-  const link=new Map();own.forEach(c=>{const m=String(c.notes||'').match(HM_LINK);if(m)link.set(m[1],c.id)});
-  A.cases=[...A.hm.map(c=>link.has(c.hmId)?{...c,local:link.get(c.hmId)}:c),...own.filter(c=>{const m=String(c.notes||'').match(HM_LINK);return !(m&&A.hm.some(h=>h.hmId===m[1]))})]}
+  // เคสของเราที่เป็นสำเนาเคส Help Me: รหัสเดียวกัน (ยกมาตรง ๆ) หรือบันทึกมีลิงก์ ?case= (รับมาจากคิวโซเชียล)
+  const hmIds=new Set(A.hm.map(h=>h.hmId)),hmOf=c=>hmIds.has(String(c.id))?String(c.id):((String(c.notes||'').match(HM_LINK)||[])[1]||'');
+  const link=new Map();own.forEach(c=>{const h=hmOf(c);if(h&&hmIds.has(h))link.set(h,c)});
+  // แสดงเคส Help Me ใบเดียว แต่ยังใช้ข้อมูลที่ทีมเราบันทึกในสำเนา (จำนวนถุงยังชีพ ผลดูกล้อง ครัวเรือน)
+  A.cases=[...A.hm.map(c=>{const o=link.get(c.hmId);return o?{...c,local:o.id,bags:o.bags,cctv:o.cctv||c.cctv,households:o.households}:c}),...own.filter(c=>!hmIds.has(hmOf(c)))]}
 async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').textContent='กำลังโหลด…';
   try{const r=await api({action:'list',key:A.key});
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
@@ -236,20 +239,23 @@ async function saveCctv(id,val){
 // รหัสเคสในระบบที่ถูกรวมเข้ากับเคส Help Me → เปิดเคส Help Me ที่ตรงกันแทน
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
 function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
-function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
+function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').dataset.case='';$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
 /* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
 // ผลตรวจหมุดเทียบที่อยู่ (หลังบ้านตรวจให้ เฉพาะเคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต)
 function pinNote(c){const p=c.pinCheck;if(!p)return '';const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
-  if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
-  return ` · ⚠️ หมุดอยู่${/^(อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
+  if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
+  return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
 const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed';
 // รูปจากผู้แจ้ง (เคส Help Me): รหัสไฟล์ Google Drive ที่ Help Me แชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
 const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
+  // วาดใหม่โดยไม่ทิ้งสิ่งที่ผู้ใช้กำลังทำ: ชื่อทีมที่พิมพ์ค้าง ส่วนที่กางไว้ ตำแหน่งเลื่อน และช่องที่โฟกัสอยู่
+  const same=d.dataset.case===String(c.id),keep=same?{team:(d.querySelector('#d-team')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:''}:null;
+  d.dataset.case=String(c.id);
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
@@ -273,6 +279,7 @@ function renderDrawer(){
   d.querySelectorAll('[data-cctv]').forEach(b=>{if(c.hm)b.remove();else b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
+  if(keep){const t=d.querySelector('#d-team');if(t&&keep.team!=null)t.value=keep.team;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dst]').forEach(b=>b.onclick=()=>{const team=$('#d-team').value.trim();if(b.dataset.dst==='going'&&!team){toast('ใส่ชื่อทีมก่อนรับเคส');$('#d-team').focus();return}changeStatus(c.id,b.dataset.dst,null,b.dataset.dst==='open'?'':team)});
 }
 

@@ -5,6 +5,7 @@
   "workers_dev": false,
   "routes": [
     { "pattern": "helpme4u.com", "custom_domain": true },
-    { "pattern": "www.helpme4u.com", "custom_domain": true }
+    { "pattern": "www.helpme4u.com", "custom_domain": true },
+    { "pattern": "admin.helpme4u.com", "custom_domain": true }
   ]
 }

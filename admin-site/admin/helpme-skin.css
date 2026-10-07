@@ -311,6 +311,9 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .d-photos>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
 .d-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#dde2e8}
 .has-photo{display:block;color:#5b6670}
+.row-photos{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;cursor:zoom-in}
+.row-photos img{width:56px;height:56px;object-fit:cover;border-radius:8px;display:block;background:#dde2e8}
+.row-photos em{display:grid;place-items:center;width:56px;height:56px;border-radius:8px;background:#dde2e8;color:#3b4650;font-style:normal;font-weight:700}
 
 /* รายละเอียดเคสบนจอกว้าง: แผงกว้างแบ่ง 2 คอลัมน์ เห็นครบในหน้าจอเดียวไม่ต้องเลื่อน
    ซ้าย = สถานการณ์ · รูป · ผลตรวจพื้นที่ · ขวา = ข้อมูลเคส · ปุ่ม · สถานะ (มือถือยังเป็นคอลัมน์เดียว) */

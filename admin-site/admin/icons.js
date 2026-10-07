@@ -72,7 +72,7 @@ Object.assign(ICONS,{
   hand:'<path d="M7 11.5V6.5a1.5 1.5 0 0 1 3 0V11M10 10V4.5a1.5 1.5 0 0 1 3 0V10M13 10V5.5a1.5 1.5 0 0 1 3 0V11M16 11V8a1.5 1.5 0 0 1 3 0v6a7 7 0 0 1-7 7h-.5a6.5 6.5 0 0 1-5.4-2.9L3.5 14a1.6 1.6 0 0 1 2.6-1.8L7 13.5"/>',
   live:'<circle cx="12" cy="12" r="2.5"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/>',
   drop:'<path d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3z"/>',
-  board:'<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>',
+  expand:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',board:'<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>',
   box:'<path d="m21 8-9-5-9 5v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/>'
 });
 
@@ -90,3 +90,6 @@ function umPin(k,o={}){
     html:`<svg viewBox="0 0 32 42" width="32" height="42" aria-hidden="true"><path class="pb" d="M16 1.5C8 1.5 1.5 7.9 1.5 15.8c0 9.9 11.6 21.9 13.6 23.9a1.3 1.3 0 0 0 1.8 0c2-2 13.6-14 13.6-23.9C30.5 7.9 24 1.5 16 1.5z"/>${mark}</svg>`+(o.extra||''),
     iconSize:[32,42],iconAnchor:[16,41],popupAnchor:[0,-38],tooltipAnchor:[0,-34]});
 }
+
+/* แถบเมนูล่างบนมือถือเลื่อนข้างได้: เลื่อนให้เห็นเมนูของหน้าปัจจุบัน */
+addEventListener('load',()=>{const t=document.querySelector('.tabs'),a=t&&t.querySelector('[aria-current=page]');if(a&&t.scrollWidth>t.clientWidth)t.scrollLeft=a.offsetLeft-(t.clientWidth-a.offsetWidth)/2});

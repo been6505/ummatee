@@ -684,9 +684,11 @@ async function sheetCases(env) {
     return { id: v(r, 'รหัสเคส'), createdAt: sheetTime(v(r, 'เวลาแจ้ง')), updatedAt: sheetTime(v(r, 'อัปเดตล่าสุด')),
       status: HM_STATUS[v(r, 'สถานะ')] || 'open', urgency: HM_URG[v(r, 'ความเร่งด่วน')] || 1, name: v(r, 'ชื่อ'), phone: v(r, 'เบอร์โทร').replace(/^'/, ''),
       notes: all('รายละเอียด').map(i => String(r[i] || '').trim()).filter(Boolean).join(' · '), people: Number(v(r, 'จำนวนคน')) || 1, address,
-      district: dm ? dm[1] : '', lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
+      district: dm ? dm[1] : '', addrDistrict: (address.match(/เขต\s*([ก-๙]+)/) || [])[1] && BKK_DISTRICTS.includes(address.match(/เขต\s*([ก-๙]+)/)[1]) ? address.match(/เขต\s*([ก-๙]+)/)[1] : '', /* เฉพาะที่เขียน "เขต…" ชัด ๆ (ชื่อถนนอย่างลาดพร้าวไม่นับ) */ lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
       needs: v(r, 'ต้องการ').split(/\s*,\s*/).filter(Boolean), volunteer: v(r, 'ทีมอาสา'), org: v(r, 'หน่วยงาน'), pinSrc: v(r, 'ที่มาของหมุด'),
-      pickedAt: sheetTime(v(r, 'เวลารับเคส')), doneAt: sheetTime(v(r, 'เวลาช่วยเสร็จ')) };
+      pickedAt: sheetTime(v(r, 'เวลารับเคส')), doneAt: sheetTime(v(r, 'เวลาช่วยเสร็จ')),
+      // รูปจากผู้แจ้ง: ลิงก์ Google Drive (คั่นบรรทัด) → เก็บแค่รหัสไฟล์ แบบเดียวกับแอป Help Me
+      photos: v(r, 'รูปภาพ').match(/[-\w]{25,}/g) || [] };
   }).filter(c => c.id);
 }
 /* แท็บที่มีคอลัมน์พิกัด (ลิงก์ Google Maps หรือ "lat, lng") และ "แสดงบนแผนที่" */
@@ -896,6 +898,70 @@ async function fillDistricts(db, cases) {
   }
   need.forEach(c => { const d = known.get(key(c)); if (d && d !== '-') c.district = d; });
 }
+/* ตรวจหมุดเทียบที่อยู่ (เคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต):
+   หมุดตกคนละเขตกับที่อยู่ → ค้นที่อยู่ด้วย Photon ในกรุงเทพฯ แล้วใช้ผลที่ตกในเขตเดียวกับที่อยู่เท่านั้น
+   เจอ → ใช้หมุดใหม่ (เก็บหมุดเดิมไว้ใน pinCheck) · ไม่เจอ → คงหมุดเดิม แต่ติดป้ายว่าหมุดอาจผิด
+   ผลค้นทั้งสองทางจำไว้ใน meta (หมุด→เขต: hmd:, ที่อยู่→พิกัด: hmg:) จึงเรียก Photon เฉพาะครั้งแรก */
+const normD = d => String(d || '').replace(/^เขต\s*/, '').replace(/\s+/g, '').trim();
+async function checkPins(db, cases) {
+  if (!db) return;
+  const pinned = cases.filter(c => c.addrDistrict && c.lat != null && c.lng != null);
+  if (!pinned.length) return;
+  const rkey = c => 'hmd:' + c.lat.toFixed(3) + ',' + c.lng.toFixed(3), known = new Map();
+  const keys = [...new Set(pinned.map(rkey))];
+  for (let i = 0; i < keys.length; i += 90) {
+    const part = keys.slice(i, i + 90), { results } = await db.prepare(`SELECT k,v FROM meta WHERE k IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+    results.forEach(r => known.set(r.k, r.v));
+  }
+  let asked = 0;
+  for (const k of keys) {
+    if (known.has(k) || asked >= 25) continue; asked++;
+    const [lat, lng] = k.slice(4).split(',').map(Number);
+    try {
+      const r = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=default`, { headers: UA, cf: { cacheTtl: 86400 } });
+      const p = ((await r.json()).features || [])[0]?.properties || {};
+      const d = String(p.district || p.county || p.city || '').replace(/^เขต\s*/, '').trim() || '-';
+      known.set(k, d); await setMeta(db, k, d);
+    } catch (e) {}
+  }
+  let searched = 0;
+  // ค้นจากละเอียดไปหยาบ: ที่อยู่เต็ม → ส่วนถนน/ซอย → ซอยหลัก (ตัด /2, แยก) → แขวง → เขต · รับเฉพาะผลที่อยู่ในเขตตามที่อยู่
+  const variants = c => {
+    const full = String(c.address).split(' · ')[0].replace(/\(.*?\)/g, ' ').replace(/([ก-๙])(\d)/g, '$1 $2').replace(/\s+/g, ' ').trim().slice(0, 160);
+    const street = full.split(/\s*แขวง/)[0].replace(/^(บ้านเลขที่|เลขที่)?\s*[\d/-]+\s*/, '').trim();
+    const soi = street.replace(/\s*แยก.*$/, '').replace(/(\d+)\/\d+/, '$1').trim();
+    const kw = (full.match(/แขวง\s*([ก-๙]+)/) || [])[1];
+    const v = [[full, 'ที่อยู่'], [street, 'ซอย/ถนน'], [soi, 'ซอยหลัก'], [kw ? 'แขวง' + kw + ' เขต' + c.addrDistrict : '', 'แขวง'], ['เขต' + c.addrDistrict, 'เขต']];
+    return v.filter(([q], i) => q && q.length >= 4 && v.findIndex(([x]) => x === q) === i);
+  };
+  for (const c of pinned) {
+    const pinD = known.get(rkey(c));
+    if (!pinD || pinD === '-' || normD(pinD) === normD(c.addrDistrict)) continue;
+    const gkey = 'hmg2:' + String(c.address).slice(0, 160);
+    let hit = await getMeta(db, gkey);
+    if (!hit && searched < 12) {
+      try {
+        for (const [q, level] of variants(c)) {
+          if (searched >= 12) { hit = ''; break; }
+          searched++;
+          const u = 'https://photon.komoot.io/api?limit=8&lang=default&lat=13.75&lon=100.6&bbox=100.3,13.45,100.98,14.0&q=' + encodeURIComponent(q + ' กรุงเทพ');
+          const fs = ((await (await fetch(u, { headers: UA, cf: { cacheTtl: 86400 } })).json()).features || []);
+          const f = fs.find(f => normD(f.properties && (f.properties.district || f.properties.county)) === normD(c.addrDistrict));
+          if (f) { hit = [f.geometry.coordinates[1].toFixed(6), f.geometry.coordinates[0].toFixed(6), level, clean(f.properties.name || f.properties.street || '', 80)].join('|'); break; }
+          hit = '-';
+        }
+        if (hit) await setMeta(db, gkey, hit);
+      } catch (e) { hit = ''; }
+    }
+    const from = { lat: c.lat, lng: c.lng, district: pinD };
+    if (hit && hit !== '-') {
+      const [la, ln, level, label] = hit.split('|');
+      c.pinCheck = { status: 'fixed', from, addrDistrict: c.addrDistrict, level, label };
+      c.lat = Number(la); c.lng = Number(ln);
+    } else if (hit === '-') c.pinCheck = { status: 'mismatch', from, addrDistrict: c.addrDistrict };
+    else c.pinCheck = { status: 'pending', from, addrDistrict: c.addrDistrict }; // ยังค้นไม่ถึงในรอบนี้
+  }
+}
 const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i; // เคสทดสอบในชีต ไม่นับในสถิติ
 /* เคส Help Me รายเคสสำหรับการ์ดตัวเลขของแดชบอร์ด (เฉพาะรหัสทีม) · ไม่ส่งชื่อ/เบอร์ */
 // ระดับน้ำในชีต Help Me → รหัสของ Helpme+ (ช่วงใช้ค่าบน) ให้ผลตรวจพื้นที่คิดคะแนนได้ · "แห้ง" ไม่มีรหัส
@@ -912,12 +978,13 @@ function hmLevelCode(text) {
   return ''; // รวม "แห้ง / ต่ำกว่าข้อเท้า"
 }
 async function helpmeCases(env, db) {
-  const cases = await sheetCases(env); await fillDistricts(db, cases);
+  const cases = await sheetCases(env); await fillDistricts(db, cases); await checkPins(db, cases);
   const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
   return { ok: true, time: Date.now(), cases: all.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, volunteer: c.volunteer,
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null,
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, photos: c.photos || [],
+    pinCheck: c.pinCheck || null,
     level: hmLevelCode(c.level), levelText: c.level || '' })) };
 }
 async function helpmeStatsLive(env, db) {

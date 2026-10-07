@@ -42,21 +42,26 @@ const CAMLIVE=(()=>{
   const img=s=>{const i=new Image();i.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);return i},CAM_IMG=img(CAM_SVG),LIVE_IMG=img(LIVE_SVG),OLD_IMG=img(OLD_SVG);
   let CamMarker=null;
   function camMarker(ll,opt,live){if(!CamMarker)CamMarker=L.CircleMarker.extend({_updatePath(){const r=this._renderer;if(!r._drawing||this._empty())return;
-      const im=this.options.live?LIVE_IMG:this.options.old?OLD_IMG:CAM_IMG;if(!im.complete||!im.naturalWidth)return L.CircleMarker.prototype._updatePath.call(this);const p=this._point,z=24;r._ctx.drawImage(im,p.x-z/2,p.y-z/2,z,z)}});
+      const im=this.options.live?LIVE_IMG:this.options.old?OLD_IMG:CAM_IMG;if(!im.complete||!im.naturalWidth)return L.CircleMarker.prototype._updatePath.call(this);const p=this._point,z=this._map&&this._map.getZoom()>=16?24:18;r._ctx.drawImage(im,p.x-z/2,p.y-z/2,z,z)}});
     return new CamMarker(ll,{...opt,live,old:opt.old})}
-  const MIN_ZOOM=12;
+  // กล้องมีราว 1,400 ตัว: แสดงตั้งแต่ซูม 14 (ระดับย่าน) · กล้องที่ภาพค้างเกิน 3 ชม. แสดงเฉพาะซูม 16 ขึ้นไป ไม่ให้บังหมุดเคส
+  const MIN_ZOOM=14,STALE_ZOOM=16;
   /* layer(map, cams) → {remove()} · ซ่อนเองเมื่อซูมออก · ป๊อปอัปเล่นภาพสด/ภาพนิ่ง */
   function layer(map,cams,onZoomHint){
     const rd=L.canvas({padding:.3}),lives=cams.filter(c=>c.hls),byId=new Map();
     const km=(a,b)=>{const R=6371,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
     // กล้องภาพนิ่ง: หากล้องภาพสดที่ใกล้ที่สุดในรัศมี 5 กม. ไว้ให้กดสลับไปดู
     cams.forEach(c=>{if(c.hls||!lives.length)return;let best=null;for(const l of lives){const d=km(c,l);if(d<=5&&(!best||d<best.km))best={c:l,km:d}}if(best)c._near=best});
-    const g=L.layerGroup(cams.map(c=>{const mk=bind(camMarker([c.lat,c.lng],{renderer:rd,radius:12,weight:0,fillOpacity:0,old:!!stale(c)},!!c.hls).bindPopup(()=>html(c),{maxWidth:320,minWidth:280,offset:[0,-6],autoPanPaddingTopLeft:[190,70],autoPanPaddingBottomRight:[70,40]}));byId.set(c.id,mk);return mk}));
+    const mkOf=c=>{const mk=bind(camMarker([c.lat,c.lng],{renderer:rd,radius:12,weight:0,fillOpacity:0,old:!!stale(c)},!!c.hls).bindPopup(()=>html(c),{maxWidth:320,minWidth:280,offset:[0,-6],autoPanPaddingTopLeft:[190,70],autoPanPaddingBottomRight:[70,40]}));byId.set(c.id,mk);return mk};
+    const g=L.layerGroup(cams.filter(c=>!stale(c)).map(mkOf)),gs=L.layerGroup(cams.filter(c=>stale(c)).map(mkOf));
     const go=e=>{const b=e.target.closest&&e.target.closest('[data-golive]');if(!b)return;const mk=byId.get(b.dataset.golive);if(!mk)return;map.closePopup();map.setView(mk.getLatLng(),Math.max(map.getZoom(),MIN_ZOOM));mk.openPopup()};
     map.getContainer().addEventListener('click',go);
-    const sync=()=>{const show=map.getZoom()>=MIN_ZOOM;if(show&&!map.hasLayer(g))g.addTo(map);else if(!show&&map.hasLayer(g))map.removeLayer(g);if(onZoomHint)onZoomHint(show)};
+    const sync=()=>{const z=map.getZoom(),show=z>=MIN_ZOOM,old=z>=STALE_ZOOM;
+      if(show&&!map.hasLayer(g))g.addTo(map);else if(!show&&map.hasLayer(g))map.removeLayer(g);
+      if(old&&!map.hasLayer(gs))gs.addTo(map);else if(!old&&map.hasLayer(gs))map.removeLayer(gs);
+      rd._redraw&&rd._redraw();if(onZoomHint)onZoomHint(show)};
     [CAM_IMG,LIVE_IMG].forEach(i=>{if(!i.complete)i.onload=()=>rd._redraw&&rd._redraw()});
     map.on('zoomend',sync);sync();
-    return {remove(){map.off('zoomend',sync);map.getContainer().removeEventListener('click',go);map.removeLayer(g)},count:cams.length}}
+    return {remove(){map.off('zoomend',sync);map.getContainer().removeEventListener('click',go);map.removeLayer(g);map.removeLayer(gs)},count:cams.length}}
   return {html,bind,start,stop,layer,MIN_ZOOM}
 })();

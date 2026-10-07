@@ -304,3 +304,10 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 [data-theme="dark"] .vr-chip.k-ok{background:rgba(46,158,87,.18);color:#7fe0a3}
 [data-theme="dark"] .vr-ai{background:rgba(255,255,255,.05)}
 [data-theme="dark"] .vr-ai-shots small{color:#9aa6b0}
+
+/* รูปจากผู้แจ้ง (เคส Help Me) ในหน้ารายละเอียด */
+.d-photos{margin:10px 0}
+.d-photos>b{display:block;font-size:14px;margin-bottom:6px}
+.d-photos>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.d-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block;background:#dde2e8}
+.has-photo{display:block;color:#5b6670}

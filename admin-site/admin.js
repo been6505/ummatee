@@ -156,10 +156,10 @@ function renderList(list){
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
       <td data-l="สถานะ">${c.hm?`<span class="st st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</span> <small class="hm-tag">Help Me</small>`:`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}</td>
-      <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}</td>
+      <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<small class="has-photo">📷 ${photosOf(c).length} รูป</small>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
       <td data-l="ถุงยังชีพ" class="bag">${c.hm?'<small>—</small>':`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
-      <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?'':'<small class="warn">ไม่มีหมุด</small>'}</td>
+      <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?(pinWarn(c)?'<small class="warn">หมุดอาจผิด</small>':c.pinCheck?'<small class="muted">หมุดปรับจากที่อยู่</small>':''):'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
       <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
       <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
@@ -241,13 +241,21 @@ $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
 /* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
+// ผลตรวจหมุดเทียบที่อยู่ (หลังบ้านตรวจให้ เฉพาะเคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต)
+function pinNote(c){const p=c.pinCheck;if(!p)return '';const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
+  if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
+  return ` · ⚠️ หมุดอยู่${/^(อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
+const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed';
+// รูปจากผู้แจ้ง (เคส Help Me): รหัสไฟล์ Google Drive ที่ Help Me แชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
+const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
-    ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
+    ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
+    ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy"></a>`).join('')}</div></div>`:''}
     ${covSection(c)}${vrSection(c)}
     <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">

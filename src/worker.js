@@ -51,6 +51,8 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
   // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
+  // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
+  `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
   `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
@@ -68,7 +70,7 @@ async function init(db) {
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
     // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
-      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -299,7 +301,7 @@ async function saveRoster(db, b) {
   return { ok: true, id };
 }
 async function listRoster(db) {
-  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck,warroom FROM roster WHERE active=1 ORDER BY name').all();
+  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck,warroom,gmaps FROM roster WHERE active=1 ORDER BY name').all();
   // ทีมที่ยังไม่มีลิงก์เฉพาะทีม: สร้างให้
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
@@ -331,7 +333,7 @@ async function teamMe(db, t) {
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
-      status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, inRoster: !!r.id },
+      status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', inRoster: !!r.id },
     hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => outCase(c, true)), live: live || null, supplies: stock.map(s => s.name), now };
 }
 async function callStart(db, team, from, b) {
@@ -418,6 +420,7 @@ const TEAM_POST = {
   },
   call_start: (db, t, b) => callStart(db, t.name, 'team', b),
   chat_send: (db, t, b) => chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }),
+  team_gmaps: (db, t, b) => setTeamGmaps(db, t.name, b.gmaps),
   chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
 };
 /* SOS ที่ยังไม่มีใครรับทราบ + สายที่ทีมโทรเข้ามาภายใน 2 นาที (แสดงทุกหน้าหลังบ้าน) */
@@ -443,6 +446,50 @@ async function saveZone(db, b) {
     .bind(id, name, color, lat, lng, clampInt(z.radius, 100, 30000, 1500), clean(z.note, 200), Date.now(), clean(b.by, 60)).run();
   return { ok: true, id };
 }
+/* ---------- ประกาศแจ้งเตือนรายพื้นที่ ----------
+   scope: all (ทุกพื้นที่) · province (จังหวัด) · district (เขต/อำเภอ) · circle (รัศมีจากจุด)
+   level: info ข่าวสาร · warn เฝ้าระวัง · danger อันตราย/อพยพ · อ่านได้ทุกคน (ข้อมูลสาธารณะ) เขียนได้เฉพาะ CENTRAL */
+const BC_LEVELS = ['info', 'warn', 'danger'], BC_SCOPES = ['all', 'province', 'district', 'circle'];
+const bcOut = b => ({ id: b.id, level: b.level, title: b.title, body: b.body || '', link: b.link || '', scope: b.scope,
+  provinces: String(b.provinces || '').split(',').filter(Boolean), districts: String(b.districts || '').split(',').filter(Boolean),
+  lat: b.lat, lng: b.lng, radiusKm: b.radiusKm, createdAt: b.createdAt, expiresAt: b.expiresAt, cancelledAt: b.cancelledAt || null });
+async function listBroadcasts(db, all) {
+  const now = Date.now();
+  const q = all ? db.prepare('SELECT * FROM broadcasts WHERE createdAt>? ORDER BY createdAt DESC LIMIT 200').bind(now - 30 * 864e5)
+    : db.prepare('SELECT * FROM broadcasts WHERE cancelledAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 50').bind(now);
+  const { results } = await q.all();
+  return { ok: true, now, broadcasts: results.map(b => all ? { ...bcOut(b), by: b.by_ || '', warroom: b.warroom || '' } : bcOut(b)) };
+}
+async function saveBroadcast(db, b) {
+  const x = b.broadcast || {}, now = Date.now();
+  const level = BC_LEVELS.includes(x.level) ? x.level : 'info', scope = BC_SCOPES.includes(x.scope) ? x.scope : 'all';
+  const title = clean(x.title, 120), body = clean(x.body, 1000), link = /^https:\/\/[^\s<>"']{4,300}$/.test(String(x.link || '')) ? String(x.link) : '';
+  if (!title) return { ok: false, error: 'missing_title' };
+  const list = (v, n) => (Array.isArray(v) ? v : String(v || '').split(/[,\n]/)).map(y => clean(y, 40).replace(/^(เขต|จังหวัด|จ\.)\s*/, '')).filter(Boolean).slice(0, n);
+  const provinces = scope === 'province' ? list(x.provinces, 20).map(provName) : [], districts = scope === 'district' ? list(x.districts, 60) : [];
+  const lat = scope === 'circle' ? num(x.lat, -90, 90) : null, lng = scope === 'circle' ? num(x.lng, -180, 180) : null, radiusKm = scope === 'circle' ? num(x.radiusKm, 0.1, 300) : null;
+  if (scope === 'province' && !provinces.length || scope === 'district' && !districts.length || scope === 'circle' && (lat == null || lng == null || radiusKm == null)) return { ok: false, error: 'missing_area' };
+  const hours = Math.min(168, Math.max(1, Number(x.hours) || 24)), id = 'B' + rand(5);
+  await db.prepare('INSERT INTO broadcasts (id,level,title,body,link,scope,provinces,districts,lat,lng,radiusKm,createdAt,expiresAt,by_,warroom) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, level, title, body, link, scope, provinces.join(','), districts.join(','), lat, lng, radiusKm, now, now + hours * 3600e3, clean(b.by, 60), clean(x.warroom, 20)).run();
+  await setMeta(db, 'bc_rev', String(now));
+  return { ok: true, id };
+}
+async function cancelBroadcast(db, b) {
+  const r = await db.prepare('UPDATE broadcasts SET cancelledAt=? WHERE id=? AND cancelledAt IS NULL').bind(Date.now(), clean(b.id, 20)).run();
+  await setMeta(db, 'bc_rev', String(Date.now()));
+  return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' };
+}
+/* ลิงก์แชร์ตำแหน่งสดจาก Google Maps (ทำงานต่อแม้ล็อกจอ ไม่ต้องลงแอปเพิ่ม) · ว่าง = ลบ */
+const GMAPS_RE = /^https:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|(?:www\.)?google\.(?:com|co\.th)\/maps|maps\.google\.(?:com|co\.th))\/[^\s<>"']{0,300}$/i;
+async function setTeamGmaps(db, team, link) {
+  const m = String(link || '').match(/https:\/\/[^\s<>"']+/), url = m ? m[0] : '';
+  if (url && !GMAPS_RE.test(url)) return { ok: false, error: 'not_gmaps' };
+  const r = await db.prepare('UPDATE roster SET gmaps=?, updatedAt=? WHERE name=? AND active=1').bind(url, Date.now(), team).run();
+  if (url) await chatSend(db, { team, from: 'team', text: 'แชร์ตำแหน่งสดผ่าน Google Maps: ' + url });
+  return r.meta.changes ? { ok: true, gmaps: url } : { ok: false, error: 'not_in_roster' };
+}
+
 /* ---------- War Room ย่อย ---------- */
 const WR_ROLES = ['lead', 'ops', 'dispatch', 'stock', 'comms', 'medic', 'staff'];
 async function listWarrooms(db) {
@@ -1416,6 +1463,9 @@ async function api(request, env) {
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       case 'warrooms': return json(vol ? await listWarrooms(db) : { ok: false, error: 'not_volunteer' });
+      // ประกาศที่ยังมีผล: สาธารณะ (หน้าบ้าน Help Me / หน้าทีม) · ทั้งหมด 30 วัน: เฉพาะ CENTRAL
+      case 'broadcasts': return json(await listBroadcasts(db, false));
+      case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
@@ -1437,7 +1487,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

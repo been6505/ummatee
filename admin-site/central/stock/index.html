@@ -32,7 +32,7 @@
 <div id="app" hidden>
   <header class="top">
     <a class="brand" href="../../central.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
-    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/" aria-current="page">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a></nav>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/" aria-current="page">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a></nav>
     <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
   </header>
   <main class="wrap" id="main">
@@ -79,5 +79,6 @@
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
+<script src="../../bc.js?v=1" data-mode="staff" defer></script>
 </body>
 </html>

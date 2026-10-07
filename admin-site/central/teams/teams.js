@@ -62,7 +62,7 @@ function render(){
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
     return `<article class="team st-${esc(t.status)}${sosOn(t)?' sos':''}" data-team-id="${esc(t.id)}"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.members?t.members+' คน':'',t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุรายละเอียด'}</small></div>
       <select class="tst tst-${esc(t.status)}" data-tst="${esc(t.id)}" aria-label="สถานะทีม ${esc(t.name)}">${Object.entries(TST).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
-      <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${liveTag(t)}${lv?`<button class="linkish" data-track="${esc(t.name)}"><i data-ic="pin"></i> ติดตาม</button>`:''}</div>
+      <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${liveTag(t)}${lv?`<button class="linkish" data-track="${esc(t.name)}"><i data-ic="pin"></i> ติดตาม</button>`:''}${/^https:\/\//.test(t.gmaps||'')?`<a class="linkish gm" href="${esc(t.gmaps)}" target="_blank" rel="noopener" title="ตำแหน่งสดที่ทีมแชร์จาก Google Maps (ส่งต่อแม้ล็อกจอ)"><i data-ic="live"></i> ตำแหน่งสด Google Maps ↗</a>`:''}</div>
       ${typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(t,{caseText:g[0]?TEAMCALL.caseText(g[0]):''}):''}
       ${g.length?`<ul class="tcases">${g.map(c=>`<li><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน <small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}</small> <button class="linkish" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยแล้ว</button></li>`).join('')}</ul>`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}
       <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><span><button class="btn ghost sm" data-tlink="${esc(t.id)}"><i data-ic="link"></i> ลิงก์ทีม</button> <button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></span></div></article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
@@ -139,11 +139,15 @@ function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
     <label class="fld"><span>พื้นที่รับผิดชอบ</span><input name="zone" maxlength="80" placeholder="เช่น บึงกุ่ม, ลาดพร้าว" value="${esc(t.zone)}"></label>
     <label class="fld"><span>สถานะ</span><select name="status">${Object.entries(TST).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></label>
     <label class="fld"><span>หมายเหตุ</span><input name="note" maxlength="300" value="${esc(t.note)}"></label>
+    <label class="fld"><span>ลิงก์ตำแหน่งสด Google Maps (ไม่บังคับ)</span><input name="gmaps" inputmode="url" maxlength="300" placeholder="https://maps.app.goo.gl/…" value="${esc(t.gmaps||'')}"></label>
     <div class="form-act"><button class="btn primary" type="submit">บันทึก</button>${t.id?'<button class="btn ghost" type="button" id="t-off">ปิดทีมนี้</button>':''}</div>
   </form>`;
   d.hidden=false;$('#drawer-bg').hidden=false;
   $('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm;
-  $('#tform').onsubmit=async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));if(!fd.name.trim())return;if(await saveTeam({...t,...fd,id:t.id||''}))closeForm()};
+  $('#tform').onsubmit=async e=>{e.preventDefault();const fd=Object.fromEntries(new FormData(e.target));if(!fd.name.trim())return;
+    const gm=String(fd.gmaps||'').trim();delete fd.gmaps;
+    if(gm&&!/^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.(com|co\.th)\/maps|maps\.google\.)/.test((gm.match(/https:\/\/\S+/)||[''])[0])){toast('ลิงก์ต้องเป็นลิงก์แชร์จาก Google Maps เช่น https://maps.app.goo.gl/…');return}
+    if(await saveTeam({...t,...fd,id:t.id||''})){if(gm!==(t.gmaps||''))await apiPost({action:'team_gmaps',team:fd.name.trim(),gmaps:gm}).catch(()=>{});closeForm();loadAll()}};
   const off=$('#t-off');if(off)off.onclick=async()=>{if(await saveTeam({...t,active:false},`ปิดทีม ${t.name} แล้ว`))closeForm()};
   setTimeout(()=>d.querySelector('input').focus(),50)}
 function closeForm(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}

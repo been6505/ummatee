@@ -21,6 +21,7 @@ const waitTxt=t=>{const m=mins(t);if(m==null)return '';if(m<60)return m+' นา
 const vol=c=>String(c.volunteer||'').replace(/^'/,'').trim();
 const photos=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 const thumb=(id,w=96)=>`https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w${w}`;
+const navLink=(lat,lng)=>`https://www.google.com/maps/dir/?api=1&destination=${+lat},${+lng}&travelmode=driving`;
 const caseLink=c=>'../../central.html#'+encodeURIComponent(c.src==='hm'?'hm-'+c.id:c.id);
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,s=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(s))};
 const normD=d=>String(d||'').replace(/^เขต\s*/,'').replace(/\s+/g,'');
@@ -114,7 +115,7 @@ function queue(V){
   $('#queue').innerHTML=q.length?q.map(c=>{const ph=photos(c);return `<li class="u${sev(c)}">${ph.length?`<a class="qimg" href="${caseLink(c)}" aria-label="ดูเคส"><img src="${thumb(ph[0],120)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w120" alt="รูปจากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b>${ph.length}</b>`:''}</a>`:'<span class="qimg none"><i data-ic="image"></i></span>'}
     <a class="qtx" href="${caseLink(c)}"><span class="tag">${URG[sev(c)]}</span><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b>
       <small>${esc([c.district?'เขต'+c.district:'',(c.people||1)+' คน'].filter(Boolean).join(' · '))} · รอ ${esc(waitTxt(c.createdAt))}${hasPin(c)?'':' · ไม่มีหมุด'}</small></a>
-    ${hasPin(c)?`<button type="button" class="lnk" data-fly="${+c.lat},${+c.lng}" aria-label="ดูบนแผนที่"><i data-ic="pin"></i></button>`:''}</li>`}).join(''):'<li class="muted">ไม่มีเคสค้างที่ยังไม่มีทีมรับ</li>';
+    ${hasPin(c)?`<span class="qact"><button type="button" class="lnk" data-fly="${+c.lat},${+c.lng}" aria-label="ดูบนแผนที่" title="ดูบนแผนที่"><i data-ic="pin"></i></button><a class="lnk" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" aria-label="นำทางด้วย Google Maps" title="นำทาง (Google Maps)"><i data-ic="nav"></i></a></span>`:''}</li>`}).join(''):'<li class="muted">ไม่มีเคสค้างที่ยังไม่มีทีมรับ</li>';
 }
 function teamRows(V){const live=new Map(W.live.map(l=>[l.team,l])),sos=new Set((W.alerts.sos||[]).map(s=>s.name));
   const load=new Map();W.cases.filter(c=>c.status==='going').forEach(c=>{const v=vol(c);if(v)load.set(v,(load.get(v)||0)+1)});
@@ -124,7 +125,7 @@ function teams(V){const rows=teamRows(V);
   $('#teams').innerHTML=rows.length?rows.map(({t,l,on,n,sos})=>`<li class="${sos?'sos':on?'on':'off'}"><i class="dot"></i><b>${esc(t.name)}</b>
       <span class="st">${esc(ST[t.status]||t.status||'')}</span>${n?`<span class="busy">${n} เคส</span>`:''}
       <small>${l?(on?'ออนไลน์':'ตำแหน่งเมื่อ '+esc(ago(l.updatedAt))):'ไม่แชร์ตำแหน่ง'}${l&&l.battery!=null?' · แบต '+l.battery+'%':''}</small>
-      ${l?`<button type="button" class="lnk" data-fly="${+l.lat},${+l.lng}" aria-label="ดูทีมบนแผนที่"><i data-ic="pin"></i></button>`:''}</li>`).join('')
+      <span class="qact">${l?`<button type="button" class="lnk" data-fly="${+l.lat},${+l.lng}" aria-label="ดูทีมบนแผนที่"><i data-ic="pin"></i></button>`:''}${/^https:\/\//.test(t.gmaps||'')?`<a class="lnk" href="${esc(t.gmaps)}" target="_blank" rel="noopener" title="ตำแหน่งสด Google Maps" aria-label="ตำแหน่งสด Google Maps ของ ${esc(t.name)}"><i data-ic="live"></i></a>`:''}</span></li>`).join('')
     :`<li class="muted">${V.r?'ยังไม่มีทีมใน War Room นี้ · เพิ่มได้ที่แท็บ "ทีม"':'ยังไม่มีทีมในระบบ'}</li>`;
 }
 function feed(V){
@@ -225,7 +226,7 @@ function casesTab(V){
       <td>${esc(c.district?'เขต'+c.district:'')}<small>${esc(String(c.address||'').slice(0,80))}</small></td>
       <td class="nw">${c.status==='done'?'—':esc(waitTxt(c.createdAt))}</td>
       <td>${c.src==='own'&&c.status!=='done'?`<select data-assign="${esc(c.id)}" aria-label="มอบทีม">${teamOpts(v)}</select>`:esc(v||'—')}<small>${esc(CST[c.status]||c.status)}</small></td>
-      <td class="act">${c.src==='own'&&c.status!=='done'?`<button type="button" class="btn ghost sm" data-done="${esc(c.id)}">เสร็จ</button>`:''}<a class="btn ghost sm" href="${caseLink(c)}">เปิด</a></td></tr>`}).join('')
+      <td class="act">${c.src==='own'&&c.status!=='done'?`<button type="button" class="btn ghost sm" data-done="${esc(c.id)}">เสร็จ</button>`:''}${hasPin(c)?`<a class="btn ghost sm" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" title="นำทางด้วย Google Maps"><i data-ic="nav"></i> นำทาง</a>`:''}<a class="btn ghost sm" href="${caseLink(c)}">เปิด</a></td></tr>`}).join('')
     :`<tr><td colspan="7" class="muted">ไม่มีเคส${V.r?' ในพื้นที่ของ War Room นี้ (ตั้งเขต/รัศมีได้ที่แท็บโปรไฟล์)':''}</td></tr>`;
 }
 $('#c-st').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;W.cst=b.dataset.st;casesTab(view())});
@@ -251,7 +252,7 @@ function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new 
     return `<div class="wr-tcard${mine?' mine':''}"><div class="h"><i class="dot ${on?'on':''}"></i><b>${esc(t.name)}</b><span class="st">${esc(ST[t.status]||'')}</span></div>
       <small>${esc([t.leader?'หัวหน้า '+t.leader:'',t.members?t.members+' คน':'',t.vehicle||''].filter(Boolean).join(' · ')||'—')}</small>
       <small>${l?(on?'ออนไลน์':'ตำแหน่งเมื่อ '+esc(ago(l.updatedAt))):'ไม่แชร์ตำแหน่ง'}${other?` · อยู่ใน <b>${esc(other.name)}</b>`:''}</small>
-      <div class="a">${t.phone?`<a class="btn ghost sm" href="tel:${esc(telOf(t.phone))}"><i data-ic="phone"></i> โทร</a>`:''}${mine?`<button type="button" class="btn ghost sm" data-tw="${esc(t.name)}" data-to="">นำออก</button>`:`<button type="button" class="btn primary sm" data-tw="${esc(t.name)}" data-to="${esc(r.id)}">เพิ่มเข้า War Room นี้</button>`}</div></div>`}).join('')||'<p class="muted">ยังไม่มีทีมในระบบ · เพิ่มทีมที่หน้า "จัดทีม"</p>';
+      <div class="a">${/^https:\/\//.test(t.gmaps||'')?`<a class="btn ghost sm" href="${esc(t.gmaps)}" target="_blank" rel="noopener"><i data-ic="live"></i> ตำแหน่งสด</a>`:''}${t.phone?`<a class="btn ghost sm" href="tel:${esc(telOf(t.phone))}"><i data-ic="phone"></i> โทร</a>`:''}${mine?`<button type="button" class="btn ghost sm" data-tw="${esc(t.name)}" data-to="">นำออก</button>`:`<button type="button" class="btn primary sm" data-tw="${esc(t.name)}" data-to="${esc(r.id)}">เพิ่มเข้า War Room นี้</button>`}</div></div>`}).join('')||'<p class="muted">ยังไม่มีทีมในระบบ · เพิ่มทีมที่หน้า "จัดทีม"</p>';
 }
 $('#t-list').addEventListener('click',async e=>{const gz=e.target.closest('[data-gozone]');if(gz){W.room=gz.dataset.gozone;W.tab='teams';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
   const b=e.target.closest('[data-tw]');if(!b)return;b.disabled=true;

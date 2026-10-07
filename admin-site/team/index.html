@@ -75,6 +75,8 @@ form.send input{border-radius:999px;padding:11px 16px}
 .bg-trk>*:not(summary){margin-top:8px}.trk-apps{display:grid;grid-template-columns:1fr 1fr;gap:8px}.trk-apps .btn{min-height:44px;font-size:14px;text-decoration:none}
 .trk-steps{margin:8px 0 0;padding-left:20px;display:grid;gap:8px;font-size:14px;line-height:1.5}
 .trk-f{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:6px;background:var(--bg,#f2f3f7);border-radius:12px;padding:8px 10px}
+.bg-trk summary small{font-weight:500;color:var(--muted)}
+.trk-gm{display:grid;grid-template-columns:1fr auto;gap:8px}.trk-gm input{min-height:44px;border-radius:12px;border:1px solid var(--line,#e6e8ef);padding:8px 12px;font:inherit;min-width:0}
 .trk-f span{grid-column:1/-1;font-size:12px;color:var(--muted)}.trk-f code{font-size:13.5px;overflow-wrap:anywhere;user-select:all}
 /* แถบล่าง + SOS */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -1px 0 var(--line);padding-bottom:var(--safe-b)}
@@ -135,7 +137,18 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
     <p class="sec">ตั้งค่า</p>
     <div class="box"><label style="display:flex;align-items:center;gap:10px;font-weight:600"><input type="checkbox" id="wake" style="width:22px;height:22px"> จอไม่ดับ (ส่งตำแหน่งต่อเนื่อง)</label>
       <p class="hint">ปิดหน้านี้หรือจอดับ ตำแหน่งจะหยุดส่ง · ใช้แอปด้านล่างเพื่อให้ศูนย์เห็นตำแหน่งตลอด</p>
-      <details class="bg-trk" id="bg-trk"><summary><i data-ic="gps"></i> ให้ศูนย์ติดตามได้แม้ปิดหน้านี้</summary>
+      <button class="btn" id="loc-now" type="button"><i data-ic="pin"></i> ส่งตำแหน่งตอนนี้</button>
+      <details class="bg-trk" id="gm-trk"><summary><i data-ic="live"></i> แชร์ตำแหน่งสดผ่าน Google Maps <small>(ไม่ต้องลงแอปเพิ่ม · ใช้ได้แม้ล็อกจอ)</small></summary>
+        <p class="hint">ใช้ Google Maps ที่มีในมือถืออยู่แล้ว ศูนย์กดลิงก์ดูตำแหน่งสดของทีมได้ตลอด แม้ปิดหน้านี้หรือจอดับ</p>
+        <ol class="trk-steps">
+          <li>แตะ <a href="https://www.google.com/maps" target="_blank" rel="noopener"><b>เปิด Google Maps</b></a> → แตะรูปโปรไฟล์ → <b>การแชร์ตำแหน่ง</b> → <b>แชร์ตำแหน่ง</b> (หรือ <b>แชร์ใหม่</b>)</li>
+          <li>ตั้งเวลา <b>จนกว่าคุณจะปิด</b> → เลือก <b>คัดลอกไปยังคลิปบอร์ด</b> (หรือ "อื่นๆ" → คัดลอก)</li>
+          <li>วางลิงก์ในช่องด้านล่าง แล้วกดบันทึก (วางทั้งข้อความได้ ระบบดึงลิงก์ออกให้)</li>
+        </ol>
+        <div class="trk-gm"><input id="gm-in" inputmode="url" maxlength="400" placeholder="https://maps.app.goo.gl/…" aria-label="ลิงก์แชร์ตำแหน่งจาก Google Maps"><button class="btn blue" type="button" id="gm-save">บันทึก</button></div>
+        <p class="hint" id="gm-st"></p>
+      </details>
+      <details class="bg-trk" id="bg-trk"><summary><i data-ic="gps"></i> ให้ศูนย์ติดตามได้แม้ปิดหน้านี้ <small>(แอป Traccar · เห็นบนแผนที่ CENTRAL)</small></summary>
         <p class="hint">เว็บส่งตำแหน่งได้เฉพาะตอนเปิดหน้าอยู่ · ติดตั้งแอปฟรี <b>Traccar Client</b> ครั้งเดียว แอปจะส่งตำแหน่งเบื้องหลังให้ศูนย์ แม้ปิดหน้านี้หรือจอดับ</p>
         <div class="trk-apps"><a class="btn" href="https://apps.apple.com/app/traccar-client/id843156974" target="_blank" rel="noopener">iPhone (App Store)</a><a class="btn" href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" rel="noopener">Android (Play Store)</a></div>
         <ol class="trk-steps">
@@ -206,7 +219,19 @@ $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code')
   st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
 $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/api?'+new URLSearchParams({action:'roster',key:$('#code').value.trim()}))).json();if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
 /* ติดตามเบื้องหลังด้วยแอป Traccar Client: ใช้รหัสลิงก์ทีมเป็น Device identifier */
-function bgTrack(){const d=$('#bg-trk');if(!d)return;
+/* ลิงก์แชร์ตำแหน่งสด Google Maps ของทีม */
+function gmUI(){const g=S.me&&S.me.team&&S.me.team.gmaps;if(document.activeElement!==$('#gm-in'))$('#gm-in').value=g||'';
+  $('#gm-st').innerHTML=g?`ศูนย์เห็นลิงก์แล้ว · <a href="${esc(g)}" target="_blank" rel="noopener">เปิดดู ↗</a> · เลิกแชร์: ลบลิงก์แล้วกดบันทึก และหยุดแชร์ใน Google Maps`:'ยังไม่ได้แชร์ลิงก์';
+  if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}}
+$('#gm-save').onclick=async()=>{const raw=$('#gm-in').value.trim(),m=raw.match(/https:\/\/\S+/),url=m?m[0].replace(/[)\]"'.,]+$/,''):'';
+  if(raw&&!/^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.(com|co\.th)\/maps|maps\.google\.)/.test(url)){toast('ต้องเป็นลิงก์แชร์จาก Google Maps เช่น https://maps.app.goo.gl/…');return}
+  $('#gm-save').disabled=true;try{const r=await post({action:'team_gmaps',gmaps:url});if(r.ok){toast(url?'ส่งลิงก์ตำแหน่งสดให้ศูนย์แล้ว':'ลบลิงก์แล้ว');refresh()}else toast(r.error==='not_in_roster'?'ทีมนี้ยังไม่อยู่ในรายชื่อทีมของศูนย์':'บันทึกไม่สำเร็จ')}catch(e){toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}finally{$('#gm-save').disabled=false}};
+$('#loc-now').onclick=()=>{if(TR.pos&&Date.now()-TR.pos.at<15000){ping().then(()=>toast('ส่งตำแหน่งแล้ว'));return}
+  navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>{TR.pos={lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,speed:q.coords.speed,heading:q.coords.heading,at:Date.now()};ping().then(()=>toast(TR.fail?'ส่งไม่ได้ จะลองใหม่เมื่อมีเน็ต':'ส่งตำแหน่งแล้ว'))},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
+/* เน็ตกลับมา / กลับมาเปิดหน้านี้: ส่งตำแหน่งล่าสุดทันที (แบบ Traccar) */
+addEventListener('online',()=>{if(TR.watch!=null&&TR.pos)ping()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>5000)ping()});
+function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
   if(!S.tk){d.querySelector('.trk-steps').hidden=true;$('#trk-last').textContent='ต้องเข้าหน้านี้จากลิงก์ทีม (ขอลิงก์ทีมจากศูนย์) จึงจะตั้งค่าแอปได้';return}
   $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track'; // โดเมนหลักปัจจุบัน (โดเมนเก่ายังรับได้)$('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
@@ -362,5 +387,6 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-pw-toggle]
 if($('#wake').checked)wake(true);
 boot();
 </script>
+<script src="../bc.js?v=1" data-mode="team" defer></script>
 </body>
 </html>

@@ -149,3 +149,5 @@
 .wr-tree .addz{justify-self:start}
 .wr-team i{position:relative}.wr-team.mv i{box-shadow:0 1px 4px rgba(0,0,0,.4),0 0 0 6px rgba(14,159,110,.25)}
 .wr-team .hd{border-bottom-color:#0e9f6e}
+.wr-q .qact,.wr-teams .qact{display:inline-flex;gap:2px;align-items:center}.wr-q .qact .lnk svg,.wr-teams .qact .lnk svg{width:18px;height:18px}
+.wr-teams li{grid-template-columns:12px minmax(0,1fr) auto auto auto}

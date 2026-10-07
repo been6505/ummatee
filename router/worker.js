@@ -36,6 +36,10 @@ export default {
         return new Response(res.body, { status: res.status, headers: h });
       }
     }
+    // หน้าบ้าน Help Me: ใส่แถบประกาศแจ้งเตือนรายพื้นที่ของ CENTRAL ลงในทุกหน้า HTML (ไม่ต้องแก้โค้ดของแอปหน้าบ้าน)
+    if (!center && req.method === 'GET' && res.ok && String(res.headers.get('content-type') || '').includes('text/html')) {
+      return new HTMLRewriter().on('head', { element(e) { e.append(`<script src="https://${CENTER_HOST}/bc.js" data-mode="public" defer></script>`, { html: true }); } }).transform(res);
+    }
     return res;
   },
 };

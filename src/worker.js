@@ -799,6 +799,60 @@ async function popnixCams() {
     return { ok: true, time: Date.now(), cams };
   });
 }
+/* ---------- ตรวจกล้อง CCTV อัตโนมัติด้วย Workers AI (โมเดลดูภาพ) ----------
+   เลือกกล้องที่มีภาพนิ่งล่าสุด (ไม่เกิน 3 ชม.) ใกล้จุดเคสไม่เกิน 2 กม. สูงสุด 2 ตัว แล้วให้โมเดลดูว่ามีน้ำท่วมบนถนนไหม
+   ผลจำไว้ต่อ "ภาพ" (กล้อง + เวลาภาพ) 30 นาที เคสใกล้กันใช้ผลร่วมกัน ไม่เรียกโมเดลซ้ำ
+   กล้องถนนเห็นแค่ถนน: "ไม่เห็นน้ำ" ไม่ได้แปลว่าบ้านในซอยไม่ท่วม หน้าเว็บจึงใช้ผลนี้เป็นหลักฐานเฉพาะตอน "เห็นน้ำ" */
+const CCTV_AI_MODEL = '@cf/mistralai/mistral-small-3.1-24b-instruct';
+// เลือกกล้องที่มีภาพนิ่ง: POPNIX (มีเวลาภาพ ใช้เฉพาะภาพไม่เกิน 3 ชม.) และ iTIC (ภาพสด ไม่มีเวลาภาพ)
+const CCTV_AI_PROMPT = 'This is a traffic CCTV snapshot in Thailand. Decide if there is FLOOD WATER on the road. ' +
+  'Answer "yes" ONLY if you clearly see standing or flowing water covering part of the road surface (water over lane markings, ' +
+  'cars or people moving through water, water reaching kerbs or wheels). Dry asphalt, shadows, glare, or a wet sheen after rain are "no". ' +
+  'Use "unclear" if the image is dark, blurry, blocked, frozen, or does not show a road. If unsure between yes and no, answer "unclear". ' +
+  'Reply with JSON only: {"flood":"yes"|"no"|"unclear","depth_cm":number|null,"note":"<= 12 Thai words describing what you see"}.';
+function camDistM(lat, lng, lat2, lng2) {
+  const R = 6371000, r = Math.PI / 180, a = Math.sin((lat2 - lat) * r / 2) ** 2 + Math.cos(lat * r) * Math.cos(lat2 * r) * Math.sin((lng2 - lng) * r / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function b64(buf) { let s = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
+async function cctvAiOne(env, cam) {
+  // กล้องภาพสด (iTIC) ไม่มีเวลาภาพ → จำผลเป็นช่วงละ 10 นาที
+  const stamp = cam.at || 'live' + Math.floor(Date.now() / 600000);
+  return cached('cctv-ai-v4:' + cam.id + ':' + stamp, cam.at ? 1800 : 600, async () => {
+    const r = await fetch(cam.img, { headers: UA, cf: { cacheTtl: 60 } });
+    if (!r.ok) return { flood: 'unclear', note: 'โหลดภาพไม่ได้' };
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength < 2000 || buf.byteLength > 2_500_000) return { flood: 'unclear', note: 'ภาพใช้ไม่ได้' };
+    const out = await env.AI.run(CCTV_AI_MODEL, {
+      messages: [{ role: 'user', content: [{ type: 'text', text: CCTV_AI_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64(buf) } }] }],
+      max_tokens: 120, temperature: 0 });
+    // Workers AI ส่ง response เป็น object ที่แปลง JSON ให้แล้ว หรือเป็นข้อความ (ขึ้นกับรุ่น) → รองรับทั้งสองแบบ
+    const raw = out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content));
+    let j = raw && typeof raw === 'object' ? raw : {};
+    if (typeof raw === 'string') { const m = raw.match(/\{[\s\S]*\}/); try { j = m ? JSON.parse(m[0]) : {}; } catch (e) {} }
+    let flood = ['yes', 'no', 'unclear'].includes(j.flood) ? j.flood : 'unclear';
+    const depth = Number(j.depth_cm);
+    // กันผลบวกลวง: "เห็นน้ำ" แต่ประเมินลึกไม่ถึง 10 ซม. (มักเป็นถนนเปียก/แสงสะท้อน) → ไม่ชัด
+    if (flood === 'yes' && isFinite(depth) && depth > 0 && depth < 10) flood = 'unclear';
+    return { flood, depth: flood === 'yes' && isFinite(depth) && depth > 0 ? Math.min(300, Math.round(depth)) : null, note: clean(j.note, 80) };
+  });
+}
+async function cctvAiCheck(env, p) {
+  if (!env.AI) return { ok: false, error: 'ai_not_bound' };
+  const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180);
+  if (lat == null || lng == null) return { ok: false, error: 'missing' };
+  const now = Date.now() / 1000, all = (await allCams()).cams;
+  const near = all.filter(c => c.img && (!c.at || now - c.at < 3 * 3600)) // ไม่มีเวลาภาพ = กล้องภาพสด
+    .map(c => ({ ...c, d: Math.round(camDistM(lat, lng, c.lat, c.lng)) })).filter(c => c.d <= 2000)
+    .sort((a, b) => a.d - b.d).slice(0, 2);
+  const checks = await Promise.all(near.map(async c => {
+    try { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, ...(await cctvAiOne(env, c)) }; }
+    catch (e) { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, flood: 'unclear', note: 'ตรวจไม่สำเร็จ' }; }
+  }));
+  // สรุป: เห็นน้ำจากกล้องไหนก็ได้ = flood · มีกล้องที่เห็นชัดว่าไม่มีน้ำ (และไม่มีตัวไหนเห็นน้ำ) = clear · อื่น ๆ = unclear · ไม่มีกล้อง = none
+  const verdict = !checks.length ? 'none' : checks.some(c => c.flood === 'yes') ? 'flood' : checks.some(c => c.flood === 'no') ? 'clear' : 'unclear';
+  return { ok: true, time: Date.now(), model: CCTV_AI_MODEL, verdict, checks };
+}
 async function allCams() {
   const [p, l] = await Promise.allSettled([popnixCams(), cctvData()]);
   const cams = [...(l.status === 'fulfilled' ? l.value.cams.filter(c => c.hls).map(c => ({ ...c, src: 'iTIC' })) : []), ...(p.status === 'fulfilled' ? p.value.cams : [])];
@@ -1012,6 +1066,7 @@ async function api(request, env) {
       // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
+      case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
@@ -1061,7 +1116,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }

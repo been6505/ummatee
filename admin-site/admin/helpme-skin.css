@@ -275,3 +275,32 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .hm-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--primary,#2b45c7);background:var(--tint,#eef1ff);border-radius:999px;padding:1px 8px;vertical-align:middle;line-height:1.6}
 .stat .hm-tag{font-size:10px;margin-left:2px}
 [data-theme="dark"] .hm-tag{background:rgba(255,255,255,.08)}
+
+/* ผลตรวจพื้นที่แบบสั้น: ป้ายหลักฐาน + กล้อง CCTV ตรวจอัตโนมัติ · รายละเอียดพับไว้ */
+.vr-chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.vr-chip{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;line-height:1.3;border-radius:999px;padding:4px 10px;background:#eef1f5;color:#3b4652}
+.vr-chip.k-bad{background:#fde8e8;color:#b42318}
+.vr-chip.k-ok{background:#e4f4e9;color:#1f6b3a}
+.vr-chip.k-na{background:#eef1f5;color:#5b6670}
+.vr-ai{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.035)}
+.vr-ai-h{font-size:14px;line-height:1.45;display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+.vr-ai-h svg{flex:none;margin-top:2px}
+.vr-ai-h .t-bad{color:#b42318}.vr-ai-h .t-ok{color:#1f6b3a}
+.vr-ai-wait{color:#5b6670;animation:vrPulse 1.2s ease-in-out infinite}
+@keyframes vrPulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.vr-ai-wait{animation:none}}
+.vr-ai-shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px}
+.vr-ai-shots a{position:relative;display:block;text-decoration:none;color:inherit}
+.vr-ai-shots img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;background:#dde2e8}
+.vr-ai-shots .vr-chip{position:absolute;top:6px;left:6px;font-size:11.5px;padding:2px 8px}
+.vr-ai-shots small{display:block;font-size:12px;line-height:1.35;margin-top:4px;color:#5b6670}
+.vr-more{margin-top:10px}
+.vr-more>summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--primary,#2b45c7);padding:6px 0;list-style:none}
+.vr-more>summary::-webkit-details-marker{display:none}
+.vr-more>summary::after{content:' ▾'}
+.vr-more[open]>summary::after{content:' ▴'}
+[data-theme="dark"] .vr-chip{background:rgba(255,255,255,.08);color:#d6dde4}
+[data-theme="dark"] .vr-chip.k-bad{background:rgba(229,56,59,.18);color:#ff9a9c}
+[data-theme="dark"] .vr-chip.k-ok{background:rgba(46,158,87,.18);color:#7fe0a3}
+[data-theme="dark"] .vr-ai{background:rgba(255,255,255,.05)}
+[data-theme="dark"] .vr-ai-shots small{color:#9aa6b0}

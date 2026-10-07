@@ -9,12 +9,12 @@ const VERIFY=(()=>{
   const LV_PTS={ankle:2,knee:5,waist:10,chest:15,roof:20};
   const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
   const RESULT={
-    confirmed:{t:'วิกฤตจริง',d:'ข้อมูลน้ำท่วมรอบจุดตรงกับที่ผู้แจ้งบอก',k:'confirmed'},
-    likely:{t:'น่าจะวิกฤต',d:'มีหลักฐานน้ำท่วมใกล้จุดบางส่วน',k:'likely'},
-    conflict:{t:'ข้อมูลขัดแย้ง',d:'ผู้แจ้งบอกว่าหนัก แต่กล้องหรือรายงานล่าสุดบอกว่าน้ำลด/ไม่ท่วม ควรโทรยืนยัน',k:'conflict'},
-    notcrit:{t:'ไม่น่าวิกฤต',d:'มีน้ำท่วมแต่ไม่รุนแรงตามข้อมูลที่มี',k:'notcrit'},
-    unverified:{t:'รอตรวจเพิ่ม',d:'ไม่มีข้อมูลน้ำท่วมใกล้จุดนี้ ควรดูกล้องหรือโทรถาม',k:'unverified'},
-    nopin:{t:'ยืนยันไม่ได้',d:'ไม่มีพิกัดหรือที่อยู่ที่ชัดเจน ต้องโทรถามตำแหน่งก่อน',k:'nopin'}
+    confirmed:{t:'วิกฤตจริง',d:'ข้อมูลรอบจุดยืนยันว่าท่วม',k:'confirmed'},
+    likely:{t:'น่าจะวิกฤต',d:'มีหลักฐานน้ำท่วมใกล้จุด',k:'likely'},
+    conflict:{t:'ข้อมูลขัดแย้ง',d:'ผู้แจ้งบอกหนัก แต่ข้อมูลล่าสุดว่าน้ำลด · โทรยืนยัน',k:'conflict'},
+    notcrit:{t:'ไม่น่าวิกฤต',d:'มีน้ำ แต่ไม่รุนแรง',k:'notcrit'},
+    unverified:{t:'รอตรวจเพิ่ม',d:'ยังไม่มีข้อมูลใกล้จุด · โทรถาม',k:'unverified'},
+    nopin:{t:'ยืนยันไม่ได้',d:'ไม่มีหมุด/ที่อยู่ · โทรถามตำแหน่ง',k:'nopin'}
   };
 
   /* ---------- โหลดข้อมูล ---------- */
@@ -68,39 +68,41 @@ const VERIFY=(()=>{
     R+=vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?8:vul.length?4:0;R=Math.min(50,R);
     const reporterSevere=sev===3||c.level==='chest'||c.level==='roof';
     const cctv=parseCctv(c.cctv);
-    const out={R,E:0,score:R,ev:[],road:null,reports:[],cctv,result:null};
+    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null};
+    const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
     // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
     const addrTxt=[c.address,c.district].filter(Boolean).join(' ').replace(/[\s\-–—.,]/g,''),clearAddr=addrTxt.length>=6;
     if(!hasPin||!clearAddr){out.result=RESULT.nopin;
-      if(!hasPin)out.ev.push('ไม่มีพิกัด จึงเทียบกับแผนที่น้ำท่วมไม่ได้');
-      if(!clearAddr)out.ev.push('ไม่มีที่อยู่ / จุดสังเกตที่ชัดเจน ทีมหาบ้านไม่เจอ');
+      if(!hasPin){out.ev.push('ไม่มีพิกัด จึงเทียบกับแผนที่น้ำท่วมไม่ได้');chip('ไม่มีหมุด','na')}
+      if(!clearAddr){out.ev.push('ไม่มีที่อยู่ / จุดสังเกตที่ชัดเจน ทีมหาบ้านไม่เจอ');chip('ที่อยู่ไม่ชัด','na')}
       if(!hasPin){if(cctv)applyCctv(out,reporterSevere);return finish(out,reporterSevere,false)}}
     const lat=+c.lat,lng=+c.lng;
     // 2) ถนนน้ำท่วมจาก Floodboard (ใกล้สุดใน 800 ม.)
     let near=null;F.roads.forEach(r=>{const d=distToLines(lat,lng,r.lines);if(d<=800&&(!near||d<near.d))near={...r,d}});
     if(near){const base=sevPts(near.depth,near.verdict,near.closed)*recency(near.updated)*(.5+.5*Math.min(1,near.conf))*(near.d<=300?1:.6);out.E+=base;out.road=near;
-      out.ev.push(`ถนนน้ำท่วม "${near.name}" ห่าง ${Math.round(near.d)} ม.${near.depth!=null?` · ลึก ~${near.depth} ซม.`:''}${near.verdict?` · ${VERDICT_TH[near.verdict]||near.verdict}`:''}`)}
+      out.ev.push(`ถนนน้ำท่วม "${near.name}" ห่าง ${Math.round(near.d)} ม.${near.depth!=null?` · ลึก ~${near.depth} ซม.`:''}${near.verdict?` · ${VERDICT_TH[near.verdict]||near.verdict}`:''}`);
+      chip(`ถนน ${m(near.d)} · ${near.depth!=null?near.depth+' ซม.':VERDICT_TH[near.verdict]||'มีน้ำ'}`,near.verdict==='ok'&&!(near.depth>=10)?'ok':'bad')}
     // 2.5) เซ็นเซอร์วัดน้ำบนถนนของ กทม. (ใกล้สุดใน 1 กม. · ไม่นับตัวที่เสีย)
     let sn=null;F.sensors.forEach(x=>{if(x.status==='malfunction'||x.now==null)return;const d=dist(lat,lng,x.lat,x.lng);if(d<=1000&&(!sn||d<sn.d))sn={...x,d}});
     let sensorClear=false;
     if(sn){out.sensor=sn;const fresh=sn.t&&Date.now()-sn.t<3*36e5,tt=sn.t?new Date(sn.t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-      if(sn.now>=5){out.E+=(sn.now>=30?25:sn.now>=15?18:10)*(sn.d<=500?1:.6)*(fresh?1:.6);out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. วัดได้ ${sn.now} ซม.${tt?` (${tt} น.)`:''}`)}
-      else{if(sn.d<=500&&fresh)sensorClear=true;out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. ไม่พบน้ำท่วมบนถนน${tt?` (${tt} น.)`:''} · ในซอย/บ้านอาจยังท่วม`)}}
+      if(sn.now>=5){out.E+=(sn.now>=30?25:sn.now>=15?18:10)*(sn.d<=500?1:.6)*(fresh?1:.6);out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. วัดได้ ${sn.now} ซม.${tt?` (${tt} น.)`:''}`);chip(`เซ็นเซอร์ ${m(sn.d)} · ${sn.now} ซม.`,'bad')}
+      else{if(sn.d<=500&&fresh)sensorClear=true;out.ev.push(`เซ็นเซอร์น้ำ กทม. "${sn.name}" ห่าง ${Math.round(sn.d)} ม. ไม่พบน้ำท่วมบนถนน${tt?` (${tt} น.)`:''} · ในซอย/บ้านอาจยังท่วม`);chip(`เซ็นเซอร์ ${m(sn.d)} · ถนนแห้ง`,'ok')}}
     // 3) รายงานน้ำท่วมรอบจุด (1 กม. · 72 ชม.)
     const since=Date.now()-72*36e5,rs=F.reports.filter(r=>r.t>=since).map(r=>({...r,d:dist(lat,lng,r.lat,r.lng)})).filter(r=>r.d<=1000).sort((a,b)=>a.d-b.d);
     const active=rs.filter(r=>!r.cleared),cleared=rs.filter(r=>r.cleared&&r.d<=600&&Date.now()-r.t<24*36e5);
     let rp=0;active.forEach(r=>{const dep=r.depth==null?.35:r.depth>=50?1:r.depth>=30?.7:r.depth>=10?.45:.3;rp+=(.4+Number(r.w||0))*dep*(r.tier==='official'?1.5:1)*(r.d<=400?1:.6)*8+(r.closed?3:0)});
     rp=Math.min(20,rp);out.E+=rp;out.reports=active.slice(0,5);
-    if(active.length)out.ev.push(`รายงานน้ำท่วมรอบจุด ${active.length} รายการใน 3 วัน (ใกล้สุด ${Math.round(active[0].d)} ม.)`);
+    if(active.length){out.ev.push(`รายงานน้ำท่วมรอบจุด ${active.length} รายการใน 3 วัน (ใกล้สุด ${Math.round(active[0].d)} ม.)`);chip(`รายงาน ${active.length} · ใกล้สุด ${m(active[0].d)}`,'bad')}
     const recentlyCleared=cleared.length&&!active.some(r=>r.t>cleared[0].t);
-    if(recentlyCleared)out.ev.push('มีรายงานล่าสุดว่าน้ำลด / ระบายแล้วใกล้จุดนี้');
+    if(recentlyCleared){out.ev.push('มีรายงานล่าสุดว่าน้ำลด / ระบายแล้วใกล้จุดนี้');chip('รายงานล่าสุด: น้ำลด','ok')}
     if(cctv)applyCctv(out,reporterSevere);
     if(sensorClear&&!active.length&&!near)out.sensorClear=true;
-    if(!near&&!active.length&&!cctv&&!sn)out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');
+    if(!near&&!active.length&&!cctv&&!sn){out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');chip(F.loaded?'ไม่มีข้อมูลใกล้จุด':'กำลังโหลดข้อมูล','na')}
     return finish(out,reporterSevere,recentlyCleared);
   }
-  function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''))}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''))}}
+  function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: เห็นน้ำ',k:'bad'})}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: ไม่เห็นน้ำ',k:'ok'})}}
   function finish(out,severe,cleared){
     out.E=Math.max(-20,Math.min(50,out.E));out.score=Math.max(0,Math.min(100,Math.round(out.R+out.E)));
     if(out.result)return out;   // ไม่มีหมุด

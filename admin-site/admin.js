@@ -102,7 +102,30 @@ $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classLis
 /* ---------- ตรวจสอบพื้นที่ (Floodboard + CCTV) ---------- */
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};
 let vrCache=new Map();
-function vr(c){const k=c.id+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c);vrCache.set(c.id,{k,v});return v}
+function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
+/* ---------- ตรวจกล้อง CCTV อัตโนมัติ (Workers AI ดูภาพกล้องใกล้จุด ≤ 2 กม.) ----------
+   เรียกเมื่อเปิดดูเคส · จำผลต่อเคส 10 นาที · ใช้เป็นหลักฐานเฉพาะตอน "เห็นน้ำ" จากกล้องไม่เกิน 1 กม.
+   (กล้องถนน "ไม่เห็นน้ำ" ไม่ได้แปลว่าบ้านในซอยไม่ท่วม จึงไม่หักคะแนน) */
+const AI=new Map();
+const camDist=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.';
+function aiCctvOf(c){const a=AI.get(String(c.id));if(!a||!a.data||a.data.verdict!=='flood')return '';
+  const hit=a.data.checks.find(x=>x.flood==='yes'&&x.d<=1000);return hit?'flood|ตรวจอัตโนมัติ '+new Date(a.data.time).toTimeString().slice(0,5):''}
+function aiCheck(c){if(!hasPin(c)||c.status==='done')return;const id=String(c.id),a=AI.get(id);
+  if(a&&(a.loading||Date.now()-a.at<10*60e3))return;
+  AI.set(id,{loading:true,at:Date.now()});
+  api({action:'cctv_ai',key:A.key,lat:c.lat,lng:c.lng}).then(r=>{AI.set(id,{at:Date.now(),data:r&&r.ok?r:null,err:!(r&&r.ok)})})
+    .catch(()=>AI.set(id,{at:Date.now(),err:true})).finally(()=>{if(A.openId===id)renderDrawer();render()})}
+function aiBlock(c){if(!hasPin(c)||c.status==='done')return '';const a=AI.get(String(c.id));
+  const RES={yes:['เห็นน้ำ','bad'],no:['ไม่เห็นน้ำ','ok'],unclear:['ภาพไม่ชัด','na']};
+  let line;
+  if(!a||a.loading)line='<span class="vr-ai-wait">กำลังตรวจกล้องใกล้จุด…</span>';
+  else if(a.err)line='ตรวจกล้องไม่สำเร็จ';
+  else if(a.data.verdict==='none')line='ไม่มีกล้องที่มีภาพในรัศมี 2 กม.';
+  else{const near=a.data.checks[0];line=a.data.verdict==='flood'?'<b class="t-bad">เห็นน้ำท่วม</b>':a.data.verdict==='clear'?'<b class="t-ok">ไม่เห็นน้ำบนถนน</b> · ในซอยอาจยังท่วม':'<b>ภาพไม่ชัด</b> ตัดสินไม่ได้';
+    line+=` · ใกล้สุด ${camDist(near.d)}`}
+  const shots=a&&a.data&&a.data.checks.length?`<div class="vr-ai-shots">${a.data.checks.map(x=>{const [t,k]=RES[x.flood]||RES.unclear;
+    return `<a href="${esc(x.img)}" target="_blank" rel="noopener"><img src="${esc(x.img)}" alt="${esc(x.title)}" loading="lazy"><span class="vr-chip k-${k}">${t}</span><small>${camDist(x.d)} · ${esc(x.title)}${x.note?'<br>'+esc(x.note):''}</small></a>`}).join('')}</div>`:'';
+  return `<div class="vr-ai"><div class="vr-ai-h"><i data-ic="cam"></i> กล้อง CCTV (ตรวจอัตโนมัติ): ${line}</div>${shots}</div>`}
 async function loadFlood(force){try{await VERIFY.load(force)}catch(e){}render();if(typeof COVERED!=='undefined')COVERED.load(API_URL,A.key).then(render,render)}
 const cov=c=>typeof COVERED!=='undefined'?COVERED.match(c):null;
 function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} รับแล้ว</span>`}
@@ -180,6 +203,9 @@ function vrSection(c){
   const rd=v.road,reps=v.reports.slice(0,3);
   return `<section class="vr-box vr-b-${v.result.k}">
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
+    <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
+    ${aiBlock(c)}
+    <details class="vr-more"><summary>รายละเอียด / ตรวจเอง</summary>
     <div class="vr-bars"><div><span>ข้อมูลผู้แจ้ง</span><i style="width:${v.R*2}%"></i><em>${v.R}/50</em></div><div><span>หลักฐานน้ำท่วม + กล้อง</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*2}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/50</em></div></div>
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
@@ -193,7 +219,8 @@ function vrSection(c){
       <div class="vr-cctv-btns"><button class="btn ${cc&&cc.s==='flood'?'primary':'ghost'} sm" data-cctv="flood">กล้องเห็นน้ำท่วม</button><button class="btn ${cc&&cc.s==='clear'?'primary':'ghost'} sm" data-cctv="clear">กล้องไม่เห็นน้ำ</button>${cc?'<button class="btn ghost sm" data-cctv="">ล้างผล</button>':''}</div>
       <div class="vr-links"><a href="https://world.tehx.dyndns.info/flood#tab=roads" target="_blank" rel="noopener">เปิดกล้อง CCTV ถนน (JK World) ↗</a><a href="https://world.tehx.dyndns.info/flood#tab=area" target="_blank" rel="noopener">แถวนี้ท่วมมั้ย ↗</a><a href="https://www.floodboard.org/#map" target="_blank" rel="noopener">แผนที่น้ำท่วม Floodboard ↗</a>${ll?`<button type="button" class="linkish" data-copyll="${ll}">คัดลอกพิกัด ${ll}</button>`:''}</div>
     </div>
-    <p class="vr-note">คำนวณจากข้อมูลผู้แจ้ง + ถนนน้ำท่วมและรายงานจาก Floodboard (1 กม. · 3 วัน) + เซ็นเซอร์น้ำบนถนนของสำนักการระบายน้ำ กทม. (1 กม.) + ผลดูกล้องที่แอดมินบันทึก · ไม่มีข้อมูลใกล้จุด ≠ ไม่ท่วม</p>
+    <p class="vr-note">คำนวณจากข้อมูลผู้แจ้ง + Floodboard (1 กม. · 3 วัน) + เซ็นเซอร์น้ำ กทม. (1 กม.) + กล้อง CCTV (ตรวจอัตโนมัติด้วย AI หรือแอดมินบันทึก) · ไม่มีข้อมูลใกล้จุด ≠ ไม่ท่วม</p>
+    </details>
   </section>`}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-copyll]');if(!b)return;(navigator.clipboard?navigator.clipboard.writeText(b.dataset.copyll):Promise.reject()).then(()=>toast('คัดลอกพิกัดแล้ว ใช้ค้นหากล้องใกล้จุดได้',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))});
 async function saveCctv(id,val){
@@ -208,7 +235,7 @@ async function saveCctv(id,val){
 /* ---------- รายละเอียด ---------- */
 // รหัสเคสในระบบที่ถูกรวมเข้ากับเคส Help Me → เปิดเคส Help Me ที่ตรงกันแทน
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
-function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
+function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
 function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});

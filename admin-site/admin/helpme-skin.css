@@ -380,3 +380,13 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 @media(prefers-reduced-motion:reduce){.um-pin2.pin-danger::before{animation:none;opacity:0}}
 .um-pin2 .pin-ph{position:absolute;right:-6px;top:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#111827;color:#fff;font:700 11px/17px system-ui,sans-serif;text-align:center;border:2px solid #fff;box-sizing:content-box}
 .cv-leg .lg-p,.cv-leg .lg-c{border-radius:50% 50% 50% 0!important;transform:rotate(-45deg)}
+/* จัดทีม: ลิงก์ทีม / ติดต่อทีม แสดงเป็นหน้าต่างเล็กกลางจอ (มือถือ: แผ่นล่าง) แทนเต็มจอ */
+.drawer:has(>.link-sheet),.drawer:has(>.call-sheet){top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 32px);
+  border-radius:22px!important;box-shadow:0 24px 60px rgba(10,14,40,.35);background:var(--surface,#fff);overflow:auto;padding:0}
+.drawer:has(>.link-sheet)>.d-head,.drawer:has(>.call-sheet)>.d-head{padding:16px 18px 12px;border-radius:22px 22px 0 0;background:inherit}
+.drawer:has(>.link-sheet)>.d-head>div,.drawer:has(>.call-sheet)>.d-head>div{max-width:none}
+.drawer>.link-sheet{margin:0;border:0;border-radius:0;background:transparent;padding:16px 18px 20px}
+.drawer>.call-sheet{padding:14px 18px 20px}
+@media(max-width:600px){
+  .drawer:has(>.link-sheet),.drawer:has(>.call-sheet){top:auto;bottom:0;left:0;transform:none;width:100%;max-height:92dvh;border-radius:22px 22px 0 0!important;padding-bottom:env(safe-area-inset-bottom)}
+}

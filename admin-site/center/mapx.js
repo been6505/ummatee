@@ -209,7 +209,7 @@ const MX=(()=>{
   document.addEventListener('change',e=>{const t=e.target;if(!t.closest||!t.closest('#map-side'))return;
     if(t.id==='r-src')R.src=t.value;if(t.id==='r-max')R.max=+t.value;if(t.id==='r-open')R.onlyOpen=t.checked;if(t.id==='r-avoid')R.avoid=t.checked;
     if(t.dataset.zTeam){const tm=S.roster.find(x=>x.id===t.dataset.zTeam),z=zoneOf(S.zoneId);if(tm&&z)saveTeamZone(tm,t.checked?z.name:(tm.zone===z.name?'':tm.zone))}});
-  async function saveTeamZone(t,zone){try{const r=await post({action:'roster_save',key:A.key,team:{...t,zone},by:'หลังบ้าน'});if(r&&r.ok){t.zone=zone;toast(zone?`${t.name} → โซน ${zone}`:`${t.name} ออกจากโซน`,true);drawZones();renderSide()}else toast('บันทึกไม่สำเร็จ: '+(r&&r.error||''))}catch(e){toast('บันทึกไม่สำเร็จ')}}
+  async function saveTeamZone(t,zone){try{const r=await post({action:'roster_save',key:A.key,team:{...t,zone},by:'Center'});if(r&&r.ok){t.zone=zone;toast(zone?`${t.name} → โซน ${zone}`:`${t.name} ออกจากโซน`,true);drawZones();renderSide()}else toast('บันทึกไม่สำเร็จ: '+(r&&r.error||''))}catch(e){toast('บันทึกไม่สำเร็จ')}}
   document.addEventListener('click',async e=>{const t=e.target.closest('button,a');if(!t||!t.closest('#map-side'))return;const d=t.dataset;
     if(d.sheet!==undefined){const o=$('#map-side').classList.toggle('open');t.setAttribute('aria-expanded',String(o));return}
     if(d.side!==undefined){S.side=d.side;S.form=null;clearPreview();if(S.side!=='zone')S.zoneId=null;drawZones();renderSide();return}
@@ -219,7 +219,7 @@ const MX=(()=>{
     if(d.zc){S.form.color=d.zc;showPreview();renderSide();return}
     if(d.zCancel!==undefined){S.form=null;clearPreview();renderSide();return}
     if(d.zSave!==undefined){const f=S.form;if(!f.name.trim()){toast('ใส่ชื่อโซนก่อน');$('#zf-name').focus();return}t.disabled=true;
-      try{const r=await post({action:'zone_save',key:A.key,zone:f,by:'หลังบ้าน'});if(!r||!r.ok){toast('บันทึกไม่สำเร็จ: '+(r&&r.error||''));return}
+      try{const r=await post({action:'zone_save',key:A.key,zone:f,by:'Center'});if(!r||!r.ok){toast('บันทึกไม่สำเร็จ: '+(r&&r.error||''));return}
         const old=f.id&&zoneOf(f.id);if(old&&old.name!==f.name)for(const tm of S.roster.filter(x=>x.zone===old.name))await saveTeamZone(tm,f.name);
         toast('บันทึกโซน '+f.name+' แล้ว',true);S.form=null;clearPreview();S.side='zone';S.zoneId=r.id;await loadZones();render()}finally{t.disabled=false}return}
     if(d.zDel!==undefined){const f=S.form;if(!confirm(`ลบโซน "${f.name}"? (เคสไม่ถูกลบ)`))return;const r=await post({action:'zone_save',key:A.key,zone:{id:f.id,active:false}});

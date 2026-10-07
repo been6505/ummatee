@@ -48,7 +48,10 @@ const SCHEMA = [
   // โทรในระบบ (WebRTC): ห้องสาย 1 ต่อ 1 + ข้อความนัดเชื่อมต่อ (offer/answer/ice) · เก็บ 1 วัน
   `CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, secret TEXT, mode TEXT, team TEXT, caller TEXT, name TEXT, createdAt INTEGER, endedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
-  `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`
+  `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
+  // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
+  `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
+  `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
@@ -65,7 +68,7 @@ async function init(db) {
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
     // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
-      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -296,7 +299,7 @@ async function saveRoster(db, b) {
   return { ok: true, id };
 }
 async function listRoster(db) {
-  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck FROM roster WHERE active=1 ORDER BY name').all();
+  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck,warroom FROM roster WHERE active=1 ORDER BY name').all();
   // ทีมที่ยังไม่มีลิงก์เฉพาะทีม: สร้างให้
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
@@ -440,10 +443,52 @@ async function saveZone(db, b) {
     .bind(id, name, color, lat, lng, clampInt(z.radius, 100, 30000, 1500), clean(z.note, 200), Date.now(), clean(b.by, 60)).run();
   return { ok: true, id };
 }
+/* ---------- War Room ย่อย ---------- */
+const WR_ROLES = ['lead', 'ops', 'dispatch', 'stock', 'comms', 'medic', 'staff'];
+async function listWarrooms(db) {
+  const { results: rooms } = await db.prepare('SELECT * FROM warrooms WHERE active=1 ORDER BY createdAt').all();
+  const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
+  const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
+  return { ok: true, warrooms: rooms.map(r => ({ ...r, districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
+}
+async function saveWarroom(db, b) {
+  const w = b.warroom || {}, id = clean(w.id, 20).replace(/[^\w-]/g, '') || ('W' + rand(3)), now = Date.now();
+  if (w.active === false) {
+    await db.batch([db.prepare('UPDATE warrooms SET active=0, updatedAt=? WHERE id=?').bind(now, id), db.prepare("UPDATE roster SET warroom='' WHERE warroom=?").bind(id)]);
+    return { ok: true, id };
+  }
+  const name = clean(w.name, 60);
+  if (!name) return { ok: false, error: 'missing_name' };
+  const lat = num(w.lat, -90, 90), lng = num(w.lng, -180, 180);
+  const districts = (Array.isArray(w.districts) ? w.districts : String(w.districts || '').split(/[,\n]/)).map(x => clean(x, 40).replace(/^เขต\s*/, '')).filter(Boolean).slice(0, 60).join(',');
+  await db.prepare(`INSERT INTO warrooms (id,name,color,lat,lng,radius,districts,address,phone,lead,note,active,createdAt,updatedAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name,color=excluded.color,lat=excluded.lat,lng=excluded.lng,radius=excluded.radius,districts=excluded.districts,address=excluded.address,phone=excluded.phone,lead=excluded.lead,note=excluded.note,active=1,updatedAt=excluded.updatedAt,by_=excluded.by_`)
+    .bind(id, name, /^#[0-9a-f]{6}$/i.test(w.color || '') ? w.color : '#2D45C8', lat, lng, clampInt(w.radius, 0, 200000, 0) || null, districts, clean(w.address, 200),
+      clean(w.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(w.lead, 60), clean(w.note, 500), now, now, clean(b.by, 60)).run();
+  return { ok: true, id };
+}
+async function saveWarroomStaff(db, b) {
+  const m = b.staff || {}, id = clean(m.id, 20).replace(/[^\w-]/g, '') || ('P' + rand(4));
+  if (m.active === false) { await db.prepare('UPDATE warroom_staff SET active=0, updatedAt=? WHERE id=?').bind(Date.now(), id).run(); return { ok: true, id }; }
+  const wr = clean(m.wr, 20), name = clean(m.name, 60);
+  if (!wr || !name) return { ok: false, error: 'missing' };
+  if (!await db.prepare('SELECT id FROM warrooms WHERE id=? AND active=1').bind(wr).first()) return { ok: false, error: 'no_warroom' };
+  await db.prepare(`INSERT INTO warroom_staff (id,wr,name,role,phone,shift,note,active,updatedAt) VALUES (?,?,?,?,?,?,?,1,?)
+    ON CONFLICT(id) DO UPDATE SET wr=excluded.wr,name=excluded.name,role=excluded.role,phone=excluded.phone,shift=excluded.shift,note=excluded.note,active=1,updatedAt=excluded.updatedAt`)
+    .bind(id, wr, name, WR_ROLES.includes(m.role) ? m.role : 'staff', clean(m.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(m.shift, 40), clean(m.note, 200), Date.now()).run();
+  return { ok: true, id };
+}
+async function setTeamWarroom(db, b) {
+  const team = clean(b.team, MAX.volunteer), wr = clean(b.warroom, 20).replace(/[^\w-]/g, '');
+  if (!team) return { ok: false, error: 'missing_team' };
+  if (wr && !await db.prepare('SELECT id FROM warrooms WHERE id=? AND active=1').bind(wr).first()) return { ok: false, error: 'no_warroom' };
+  const r = await db.prepare('UPDATE roster SET warroom=?, updatedAt=? WHERE name=? AND active=1').bind(wr, Date.now(), team).run();
+  return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' };
+}
 async function listStock(db) {
   const { results: items } = await db.prepare('SELECT * FROM stock ORDER BY id').all();
   const { results: log } = await db.prepare('SELECT time,itemId,item,type,delta,after,note,caseId,by_ AS "by",team FROM stock_log ORDER BY n DESC LIMIT 1000').all();
-  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '', kit: parseKit(i.kit) })), log: log.map(l => ({ ...l, team: l.team || '' })) };
+  return { ok: true, items: items.map(i => ({ ...i, min: i.min == null ? '' : i.min, needed: !!i.needed, expiry: i.expiry || '', location: i.location || '', warroom: i.warroom || '', kit: parseKit(i.kit) })), log: log.map(l => ({ ...l, team: l.team || '' })) };
 }
 function parseKit(v) { try { const a = typeof v === 'string' ? JSON.parse(v || '[]') : v; return (Array.isArray(a) ? a : []).map(x => ({ id: clean(x.id, 20), qty: clampInt(x.qty, 1, 9999, 1) })).filter(x => x.id).slice(0, 30); } catch (e) { return []; } }
 async function saveStockItem(db, b) {
@@ -454,9 +499,11 @@ async function saveStockItem(db, b) {
   const expiry = /^\d{4}-\d{2}-\d{2}$/.test(String(t.expiry || '')) ? t.expiry : '';
   // ไม่ส่ง kit มา (เช่นแก้ชื่อ/หน่วยจากฟอร์มทั่วไป) = คงรายการในถุงเดิมไว้
   const kit = t.kit === undefined ? ((await db.prepare('SELECT kit FROM stock WHERE id=?').bind(id).first()) || {}).kit || '[]' : JSON.stringify(parseKit(t.kit).filter(x => x.id !== id));
-  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location,kit) VALUES (?,?,?,?,0,?,?,?,?,?,?,?)
-    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location,kit=excluded.kit`)
-    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now(), expiry, clean(t.location, 60), kit).run();
+  // warroom: คลังของ War Room ไหน ('' = คลังกลาง) · ไม่ส่งมา = คงค่าเดิม
+  const wr = t.warroom === undefined ? ((await db.prepare('SELECT warroom FROM stock WHERE id=?').bind(id).first()) || {}).warroom || '' : clean(t.warroom, 20).replace(/[^\w-]/g, '');
+  await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location,kit,warroom) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location,kit=excluded.kit,warroom=excluded.warroom`)
+    .bind(id, name, clean(t.unit, 20), clean(t.category, 30), min, t.needed ? 1 : 0, clean(t.note, 200), Date.now(), expiry, clean(t.location, 60), kit, wr).run();
   return { ok: true, id };
 }
 async function moveStock(db, b) {
@@ -1335,6 +1382,7 @@ async function api(request, env) {
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
+      case 'warrooms': return json(vol ? await listWarrooms(db) : { ok: false, error: 'not_volunteer' });
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
@@ -1356,7 +1404,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
@@ -1380,7 +1428,7 @@ export default {
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
-      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
+      const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.|center\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }
@@ -1388,6 +1436,9 @@ export default {
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }
+    // ลิงก์เก่า (/admin, /admin.html, /admin/…) → ชื่อใหม่ /center
+    const old = url.pathname.match(/^\/admin(\.html|\/.*)?$/);
+    if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/center' + old[1] : '/center'; return Response.redirect(url.toString(), 301); }
     return env.ASSETS.fetch(request);
   },
   // cron (ตั้งใน wrangler config): ส่งแถวที่เปลี่ยนไป Google Sheet ส่งต่อจนคิวหมด สูงสุด 5 รอบต่อครั้ง

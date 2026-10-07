@@ -100,7 +100,7 @@ async function drawMap(L0){
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
     const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';
     L.marker(ll,{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
-      .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
+      .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="../../center.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   $('#map-nopin').textContent=nopin?`· ${nopin} เคสไม่มีหมุด (ไม่แสดงบนแผนที่)`:'';
   if(pts.length&&!M.fitted){M.map.fitBounds(pts,{padding:[30,30],maxZoom:14});M.fitted=true}
   const F=typeof VERIFY!=='undefined'?VERIFY.F:null;
@@ -114,7 +114,7 @@ async function drawMap(L0){
   M.leads.clearLayers();M.live.clearLayers();
   (D.leads||[]).filter(l=>l.status==='new'&&l.lat!=null&&l.lng!=null).forEach(l=>{const u=Math.min(3,Math.max(1,+l.urgency||1));
     L.marker([+l.lat,+l.lng],{icon:L.divIcon({className:'lead-pin u'+u,html:'<span></span>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]}),zIndexOffset:300+u*100,keyboard:false})
-      .bindPopup(`<b><i data-ic="megaphone"></i> ${escT(URG[u])} · รอคัด</b><br>${escT(l.title||'')}<br>${escT([l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · '))}${(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))?'<br><i data-ic="alert"></i> ติดธง ตรวจก่อนรับ':''}${(l.flags||[]).includes('approx_location')?'<br><i data-ic="pin"></i> ตำแหน่งโดยประมาณ':''}<br><a href="../../admin.html#leads">คัดเคสนี้ที่หน้าเคสจากโซเชียล →</a>`).addTo(M.leads)});
+      .bindPopup(`<b><i data-ic="megaphone"></i> ${escT(URG[u])} · รอคัด</b><br>${escT(l.title||'')}<br>${escT([l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · '))}${(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))?'<br><i data-ic="alert"></i> ติดธง ตรวจก่อนรับ':''}${(l.flags||[]).includes('approx_location')?'<br><i data-ic="pin"></i> ตำแหน่งโดยประมาณ':''}<br><a href="../../center.html#leads">คัดเคสนี้ที่หน้าเคสจากโซเชียล →</a>`).addTo(M.leads)});
   (D.live||[]).forEach(t=>L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'live-tm',html:`<span><i data-ic="live"></i> ${escT(t.team)}</span>`,iconSize:null}),zIndexOffset:1500,keyboard:false})
     .bindPopup(`<b><i data-ic="live"></i> ${escT(t.team)}</b><br>แชร์ตำแหน่ง ${escT(ago(t.updatedAt))}${t.caseId?'<br>ถือเคส #'+escT(t.caseId):''}`).addTo(M.live));
   if($('#mt-leads').checked)M.leads.addTo(M.map);else M.leads.remove();
@@ -164,7 +164,7 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.re
     k.push([cr.length?nf(cr.length):(COVERED.C.loading||!COVERED.C.loaded?'…':'0'),'พื้นที่ที่องค์กรอื่นช่วยแล้ว',cr.length?`${nf(orgs.size)} องค์กร${sets?' · '+nf(sets)+' ชุด':''}`:(COVERED.C.error||'กำลังโหลดจากชีต'),'#7b3fc4','../covered/'],
       [cr.length?nf(dup):'…','เคสรอช่วยในพื้นที่ที่มีคนช่วยแล้ว','ตรวจก่อนส่งทีม (อาจซ้ำ)','#7b3fc4','../covered/']);}
   if(D.leads){const nw=D.leads.filter(l=>l.status==='new');
-    k.splice(1,0,[nf(nw.length),'เคสจากโซเชียลรอคัด',`วิกฤต ${nf(nw.filter(l=>+l.urgency===3).length)} · ติดธง ${nf(nw.filter(l=>(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))).length)}`,'var(--crit)','../../admin.html#leads'])}
+    k.splice(1,0,[nf(nw.length),'เคสจากโซเชียลรอคัด',`วิกฤต ${nf(nw.filter(l=>+l.urgency===3).length)} · ติดธง ${nf(nw.filter(l=>(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))).length)}`,'var(--crit)','../../center.html#leads'])}
   $('#kpis').replaceChildren(...k.map(item=>{const [v,t,s,col,href]=item,d=el(href?'a':'div','kpi'+(href?' kpi-cov':''));if(href)d.href=href;const lab=el('span',null,t);if(fromHM.has(item))lab.append(' ',el('small','hm-tag','Help Me'));d.append(el('b',null,v),lab);if(s){const sm=el('small');if(col){const i=el('i');i.style.background=col;sm.append(i)}sm.append(s);d.append(sm)}return d}));
 
   /* trend: เคสใหม่ (และช่วยเสร็จ) จาก Google Sheet ของ Help Me ถ้าโหลดได้ ไม่ได้ใช้เคสในระบบ Helpme+ */
@@ -206,7 +206,7 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.re
   if(!w.length)$('#waiting').replaceChildren(el('p','empty','ไม่มีเคสวิกฤตที่รอทีมอยู่ <i data-ic="check"></i>'));
   else{const t=el('table','tlist');t.innerHTML='<thead><tr><th>รอมาแล้ว</th><th>ความต้องการ</th><th class="hide-s">ที่อยู่</th><th class="n">คน</th></tr></thead>';const tb=el('tbody');
     w.forEach(c=>{const r=el('tr'),m=Math.round((Date.now()-c.createdAt)/60000);r.append(el('td',null,m<60?m+' นาที':m<1440?Math.floor(m/60)+' ชม. '+(m%60)+' นาที':Math.floor(m/1440)+' วัน'),el('td',null,[...new Set(c.needs)].join(', ')||'-'),el('td','hide-s',[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'-'),el('td','n',nf(c.people||1)));tb.append(r)});
-    t.append(tb);const a=el('a',null,HMC?'เปิด Help Me →':'ไปที่หน้าจัดการเคส →');a.href=HMC?'https://helpme-th.pages.dev/':'../../admin.html';if(HMC){a.target='_blank';a.rel='noopener'}const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
+    t.append(tb);const a=el('a',null,HMC?'เปิด Help Me →':'ไปที่หน้าจัดการเคส →');a.href=HMC?'https://helpme-th.pages.dev/':'../../center.html';if(HMC){a.target='_blank';a.rel='noopener'}const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#waiting').replaceChildren(t,p)}
   renderLeads();
   renderStock();
   renderHelpme();
@@ -266,7 +266,7 @@ function renderLeads(){
     const lv=el('td');const i=el('i','dot');i.style.background=URG_COL[u];lv.append(i,URG[u]+((l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))?' <i data-ic="alert"></i>':''));
     tr.append(lv,el('td',null,l.title||'-'),el('td','hide-s',[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · ')||'-'),
       el('td',null,near?`${near.x.team} · ${near.d.toFixed(1)} กม.`:'ยังไม่มีทีมแชร์ตำแหน่ง'),el('td','n hide-s',ago(l.postedAt)));tb.append(tr)});
-  t.append(tb);const a=el('a',null,'คัดเคสที่หน้าเคสจากโซเชียล →');a.href='../../admin.html#leads';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#leads').replaceChildren(t,p)}
+  t.append(tb);const a=el('a',null,'คัดเคสที่หน้าเคสจากโซเชียล →');a.href='../../center.html#leads';const p=el('p');p.style.margin='10px 0 0';p.append(a);$('#leads').replaceChildren(t,p)}
 
 /* ---------- สต็อก (ยอดปัจจุบัน ไม่ขึ้นกับช่วงเวลา) ---------- */
 // หน่วยของแต่ละรายการไม่เหมือนกัน (ห่อ แผง ขวด) จึงเทียบกันด้วย % ของที่เคยรับเข้า ไม่ใช่จำนวนดิบ

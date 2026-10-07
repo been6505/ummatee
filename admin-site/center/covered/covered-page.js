@@ -20,7 +20,7 @@ function render(){
     const map=r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดแผนที่ ↗</a>`:'<span class="cv-warn">ยังไม่มีลิงก์</span>';
     const pos=r.lat==null?'<small class="muted">ไม่พบตำแหน่ง</small>':r.approx?'<small class="muted">ตำแหน่งโดยประมาณ</small>':r.src==='known'?'<small class="cv-ok">ตำแหน่งที่ทีมตรวจแล้ว</small>':'<small class="cv-ok">ตำแหน่งจากลิงก์</small>';
     return `<tr><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="รายการ">${esc(r.items)}${r.items&&r.sets?'<br>':''}${r.sets?`<b>${/^[\d,]+$/.test(String(r.sets).trim())?nf(String(r.sets).replace(/,/g,''))+' ชุด':esc(r.sets)}</b>`:''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
-      <td data-l="เคสที่อาจซ้ำ"${cs.length?'':' class="cv-nodup"'}>${cs.length?`<a class="cv-dup" href="../../admin.html" title="${esc(cs.map(c=>'#'+c.id+' '+(c.address||'')).join('\n'))}"><span class="cv-m"><i data-ic="alert"></i> อาจซ้ำ </span>${cs.length} เคส</a>`:'<span class="muted">–</span>'}</td><td data-l="go">${r.lat!=null?`<button class="cv-go" data-i="${COVERED.C.rows.indexOf(r)}">ดูบนแผนที่</button>`:''}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">ไม่พบพื้นที่ที่ตรงกับการค้นหา</td></tr>';
+      <td data-l="เคสที่อาจซ้ำ"${cs.length?'':' class="cv-nodup"'}>${cs.length?`<a class="cv-dup" href="../../center.html" title="${esc(cs.map(c=>'#'+c.id+' '+(c.address||'')).join('\n'))}"><span class="cv-m"><i data-ic="alert"></i> อาจซ้ำ </span>${cs.length} เคส</a>`:'<span class="muted">–</span>'}</td><td data-l="go">${r.lat!=null?`<button class="cv-go" data-i="${COVERED.C.rows.indexOf(r)}">ดูบนแผนที่</button>`:''}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">ไม่พบพื้นที่ที่ตรงกับการค้นหา</td></tr>';
   drawMap(hit);
   $('#sync').textContent=COVERED.C.loaded?'อัปเดต '+ago(COVERED.C.loaded):'';
 }
@@ -44,7 +44,7 @@ function drawMap(hit){
   if($('#mt-cases').checked)P.cases.filter(c=>c.status!=='done'&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)).forEach(c=>{
     // หมุดหยดน้ำแบบหน้าแดชบอร์ด/จัดการเคส: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป
     const u=Math.min(3,Math.max(1,Number(c.urgency)||1)),k=c.status==='going'?'going':u===3?'danger':u===2?'urgent':'open';
-    L.marker([+c.lat,+c.lng],{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../admin.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
+    L.marker([+c.lat,+c.lng],{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../center.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   const miss=rows.filter(r=>r.lat==null).length;$('#map-miss').textContent=COVERED.C.loading?'กำลังหาตำแหน่ง…':miss?`ไม่พบตำแหน่ง ${miss} พื้นที่`:'';
   if(!M.fitted&&pts.length&&!COVERED.C.loading){M.fitted=true;M.map.fitBounds(pts,{padding:[30,30],maxZoom:14})}
   setTimeout(()=>M.map.invalidateSize(),50);

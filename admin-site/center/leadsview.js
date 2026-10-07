@@ -12,7 +12,7 @@
     const leads=view==='leads';
     sw.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===view)));
     caseParts.forEach(e=>{e.hidden=leads});box.hidden=!leads;
-    if(leads&&!frame){frame=document.createElement('iframe');frame.src='./admin/leads/?embed=1';frame.title='เคสจากโซเชียลรอคัด';frame.className='leads-frame';box.append(frame)}
+    if(leads&&!frame){frame=document.createElement('iframe');frame.src='./center/leads/?embed=1';frame.title='เคสจากโซเชียลรอคัด';frame.className='leads-frame';box.append(frame)}
     if(!leads)setTimeout(()=>window.dispatchEvent(new Event('resize')),60);
     const h=leads?'#leads':'';if(location.hash!==h)history.replaceState(null,'',location.pathname+h)}
   sw.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)show(b.dataset.view)});

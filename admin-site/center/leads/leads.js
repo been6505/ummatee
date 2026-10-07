@@ -58,7 +58,7 @@ function card(l){
       <button class="btn primary sm" data-accept="${esc(l.id)}"><i data-ic="check"></i> รับเป็นเคส</button>
       <select data-rej="${esc(l.id)}" aria-label="ตัดทิ้งเพราะ"><option value="">ตัดทิ้งเพราะ…</option><option value="duplicate">ซ้ำกับเคสอื่น</option><option value="not_people">ไม่ใช่คนเดือดร้อน</option><option value="resolved">ได้รับความช่วยเหลือแล้ว</option><option value="suspicious">น่าสงสัย / มิจฉาชีพ</option><option value="rejected_by_staff">อื่น ๆ</option></select>`
     :st==='rejected'?`<button class="btn ghost sm" data-reopen="${esc(l.id)}"><i data-ic="undo"></i> คืนเข้าคิว</button>`
-    :`<a href="../../admin.html#${esc(l.caseId)}" target="_top" data-case="${esc(l.caseId)}">เปิดเคส #${esc(l.caseId)} →</a>`;
+    :`<a href="../../center.html#${esc(l.caseId)}" target="_top" data-case="${esc(l.caseId)}">เปิดเคส #${esc(l.caseId)} →</a>`;
   return `<article class="lead u${sev(l)} st-${esc(st)}${LD.sel===l.id?' sel':''}${LD.open.has(l.id)?' open':''}" data-id="${esc(l.id)}">
     <div class="l-h">${head}</div>
     <h3>${esc(l.title||'(ไม่มีหัวข้อ)')}</h3>

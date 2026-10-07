@@ -21,7 +21,7 @@ function adminBoot(probe,field,onReady){
   $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;$('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
     try{ADM.key=k;const r=await apiGet(probe);
       if(good(r)){const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';$('#login').hidden=true;$('#app').hidden=false;onReady(r)}
-      else{ADM.key='';$('#login-err').textContent=r&&r.error==='not_volunteer'?'รหัสไม่ถูกต้อง':r&&r.ok?'ระบบหลังบ้านยังไม่รองรับหน้านี้ ต้องอัปเดต Code.gs ก่อน':'ใช้งานไม่ได้: '+(r&&r.error||'')}}
+      else{ADM.key='';$('#login-err').textContent=r&&r.error==='not_volunteer'?'รหัสไม่ถูกต้อง':r&&r.ok?'ระบบ Center ยังไม่รองรับหน้านี้ ต้องอัปเดต Code.gs ก่อน':'ใช้งานไม่ได้: '+(r&&r.error||'')}}
     catch(err){ADM.key='';$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
   if(ADM.key){$('#app').hidden=false;apiGet(probe).then(r=>{if(good(r))onReady(r);else if(r&&r.error==='not_volunteer')logout('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');else{$('#main').innerHTML='<p class="empty">หน้านี้ต้องอัปเดต Code.gs ก่อนจึงจะใช้งานได้ (ระบบตอบกลับ: '+esc(r&&r.error||'ไม่รองรับ')+')</p>'}}).catch(()=>{$('#main').innerHTML='<p class="empty">เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรช</p>'})}
   else{$('#login').hidden=false;setTimeout(()=>$('#login-key').focus(),50)}

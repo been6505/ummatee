@@ -1,25 +1,26 @@
-/* helpme4u.com — Help Me homepage + admin under one domain name (Cloudflare Worker, Custom Domains)
+/* helpme4u.com — Help Me homepage + Center (ศูนย์สั่งการ) under one domain name (Cloudflare Worker, Custom Domains)
      helpme4u.com, www.helpme4u.com  → umplus-help.pages.dev (หน้าบ้าน Help Me)
-     admin.helpme4u.com              → admin-helpme.pages.dev (หลังบ้าน)
-   The admin lives on its own subdomain on purpose: the public app registers a service worker with
-   scope "/" on helpme4u.com that caches same-origin GETs (and only skips paths under /api/), so admin
-   pages or the admin API on helpme4u.com would be cached, replayed stale and kept on shared phones.
-   Old admin links on helpme4u.com (/admin…, /team…, /api) are 308-redirected (method + body kept).
-   The upstream sites stay the single source of truth: a deploy to either Pages project shows up here. */
+     center.helpme4u.com             → admin-helpme.pages.dev (Center · เดิมชื่อหลังบ้าน)
+     admin.helpme4u.com              → ชื่อเดิม: หน้าเว็บย้ายไป center (301) · แต่ /api /team /call ยังตอบตรง
+                                       เพราะลิงก์ทีม แอปติดตาม (Traccar) และลิงก์สายที่ส่งไปแล้วใช้โดเมนนี้อยู่ (บางแอปไม่ตามการย้าย)
+   Center อยู่โดเมนย่อยแยกโดยตั้งใจ: แอปหน้าบ้านลง service worker ขอบเขต "/" บน helpme4u.com ที่แคชทุก GET ในโดเมน
+   (ยกเว้นใต้ /api/) ถ้าหน้า Center อยู่บน helpme4u.com จะถูกแคชค้างบนเครื่องที่ใช้ร่วมกัน
+   ลิงก์ Center บน helpme4u.com (/admin… /center… /team… /call… /api) ส่งต่อไป center.helpme4u.com แบบ 308 (คง method + body) */
 const PUBLIC = 'https://umplus-help.pages.dev';
 const ADMIN = 'https://admin-helpme.pages.dev';
-const ADMIN_HOST = 'admin.helpme4u.com';
-const isAdminPath = p => p === '/api' || p === '/admin' || p.startsWith('/admin.') || p.startsWith('/admin/') || p === '/team' || p.startsWith('/team/');
+const CENTER_HOST = 'center.helpme4u.com', OLD_HOST = 'admin.helpme4u.com';
+const under = (p, b) => p === b || p.startsWith(b + '/') || p.startsWith(b + '.');
+const isCenterPath = p => ['/api', '/admin', '/center', '/team', '/call'].some(b => under(p, b));
+const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 
 export default {
   async fetch(req) {
     const url = new URL(req.url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }
-    if (url.hostname !== ADMIN_HOST && isAdminPath(url.pathname)) {
-      url.hostname = ADMIN_HOST;
-      return Response.redirect(url.toString(), 308);
-    }
-    const origin = url.hostname === ADMIN_HOST ? ADMIN : PUBLIC;
+    if (url.hostname === OLD_HOST && !keepOnOld(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 301); }
+    const center = url.hostname === CENTER_HOST || url.hostname === OLD_HOST;
+    if (!center && isCenterPath(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 308); }
+    const origin = center ? ADMIN : PUBLIC;
     const up = new URL(url.pathname + url.search, origin);
     const init = { method: req.method, headers: new Headers(req.headers), redirect: 'manual' };
     if (!['GET', 'HEAD'].includes(req.method)) init.body = req.body;

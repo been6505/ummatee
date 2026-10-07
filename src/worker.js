@@ -962,6 +962,28 @@ async function checkPins(db, cases) {
     else c.pinCheck = { status: 'pending', from, addrDistrict: c.addrDistrict }; // ยังค้นไม่ถึงในรอบนี้
   }
 }
+/* เคสในระบบของเราเอง: ตรวจหมุดเทียบที่อยู่แบบเดียวกับเคส Help Me แต่ "บันทึก" หมุดที่ถูกลงฐานข้อมูลเลย (ทำครั้งเดียวต่อเคส)
+   หมุดเดิมจดไว้ในบันทึกของเคส เพื่อย้อนดูได้ · เคสที่ปรับแล้วหมุดตรงเขตแล้ว รอบถัดไปจึงไม่ทำซ้ำ */
+async function fixOwnPins(db, rows) {
+  const cand = rows.filter(r => r.status !== 'done' && r.lat != null && r.lng != null && r.lat !== '' && /เขต/.test(r.address || ''));
+  if (!cand.length) return;
+  const objs = cand.map(r => {
+    const m = String(r.address).match(/เขต\s*([ก-๙]+)/), d = m && BKK_DISTRICTS.find(x => m[1].startsWith(x));
+    return { row: r, address: r.address, addrDistrict: d || '', lat: Number(r.lat), lng: Number(r.lng) };
+  }).filter(o => o.addrDistrict && isFinite(o.lat) && isFinite(o.lng));
+  if (!objs.length) return;
+  await checkPins(db, objs);
+  let changed = 0;
+  for (const o of objs) {
+    if (!o.pinCheck || o.pinCheck.status !== 'fixed') continue;
+    const f = o.pinCheck.from, now = Date.now();
+    const note = `[ปรับหมุดตามที่อยู่ ${new Date(now).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}] หมุดเดิม ${f.lat},${f.lng} (เขต${f.district}) ไม่ตรงกับ เขต${o.addrDistrict} ในที่อยู่ · หมุดใหม่ระดับ${o.pinCheck.level}`;
+    const notes = clean([note, o.row.notes || ''].filter(Boolean).join('\n'), MAX.notes); // ไว้หน้าสุด ไม่ให้ถูกตัดเมื่อบันทึกยาว
+    await db.prepare('UPDATE cases SET lat=?, lng=?, notes=?, updatedAt=? WHERE id=?').bind(o.lat, o.lng, notes, now, o.row.id).run();
+    Object.assign(o.row, { lat: o.lat, lng: o.lng, notes, updatedAt: now }); changed++;
+  }
+  if (changed) await bumpRev(db);
+}
 const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i; // เคสทดสอบในชีต ไม่นับในสถิติ
 /* เคส Help Me รายเคสสำหรับการ์ดตัวเลขของแดชบอร์ด (เฉพาะรหัสทีม) · ไม่ส่งชื่อ/เบอร์ */
 // ระดับน้ำในชีต Help Me → รหัสของ Helpme+ (ช่วงใช้ค่าบน) ให้ผลตรวจพื้นที่คิดคะแนนได้ · "แห้ง" ไม่มีรหัส
@@ -1117,6 +1139,7 @@ async function api(request, env) {
       case 'list': {
         const since = Number(p.since) || 0;
         const { results } = await db.prepare('SELECT * FROM cases WHERE updatedAt>? ORDER BY createdAt').bind(since).all();
+        if (vol) { try { await fixOwnPins(db, results); } catch (e) {} }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
       case 'rev': { const r = await db.prepare("SELECT v FROM meta WHERE k='rev'").first(); return json({ ok: true, rev: r ? r.v : '0' }); }

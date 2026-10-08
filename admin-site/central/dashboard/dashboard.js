@@ -146,7 +146,7 @@ function summary(){if(typeof hmSummary!=='function')return;const all=(D.hmc||[])
   const online=new Set((D.live||[]).filter(t=>Date.now()-t.updatedAt<10*60e3).map(t=>t.team)).size;
   hmSummary($('#sumbox'),{cases:all,title:'ภาพรวมทั้งหมด',online,teams:D.rosterN||(D.live||[]).length,sev})}
 /* ตัวชี้วัด (Design Thinking: วัดผลทุกการปรับปรุง) · เทียบเป้าหมาย: เขียว = ถึงเป้า · เหลือง = ใกล้ · แดง = ต้องแก้ */
-function metrics(){const el=$('#metrics');if(!el)return;const all=(D.hmc||[]).concat(D.cases);if(!all.length)return;
+function metrics(){const el=$('#metrics');if(!el)return;const all=(D.hmc||[]).concat(D.cases).filter(c=>!c.dupOf);if(!all.length)return;
   const now=Date.now(),wk=now-7*864e5,M=60e3,med=a=>{if(!a.length)return null;a=a.slice().sort((x,y)=>x-y);const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2};
   const dur=ms=>ms==null?'–':ms<3600e3?Math.round(ms/M)+' นาที':ms<864e5?(ms/3600e3).toFixed(1).replace(/\.0$/,'')+' ชม.':(ms/864e5).toFixed(1).replace(/\.0$/,'')+' วัน';
   const rec=all.filter(c=>c.createdAt>=wk),open=all.filter(c=>c.status!=='done'&&c.status!=='going');

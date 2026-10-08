@@ -72,7 +72,7 @@ async function loadCases(){
   const [h,o]=await Promise.all([apiGet({action:'helpme_cases'}).catch(()=>null),apiGet({action:'list'}).catch(()=>null)]);
   const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
   // เคสในระบบที่ไม่ใช่สำเนาของเคส Help Me (สำเนามีรหัสเดียวกัน)
-  W.cases=hm.map(c=>({...c,needs:c.needs||[],src:'hm'})).concat(own.filter(c=>!ids.has(String(c.id))).map(c=>({...c,needs:c.needs||[],src:'own'})));
+  W.cases=hm.map(c=>({...c,needs:c.needs||[],src:'hm'})).concat(own.filter(c=>!ids.has(String(c.id))).map(c=>({...c,needs:c.needs||[],src:'own'}))).filter(c=>!c.dupOf); // เคสที่รวมเป็นเคสซ้ำแล้วไม่แสดง
   W.at=Date.now();
 }
 async function loadTeams(){

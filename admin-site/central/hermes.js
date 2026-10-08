@@ -22,13 +22,13 @@ const HERMES=(()=>{
 
   /* ---------- ข้อมูล ---------- */
   async function data(){
-    if(S.scope&&S.scope.cases)return {cases:S.scope.cases,roster:S.scope.roster||[],live:S.scope.live||[],title:S.scope.title||'War Room'};
+    if(S.scope&&S.scope.cases)return {cases:S.scope.cases.filter(c=>!c.dupOf),roster:S.scope.roster||[],live:S.scope.live||[],title:S.scope.title||'War Room'};
     if(S.data&&Date.now()-S.at<30000)return S.data;
     if(S.loading)return S.loading; // โหลดอยู่แล้ว: ใช้ผลเดียวกัน ไม่ดึงซ้ำ
     return S.loading=(async()=>{try{
     const [h,o,r,t]=await Promise.all([get({action:'helpme_cases'}).catch(()=>null),get({action:'list'}).catch(()=>null),get({action:'roster'}).catch(()=>null),get({action:'teams'}).catch(()=>null)]);
     const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
-    S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
+    S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))).filter(c=>!c.dupOf),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
   /* สต็อก/ถุงยังชีพ (แคช 60 วิ) · War Room เห็นคลังของห้อง + คลังกลาง */
   async function stock(){if(S.stk&&Date.now()-S.stkAt<60000)return S.stk;const r=await get({action:'stock'}).catch(()=>null);S.stk=r&&r.ok?r.items||[]:[];S.stkAt=Date.now();return S.stk}
   function stockText(items,d){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);if(!its.length)return 'สต็อก: ไม่มีข้อมูล';
@@ -57,6 +57,48 @@ const HERMES=(()=>{
       out.push({team:T.t.name,vehicle:T.t.vehicle||'',cases:bundle.map(x=>x.c),why})}
     return {plan:out,left:open.filter(x=>!used.has(x.c.id)).length,teams:teams.length}}
 
+  /* ---------- จับคู่เคส ---------- */
+  const bagsOf=c=>c.bags!==''&&c.bags!=null&&!isNaN(+c.bags)?+c.bags:Math.max(1,Number(c.households)||Math.ceil((Number(c.people)||1)/4));
+  // ทีมที่เหมาะกับเคสเดียว (เรียงคะแนน: ใกล้ · ว่าง · พาหนะตรงความต้องการ)
+  function teamsFor(d,c){const busy=new Map();d.cases.forEach(x=>{if(x.status==='going'&&vol(x))busy.set(vol(x),(busy.get(vol(x))||0)+1)});
+    const needBoat=/เรือ|อพยพ/.test((c.needs||[]).join(' '))||/อก|คอ|หลังคา|ท่วมมิด/.test(c.levelText||c.level||'');
+    return d.roster.filter(t=>t.status!=='rest').map(t=>{const p=teamPos(d,t.name),dist=p&&pin(c)?km(p.lat,p.lng,+c.lat,+c.lng):null,boat=/boat|truck/.test(t.vehicle||''),b=busy.get(t.name)||0;
+      const score=100-(dist==null?20:dist*5)-b*15+(t.status==='ready'?10:0)+(needBoat?(boat?20:-40):0);
+      return {t,dist,b,score,why:[dist!=null?`~${dist.toFixed(1)} กม.`:'ไม่ทราบตำแหน่ง',b?`รับอยู่ ${b} เคส`:'ว่าง',needBoat?(boat?'มีเรือ/รถสูง':'ไม่มีเรือ'):''].filter(Boolean).join(' · ')}}).sort((a,b)=>b.score-a.score)}
+  // เคสซ้ำ: เบอร์เดียวกัน หรือ ห่างกัน ≤150 ม. แจ้งภายใน 3 วัน และความต้องการคล้ายกัน
+  function dups(d){const L=d.cases.filter(c=>c.status!=='done'),P=L.map((_,i)=>i),f=i=>P[i]===i?i:(P[i]=f(P[i])),why=new Map();
+    const u=(i,j,w)=>{const a=f(i),b=f(j);if(a!==b)P[b]=a;why.set(i+'-'+j,w)};
+    const ph=c=>String(c.phone||'').replace(/\D/g,'').slice(-9);
+    for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];
+      if(ph(a).length===9&&ph(a)===ph(b)){u(i,j,'เบอร์เดียวกัน');continue}
+      if(pin(a)&&pin(b)&&Math.abs((a.createdAt||0)-(b.createdAt||0))<3*864e5&&km(+a.lat,+a.lng,+b.lat,+b.lng)<=0.15){const na=new Set(a.needs||[]),nb=b.needs||[];
+        if(!na.size||!nb.length||nb.some(x=>na.has(x)))u(i,j,'ตำแหน่งเดียวกัน (≤150 ม.)')}}
+    const g=new Map();L.forEach((c,i)=>{const r=f(i);if(!g.has(r))g.set(r,[]);g.get(r).push(i)});
+    return [...g.values()].filter(x=>x.length>1).map(ix=>{const cs=ix.map(i=>L[i]).sort((a,b)=>(vol(b)?1:0)-(vol(a)?1:0)||(a.createdAt||0)-(b.createdAt||0));
+      const w=new Set();for(const i of ix)for(const j of ix){const x=why.get(i+'-'+j);if(x)w.add(x)}return {keep:cs[0],dup:cs.slice(1),why:[...w].join(' · ')}})}
+  // กลุ่มเคสใกล้กัน (≤1 กม. ต่อเนื่องกัน) ให้ทีมเดียวไปทีเดียว
+  function clusters(d,R=1){const L=d.cases.filter(c=>c.status!=='done'&&c.status!=='going'&&!vol(c)&&pin(c)),seen=new Set(),out=[];
+    for(let i=0;i<L.length;i++){if(seen.has(i))continue;const q=[i],g=[];seen.add(i);
+      while(q.length){const k=q.pop();g.push(L[k]);for(let j=0;j<L.length;j++)if(!seen.has(j)&&km(+L[k].lat,+L[k].lng,+L[j].lat,+L[j].lng)<=R){seen.add(j);q.push(j)}}
+      if(g.length>1){const lat=g.reduce((a,c)=>a+ +c.lat,0)/g.length,lng=g.reduce((a,c)=>a+ +c.lng,0)/g.length;out.push({cases:g.sort((a,b)=>sevOf(b)-sevOf(a)),lat,lng,people:g.reduce((a,c)=>a+(Number(c.people)||1),0),top:Math.max(...g.map(sevOf))})}}
+    return out.sort((a,b)=>b.top-a.top||b.cases.length-a.cases.length)}
+  // เคส ↔ สต็อก: ความต้องการเทียบของในคลัง และเคสไหนจัดของได้ครบ (เรียงตามความสำคัญจนของหมด)
+  const NEED_MAP=[[/อาหาร/,i=>Array.isArray(i.kit)&&i.kit.length||/ถุงยังชีพ/.test(i.name+i.category),c=>bagsOf(c),'ถุงยังชีพ'],[/น้ำ/,i=>/น้ำดื่ม|น้ำเปล่า/.test(i.name),c=>Math.max(1,Number(c.people)||1),'น้ำดื่ม (ขวด · 1 ขวด/คน)'],
+    [/ยา/,i=>/ยา/.test(i.category+i.name)&&!/ยาง/.test(i.name),c=>1,'ชุดยา'],[/นม/,i=>/นม/.test(i.name),c=>1,'นม'],[/ผ้าอ้อม|แพมเพิส/,i=>/ผ้าอ้อม|แพมเพิส/.test(i.name),c=>1,'ผ้าอ้อม'],[/แมว|สัตว์|หมา/,i=>/สัตว์|แมว|หมา/.test(i.name),c=>1,'อาหารสัตว์']];
+  function stockMatch(d,items){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);
+    const open=d.cases.filter(c=>c.status!=='done').sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0));
+    const rows=NEED_MAP.map(([re,pick,amt,label])=>{const stockItems=its.filter(pick),have=stockItems.reduce((a,i)=>a+(+i.qty||0),0),cs=open.filter(c=>re.test((c.needs||[]).join(' ')));
+      let left=have,ok=0;const short=[];for(const c of cs){const n=amt(c);if(left>=n){left-=n;ok++}else short.push(c)}
+      return {label,have,unit:(stockItems[0]||{}).unit||'',need:cs.reduce((a,c)=>a+amt(c),0),cases:cs.length,ok,short,items:stockItems.map(i=>i.name)}}).filter(r=>r.cases||r.have);
+    return rows}
+  async function match(k){add({team:'เคส ↔ ทีม',dup:'หาเคสซ้ำ',stock:'เคส ↔ สต็อก',near:'กลุ่มเคสใกล้กัน'}[k],'hz-m u');let d;try{d=await data()}catch(e){note('โหลดข้อมูลไม่ได้');return}
+    if(k==='dup'){const G=dups(d);if(!G.length){note('ไม่พบเคสซ้ำในเคสที่ยังไม่เสร็จ');return}note(`พบเคสที่น่าจะซ้ำ ${G.length} กลุ่ม · ตรวจก่อนรวม`);G.slice(0,20).forEach(g=>actCard({type:'merge',keep:g.keep,dup:g.dup,why:g.why},d));return}
+    if(k==='near'){const C=clusters(d);if(!C.length){note('ไม่มีเคสค้างที่อยู่ใกล้กัน (≤1 กม.)');return}note(`พบ ${C.length} กลุ่ม · เลือกทีมแล้วกดยืนยัน`);
+      C.slice(0,12).forEach(g=>{const T=teamsFor(d,{...g.cases[0],lat:g.lat,lng:g.lng});actCard({type:'assign',team:(T[0]||{t:{}}).t.name||'',choices:T.slice(0,6).map(x=>({name:x.t.name,why:x.why})),cases:g.cases.map(c=>String(c.id)),why:`${g.cases.length} เคส · ${g.people} คน · ใกล้กันในรัศมี 1 กม.`},d)});return}
+    if(k==='stock'){let items=[];try{items=await stock()}catch(e){}const R=stockMatch(d,items);if(!R.length){note('ไม่มีข้อมูลสต็อกหรือความต้องการ');return}
+      add(R.map(r=>`<b>${E(r.label)}</b> · มี ${E(r.have)} ${E(r.unit)} · ต้องใช้ ~${E(r.need)} (${E(r.cases)} เคส) · จัดได้ครบ ${E(r.ok)} เคส${r.short.length?` · <span style="color:#C62828">ขาด ${E(r.short.length)} เคส</span>`:' ✓'}${r.short.length?`<br><small>เคสที่ของไม่พอ: ${r.short.slice(0,6).map(c=>'#'+E(c.id)+' '+E(c.district||'')).join(', ')}${r.short.length>6?'…':''}</small>`:''}`).join('<br>'),'hz-m a');
+      if(typeof LOCALAI!=='undefined'&&LOCALAI.on()){const go=()=>S.busy?setTimeout(go,600):ask('ดูผลจับคู่เคสกับสต็อก (ข้อมูลสต็อกอยู่ท้ายข้อมูล) แล้วแนะนำว่าควรเบิก/เติมอะไรก่อน และเคสไหนควรได้ของก่อน สั้น ๆ',{label:'ให้ Hermes แนะนำการเบิกของ'});go()}return}
+    if(k==='team')return quick('plan')}
   /* ---------- สรุปข้อมูลให้ Hermes (เฉพาะที่จำเป็น) ---------- */
   function caseLine(c){return `#${c.id} | ${URG[sevOf(c)]} | ${STS[c.status]||c.status} | ต้องการ: ${(c.needs||[]).join(', ')||'-'} | ${c.people||1} คน | ระดับน้ำ: ${c.levelText||c.level||'-'} | ${[c.district,c.province].filter(Boolean).join(' ')||'-'} | ที่อยู่: ${String(c.address||'').slice(0,80)||'-'} | ผู้แจ้ง: ${c.name||'-'} ${String(c.phone||'').replace(/^'/,'')} | ถุงยังชีพ ${c.bags===''||c.bags==null?'ยังไม่ระบุ':c.bags+' ถุง'} | รอ ${wait(c.createdAt)} | ทีม: ${vol(c)||'-'}${pin(c)?` | พิกัด ${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}`:''}`}
   function context(d,P,stk){const open=d.cases.filter(c=>c.status!=='done'),crit=open.filter(c=>sevOf(c)===3&&c.status!=='going');
@@ -82,6 +124,8 @@ const HERMES=(()=>{
       if(a.notify){const cs=a.cases.map(id=>d.cases.find(c=>String(c.id)===id)).filter(Boolean);
         await post({action:'chat_send',team:a.team,from:'hq',name:me(),text:`ศูนย์มอบ ${cs.length} เคส:\n`+cs.map((c,i)=>`${i+1}) ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน · ${c.district||''} ${String(c.address||'').slice(0,60)}${c.phone?' · โทร '+String(c.phone).replace(/^'/,''):''}${pin(c)?` · https://maps.google.com/?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`:''}`).join('\n')})}
       d.cases.forEach(c=>{if(a.cases.includes(String(c.id))){c.status='going';c.volunteer=a.team}});S.at=0}
+    if(a.type==='merge'){for(const c of a.dup){const r=await post({action:'update',id:c.id,status:'done',volunteer:vol(a.keep)||vol(c)||'',dupOf:String(a.keep.id)});if(!r.ok)throw new Error(r.error||'update')}
+      d.cases=d.cases.filter(c=>!a.dup.includes(c));S.at=0}
     if(a.type==='message'){const r=await post({action:'chat_send',team:a.team,from:'hq',name:me(),text:a.text});if(!r.ok)throw new Error(r.error||'chat')}}
 
   /* ---------- หน้าต่าง Hermes ---------- */
@@ -96,6 +140,7 @@ const HERMES=(()=>{
     .hz-m{max-width:92%;border-radius:16px;padding:9px 12px;font-size:14.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.hz-m.u{justify-self:end;background:var(--primary,#DD2027);color:#fff}.hz-m.a{background:var(--surface,#fff);box-shadow:0 1px 2px rgba(22,27,61,.06)}.hz-m.n{background:transparent;color:var(--muted);font-size:13px;padding:2px 4px}
     .hz-act{background:var(--surface,#fff);border-radius:16px;padding:10px 12px;display:grid;gap:6px;box-shadow:inset 4px 0 0 #7B3FC4}.hz-act b{font-size:14px}.hz-act small{color:var(--muted);font-size:12.5px}
     .hz-act ul{margin:0;padding-left:18px;font-size:13.5px;display:grid;gap:2px}.hz-act textarea{font:inherit;font-size:14px;border:1px solid var(--line,#e8e8ec);border-radius:12px;padding:8px;resize:vertical;background:var(--surface,#fff);color:inherit}
+    .hz-act select{font:inherit;font-size:14px;border:1px solid var(--line,#e8e8ec);border-radius:12px;padding:8px;background:var(--surface,#fff);color:inherit;max-width:100%}
     .hz-act label{font-size:13px;display:flex;gap:6px;align-items:center}.hz-act .row{display:flex;gap:6px;flex-wrap:wrap}
     .hz-act .row button{border:0;border-radius:999px;padding:7px 14px;font:700 13.5px/1 inherit;cursor:pointer}.hz-act .ok{background:#2E9E57;color:#fff}.hz-act .no{background:var(--bg,#f2f2f5);color:inherit}
     .hz-act.done{opacity:.6;box-shadow:inset 4px 0 0 #2E9E57}
@@ -110,11 +155,11 @@ const HERMES=(()=>{
     const fab=document.createElement('button');fab.type='button';fab.className='hz-fab';fab.innerHTML=SPARK+'<span>AI</span>';fab.title='ถาม Hermes';fab.onclick=()=>toggle();document.body.append(fab);
     const w=document.createElement('section');w.className='hz-win';w.hidden=true;w.setAttribute('aria-label','Hermes');
     w.innerHTML=`<header class="hz-h"><i class="hz-dot"></i><b>Hermes</b><small class="hz-sc"></small><a href="${location.pathname.includes('/central/')?'../settings/':'./central/settings/'}" title="ตั้งค่า Local AI">${I('settings')}</a><button type="button" class="hz-x" aria-label="ปิด">${I('close')}</button></header>
-      <div class="hz-chips"><button data-q="sum">สรุปสถานการณ์</button><button data-q="plan">จัดเคสให้ทีม</button><button data-q="first">เคสไหนก่อน</button><button data-q="msg">ร่างข้อความถึงทีม</button></div>
+      <div class="hz-chips"><button data-q="sum">สรุปสถานการณ์</button><button data-q="plan">จัดเคสให้ทีม</button><button data-m="near">กลุ่มเคสใกล้กัน</button><button data-m="dup">หาเคสซ้ำ</button><button data-m="stock">เคส ↔ สต็อก</button><button data-q="first">เคสไหนก่อน</button><button data-q="msg">ร่างข้อความถึงทีม</button></div>
       <div class="hz-log" aria-live="polite"></div><form class="hz-f"><input placeholder="ถาม Hermes…" maxlength="800" aria-label="คำถาม"><button>ถาม</button></form>`;
     document.body.append(w);S.el=w;S.fab=fab;
     w.querySelector('.hz-x').onclick=()=>toggle(false);
-    w.querySelector('.hz-chips').onclick=e=>{const b=e.target.closest('[data-q]');if(b)quick(b.dataset.q)};
+    w.querySelector('.hz-chips').onclick=e=>{const b=e.target.closest('[data-q]');if(b)quick(b.dataset.q);const m=e.target.closest('[data-m]');if(m)match(m.dataset.m)};
     w.querySelector('.hz-f').onsubmit=e=>{e.preventDefault();const i=w.querySelector('.hz-f input'),q=i.value.trim();if(!q)return;i.value='';ask(q)};
     w.querySelector('.hz-log').addEventListener('click',onAct);
     const css2=document.createElement('style');css2.textContent='.chat-fab[aria-expanded=true]~.hz-fab{display:none}';document.head.append(css2);
@@ -127,15 +172,21 @@ const HERMES=(()=>{
   const note=t=>add(E(t),'hz-m n');
   let actSeq=0;const ACTS=new Map();
   function actCard(a,d){const id='a'+(++actSeq);ACTS.set(id,{a,d});
+    if(a.type==='merge'){const row=c=>`#${E(c.id)} · ${E(STS[c.status]||c.status)}${vol(c)?' · '+E(vol(c)):''} · ${E((c.needs||[]).join(', ')||'-')} · ${E(c.people||1)} คน · ${E(c.name||'')} ${E(String(c.phone||'').replace(/^'/,''))} · ${E(String(c.address||c.district||'').slice(0,50))} · แจ้ง ${E(wait(c.createdAt))}ก่อน`;
+      return add(`<b>${I('copy')} เคสซ้ำ ${a.dup.length+1} เคส</b><small>${E(a.why)}</small><ul><li><b>เก็บ</b> ${row(a.keep)}</li>${a.dup.map(c=>`<li>รวมเข้า: ${row(c)}</li>`).join('')}</ul>
+        <div class="row"><button type="button" class="ok" data-run="${id}">ยืนยันรวมเคส</button><button type="button" class="no" data-skip="${id}">ไม่ใช่เคสซ้ำ</button></div>`,'hz-act')}
     if(a.type==='assign'){const cs=a.cases.map(x=>d.cases.find(c=>String(c.id)===x)).filter(Boolean);
+      if(a.choices&&a.choices.length)return add(`<b>${I('users')} ${cs.length>1?`กลุ่ม ${cs.length} เคส · เลือกทีม`:`เลือกทีมให้เคส #${E(cs[0]&&cs[0].id)}`}</b>${a.why?`<small>${E(a.why)}</small>`:''}<ul>${cs.map(c=>`<li>#${E(c.id)} · ${URG[sevOf(c)]} · ${E((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${E(c.people||1)} คน · ${E(c.district||'')}</li>`).join('')}</ul>
+        <select data-team>${a.choices.map(x=>`<option value="${E(x.name)}">${E(x.name)} · ${E(x.why)}</option>`).join('')}</select>
+        <label><input type="checkbox" data-notify checked> ส่งรายละเอียดเคสให้ทีมทางแชทด้วย</label><div class="row"><button type="button" class="ok" data-run="${id}">ยืนยันมอบกลุ่มนี้</button><button type="button" class="no" data-skip="${id}">ข้าม</button></div>`,'hz-act');
       return add(`<b>${I('users')} มอบ ${cs.length} เคส ให้ ${E(a.team)}</b>${a.why?`<small>${E(a.why)}</small>`:''}<ul>${cs.map(c=>`<li>#${E(c.id)} · ${URG[sevOf(c)]} · ${E((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${E(c.people||1)} คน · ${E(c.district||'')}${c.name?' · '+E(c.name):''}</li>`).join('')}</ul>
         <label><input type="checkbox" data-notify checked> ส่งรายละเอียดเคสให้ทีมทางแชทด้วย</label><div class="row"><button type="button" class="ok" data-run="${id}">ยืนยันมอบเคส</button><button type="button" class="no" data-skip="${id}">ข้าม</button></div>`,'hz-act')}
     return add(`<b>${I('chat')} ข้อความถึง ${E(a.team)}</b><textarea rows="3" data-text>${E(a.text)}</textarea><div class="row"><button type="button" class="ok" data-run="${id}">ยืนยันส่ง</button><button type="button" class="no" data-skip="${id}">ข้าม</button></div>`,'hz-act')}
   async function onAct(e){const sk=e.target.closest('[data-skip]');if(sk){const card=sk.closest('.hz-act');card.classList.add('done');card.querySelector('.row').innerHTML='<small>ข้ามแล้ว</small>';return}
     const b=e.target.closest('[data-run]');if(!b)return;const {a,d}=ACTS.get(b.dataset.run)||{};if(!a)return;const card=b.closest('.hz-act');
-    if(a.type==='message')a.text=card.querySelector('[data-text]').value.trim();if(a.type==='assign')a.notify=card.querySelector('[data-notify]').checked;
+    if(a.type==='message')a.text=card.querySelector('[data-text]').value.trim();const ts=card.querySelector('[data-team]');if(ts)a.team=ts.value;if(a.type==='assign')a.notify=card.querySelector('[data-notify]').checked;
     b.disabled=true;b.textContent='กำลังทำ…';
-    try{await run(a,d);card.classList.add('done');card.querySelector('.row').innerHTML=`<small>✓ ${a.type==='assign'?'มอบเคสแล้ว':'ส่งแล้ว'} โดย ${E(me())}</small>`;if(typeof toast==='function')toast('ทำแล้ว',true);
+    try{await run(a,d);card.classList.add('done');card.querySelector('.row').innerHTML=`<small>✓ ${a.type==='assign'?'มอบเคสให้ '+E(a.team)+' แล้ว':a.type==='merge'?'รวมเคสแล้ว':'ส่งแล้ว'} โดย ${E(me())}</small>`;if(typeof toast==='function')toast('ทำแล้ว',true);
       window.dispatchEvent(new CustomEvent('hermes:done',{detail:a}))}
     catch(err){b.disabled=false;b.textContent='ลองอีกครั้ง';note('ทำไม่สำเร็จ: '+(err.message||''))}}
 
@@ -168,7 +219,10 @@ const HERMES=(()=>{
   /* ปุ่มสรุปในรายละเอียดเคส (หน้าจัดการเคส) */
   function drawerHook(){const dr=document.getElementById('drawer');if(!dr)return;
     new MutationObserver(()=>{const sm=dr.querySelector('.d-head small');if(!sm||dr.querySelector('.hz-sum'))return;const b=document.createElement('button');b.type='button';b.className='hz-sum';b.innerHTML='✦ สรุปด้วย Hermes';
-      b.onclick=()=>{S.focus=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);ask('สรุปเคสที่กำลังดู: สถานการณ์ ความเสี่ยง สิ่งที่ต้องเตรียม และเสนอทีมที่เหมาะ (ใส่ actions ถ้ามีทีมเหมาะ)',{label:'สรุปเคสนี้'})};sm.after(b)}).observe(dr,{childList:true,subtree:true})}
+      b.onclick=()=>{S.focus=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);ask('สรุปเคสที่กำลังดู: สถานการณ์ ความเสี่ยง สิ่งที่ต้องเตรียม และเสนอทีมที่เหมาะ (ใส่ actions ถ้ามีทีมเหมาะ)',{label:'สรุปเคสนี้'})};sm.after(b);
+      const t=document.createElement('button');t.type='button';t.className='hz-sum';t.innerHTML='✦ หาทีมให้เคสนี้';t.onclick=async()=>{const id=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);add('หาทีมให้เคสนี้','hz-m u');
+        const d=await data(),c=d.cases.find(x=>String(x.id)===id);if(!c){note('ไม่พบเคสในข้อมูล');return}const T=teamsFor(d,c);if(!T.length){note('ไม่มีทีมที่ว่าง');return}
+        note('ทีมที่เหมาะ (เลือกแล้วกดยืนยัน)');actCard({type:'assign',team:T[0].t.name,choices:T.slice(0,6).map(x=>({name:x.t.name,why:x.why})),cases:[id],why:'เรียงจากใกล้ · ว่าง · พาหนะเหมาะ'},d)};b.after(t)}).observe(dr,{childList:true,subtree:true})}
   /* ร่างคำตอบในแชท: คืนข้อความให้คนแก้แล้วกดส่งเอง */
   async function draft(team,msgs){if(typeof LOCALAI==='undefined'||!LOCALAI.on())throw new Error('ยังไม่ได้เปิด Local AI (หน้า ตั้งค่า)');
     const d=await data().catch(()=>null),t=d&&d.roster.find(x=>x.name===team),g=d?d.cases.filter(c=>c.status==='going'&&vol(c)===team):[];
@@ -177,5 +231,5 @@ const HERMES=(()=>{
       {role:'user',content:`ทีม: ${team}${t?` (${TST[t.status]||''} · พาหนะ ${t.vehicle||'-'})`:''}\nเคสที่ทีมรับอยู่:\n${g.map(caseLine).join('\n')||'-'}\n\nบทสนทนาล่าสุด:\n${conv||'-'}\n\nร่างข้อความตอบของศูนย์:`}],{timeout:120000});
     return ans.replace(/```[\s\S]*?```/g,'').replace(/^["“]|["”]$/g,'').trim()}
   const t0=setInterval(()=>{if(KEY()&&document.getElementById('app')&&!document.getElementById('app').hidden&&!document.documentElement.classList.contains('embed')){clearInterval(t0);build()}},1200);
-  return {open:q=>{toggle(true);if(q)ask(q)},plan,setScope:sc=>{S.scope=sc||null;if(S.el&&!S.el.hidden)S.el.querySelector('.hz-sc').textContent=sc&&sc.title||'ภาพรวมทั้งหมด'},draft};
+  return {open:q=>{toggle(true);if(q)ask(q)},plan,dups,clusters,teamsFor,setScope:sc=>{S.scope=sc||null;if(S.el&&!S.el.hidden)S.el.querySelector('.hz-sc').textContent=sc&&sc.title||'ภาพรวมทั้งหมด'},draft};
 })();

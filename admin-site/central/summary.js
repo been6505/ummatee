@@ -1,6 +1,6 @@
 /* การ์ดสรุปแบบหน้า "สรุป" ของ helpme4u.com: การ์ดดำ (% ช่วยเสร็จ · วงแหวน · ตัวเลขใหญ่) + สถานะตอนนี้ (จุดสี · แถบสัดส่วน · ตัวเลขคน)
    ใช้: hmSummary(el,{cases,title,online,teams,sev}) · ปุ่มสถานะมี data-cst="open|crit|going|done" ให้หน้าที่เรียกจับคลิกเอง */
-function hmSummary(el,o){if(!el)return;const cases=o.cases||[],sev=o.sev||(c=>Math.min(3,Math.max(1,Number(c.urgency)||1)));
+function hmSummary(el,o){if(!el)return;const cases=(o.cases||[]).filter(c=>!c.dupOf),sev=o.sev||(c=>Math.min(3,Math.max(1,Number(c.urgency)||1)));
   const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n=x=>Number(x).toLocaleString('th-TH'),pp=c=>Math.max(1,Number(c.people)||1),sum=l=>l.reduce((a,c)=>a+pp(c),0);
   const wait=t=>{const m=Math.max(0,Math.round((Date.now()-t)/60000));if(m<60)return m+' นาที';const h=Math.floor(m/60);return h<24?h+' ชม. '+(m%60)+' นาที':Math.floor(h/24)+' วัน'};

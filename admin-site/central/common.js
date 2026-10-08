@@ -23,6 +23,13 @@ function adminBoot(probe,field,onReady){
       if(good(r)){const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';$('#login').hidden=true;$('#app').hidden=false;onReady(r)}
       else{ADM.key='';$('#login-err').textContent=r&&r.error==='not_volunteer'?'รหัสไม่ถูกต้อง':r&&r.ok?'ระบบ CENTRAL ยังไม่รองรับหน้านี้ ต้องอัปเดต Code.gs ก่อน':'ใช้งานไม่ได้: '+(r&&r.error||'')}}
     catch(err){ADM.key='';$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
-  if(ADM.key){$('#app').hidden=false;apiGet(probe).then(r=>{if(good(r))onReady(r);else if(r&&r.error==='not_volunteer')logout('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');else{$('#main').innerHTML='<p class="empty">หน้านี้ต้องอัปเดต Code.gs ก่อนจึงจะใช้งานได้ (ระบบตอบกลับ: '+esc(r&&r.error||'ไม่รองรับ')+')</p>'}}).catch(()=>{$('#main').innerHTML='<p class="empty">เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรช</p>'})}
+  /* เปิดหน้า: ตรวจรหัสด้วยการเรียก API · ลองซ้ำ 3 ครั้งเมื่อเน็ตสะดุด · เน็ตหลุดจริงก็ไม่ลบหน้า แค่แสดงแถบให้ลองใหม่ */
+  if(ADM.key){$('#app').hidden=false;
+    const fail=html=>{let n=document.getElementById('boot-err');if(!n){n=document.createElement('p');n.id='boot-err';n.className='empty boot-err';$('#main').prepend(n)}n.innerHTML=html};
+    const go=async(tries=0)=>{try{const r=await apiGet(probe);const n=document.getElementById('boot-err');if(n)n.remove();
+        if(good(r))onReady(r);else if(r&&r.error==='not_volunteer')logout('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');else fail('หน้านี้ยังใช้งานไม่ได้ (ระบบตอบกลับ: '+esc(r&&r.error||'ไม่รองรับ')+')')}
+      catch(e){if(tries<3){setTimeout(()=>go(tries+1),1200*(tries+1));return}
+        fail('เชื่อมต่อไม่ได้ · <button type="button" class="linkish" id="boot-retry">ลองใหม่</button>');$('#boot-retry').onclick=()=>go(0)}};
+    go()}
   else{$('#login').hidden=false;setTimeout(()=>$('#login-key').focus(),50)}
 }

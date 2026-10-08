@@ -7,7 +7,7 @@
    ข้อมูล: เคส Help Me (หลัก) + เคสในระบบ · ทีม/ตำแหน่งสด (roster) · SOS/สายเข้า/แชท (chat_threads) · ประกาศกรมอุตุฯ (news)
    อัปเดตเอง: เคส 30 วิ · ทีม/แจ้งเตือน 15 วิ · ประกาศ 10 นาที */
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
-  room:'',tab:'over',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
+  room:'',tab:new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
 /* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
   if(k&&wr){store.set('uh_vol_key','wr_'+k,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',wr,true);ADM.key='wr_'+k;
@@ -94,11 +94,11 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   else $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
   const r=room();$('#subtabs').hidden=false;
-  const tabs=!r?['over','struct']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab='over';
+  const tabs=!r?['struct','over']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
   document.body.classList.toggle('wr-overview',W.tab==='over')}
-$('#rooms').addEventListener('click',e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';
+$('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';W.tab=W.room?'over':'struct';if(!W.room)await loadStock();
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
 $('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
@@ -207,10 +207,15 @@ function stats(cs,names){const act=cs.filter(c=>c.status!=='done');const live=ne
   return {act:act.length,crit:act.filter(c=>sev(c)===3&&c.status!=='going').length,going:act.filter(c=>c.status==='going').length,teams:names.length,on:names.filter(n=>live.has(n)).length,
     low:W.items.filter(i=>i.warroom&&i.min!==''&&Number(i.qty)<=Number(i.min)).length}}
 function chipsOf(st){return `<span class="k">${st.act} เคสค้าง</span>${st.crit?`<span class="k cr">${st.crit} วิกฤต</span>`:''}<span class="k">${st.going} กำลังไป</span><span class="k">ทีม ${st.on}/${st.teams} ออนไลน์</span>`}
+/* แผนผัง: เคสค้างใต้แต่ละ War Room (วิกฤตก่อน · รอนานก่อน) */
+function treeCases(list,label){const open=list.filter(c=>c.status!=='done').sort((a,b)=>sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0));if(!open.length)return '';
+  const row=c=>{const ph=photos(c);return `<a class="tc u${sev(c)}" href="${caseLink(c)}"><span class="tph">${ph.length?`<img src="${thumb(ph[0],96)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w96" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span>
+    <span class="tt"><b>${esc((c.needs||[]).slice(0,2).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน · ${esc(c.district||provOf(c)||'')} · ${c.status==='going'?'กำลังไป':'รอ '+esc(waitTxt(c.createdAt))}</small></span><span class="tl">${URG[sev(c)]}</span></a>`};
+  return `<details class="tcs"${open.length<=4?' open':''}><summary>${esc(label)} <b>${open.length}</b>${open.some(c=>sev(c)===3)?` <span class="k cr">วิกฤต ${open.filter(c=>sev(c)===3).length}</span>`:''}</summary><div class="tcl">${open.slice(0,12).map(row).join('')}${open.length>12?`<span class="muted small">และอีก ${open.length-12} เคส · เปิด War Room เพื่อดูทั้งหมด</span>`:''}</div></details>`}
 function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.rooms.filter(r=>!isProv(r));
   const covered=c=>W.rooms.some(r=>inRoom(c,r)),orphan=open.filter(c=>!covered(c)),freeTeams=W.roster.filter(t=>!t.warroom||!zones.some(z=>z.id===t.warroom));
   const provs=[...new Set(W.rooms.map(r=>r.province||'').concat(open.map(provOf).filter(Boolean)))].sort((a,b)=>(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:0)||a.localeCompare(b,'th'));
-  $('#st-sum').innerHTML=[[W.rooms.filter(isProv).length,'ศูนย์ประสานงานจังหวัด'],[zones.length,'War Room โซน'],[W.roster.length,'ทีมทั้งหมด'],[orphan.length,'เคสค้างที่ยังไม่มี War Room ดูแล',orphan.length?'crit':''],[freeTeams.length,'ทีมยังไม่สังกัดโซน',freeTeams.length?'warn':'']]
+  $('#st-sum').innerHTML=[[W.rooms.length,'War Room ทั้งหมดทั่วประเทศ'],[new Set(W.rooms.map(r=>r.province).filter(Boolean)).size,'จังหวัดที่มี War Room'],[W.rooms.filter(isProv).length,'ศูนย์ประสานงานจังหวัด'],[zones.length,'War Room โซน'],[W.roster.length,'ทีมทั้งหมด'],[orphan.length,'เคสค้างที่ยังไม่มี War Room ดูแล',orphan.length?'crit':''],[freeTeams.length,'ทีมยังไม่สังกัดโซน',freeTeams.length?'warn':'']]
     .map(([v,l,c])=>`<div class="wr-kpi ${c||''}"><b>${v}</b><span>${l}</span></div>`).join('');
   $('#st-tree').innerHTML=`<div class="node central"><b>HELP ME CENTRAL</b><span class="muted small">Common Operating Picture · ข้อมูล / มาตรฐาน / สนับสนุน</span><div class="kk">${chipsOf(stats(W.cases,W.roster.map(t=>t.name)))}</div></div>
     <div class="lvl">${provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv),pc=W.cases.filter(c=>pv?provOf(c)===pv:!provOf(c));
@@ -218,11 +223,13 @@ function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.roo
       return `<div class="branch"><div class="node prov${pr?'':' missing'}">${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>${pr.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(pr))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
           <span class="muted small">${pv?'Provincial Coordination':'เคส/โซนที่ยังไม่ระบุจังหวัด'}${pr&&pr.lead?' · '+esc(pr.lead):''}${pr&&pr.phone?` · <a href="tel:${esc(telOf(pr.phone))}">${esc(pr.phone)}</a>`:''}</span>
           <div class="kk">${chipsOf(stats(pc,pnames))}${po?`<span class="k warn">${po} เคสนอกโซน</span>`:''}</div>
-          ${!pr&&pv?`<button type="button" class="btn ghost sm" data-newprov="${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>`:''}</div>
+          ${treeCases(pc.filter(c=>!zs.some(z=>inRoom(c,z))),zs.length?'เคสในจังหวัด/ใกล้เคียง ที่ยังไม่มีโซนดูแล':'เคสในจังหวัด/ใกล้เคียง')}
+          ${!pr&&pv?`<button type="button" class="btn ghost sm" data-newprov=""${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>`:''}</div>
         <div class="lvl">${zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="branch"><div class="node zone"><button type="button" class="lnk ttl" data-go="${esc(z.id)}"><i class="rdot" style="background:${esc(z.color)}"></i> ${esc(z.name)}</button>${z.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(z))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}
             <span class="muted small">War Room โซน${z.lead?' · '+esc(z.lead):''}${z.districts.length?' · '+esc(z.districts.slice(0,4).join(', '))+(z.districts.length>4?'…':''):''}</span>
             <div class="kk">${chipsOf(stats(W.cases.filter(c=>inRoom(c,z)),tn.map(t=>t.name)))}</div>
-            <div class="tms">${tn.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')||'<span class="muted small">ยังไม่มีทีม</span>'}</div></div></div>`}).join('')}
+            <div class="tms">${tn.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')||'<span class="muted small">ยังไม่มีทีม</span>'}</div>
+            ${treeCases(W.cases.filter(c=>inRoom(c,z)),'เคสในพื้นที่โซน')}</div></div>`}).join('')}
           ${pv?`<button type="button" class="btn ghost sm addz" data-newzone="${esc(pv)}">+ เพิ่ม War Room โซนใน${esc(pv==='กรุงเทพมหานคร'?'กรุงเทพฯ':'จ.'+pv)}</button>`:''}</div></div>`}).join('')}</div>
     ${freeTeams.length?`<div class="node free"><b>ทีมยังไม่สังกัด War Room โซน</b><div class="tms">${freeTeams.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')}</div><span class="muted small">เลือก War Room โซน → แท็บ "ทีม" เพื่อเพิ่มทีมเข้าโซน</span></div>`:''}`;
 }
@@ -532,3 +539,4 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});
 
 $('#doc-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('0989406537');toast('คัดลอกเบอร์แล้ว',true)}catch(e){toast('คัดลอกไม่ได้ · 098-940-6537')}});
+$('#st-new').onclick=()=>roomForm(null);

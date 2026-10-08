@@ -522,3 +522,5 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   setInterval(pollLive,3000); // ตำแหน่งทีมแบบเรียลไทม์
   setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},30000);
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});
+
+$('#doc-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('0989406537');toast('คัดลอกเบอร์แล้ว',true)}catch(e){toast('คัดลอกไม่ได้ · 098-940-6537')}});

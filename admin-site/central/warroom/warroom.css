@@ -286,3 +286,18 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
 }
 .wr-hero-n span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wr-hero-n{align-items:start!important}
 @media(max-width:400px){.wr-hero-n span{font-size:12.5px!important}.wr-hero-n>div{padding:0 9px!important}.wr-hero-n b{font-size:24px!important}}
+
+/* การ์ดปรึกษาคุณหมอจิตอาสา (แบบแท็บ "หมอ" ของ helpme4u.com) */
+.wr-doc{border-radius:32px;overflow:hidden;background:var(--surface,#fff);box-shadow:var(--shadow-soft)}
+.wr-doc-hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#5FB5A3 0%,#3F8B7B 45%,#336F64 100%);color:#fff;text-align:center;padding:26px 18px 24px;display:grid;justify-items:center;gap:6px}
+.wr-doc-hero:after{content:"";position:absolute;right:-60px;bottom:-90px;width:230px;height:230px;border-radius:50%;background:rgba(255,255,255,.06)}
+.wr-doc-av{width:96px;height:96px;border-radius:50%;background:#fff;color:#2F7466;display:grid;place-items:center;box-shadow:0 0 0 12px rgba(255,255,255,.14);margin-bottom:10px}.wr-doc-av svg{width:44px;height:44px}
+.wr-doc-hero small{font-size:14px;opacity:.85}.wr-doc-hero h2{margin:0;font-size:26px;font-weight:800;color:#fff}
+.wr-doc-tag{border:1.5px solid rgba(255,255,255,.4);border-radius:999px;padding:4px 16px;font-weight:700;font-size:14px;margin-top:4px}
+.wr-doc-b{padding:18px 22px 22px;display:grid;justify-items:center;gap:4px}.wr-doc-b small{color:var(--muted);font-size:14px}
+.wr-doc-b>b{font-size:38px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.wr-doc-a{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px;width:100%;margin-top:12px}
+.wr-doc-a>*{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;border-radius:20px;font:inherit;font-weight:700;font-size:18px;text-decoration:none;border:0;cursor:pointer}
+.wr-doc-a .call{background:linear-gradient(180deg,#5BAE6E,#448B57);color:#fff!important;box-shadow:0 8px 20px rgba(68,139,87,.3)}
+.wr-doc-a button{background:var(--bg,#f2f2f5);color:var(--ink)}.wr-doc-a svg{width:22px;height:22px}
+@media(min-width:1000px){.wr-prof>.wr-card:last-child{grid-column:2;grid-row:1/span 2;align-self:start}.wr-prof>#pf-info,.wr-prof>.wr-doc{grid-column:1}}

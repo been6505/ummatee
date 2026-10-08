@@ -145,7 +145,29 @@ $('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigato
 function summary(){if(typeof hmSummary!=='function')return;const all=(D.hmc||[]).concat(D.cases);if(!all.length&&!D.hmcDone)return;
   const online=new Set((D.live||[]).filter(t=>Date.now()-t.updatedAt<10*60e3).map(t=>t.team)).size;
   hmSummary($('#sumbox'),{cases:all,title:'ภาพรวมทั้งหมด',online,teams:D.rosterN||(D.live||[]).length,sev})}
-function render(){summary();
+/* ตัวชี้วัด (Design Thinking: วัดผลทุกการปรับปรุง) · เทียบเป้าหมาย: เขียว = ถึงเป้า · เหลือง = ใกล้ · แดง = ต้องแก้ */
+function metrics(){const el=$('#metrics');if(!el)return;const all=(D.hmc||[]).concat(D.cases);if(!all.length)return;
+  const now=Date.now(),wk=now-7*864e5,M=60e3,med=a=>{if(!a.length)return null;a=a.slice().sort((x,y)=>x-y);const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2};
+  const dur=ms=>ms==null?'–':ms<3600e3?Math.round(ms/M)+' นาที':ms<864e5?(ms/3600e3).toFixed(1).replace(/\.0$/,'')+' ชม.':(ms/864e5).toFixed(1).replace(/\.0$/,'')+' วัน';
+  const rec=all.filter(c=>c.createdAt>=wk),open=all.filter(c=>c.status!=='done'&&c.status!=='going');
+  const pick=rec.filter(c=>c.pickedAt>c.createdAt).map(c=>c.pickedAt-c.createdAt),fin=rec.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>c.createdAt).map(c=>(c.doneAt||c.updatedAt)-c.createdAt);
+  const crit=rec.filter(c=>sev(c)===3),critOk=crit.filter(c=>c.pickedAt&&c.pickedAt-c.createdAt<=30*M).length;
+  const critWait=open.filter(c=>sev(c)===3&&now-c.createdAt>30*M).length,longWait=open.filter(c=>now-c.createdAt>864e5).length;
+  const mp=med(pick),mf=med(fin),pc=crit.length?Math.round(critOk/crit.length*100):null;
+  const lv=(v,good,warn,low)=>v==null?'':low?(v<=good?'ok':v<=warn?'warn':'bad'):(v>=good?'ok':v>=warn?'warn':'bad');
+  const T=[[dur(mp),'เวลาจนมีทีมรับ (ค่ากลาง)','เป้า ≤ 30 นาที',lv(mp,30*M,120*M,1)],[dur(mf),'เวลาจนช่วยเสร็จ (ค่ากลาง)','เป้า ≤ 12 ชม.',lv(mf,12*3600e3,24*3600e3,1)],
+    [critWait,'วิกฤตรอเกิน 30 นาที','เป้า 0',lv(critWait,0,2,1)],[pc==null?'–':pc+'%','วิกฤตมีทีมรับใน 30 นาที','เป้า ≥ 90%',lv(pc,90,60)],
+    [longWait,'เคสรอเกิน 24 ชม.','เป้า 0',lv(longWait,0,5,1)],[rec.length,'เคสใหม่ 7 วัน','',''] ];
+  el.innerHTML=T.map(([v,l,g,c])=>`<div class="mt ${c}"><b>${v}</b><span>${l}</span>${g?`<small>${g}</small>`:''}</div>`).join('')}
+/* ข้อเสนอแนะจากทีมงาน (ปุ่มในทุกหน้า) · กด "เสร็จ" เมื่อแก้แล้ว */
+async function loadFeedback(){const r=await api({action:'feedback_list',key:D.key}).catch(()=>null);const card=$('#fbk-card');if(!card||!r||!r.ok){if(card)card.hidden=true;return}
+  const open=r.feedback.filter(f=>!f.done);card.hidden=!r.feedback.length;$('#fbk-n').textContent=open.length||'';
+  $('#fbk-list').innerHTML=r.feedback.slice(0,30).map(f=>`<div class="fbk${f.done?' done':''}"><p>${escT(f.text)}</p><small>${escT([f.by||'ไม่ระบุชื่อ',f.room?'War Room '+f.room:'',f.page.split(' · ')[0],new Date(f.at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})].filter(Boolean).join(' · '))}</small>
+    <button type="button" class="linkish" data-fbk="${f.n}" data-done="${f.done?0:1}">${f.done?'เปิดอีกครั้ง':'เสร็จแล้ว'}</button></div>`).join('')}
+$('#fbk-list')&&$('#fbk-list').addEventListener('click',async e=>{const b=e.target.closest('[data-fbk]');if(!b)return;b.disabled=true;
+  await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'feedback_done',key:D.key,n:+b.dataset.fbk,done:b.dataset.done==='1'})}).catch(()=>{});loadFeedback()});
+setInterval(()=>{if(D.key&&!document.hidden)loadFeedback()},60000);
+function render(){summary();metrics();if(!D.fbkAt){D.fbkAt=1;loadFeedback()}
   const from=rangeStart(),L=D.cases.filter(c=>!from||c.createdAt>=from),act=L.filter(c=>c.status!=='done');
   drawMap(L);
   $('#sync').textContent=D.loaded?'อัปเดต '+new Date(D.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';

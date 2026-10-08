@@ -255,3 +255,14 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   .dcol-r .card{padding:12px 14px!important}.dcol-r .card h2{font-size:15px}.dcol-r .card .sub{font-size:12px}
   .dcol-m .mapcard{padding:12px!important}.dcol-m .map-h h2{font-size:16px}.dcol-m .map-h .sub{font-size:12px}
 }
+
+/* ตัวชี้วัด + ข้อเสนอแนะ */
+.mt-card h2 small,.fbk-card h2 small{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
+.mt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px}
+.mt{border-radius:14px;padding:8px 10px;background:var(--bg,#f5f5f7);display:grid;gap:1px;box-shadow:inset 4px 0 0 var(--mc,#c9ccd6)}
+.mt b{font-size:20px;line-height:1.2}.mt span{font-size:12px;color:var(--ink)}.mt small{font-size:11px;color:var(--muted)}
+.mt.ok{--mc:#2E9E57}.mt.ok b{color:#1F7A43}.mt.warn{--mc:#E0A800}.mt.warn b{color:#9A6B00}.mt.bad{--mc:#E5383B}.mt.bad b{color:#C62828}
+.fbk-n{background:var(--primary,#DD2027);color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;margin-left:4px}.fbk-n:empty{display:none}
+#fbk-list{display:grid;gap:8px;margin-top:6px;max-height:320px;overflow:auto}
+.fbk{border-radius:14px;padding:8px 12px;background:var(--bg,#f5f5f7);display:grid;gap:2px;justify-items:start}.fbk p{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.fbk small{font-size:11.5px;color:var(--muted)}.fbk.done{opacity:.55}.fbk .linkish{font-size:12.5px;color:var(--primary,#DD2027)}

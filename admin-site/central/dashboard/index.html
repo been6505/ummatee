@@ -10,7 +10,7 @@
 <link rel="icon" href="../../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=115">
+<link rel="stylesheet" href="./dashboard.css?v=116">
 <link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=34">
@@ -77,6 +77,8 @@
     </article>
     </div>
     <div class="dcol dcol-r">
+    <article class="card mt-card" id="mt-card" aria-label="ตัวชี้วัด"><h2><i data-ic="chart"></i> ตัวชี้วัด <small>7 วันล่าสุด</small></h2><div class="mt-grid" id="metrics"></div></article>
+    <article class="card fbk-card" id="fbk-card" hidden aria-label="ข้อเสนอแนะจากทีมงาน"><h2><i data-ic="chat"></i> ข้อเสนอแนะ <b class="fbk-n" id="fbk-n"></b></h2><div id="fbk-list"></div></article>
     <p class="hm-src hm-part" hidden><span id="hm-upd"></span> <a href="https://helpme-th.pages.dev/#stats" target="_blank" rel="noopener">เปิดหน้าสถิติ Help Me <i data-ic="ext"></i></a></p>
     <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
     <!-- การ์ดตัวเลขจาก Help Me แบบสรุปจากเซิร์ฟเวอร์: ใช้แทนเฉพาะตอนโหลดรายการเคส Help Me ไม่ได้ -->
@@ -127,8 +129,9 @@
 <script src="../camlive.js?v=8"></script>
 <script src="../maplayers.js?v=7"></script>
 <script src="../summary.js?v=1"></script>
-<script src="./dashboard.js?v=39"></script>
+<script src="./dashboard.js?v=40"></script>
 <script src="../chat.js?v=6"></script>
+<script src="../feedback.js?v=1"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 <script>/* กรอบพื้นที่มอบแล้ว: โหลดเมื่อใกล้ถึง · สูงเกือบเต็มจอ เลื่อนดูในกรอบ · #covered เลื่อนมาที่ส่วนนี้ */

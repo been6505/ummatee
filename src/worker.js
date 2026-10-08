@@ -52,6 +52,7 @@ const SCHEMA = [
   // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
+  `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
   // รายงานภัยที่ศูนย์ปักหมุดเอง (หลุมยุบ ดินถล่ม น้ำป่า ฯลฯ ที่ไม่มีแหล่งข้อมูลอัตโนมัติ)
   `CREATE TABLE IF NOT EXISTS hazard_reports (id TEXT PRIMARY KEY, type TEXT, lat REAL, lng REAL, radiusM INTEGER, note TEXT, level TEXT, createdAt INTEGER, expiresAt INTEGER, closedAt INTEGER, by_ TEXT)`,
@@ -128,7 +129,7 @@ function outCase(r, full) {
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
-    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '' };
+    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null };
   if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; }
   return o;
 }
@@ -157,6 +158,19 @@ async function createCase(db, b, ip) {
   await bumpRev(db);
   return { ok: true, id, urgency: u, token };
 }
+/* ข้อเสนอแนะ/แจ้งปัญหาจากทีมงาน (ปุ่มในทุกหน้า) · CENTRAL ดูและปิดได้ที่แดชบอร์ด */
+async function saveFeedback(db, b) {
+  const text = clean(b.text, 1000);
+  if (!text) return { ok: false, error: 'empty' };
+  await db.prepare('INSERT INTO feedback (at,page,by_,room,text,done) VALUES (?,?,?,?,?,0)')
+    .bind(Date.now(), clean(b.page, 200), clean(b.by, 60), WRC ? WRC.id : '', text).run();
+  return { ok: true };
+}
+async function doneFeedback(db, b) {
+  if (WRC) return { ok: false, error: 'central_only' };
+  await db.prepare('UPDATE feedback SET done=? WHERE n=?').bind(b.done === false ? 0 : 1, Number(b.n) || 0).run();
+  return { ok: true };
+}
 async function updateCase(db, b) {
   if (!STATUSES.includes(b.status)) return { ok: false, error: 'bad_status' };
   const r = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first();
@@ -171,6 +185,9 @@ async function updateCase(db, b) {
   }
   if (!meta) {
     sets.push('status=?', 'updatedAt=?', 'localAt=?'); vals.push(b.status, Date.now(), Date.now()); // localAt: ศูนย์แก้เอง (ใช้ตัดสินกับข้อมูลที่ซิงก์จาก Help Me)
+    // เวลามีทีมรับ / ช่วยเสร็จ (ใช้วัดตัวชี้วัด) · บันทึกครั้งแรกที่เปลี่ยนสถานะ
+    if (b.status === 'going' && r.status !== 'going' && !r.pickedAt) { sets.push('pickedAt=?'); vals.push(Date.now()); }
+    if (b.status === 'done' && r.status !== 'done') { sets.push('doneAt=?'); vals.push(Date.now()); if (!r.pickedAt) { sets.push('pickedAt=?'); vals.push(Date.now()); } }
     if (b.status === 'open') sets.push("volunteer=''");
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }
@@ -1720,6 +1737,11 @@ async function api(request, env) {
       case 'live_view': return json(await liveView(db, p.v));
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
+      case 'feedback_list': {
+        if (!vol || WRC) return json({ ok: false, error: 'central_only' });
+        const { results } = await db.prepare('SELECT * FROM feedback ORDER BY done, at DESC LIMIT 200').all();
+        return json({ ok: true, feedback: results.map(f => ({ n: f.n, at: f.at, page: f.page || '', by: f.by_ || '', room: f.room || '', text: f.text || '', done: !!f.done })) });
+      }
       // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
@@ -1746,7 +1768,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

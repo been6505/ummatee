@@ -151,3 +151,9 @@
 .wr-team .hd{border-bottom-color:#0e9f6e}
 .wr-q .qact,.wr-teams .qact{display:inline-flex;gap:2px;align-items:center}.wr-q .qact .lnk svg,.wr-teams .qact .lnk svg{width:18px;height:18px}
 .wr-teams li{grid-template-columns:12px minmax(0,1fr) auto auto auto}
+/* ค้นหาที่อยู่อัตโนมัติ */
+.wr-dlg .addr-wrap{position:relative}
+.addr-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:4px 0 0;padding:4px;list-style:none;background:var(--surface,#fff);border-radius:14px;box-shadow:0 12px 30px rgba(10,14,40,.22);max-height:280px;overflow:auto}
+.addr-sug li{padding:8px 10px;border-radius:10px;cursor:pointer;display:grid;gap:1px;font-weight:400}
+.addr-sug li:hover,.addr-sug li:focus{background:var(--bg,#f2f3f7)}.addr-sug li b{font-size:14.5px;color:var(--ink,#1b1f3b)}.addr-sug li small{font-size:12.5px;color:var(--muted,#6e6e73)}
+.addr-sug li.none{cursor:default;color:var(--muted,#6e6e73);font-size:13px}

@@ -10,7 +10,8 @@ const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k
   set(k,v,remember){try{if(!v){localStorage.removeItem(k);sessionStorage.removeItem(k);return}(remember?localStorage:sessionStorage).setItem(k,v)}catch(e){}}};
 const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:['both','list','map'].includes(store.get('uh_view'))?store.get('uh_view'):'both',map:null,layer:null,openId:null,rev:null};
 
-const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const claim=c=>Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ผู้แจ้งเลือกเอง (ใช้เป็นข้อมูลประกอบเท่านั้น)
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);
 const bagSuggest=c=>hh(c)||1; // แนะนำ: ครัวเรือนละ 1 ถุง
 const hh=c=>{const n=Number(c.households);if(n>0)return n;const m=String(c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?+m[1]:0};
@@ -158,7 +159,7 @@ function renderList(list){
   if(!list.length){el.innerHTML='<p class="empty">ไม่มีเคสที่ตรงกับตัวกรอง</p>';return}
   el.innerHTML=`<table class="tbl"><thead><tr><th>ระดับ</th><th>ตรวจพื้นที่</th><th>สถานะ</th><th>ความต้องการ</th><th>คน / ครัวเรือน</th><th>ถุงยังชีพ</th><th>ที่อยู่</th><th>ผู้ติดต่อ</th><th>ทีม</th><th>แจ้งเมื่อ</th><th></th></tr></thead><tbody>`+
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
-      <td data-l="ระดับ"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span></td>
+      <td data-l="ระดับ"><span class="urg urg-${sev(c)}" title="ระดับที่ระบบตัดสินจากข้อมูลผู้แจ้ง + ข้อมูลระบบ">${URG[sev(c)]}</span>${claim(c)!==sev(c)?`<small class="claim">ผู้แจ้งบอก ${URG[claim(c)]}</small>`:''}</td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
       <td data-l="สถานะ">${c.hm?`<span class="st st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</span> <small class="hm-tag">Help Me</small>`:`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
@@ -208,12 +209,13 @@ function vrSection(c){
   const rd=v.road,reps=v.reports.slice(0,3);
   return `<section class="vr-box vr-b-${v.result.k}">
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
-    <p class="vr-why"><b>วิกฤตเพราะ (ผู้แจ้งบอก):</b> ${esc((v.why||[]).join(' · '))}</p>
+    <p class="vr-why vr-lv lv${v.level}"><b>ระบบตัดสิน: ${esc(URG[v.level]||'')}</b> — ${esc(v.levelWhy||'')}</p>
+    <p class="vr-why"><b>ผู้แจ้งบอก:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
     ${aiBlock(c)}
     <details class="vr-more"><summary>รายละเอียด / ตรวจเอง</summary>
-    <div class="vr-bars"><div><span>ข้อมูลผู้แจ้ง</span><i style="width:${v.R*2}%"></i><em>${v.R}/50</em></div><div><span>ข้อมูลภายนอก (ฝน ดาวเทียม น้ำท่วม กล้อง)</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*2}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/50</em></div></div>
+    <div class="vr-bars"><div><span>ข้อมูลผู้แจ้ง</span><i style="width:${v.R*2.5}%"></i><em>${v.R}/40</em></div><div><span>ข้อมูลภายนอก (ฝน ดาวเทียม น้ำท่วม กล้อง)</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*100/60}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/60</em></div></div>
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
     ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
@@ -262,7 +264,7 @@ function renderDrawer(){
   // วาดใหม่โดยไม่ทิ้งสิ่งที่ผู้ใช้กำลังทำ: ชื่อทีมที่พิมพ์ค้าง ส่วนที่กางไว้ ตำแหน่งเลื่อน และช่องที่โฟกัสอยู่
   const same=d.dataset.case===String(c.id),keep=same?{team:(d.querySelector('#d-team')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:''}:null;
   d.dataset.case=String(c.id);
-  const t=tel(c),rows=[['ระดับ',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
+  const t=tel(c),rows=[['ระดับ (ระบบตัดสิน)',URG[sev(c)]+(claim(c)!==sev(c)?` · ผู้แจ้งเลือก ${URG[claim(c)]}`:'')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>

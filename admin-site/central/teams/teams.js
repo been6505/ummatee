@@ -4,7 +4,8 @@ const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
-const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const claim=c=>Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ผู้แจ้งเลือกเอง (ใช้เป็นข้อมูลประกอบเท่านั้น)
 const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const tname=s=>String(s||'').replace(/^'/,'').trim();

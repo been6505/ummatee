@@ -8,7 +8,8 @@
    อัปเดตเอง: เคส 30 วิ · ทีม/แจ้งเตือน 15 วิ · ประกาศ 10 นาที */
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
   room:'',tab:'over',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
-const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const claim=c=>Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ผู้แจ้งเลือกเอง (ใช้เป็นข้อมูลประกอบเท่านั้น)
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
 const ST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const CST={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'};
@@ -76,10 +77,10 @@ async function loadWarn(){try{const n=await apiGet({action:'news'});if(n&&n.ok)W
 /* ---------- เลือกห้อง / แท็บ ---------- */
 function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   const chip=(r,label)=>{const act=r?all.filter(c=>inRoom(c,r)):all,crit=act.filter(c=>sev(c)===3&&c.status!=='going').length,id=r?r.id:'';
-    return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i>'}${esc(label||r.name)} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
+    return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i><span class="lbl-long">HELP ME CENTRAL · </span>'}${esc(label||(isProv(r)&&/^ศูนย์ประสานงานจังหวัด/.test(r.name)?'ศูนย์ประสานงาน':r.name)||'(ไม่มีชื่อ)')} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
   // จัดกลุ่มตามจังหวัด: ศูนย์ประสานงานจังหวัด แล้วตามด้วย War Room โซนในจังหวัดนั้น
   const provs=[...new Set(W.rooms.map(r=>r.province||''))].sort((a,b)=>!a-!b||(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:a.localeCompare(b,'th')));
-  $('#rooms').innerHTML=chip(null,'HELP ME CENTRAL · ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
+  $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
   const r=room();$('#subtabs').hidden=false;
   const tabs=!r?['over','struct']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab='over';
@@ -318,7 +319,7 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
       <label>จังหวัด<input name="province" list="provs" maxlength="40" value="${esc(r.province||'')}" placeholder="เช่น กรุงเทพมหานคร"><datalist id="provs">${PROVINCES.map(p=>`<option value="${p}">`).join('')}</datalist></label></div>
     <label>ชื่อ<input name="name" maxlength="60" value="${esc(r.name||'')}" placeholder="เช่น War Room โซนตะวันออก (ศูนย์จังหวัดเว้นว่างได้)"></label>
     <div class="row"><label>หัวหน้า War Room<input name="lead" maxlength="60" value="${esc(r.lead||'')}"></label><label>เบอร์ติดต่อ<input name="phone" inputmode="tel" maxlength="20" value="${esc(r.phone||'')}"></label></div>
-    <label>ที่ตั้ง (ที่อยู่ / จุดสังเกต)<input name="address" maxlength="200" value="${esc(r.address||'')}"></label>
+    <label class="addr-wrap">ที่ตั้ง (พิมพ์ชื่อสถานที่/ที่อยู่ แล้วเลือกจากรายการ)<input name="address" maxlength="200" value="${esc(r.address||'')}" placeholder="เช่น โรงเรียนรีเจ้นท์ ลาดกระบัง"></label>
     <fieldset><legend>พื้นที่รับผิดชอบ (ใส่อย่างใดอย่างหนึ่งหรือทั้งสอง)</legend>
       <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
       <div class="row"><label>จุดที่ตั้ง (ละติจูด, ลองจิจูด)<input name="ll" maxlength="40" value="${r.lat!=null?esc(r.lat+', '+r.lng):''}" placeholder="13.7563, 100.5018"></label><label>รัศมี (กม.)<input name="radius" type="number" min="0" step="0.5" inputmode="decimal" value="${r.radius?esc(r.radius/1000):''}"></label></div>
@@ -334,12 +335,44 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     if(!res.ok){toast(res.error==='province_exists'?'จังหวัดนี้มีศูนย์ประสานงานแล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     toast('บันทึกแล้ว',true);await loadRooms();W.room=res.id;W.fitted='';if(!r.id)W.tab='prof';try{history.replaceState(null,'','?wr='+encodeURIComponent(res.id))}catch(e){}render()});
   const f=$('#dlg-f');
+  addrAuto(f.address,p=>{f.ll.value=p.lat.toFixed(5)+', '+p.lng.toFixed(5);
+    if(p.province&&!f.province.value.trim())f.province.value=p.province;
+    if(f.kind.value==='zone'&&p.district&&!f.districts.value.trim())f.districts.value=p.district;
+    if(f.kind.value==='zone'&&!f.radius.value)f.radius.value=3;
+    toast('ใส่ที่ตั้ง พิกัด'+(p.province?' จังหวัด':'')+(p.district&&f.kind.value==='zone'?' และเขต/อำเภอ':'')+'ให้แล้ว',true)});
   $('#ll-map').onclick=()=>{if(c)f.ll.value=c.lat.toFixed(5)+', '+c.lng.toFixed(5);else toast('เปิดแท็บภาพรวมเพื่อโหลดแผนที่ก่อน')};
   $('#ll-me').onclick=()=>navigator.geolocation&&navigator.geolocation.getCurrentPosition(p=>{f.ll.value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5)},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:10000});
   const del=$('#wr-del');if(del)del.onclick=async()=>{if(!confirm(`ปิด ${r.name}? ${isProv(r)?'War Room โซนในจังหวัดยังอยู่':'ทีมในห้องนี้จะกลับไปไม่สังกัดห้องใด'} (ข้อมูลเคสไม่หาย)`))return;
     const res=await apiPost({action:'warroom_save',warroom:{id:r.id,active:false}}).catch(()=>({}));if(res.ok){$('#dlg').close();W.room='';W.tab='over';try{history.replaceState(null,'',location.pathname)}catch(e){}await Promise.all([loadRooms(),loadTeams()]);render()}else toast('ปิดไม่สำเร็จ')};
 }
 $('#wr-new').onclick=()=>roomForm(null);
+
+/* ---------- ค้นหาที่อยู่ขณะพิมพ์ → แตะเลือกแล้วกรอกให้อัตโนมัติ ----------
+   ค้นพร้อมกัน 2 แหล่งของ OpenStreetMap (Photon + Nominatim) แล้วรวมผล · ไม่เจอ → ลองตัดคำนำหน้า (โรงเรียน/ร.ร./รร) แล้วค้นใหม่ */
+async function geoSearch(q,c){
+  const ph=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=default&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}&bbox=97.3,5.6,105.7,20.5`).then(x=>x.json()).then(r=>(r.features||[]).filter(f=>!f.properties.countrycode||f.properties.countrycode==='TH').map(f=>{const p=f.properties||{};
+      return {name:p.name||[p.housenumber,p.street].filter(Boolean).join(' ')||p.district||'',sub:[p.street&&p.name?p.street:'',p.district,p.city||p.county,p.state].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', '),lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],province:p.state||'',district:p.district||p.county||''}})).catch(()=>[]);
+  const no=fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&countrycodes=th&limit=6&accept-language=th&addressdetails=1`).then(x=>x.json()).then(r=>(r||[]).map(x=>{const a=x.address||{};
+      return {name:x.name||String(x.display_name||'').split(',')[0],sub:String(x.display_name||'').split(',').slice(1,5).join(',').trim(),lat:+x.lat,lng:+x.lon,province:a.state||a.province||(/กรุงเทพ/.test(a.city||'')?'กรุงเทพมหานคร':''),district:a.city_district||a.district||a.county||a.suburb||''}})).catch(()=>[]);
+  const all=[...await ph,...await no],seen=new Set();
+  return all.filter(x=>{const k=x.lat.toFixed(3)+','+x.lng.toFixed(3)+x.name;if(!x.name||seen.has(k))return false;seen.add(k);return true}).slice(0,8)}
+function addrAuto(input,onPick){
+  const box=document.createElement('ul');box.className='addr-sug';box.hidden=true;box.setAttribute('role','listbox');input.after(box);input.setAttribute('autocomplete','off');input.setAttribute('aria-autocomplete','list');
+  let t=null,seq=0,items=[];
+  input.addEventListener('input',()=>{clearTimeout(t);const q=input.value.trim();if(q.length<2){box.hidden=true;return}
+    box.hidden=false;box.innerHTML='<li class="none">กำลังค้นหา…</li>';
+    t=setTimeout(async()=>{const my=++seq,c=W.map?W.map.getCenter():{lat:13.75,lng:100.6};
+      let r=await geoSearch(q,c);const short=q.replace(/^(โรงเรียน|ร\.?\s?ร\.?|รร\.?)\s*/,'').trim();
+      if(!r.length&&short&&short!==q)r=await geoSearch(short,c);
+      if(my!==seq)return;items=r;
+      box.innerHTML=items.length?items.map((x,i)=>`<li role="option" data-i="${i}"><b>${esc(x.name)}</b><small>${esc(x.sub)}</small></li>`).join(''):'<li class="none">ไม่พบในแผนที่ · ลองพิมพ์ชื่อถนน/ซอย/แขวง หรือใช้ปุ่มเลือกจุดด้านล่าง</li>'},500)});
+  box.addEventListener('mousedown',e=>e.preventDefault());
+  box.addEventListener('click',e=>{const li=e.target.closest('[data-i]');if(!li)return;const x=items[+li.dataset.i];
+    input.value=[x.name,x.sub].filter(Boolean).join(', ');box.hidden=true;
+    onPick({lat:x.lat,lng:x.lng,province:String(x.province||'').replace(/^จังหวัด\s*/,'').replace(/^กรุงเทพ.*/,'กรุงเทพมหานคร'),district:String(x.district||'').replace(/^เขต\s*/,'').trim()})});
+  input.addEventListener('blur',()=>setTimeout(()=>{box.hidden=true},200));
+  input.addEventListener('keydown',e=>{if(e.key==='Escape')box.hidden=true});
+}
 
 /* ---------- กล่องฟอร์ม ---------- */
 function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
@@ -363,7 +396,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-fly]');if(
 $('#mt-done').onchange=()=>drawMap(view());
 async function full(){$('#refresh').disabled=true;try{await Promise.all([loadCases(),loadTeams(),loadRooms(),W.tab==='stock'?loadStock():null]);render()}finally{$('#refresh').disabled=false}}
 $('#refresh').onclick=full;
-adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warroom');clock();setInterval(clock,1000);
+adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warroom');if(typeof VERIFY!=='undefined'){VERIFY.onUpdate=()=>render();VERIFY.load().then(render,render)}clock();setInterval(clock,1000);
   W.room=new URLSearchParams(location.search).get('wr')||'';
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));

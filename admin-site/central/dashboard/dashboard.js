@@ -11,7 +11,8 @@ const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k
   set(k,v,rem){try{if(!v){localStorage.removeItem(k);sessionStorage.removeItem(k);return}(rem?localStorage:sessionStorage).setItem(k,v)}catch(e){}}};
 const D={key:store.get('uh_vol_key'),cases:[],loaded:0,range:'all',loading:false,rev:null};
 const nf=n=>Number(n||0).toLocaleString('th-TH');
-const sev=c=>Math.min(3,Math.max(1,Number(c.urgency)||1));
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const claim=c=>Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ผู้แจ้งเลือกเอง (ใช้เป็นข้อมูลประกอบเท่านั้น)
 const hh=c=>{const n=Number(c.households);if(n>0)return n;const m=String(c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?+m[1]:0};
 const vul=c=>(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
 const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e};

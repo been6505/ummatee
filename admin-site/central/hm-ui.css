@@ -92,3 +92,36 @@ h1,h2,h3{letter-spacing:-.01em}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;scrollbar-width:thin;padding-right:4px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) .bar-row .btn#export{order:9}
 }
+/* ---------- การ์ดเคส (มือถือ + ข้างแผนที่): หัวการ์ดแถวเดียว = ระดับ · สถานะ · ผลตรวจ (ขวา) ---------- */
+.tbl .claim{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.vr-lv{padding:8px 12px;border-radius:12px;background:var(--bg)}.vr-lv.lv3{background:#fdecec}.vr-lv.lv3 b{color:#b42318}.vr-lv.lv2 b{color:#b45309}
+@media(max-width:900px){
+  .tbl tr{grid-template-columns:auto auto minmax(0,1fr)!important;align-items:start}
+  .tbl td[data-l="ระดับ"]{grid-column:1;grid-row:1}
+  .tbl td[data-l="สถานะ"]{grid-column:2;grid-row:1;text-align:left!important;display:flex!important;flex-wrap:wrap;gap:4px;align-items:center}
+  .tbl tr{grid-template-columns:auto minmax(0,1fr)!important}
+  .tbl td.vr-cell{grid-column:1/-1;grid-row:2;text-align:left;display:flex!important;flex-wrap:wrap;align-items:center;gap:4px 8px}
+  .tbl td[data-l="สถานะ"] .hm-tag{display:inline-block;width:auto;margin:0}
+  .tbl td.vr-cell .vr-score{font-size:12px}
+  .tbl td.needs{grid-row:3}
+}
+@media(min-width:1280px){
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr{grid-template-columns:auto auto minmax(0,1fr)!important;align-items:start}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ระดับ"]{grid-column:1;grid-row:1}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="สถานะ"]{grid-column:2;grid-row:1;display:flex!important;flex-wrap:wrap;gap:4px;align-items:center}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell{grid-column:3;grid-row:1;text-align:right;display:flex!important;flex-direction:column;align-items:flex-end;gap:2px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs{grid-row:2}
+}
+/* ---------- War Room บนมือถือ: แถบเลือกห้องเลื่อนข้างแถวเดียว ---------- */
+@media(max-width:760px){
+  .wr-rooms{flex-wrap:nowrap;gap:6px}
+  .wr-roomtabs{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;min-width:0}.wr-roomtabs::-webkit-scrollbar{display:none}
+  .wr-roomtabs button{flex:none;white-space:nowrap;min-height:38px;padding:6px 12px;font-size:13.5px}
+  .wr-roomtabs button.central .lbl-long{display:none}
+  .wr-grp{flex:none!important;flex-wrap:nowrap!important}
+  #wr-new{flex:none;width:40px;height:40px;padding:0!important;font-size:0!important;border-radius:50%!important}
+  #wr-new::before{content:"+";font-size:22px;line-height:1}
+  .wr-sub{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.wr-sub button{flex:none}
+  .wr-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+  .wr-kpi{padding:8px 10px!important}.wr-kpi b{font-size:20px!important}.wr-kpi span{font-size:11.5px!important;line-height:1.3}
+}

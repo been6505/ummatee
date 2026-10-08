@@ -9,7 +9,10 @@ const VERIFY=(()=>{
   const REPORTS_URL='https://www.floodboard.org/api/export/reports.csv';
   const F={roads:[],reports:[],sensors:[],stations:[],cams:[],gauges:[],env:new Map(),envAsk:new Map(),envPending:new Set(),envTimer:null,loaded:0,error:'',loading:null};
   const LV_CM={ankle:10,knee:45,waist:90,chest:120,roof:180};
-  const LV_PTS={ankle:2,knee:5,waist:10,chest:15,roof:20};
+  /* เกณฑ์ (ต.ค. 69): คะแนนผู้แจ้งเต็ม 40 · คะแนนระบบ (ข้อมูลภายนอก) เต็ม 60
+     ระดับ วิกฤต/เร่งด่วน/ปกติ ระบบเป็นผู้ตัดสินจากทั้งสองฝั่ง — ผู้แจ้งเลือก "วิกฤต" เองไม่ทำให้เป็นวิกฤต ต้องมีข้อมูลระบบยืนยัน */
+  const LV_PTS={ankle:2,knee:4,waist:8,chest:12,roof:16};
+  const R_MAX=40,E_MAX=60,E_SCALE=1.2;
   const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
   const RESULT={
     confirmed:{t:'วิกฤตจริง',d:'ข้อมูลรอบจุดยืนยันว่าท่วม',k:'confirmed'},
@@ -83,14 +86,15 @@ const VERIFY=(()=>{
     const sev=Math.min(3,Math.max(1,Number(c.urgency)||1)),vul=(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
     // 1) ข้อมูลจากผู้แจ้ง (0–50)
     const LV_TH={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว/หลังคา'};
-    let R=({3:25,2:15,1:5})[sev]+(LV_PTS[c.level]||0);
-    R+=vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?8:vul.length?4:0;R=Math.min(50,R);
+    let R=({3:18,2:11,1:4})[sev]+(LV_PTS[c.level]||0);
+    const vulCrit=vul.some(v=>['bedridden','oxygen','dialysis'].includes(v));
+    R+=vulCrit?6:vul.length?3:0;R=Math.min(R_MAX,R);
     // ที่มาของคะแนนฝั่งผู้แจ้ง (แสดงให้แอดมินเห็นว่า "วิกฤต" มาจากอะไร)
     const why=[`ผู้แจ้งเลือกระดับ "${({3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'})[sev]}"`];if(c.level)why.push('น้ำถึง'+(LV_TH[c.level]||c.level));
     if(vul.length)why.push('มีกลุ่มเปราะบาง'+(vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?' (ติดเตียง/ออกซิเจน/ฟอกไต)':''));if(Number(c.people)>=10)why.push(c.people+' คน');
     const reporterSevere=sev===3||c.level==='chest'||c.level==='roof';
     const cctv=parseCctv(c.cctv);
-    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[]};
+    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],claim:sev,vulCrit,deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
     const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
     // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
@@ -123,7 +127,7 @@ const VERIFY=(()=>{
     // 4) ดาวเทียม GISTDA (7 วัน) — เห็นน้ำท่วมในพื้นที่โล่ง/ชุมชนริมน้ำ · ในเมืองหนาแน่นมักมองไม่เห็น จึงไม่หักคะแนนเมื่อไม่พบ
     const ev2=envOf(lat,lng),sat=ev2&&ev2.sat;
     if(sat&&!sat.error){const dd=sat.date?new Date(sat.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'',fresh=sat.date&&Date.now()-Date.parse(sat.date)<3*864e5;
-      if(sat.inside){out.E+=fresh?25:15;out.ev.push(`ดาวเทียม GISTDA: จุดนี้อยู่ในพื้นที่น้ำท่วม${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วม'+(dd?' '+dd:''),'bad')}
+      if(sat.inside){out.satInside=true;out.E+=fresh?25:15;out.ev.push(`ดาวเทียม GISTDA: จุดนี้อยู่ในพื้นที่น้ำท่วม${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วม'+(dd?' '+dd:''),'bad')}
       else if(sat.dM!=null&&sat.dM<=300){out.E+=fresh?15:10;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)}${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'bad')}
       else if(sat.dM!=null&&sat.dM<=1000){out.E+=6;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)} · ${sat.near} จุดใน 500 ม.`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'warn')}
       else{out.ev.push('ดาวเทียม GISTDA (7 วัน): ไม่พบน้ำท่วมใน 1 กม. · ในเมือง/ใต้หลังคาดาวเทียมอาจมองไม่เห็น');chip('ดาวเทียม: ไม่พบ','na')}}
@@ -139,18 +143,30 @@ const VERIFY=(()=>{
     return finish(out,reporterSevere,recentlyCleared);
   }
   function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: เห็นน้ำ',k:'bad'})}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: ไม่เห็นน้ำ',k:'ok'})}}
+  /* ระดับที่ระบบตัดสิน (1 ปกติ · 2 เร่งด่วน · 3 วิกฤต) */
+  function decide(out){const strong=out.E>=25,some=out.E>=10,sat=out.satInside,cam=out.cctv&&out.cctv.s==='flood',contra=out.result===RESULT.conflict;
+    let lv=1,why='';
+    if(!contra&&(out.score>=65&&strong||cam&&out.veryDeep||sat&&out.veryDeep||out.vulCrit&&out.deep&&strong)){lv=3;why='ข้อมูลระบบยืนยันว่าน้ำท่วมรุนแรง'+(out.vulCrit?' และมีผู้ป่วยติดเตียง/ออกซิเจน/ฟอกไต':'')}
+    else if(out.score>=45&&some||strong){lv=2;why='มีข้อมูลระบบยืนยันว่ามีน้ำท่วมใกล้จุด'}
+    else if(out.claim===3||out.veryDeep||out.vulCrit){lv=2;why='ผู้แจ้งบอกรุนแรง แต่ระบบยังยืนยันไม่ได้ · โทรยืนยันก่อน'}
+    else why='ยังไม่มีข้อมูลยืนยันความรุนแรง';
+    out.level=lv;out.levelWhy=why;return out}
   function finish(out,severe,cleared){
-    out.E=Math.max(-20,Math.min(50,out.E));out.score=Math.max(0,Math.min(100,Math.round(out.R+out.E)));
-    if(out.result)return out;   // ไม่มีหมุด
+    out.E=Math.max(-20,Math.min(E_MAX,out.E*E_SCALE));out.score=Math.max(0,Math.min(100,Math.round(out.R+out.E)));
+    if(out.result)return decide(out);   // ไม่มีหมุด
     const contra=(out.cctv&&out.cctv.s==='clear')||((cleared||out.sensorClear)&&out.E<10);
     if(severe&&contra)out.result=RESULT.conflict;
-    else if(out.score>=70&&out.E>=25)out.result=RESULT.confirmed;
-    else if(out.score>=50&&out.E>=10)out.result=RESULT.likely;
+    else if(out.score>=65&&out.E>=25)out.result=RESULT.confirmed;
+    else if(out.score>=45&&out.E>=10)out.result=RESULT.likely;
     else if(out.E<10)out.result=RESULT.unverified;
     else out.result=RESULT.notcrit;
-    return out;
+    return decide(out);
   }
   // กล้องที่ใกล้จุดที่สุด (เรียงตามระยะ)
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
-  const VERIFY={F,load,assess,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
+  /* ระดับความเร่งด่วนที่ระบบตัดสิน (ใช้แทน urgency ที่ผู้แจ้งเลือก) · แคชตามข้อมูลที่ใช้คำนวณ */
+  const LC=new Map();
+  function level(c){const k=[c.id,F.loaded,c.urgency,c.level,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
+    const v=assess(c).level||1;LC.set(c.id,{k,v});return v}
+  const VERIFY={F,load,assess,level,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

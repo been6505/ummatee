@@ -76,6 +76,14 @@ form.send input{border-radius:999px;padding:11px 16px}
 .trk-steps{margin:8px 0 0;padding-left:20px;display:grid;gap:8px;font-size:14px;line-height:1.5}
 .trk-f{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:6px;background:var(--bg,#f2f3f7);border-radius:12px;padding:8px 10px}
 .bg-trk summary small{font-weight:500;color:var(--muted)}
+.gm-first{border-top:0;padding-top:0}
+.g-gm{margin:4px 0 14px;border-radius:16px;padding:12px 14px;background:#E9F7EF;box-shadow:inset 0 0 0 1.5px #BFE6CD;text-align:left;display:grid;gap:4px}.g-gm b{display:flex;align-items:center;gap:6px;color:#1F7A43}.g-gm b svg{width:20px;height:20px}.g-gm small{color:#3c6b50;font-size:13px;line-height:1.5}
+.gm-hero{margin:4px 0 14px;border-radius:20px;padding:16px;background:linear-gradient(135deg,#E9F7EF,#F3FBF6);box-shadow:inset 0 0 0 1.5px #BFE6CD;display:grid;gap:12px}
+.gm-h{display:flex;gap:12px;align-items:flex-start}.gm-h b{display:block;font-size:17px;line-height:1.35}.gm-h small{display:block;color:#3c6b50;font-size:13.5px;margin-top:2px}
+.gm-ic{flex:none;width:44px;height:44px;border-radius:50%;background:#2E9E57;color:#fff;display:grid;place-items:center}.gm-ic svg{width:24px;height:24px}
+.gm-steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}.gm-steps li{display:grid;gap:6px}.gm-steps small{color:#3c6b50;font-size:13px;line-height:1.5}
+.gm-steps .btn{min-height:50px;font-size:16px;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px}.gm-paste{background:#fff;color:#1F7A43;box-shadow:inset 0 0 0 1.5px #2E9E57}
+.gm-later{justify-self:center;border:0;background:none;color:#3c6b50;font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer}
 .trk-gm{display:grid;grid-template-columns:1fr auto;gap:8px}.trk-gm input{min-height:44px;border-radius:12px;border:1px solid var(--line,#e6e8ef);padding:8px 12px;font:inherit;min-width:0}
 .trk-f span{grid-column:1/-1;font-size:12px;color:var(--muted)}.trk-f code{font-size:13.5px;overflow-wrap:anywhere;user-select:all}
 /* แถบล่าง + SOS */
@@ -121,7 +129,9 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
   <div class="big"><i data-ic="gps"></i></div>
   <h1 id="g-team">เปิดตำแหน่ง</h1>
   <p>ศูนย์ต้องเห็นตำแหน่งทีมเพื่อส่งงานและช่วยเหลือเมื่อเกิดเหตุ</p>
-  <button class="primary" id="g-on" type="button">เปิดตำแหน่ง</button>
+  <div class="g-gm"><b><i data-ic="live"></i> แนะนำ: แชร์ตำแหน่งสดผ่าน Google Maps</b><small>ศูนย์เห็นทีมตลอด แม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องลงแอปเพิ่ม · ขั้นตอนอยู่หน้าถัดไป</small></div>
+  <button class="primary" id="g-on" type="button">เปิดตำแหน่ง แล้วตั้งค่า Google Maps</button>
+  <button class="linkbtn" id="g-gm" type="button">ใช้ Google Maps อย่างเดียว (ไม่เปิดตำแหน่งในเว็บ)</button>
   <p class="err" id="g-err" role="alert"></p>
   <button class="linkbtn" id="g-skip" type="button" hidden>เข้าใช้ต่อโดยไม่แชร์ตำแหน่ง</button>
 </section>
@@ -132,15 +142,23 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
-  <main id="v-work"><div id="cases"></div>
+  <main id="v-work">
+    <section class="gm-hero" id="gm-hero" hidden aria-label="แชร์ตำแหน่งสดผ่าน Google Maps">
+      <div class="gm-h"><span class="gm-ic" aria-hidden="true"><i data-ic="live"></i></span><div><b>แชร์ตำแหน่งสดให้ศูนย์ผ่าน Google Maps</b><small>ทำครั้งเดียว ศูนย์เห็นทีมตลอด แม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องลงแอปเพิ่ม</small></div></div>
+      <ol class="gm-steps">
+        <li><a class="btn blue gm-open" href="https://www.google.com/maps" target="_blank" rel="noopener"><i data-ic="map"></i> 1. เปิด Google Maps</a>
+          <small>แตะรูปโปรไฟล์ → <b>การแชร์ตำแหน่ง</b> → <b>แชร์ตำแหน่ง</b> → ตั้งเวลา <b>จนกว่าคุณจะปิด</b> → <b>คัดลอกไปยังคลิปบอร์ด</b></small></li>
+        <li><button class="btn gm-paste" type="button" id="gm-paste"><i data-ic="copy"></i> 2. วางลิงก์ที่คัดลอกมา</button>
+          <small>กดแล้วระบบวางลิงก์และส่งให้ศูนย์อัตโนมัติ (ถ้ากดไม่ได้ ให้วางในช่องที่ "ตั้งค่า" ด้านล่าง)</small></li>
+      </ol>
+      <button type="button" class="gm-later" id="gm-later">ไว้ทีหลัง</button>
+    </section>
+    <div id="cases"></div>
     <p class="sec">ขอของจากศูนย์</p>
     <div class="box"><div class="chips" id="supplies"></div><input id="sup-note" maxlength="200" placeholder="จำนวน / หมายเหตุ เช่น ถุงยังชีพ 20 ถุง"><button class="btn blue" id="sup-send" type="button"><i data-ic="send"></i> ส่งคำขอ</button></div>
     <p class="sec">ตั้งค่า</p>
-    <div class="box"><label style="display:flex;align-items:center;gap:10px;font-weight:600"><input type="checkbox" id="wake" style="width:22px;height:22px"> จอไม่ดับ (ส่งตำแหน่งต่อเนื่อง)</label>
-      <p class="hint">ปิดหน้านี้หรือจอดับ ตำแหน่งจะหยุดส่ง · ใช้แอปด้านล่างเพื่อให้ศูนย์เห็นตำแหน่งตลอด</p>
-      <button class="btn" id="loc-now" type="button"><i data-ic="pin"></i> ส่งตำแหน่งตอนนี้</button>
-      <p class="hint" id="live-link" hidden></p>
-      <details class="bg-trk" id="gm-trk"><summary><i data-ic="live"></i> แชร์ตำแหน่งสดผ่าน Google Maps <small>(ไม่ต้องลงแอปเพิ่ม · ใช้ได้แม้ล็อกจอ)</small></summary>
+    <div class="box">
+      <details class="bg-trk gm-first" id="gm-trk" open><summary><i data-ic="live"></i> แชร์ตำแหน่งสดผ่าน Google Maps <small>(วิธีหลัก · ไม่ต้องลงแอปเพิ่ม · ใช้ได้แม้ล็อกจอ)</small></summary>
         <p class="hint">ใช้ Google Maps ที่มีในมือถืออยู่แล้ว ศูนย์กดลิงก์ดูตำแหน่งสดของทีมได้ตลอด แม้ปิดหน้านี้หรือจอดับ</p>
         <ol class="trk-steps">
           <li>แตะ <a href="https://www.google.com/maps" target="_blank" rel="noopener"><b>เปิด Google Maps</b></a> → แตะรูปโปรไฟล์ → <b>การแชร์ตำแหน่ง</b> → <b>แชร์ตำแหน่ง</b> (หรือ <b>แชร์ใหม่</b>)</li>
@@ -150,7 +168,11 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
         <div class="trk-gm"><input id="gm-in" inputmode="url" maxlength="400" placeholder="https://maps.app.goo.gl/…" aria-label="ลิงก์แชร์ตำแหน่งจาก Google Maps"><button class="btn blue" type="button" id="gm-save">บันทึก</button></div>
         <p class="hint" id="gm-st"></p>
       </details>
-      <details class="bg-trk" id="bg-trk"><summary><i data-ic="gps"></i> ให้ศูนย์ติดตามได้แม้ปิดหน้านี้ <small>(แอป Traccar · เห็นบนแผนที่ CENTRAL)</small></summary>
+      <label style="display:flex;align-items:center;gap:10px;font-weight:600;margin-top:12px"><input type="checkbox" id="wake" style="width:22px;height:22px"> จอไม่ดับ (ส่งตำแหน่งต่อเนื่อง)</label>
+      <p class="hint">หน้านี้ส่งตำแหน่งได้เฉพาะตอนเปิดอยู่ · แชร์ผ่าน Google Maps ด้านบนเพื่อให้ศูนย์เห็นตลอด</p>
+      <button class="btn" id="loc-now" type="button"><i data-ic="pin"></i> ส่งตำแหน่งตอนนี้</button>
+      <p class="hint" id="live-link" hidden></p>
+      <details class="bg-trk" id="bg-trk"><summary><i data-ic="gps"></i> ทางเลือกอื่น: แอป Traccar <small>(ส่งตำแหน่งเบื้องหลังเข้าแผนที่ CENTRAL โดยตรง)</small></summary>
         <p class="hint">เว็บส่งตำแหน่งได้เฉพาะตอนเปิดหน้าอยู่ · ติดตั้งแอปฟรี <b>Traccar Client</b> ครั้งเดียว แอปจะส่งตำแหน่งเบื้องหลังให้ศูนย์ แม้ปิดหน้านี้หรือจอดับ</p>
         <div class="trk-apps"><a class="btn" href="https://apps.apple.com/app/traccar-client/id843156974" target="_blank" rel="noopener">iPhone (App Store)</a><a class="btn" href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" rel="noopener">Android (Play Store)</a></div>
         <ol class="trk-steps">
@@ -225,7 +247,14 @@ $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/a
 function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location.origin+'/live/?v='+vw;$('#live-link').hidden=false;$('#live-link').innerHTML=`ลิงก์ติดตามตำแหน่งสดของทีม (ส่งให้คนอื่นดูได้): <a href="${esc(u)}" target="_blank" rel="noopener">เปิด ↗</a> · <button type="button" class="linkbtn" id="live-copy">คัดลอก</button>`;$('#live-copy').onclick=async()=>{try{await navigator.clipboard.writeText(u);toast('คัดลอกลิงก์ติดตามแล้ว')}catch(e){}}}
   const g=S.me&&S.me.team&&S.me.team.gmaps;if(document.activeElement!==$('#gm-in'))$('#gm-in').value=g||'';
   $('#gm-st').innerHTML=g?`ศูนย์เห็นลิงก์แล้ว · <a href="${esc(g)}" target="_blank" rel="noopener">เปิดดู ↗</a> · เลิกแชร์: ลบลิงก์แล้วกดบันทึก และหยุดแชร์ใน Google Maps`:'ยังไม่ได้แชร์ลิงก์';
-  if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}}
+  if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}
+  let later=false;try{later=Date.now()-(+localStorage.getItem('uh_gm_later')||0)<6*3600e3}catch(e){}
+  $('#gm-hero').hidden=!!g||later||!(S.me&&S.me.team&&S.me.team.inRoster!==false);$('#gm-trk').open=!g}
+/* ปุ่ม "วางลิงก์": อ่านคลิปบอร์ด → ดึงลิงก์ Google Maps → บันทึกให้ศูนย์ทันที */
+$('#gm-paste').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
+  if(!/https:\/\/\S*(maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|maps\.google)/.test(t)){toast('ยังไม่มีลิงก์ Google Maps ในคลิปบอร์ด · คัดลอกจาก Google Maps ก่อน หรือวางในช่องที่ "ตั้งค่า"');$('#gm-trk').open=true;$('#gm-in').focus();return}
+  $('#gm-in').value=t;$('#gm-save').click()};
+$('#gm-later').onclick=()=>{try{localStorage.setItem('uh_gm_later',String(Date.now()))}catch(e){}$('#gm-hero').hidden=true};
 $('#gm-save').onclick=async()=>{const raw=$('#gm-in').value.trim(),m=raw.match(/https:\/\/\S+/),url=m?m[0].replace(/[)\]"'.,]+$/,''):'';
   if(raw&&!/^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.(com|co\.th)\/maps|maps\.google\.)/.test(url)){toast('ต้องเป็นลิงก์แชร์จาก Google Maps เช่น https://maps.app.goo.gl/…');return}
   $('#gm-save').disabled=true;try{const r=await post({action:'team_gmaps',gmaps:url});if(r.ok){toast(url?'ส่งลิงก์ตำแหน่งสดให้ศูนย์แล้ว':'ลบลิงก์แล้ว');refresh()}else toast(r.error==='not_in_roster'?'ทีมนี้ยังไม่อยู่ในรายชื่อทีมของศูนย์':'บันทึกไม่สำเร็จ')}catch(e){toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}finally{$('#gm-save').disabled=false}};
@@ -269,6 +298,7 @@ $('#loc-btn').onclick=()=>track(true);
 $('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เครื่องนี้หาตำแหน่งไม่ได้';$('#g-skip').hidden=false;return}$('#g-err').textContent='กำลังขออนุญาต…';
   navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};
 $('#g-skip').onclick=()=>{TR.skip=true;TR.want=false;start()};
+$('#g-gm').onclick=()=>{TR.skip=true;TR.want=false;try{localStorage.removeItem('uh_gm_later')}catch(e){}start();setTimeout(()=>{const h=$('#gm-hero');if(h){h.hidden=false;h.scrollIntoView({block:'start'})}},400)};
 /* จอไม่ดับ */
 async function wake(on){try{if(on&&'wakeLock' in navigator){TR.wl=await navigator.wakeLock.request('screen')}else if(TR.wl){await TR.wl.release();TR.wl=null}}catch(e){}}
 $('#wake').checked=st.get('uh_tm_wake')==='1';$('#wake').onchange=e=>{st.set('uh_tm_wake',e.target.checked?'1':'');wake(e.target.checked)};

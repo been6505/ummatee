@@ -10,7 +10,7 @@
 <link rel="icon" href="../../assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./dashboard.css?v=104">
+<link rel="stylesheet" href="./dashboard.css?v=106">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=33">
 <link rel="stylesheet" href="../hm-ui.css?v=9">
@@ -33,7 +33,7 @@
 <div id="app" hidden>
   <header class="top">
     <a class="brand" href="../../central.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
-    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="./" aria-current="page">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a></nav>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/" aria-current="page">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a></nav>
     <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm theme-btn" id="theme-btn" type="button" aria-pressed="false" aria-label="เปลี่ยนเป็นโหมดมืด" title="เปลี่ยนเป็นโหมดมืด"><i data-ic="moon"></i></button><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i></button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
   </header>
   <main class="wrap" id="main">
@@ -105,6 +105,11 @@
       <article class="card span2" id="leads-card" hidden><h2><i data-ic="megaphone"></i> เคสจากโซเชียลรอคัด</h2><p class="sub" id="leads-sub"></p><div id="leads"></div></article>
       <article class="card span2 hm-auto"><h2>เคสวิกฤตที่ยังรอนานที่สุด</h2><p class="sub">ยังไม่มีทีมรับ เรียงจากรอนานสุด</p><div id="waiting"></div></article>
     </div>
+    <!-- พื้นที่มอบแล้ว (ย้ายมาจากเมนู) · หน้า covered ฝังในกรอบ โหลดเมื่อเลื่อนมาถึง -->
+    <section class="cov-sec" id="covered" aria-label="พื้นที่มอบแล้ว">
+      <h2 class="sec-h"><i data-ic="hand"></i> พื้นที่มอบแล้ว <small>พื้นที่ที่องค์กร/ทีมรับดูแลแล้ว · ใช้วางแผนไม่ให้ซ้ำพื้นที่</small></h2>
+      <iframe id="cov-frame" title="พื้นที่มอบแล้ว" loading="lazy" data-src="../covered/?embed=1"></iframe>
+    </section>
   </main>
 </div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
@@ -113,9 +118,13 @@
 <script src="../ofm.js?v=1"></script>
 <script src="../camlive.js?v=8"></script>
 <script src="../maplayers.js?v=7"></script>
-<script src="./dashboard.js?v=34"></script>
+<script src="./dashboard.js?v=35"></script>
 <script src="../chat.js?v=6"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
+<script>/* กรอบพื้นที่มอบแล้ว: โหลดเมื่อใกล้ถึง · สูงเกือบเต็มจอ เลื่อนดูในกรอบ · #covered เลื่อนมาที่ส่วนนี้ */
+(()=>{const f=document.getElementById('cov-frame');if(!f)return;const go=()=>{if(!f.src)f.src=f.dataset.src};
+  if(location.hash==='#covered'){go();setTimeout(()=>document.getElementById('covered').scrollIntoView(),400)}
+  else if('IntersectionObserver' in window)new IntersectionObserver((es,o)=>{if(es.some(e=>e.isIntersecting)){go();o.disconnect()}},{rootMargin:'600px'}).observe(f);else go();})()</script>
 </body>
 </html>

@@ -209,3 +209,6 @@ html.dash[data-theme="dark"] .hm-ic{background:rgba(255,255,255,.08)}
 .card .hm-bar{background:none;box-shadow:none;padding:0}
 html.dash[data-theme="dark"] .card .hm-bar{background:none}html.dash[data-theme="dark"] .hm-tag{background:rgba(255,255,255,.08)}
 html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="dark"] .kpi.t-green b{color:#4FD083}
+/* พื้นที่มอบแล้ว (ฝังในแดชบอร์ด) */
+.cov-sec{margin-top:18px;scroll-margin-top:80px}.cov-sec .sec-h small{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
+#cov-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:24px;background:transparent}

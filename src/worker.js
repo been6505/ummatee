@@ -1520,8 +1520,12 @@ async function photoAiPass(env, db, max = 4) {
   return n;
 }
 async function helpmeCases(env, db) {
-  try { await syncHelpme(env, db); } catch (e) {}   // ชีตล่ม/ช้า: ยังตอบจากฐานข้อมูลของเราได้
-  const { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all();
+  // ตอบจากฐานข้อมูลของเราทันที (ซิงก์ใช้เวลา ~20 วินาที จึงไม่ให้คนรอ) · cron ซิงก์ทุก 1 นาทีอยู่แล้ว
+  // ยังไม่เคยซิงก์ → ซิงก์ก่อนตอบ · ซิงก์ล่าสุดเกิน 3 นาที (cron มีปัญหา) → ซิงก์เบื้องหลังแล้วตอบเลย
+  let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all();
+  const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
+  if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all()); }
+  else if (Date.now() - last > 180e3 && CTX && CTX.waitUntil) CTX.waitUntil(syncHelpme(env, db).catch(() => {}));
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: c.lat, lng: c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
@@ -1646,7 +1650,7 @@ async function gistdaTile(env, layer, z, x, y) {
   return new Response(r.body, { headers: { 'content-type': r.headers.get('content-type'), 'cache-control': 'public, max-age=1800' } });
 }
 
-let ENV = {};
+let ENV = {}, CTX = null;
 async function api(request, env) {
   ENV = env;
   const db = env.DB;
@@ -1736,6 +1740,7 @@ async function api(request, env) {
 
 export default {
   async fetch(request, env, ctx) {
+    CTX = ctx;
     const url = new URL(request.url);
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
       // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)

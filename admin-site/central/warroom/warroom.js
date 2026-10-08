@@ -8,6 +8,11 @@
    อัปเดตเอง: เคส 30 วิ · ทีม/แจ้งเตือน 15 วิ · ประกาศ 10 นาที */
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
   room:'',tab:'over',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
+/* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
+(()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
+  if(k&&wr){store.set('uh_vol_key','wr_'+k,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',wr,true);ADM.key='wr_'+k;
+    try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}}})();
+const LOCK=()=>String(ADM.key||'').startsWith('wr_')?store.get('uh_wr_lock'):'';
 const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
 const ST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
@@ -84,7 +89,9 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
     return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i><span class="lbl-long">HELP ME CENTRAL · </span>'}${esc(label||(isProv(r)&&/^ศูนย์ประสานงานจังหวัด/.test(r.name)?'ศูนย์ประสานงาน':r.name)||'(ไม่มีชื่อ)')} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
   // จัดกลุ่มตามจังหวัด: ศูนย์ประสานงานจังหวัด แล้วตามด้วย War Room โซนในจังหวัดนั้น
   const provs=[...new Set(W.rooms.map(r=>r.province||''))].sort((a,b)=>!a-!b||(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:a.localeCompare(b,'th')));
-  $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
+  const lk=LOCK();document.body.classList.toggle('wr-locked',!!lk);$('#wr-new').hidden=!!lk;
+  if(lk){if(W.room!==lk)W.room=lk;const r0=W.rooms.find(r=>r.id===lk);$('#rooms').innerHTML=r0?chip(r0):'<span class="muted">ไม่พบ War Room ของลิงก์นี้ (อาจถูกปิดหรือสร้างลิงก์ใหม่แล้ว)</span>'}
+  else $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
   const r=room();$('#subtabs').hidden=false;
   const tabs=!r?['over','struct']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab='over';
@@ -334,12 +341,22 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
   $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
   $('#pf-edit').onclick=()=>roomForm(r);
-}
+  // ลิงก์ประจำห้อง (เฉพาะศูนย์กลาง)
+  if(!LOCK())$('#pf-info').insertAdjacentHTML('beforeend',`<div class="wr-link"><b><i data-ic="link"></i> ลิงก์สำหรับทีม War Room นี้</b>
+    <p class="muted small">ส่งให้ทีมงานของห้องนี้ เปิดแล้วเข้าระบบได้เลย (ไม่ต้องใช้รหัสกลาง) · จัดการเคส จัดทีม สต็อก และโปรไฟล์ของห้องนี้ได้ · ส่งต่อเฉพาะคนในทีม</p>
+    <div class="wr-link-row" id="wl-row">${r.hasLink?'<button type="button" class="btn ghost sm" id="wl-show">แสดงลิงก์</button>':'<button type="button" class="btn primary sm" id="wl-show">สร้างลิงก์</button>'}</div></div>`);
+  const sh=$('#wl-show');if(sh)sh.onclick=()=>wrLink(r,false)}
+async function wrLink(r,renew){if(renew&&!confirm('สร้างลิงก์ใหม่? ลิงก์เดิมจะใช้ไม่ได้ทันที (คนที่เข้าด้วยลิงก์เดิมจะถูกออกจากระบบ)'))return;
+  const res=await apiPost({action:'warroom_link',id:r.id,renew:!!renew}).catch(()=>({}));if(!res.ok){toast('สร้างลิงก์ไม่สำเร็จ');return}
+  const url=location.origin+'/central/warroom/?wr='+encodeURIComponent(r.id)+'&k='+res.token,msg=`HELP ME CENTRAL · ${r.name}\nลิงก์เข้าระบบ War Room (ส่งเฉพาะทีมงาน): ${url}`;r.hasLink=true;
+  $('#wl-row').innerHTML=`<input readonly value="${esc(url)}" onclick="this.select()" aria-label="ลิงก์ War Room"><button type="button" class="btn primary sm" id="wl-copy">คัดลอก</button><a class="btn ghost sm" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><button type="button" class="btn ghost sm" id="wl-renew">สร้างลิงก์ใหม่</button>`;
+  $('#wl-copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('คัดลอกลิงก์แล้ว',true)}catch(e){$('#wl-row input').select()}};$('#wl-renew').onclick=()=>wrLink(r,true)}
 $('#p-prof').addEventListener('click',async e=>{const gz=e.target.closest('[data-gozone2]');if(gz){W.room=gz.dataset.gozone2;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
   const ed=e.target.closest('[data-pedit]');if(ed){staffForm(W.staff.find(s=>s.id===ed.dataset.pedit));return}
   const del=e.target.closest('[data-pdel]');if(del&&confirm('ลบรายชื่อนี้?')){const r=await apiPost({action:'warroom_staff',staff:{id:del.dataset.pdel,active:false}}).catch(()=>({}));if(r.ok){await loadRooms();render()}else toast('ลบไม่สำเร็จ')}
   const f=e.target.closest('[data-fly2]');if(f){W.tab='over';render();const [a,o]=f.dataset.fly2.split(',').map(Number);setTimeout(()=>W.map&&W.map.flyTo([a,o],14),300)}});
 $('#pf-add').onclick=()=>staffForm(null);
+$('#logout').addEventListener('click',()=>store.set('uh_wr_lock',''));
 function staffForm(s){const r=room();if(!r)return;s=s||{};
   dlg(`<h2>${s.id?'แก้ไขรายชื่อ':'เพิ่มทีมงาน '+esc(r.name)}</h2><label>ชื่อ<input name="name" required maxlength="60" value="${esc(s.name||'')}"></label>
     <div class="row"><label>หน้าที่<select name="role">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}"${k===(s.role||'staff')?' selected':''}>${v}</option>`).join('')}</select></label><label>เบอร์โทร<input name="phone" inputmode="tel" maxlength="20" value="${esc(s.phone||'')}"></label></div>

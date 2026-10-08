@@ -74,7 +74,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -632,7 +632,7 @@ async function listWarrooms(db) {
   const { results: rooms } = await db.prepare('SELECT * FROM warrooms WHERE active=1 ORDER BY createdAt').all();
   const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
   const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
-  return { ok: true, warrooms: rooms.map(r => ({ ...r, kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
+  return { ok: true, warrooms: rooms.map(({ token, ...r }) => ({ ...r, hasLink: !!token, kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
 }
 async function saveWarroom(db, b) {
   const w = b.warroom || {}, id = clean(w.id, 20).replace(/[^\w-]/g, '') || ('W' + rand(3)), now = Date.now();
@@ -663,6 +663,23 @@ async function saveWarroomStaff(db, b) {
     ON CONFLICT(id) DO UPDATE SET wr=excluded.wr,name=excluded.name,role=excluded.role,phone=excluded.phone,shift=excluded.shift,note=excluded.note,active=1,updatedAt=excluded.updatedAt`)
     .bind(id, wr, name, WR_ROLES.includes(m.role) ? m.role : 'staff', clean(m.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(m.shift, 40), clean(m.note, 200), Date.now()).run();
   return { ok: true, id };
+}
+/* ---------- ลิงก์ประจำ War Room: ทีมของห้องเข้าระบบได้โดยไม่ต้องใช้รหัสกลาง ----------
+   ลิงก์ = /central/warroom/?wr=<id>&k=<token> · หน้าเว็บส่งรหัสเป็น key="wr_<token>" · ใช้ API ได้แบบอาสา แต่ห้ามงานระดับศูนย์กลาง
+   (สร้าง/แก้ War Room อื่น · ดูลิงก์ · สำรองข้อมูล · ตั้งเบอร์ศูนย์ · นำเข้าเคส · ตั้งค่าเคสจากโซเชียล) · สร้างลิงก์ใหม่ = ลิงก์เดิมใช้ไม่ได้ทันที */
+let WRC = null;
+const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings'];
+async function wrAuth(db, key) {
+  const k = String(key || '');
+  if (!/^wr_[a-z0-9]{16,40}$/.test(k)) return null;
+  return db.prepare('SELECT id,name FROM warrooms WHERE active=1 AND token=?').bind(k.slice(3)).first();
+}
+async function warroomLink(db, b) {
+  const id = clean(b.id, 20), r = await db.prepare('SELECT id,token FROM warrooms WHERE id=? AND active=1').bind(id).first();
+  if (!r) return { ok: false, error: 'no_warroom' };
+  let token = r.token;
+  if (!token || b.renew) { token = rand(12); await db.prepare('UPDATE warrooms SET token=?, updatedAt=? WHERE id=?').bind(token, Date.now(), id).run(); }
+  return { ok: true, id, token };
 }
 async function setTeamWarroom(db, b) {
   const team = clean(b.team, MAX.volunteer), wr = clean(b.warroom, 20).replace(/[^\w-]/g, '');
@@ -1664,7 +1681,9 @@ async function api(request, env) {
   const url = new URL(request.url);
   if (trk && ['GET', 'POST'].includes(request.method)) return trackApp(db, request, url, trk[1]);
   if (request.method === 'GET') {
-    const p = Object.fromEntries(url.searchParams), vol = isVol(env, p.key);
+    const p = Object.fromEntries(url.searchParams);
+    WRC = await wrAuth(db, p.key); if (WRC) p.key = env.VOLUNTEER_KEY;   // ลิงก์ประจำ War Room
+    const vol = isVol(env, p.key);
     switch (p.action) {
       case 'list': {
         const since = Number(p.since) || 0;
@@ -1715,12 +1734,17 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
+    WRC = await wrAuth(db, b.key);
+    if (WRC) {
+      if (WR_DENY.includes(b.action) || (b.action === 'warroom_save' && clean((b.warroom || {}).id, 20) !== WRC.id)) return json({ ok: false, error: 'central_only' });
+      b.key = env.VOLUNTEER_KEY;
+    }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, broadcast_save: saveBroadcast, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<script>/* ธีม: ค่าเริ่มต้นสว่าง · ปุ่มมุมขวาบน (theme-toggle.js) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}</script>
+<meta name="theme-color" content="#F2F3F7">
+<title>ตั้งค่า · Helpme+ CENTRAL</title>
+<link rel="icon" href="../../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../admin.css?v=7">
+<link rel="stylesheet" href="../pages.css?v=14">
+<link rel="stylesheet" href="../theme.css?v=2">
+<link rel="stylesheet" href="../helpme-skin.css?v=34">
+<link rel="stylesheet" href="../hm-ui.css?v=15">
+<link rel="stylesheet" href="./settings.css?v=1">
+<script src="../icons.js?v=6"></script>
+</head>
+<body>
+<section id="login" class="login" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <img src="../../assets/helpme-logo.png" alt="Helpme+" width="230" height="33">
+    <h1>ตั้งค่า · HELP ME CENTRAL</h1>
+    <p>สำหรับแอดมินและทีมอาสา ใส่รหัสทีมเพื่อเข้าใช้งาน</p>
+    <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
+    <label class="chk"><input id="login-remember" type="checkbox" checked><span>จำรหัสไว้ในเครื่องนี้</span></label>
+    <button class="btn primary" id="login-go" type="submit">เข้าสู่ระบบ</button>
+    <p class="err" id="login-err" role="alert"></p>
+    <a class="back" href="../../">← กลับหน้าเว็บหลัก</a>
+  </form>
+</section>
+<div id="app" hidden>
+  <header class="top">
+    <a class="brand" href="../../central.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a><a href="../settings/" aria-current="page">ตั้งค่า</a></nav>
+    <div class="top-r"><span class="sync" id="sync"></span><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
+  </header>
+  <main class="wrap st-wrap" id="main">
+    <h1 class="st-h1">ตั้งค่า</h1>
+    <section class="st-card" aria-labelledby="st-u"><h2 id="st-u"><i data-ic="user"></i> ผู้ใช้งาน</h2>
+      <label class="st-row"><span>ชื่อที่แสดง</span><input id="st-name" maxlength="60" placeholder="เช่น แอดมินศูนย์" autocomplete="name"></label>
+      <div class="st-row"><span>ธีม</span><div class="seg" id="st-theme" role="group" aria-label="ธีม"><button type="button" data-th="light">สว่าง</button><button type="button" data-th="dark">มืด</button></div></div>
+    </section>
+    <section class="st-card st-ai" aria-labelledby="st-ai"><h2 id="st-ai"><i data-ic="chat"></i> Local AI <span class="st-tag">Hermes Agent</span><span class="st-dot" id="ai-dot" title="สถานะการเชื่อมต่อ"></span></h2>
+      <label class="st-sw"><input type="checkbox" id="ai-on"><span>เปิดใช้ Local AI บนเครื่องนี้</span></label>
+      <div class="st-row"><span>ตัวรัน AI</span><div class="seg" id="ai-preset" role="group" aria-label="ตัวรัน AI"></div></div>
+      <label class="st-row"><span>ที่อยู่ API</span><input id="ai-url" inputmode="url" spellcheck="false" placeholder="http://localhost:8642/v1"></label>
+      <label class="st-row"><span>โมเดล</span><span class="st-in2"><input id="ai-model" spellcheck="false" list="ai-models" placeholder="hermes-agent"><datalist id="ai-models"></datalist><button type="button" class="btn ghost sm" id="ai-list">ดึงรายชื่อ</button></span></label>
+      <label class="st-row"><span>API key</span><input id="ai-key" type="password" autocomplete="off" placeholder="ไม่มีก็เว้นว่าง"></label>
+      <label class="st-row st-top"><span>บทบาท</span><textarea id="ai-sys" rows="2"></textarea></label>
+      <div class="st-act"><button type="button" class="btn primary" id="ai-save">บันทึก</button><button type="button" class="btn ghost" id="ai-test">ทดสอบการเชื่อมต่อ</button><span class="st-msg" id="ai-msg" role="status"></span></div>
+      <div class="st-try"><textarea id="ai-q" rows="2" placeholder="ลองถาม Hermes เช่น สรุปสิ่งที่ต้องเตรียมเมื่อน้ำท่วมสูง 1 เมตร"></textarea><button type="button" class="btn ghost" id="ai-ask">ถาม</button></div>
+      <div class="st-ans" id="ai-ans" hidden></div>
+      <details class="st-help"><summary>เชื่อมต่อไม่ได้?</summary>
+        <ul><li>ตั้งค่าเก็บไว้เฉพาะเบราว์เซอร์เครื่องนี้ และเบราว์เซอร์เรียกเครื่อง AI โดยตรง ข้อมูลไม่ผ่านเซิร์ฟเวอร์ CENTRAL</li>
+        <li><b>Hermes Agent:</b> เปิด API server ของ Hermes (OpenAI-compatible) แล้วใส่ที่อยู่ เช่น <code>http://localhost:8642/v1</code> และอนุญาต origin <code>https://central.helpme4u.com</code> (CORS)</li>
+        <li><b>Ollama:</b> <code>ollama pull hermes3</code> แล้วรันด้วย <code>OLLAMA_ORIGINS=https://central.helpme4u.com ollama serve</code></li>
+        <li><b>LM Studio:</b> เปิด Local Server และติ๊ก Enable CORS</li>
+        <li>ใช้จากเครื่องอื่นในวง LAN: ใส่ IP ของเครื่องที่รัน AI แทน localhost (ต้องเป็น https หรือเบราว์เซอร์อาจบล็อก)</li></ul></details>
+    </section>
+  </main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="../common.js?v=1"></script>
+<script src="../localai.js?v=1"></script>
+<script src="./settings.js?v=1"></script>
+<script src="../theme-toggle.js?v=2"></script>
+<script src="../chat.js?v=6"></script>
+<script src="../feedback.js?v=1"></script>
+<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
+<script src="../../bc.js?v=2" data-mode="staff" defer></script>
+</body>
+</html>

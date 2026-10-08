@@ -103,6 +103,6 @@ function glideTo(m,ll,ms=3000){if(!m||!window.L)return;const a=m.getLatLng(),b=L
 const headArrow=t=>t&&t.heading!=null&&t.speed!=null&&t.speed>=3?`<s class="hd" style="--r:${Math.round(+t.heading)}deg" aria-hidden="true"></s>`:'';
 
 /* เมนูหลัก: ใส่ไอคอนหน้าชื่อเมนู (แสดงบนมือถือเป็นแถบล่างแบบ helpme4u.com) */
-addEventListener('DOMContentLoaded',()=>{const M=[['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone']];
+addEventListener('DOMContentLoaded',()=>{const M=[['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];
   document.querySelectorAll('.tabs a').forEach(a=>{if(a.querySelector('.tab-ic'))return;const h=a.getAttribute('href')||'',m=M.find(([k])=>h.includes(k));if(!m||typeof ic!=='function')return;
     a.insertAdjacentHTML('afterbegin',ic(m[1],'tab-ic'))})});

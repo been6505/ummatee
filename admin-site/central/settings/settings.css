@@ -1,0 +1,18 @@
+.st-wrap{max-width:820px!important;display:grid;gap:14px}
+.st-h1{margin:4px 0 0;font-size:24px}
+.st-card{background:var(--surface,#fff);border-radius:24px;padding:16px 18px;box-shadow:var(--shadow-soft,0 2px 10px rgba(22,27,61,.06));display:grid;gap:12px}
+.st-card h2{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}.st-card h2 svg{width:20px;height:20px}
+.st-tag{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--tint,#FDEDEE);color:var(--primary,#DD2027)}
+.st-dot{width:10px;height:10px;border-radius:50%;background:#c9ccd6;margin-left:auto}.st-dot.on{background:#2E9E57;box-shadow:0 0 0 4px rgba(46,158,87,.18)}.st-dot.off{background:#E5383B}
+.st-row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:center}.st-row>span:first-child{font-weight:600;font-size:14px;color:var(--muted)}.st-top{align-items:start}
+.st-row input,.st-row textarea,.st-try textarea{font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line,#e8e8ec);border-radius:14px;padding:8px 12px;background:var(--surface,#fff);color:inherit;width:100%;box-sizing:border-box}
+.st-in2{display:flex;gap:8px}.st-in2 input{flex:1;min-width:0}
+.st-sw{display:flex;align-items:center;gap:10px;font-weight:600}.st-sw input{width:20px;height:20px;accent-color:var(--primary,#DD2027)}
+.st-card .seg{display:flex;flex-wrap:wrap;gap:4px}
+.st-card .seg button{border:0;border-radius:999px;padding:7px 14px;font:inherit;font-weight:600;font-size:14px;background:var(--bg,#f2f2f5);color:inherit;cursor:pointer}
+.st-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.st-msg{font-size:13.5px;color:var(--muted)}.st-msg.ok{color:#1F7A43}.st-msg.bad{color:#C62828}
+.st-try{display:flex;gap:8px;align-items:stretch}.st-try textarea{flex:1;resize:vertical}
+.st-ans{white-space:pre-wrap;background:var(--bg,#f5f5f7);border-radius:16px;padding:12px 14px;font-size:15px;line-height:1.55;max-height:360px;overflow:auto}
+.st-help summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--primary,#DD2027)}.st-help ul{margin:8px 0 0;padding-left:20px;display:grid;gap:6px;font-size:13.5px;color:var(--muted)}
+.st-help code{background:var(--bg,#f2f2f5);border-radius:6px;padding:1px 6px;font-size:12.5px}
+@media(max-width:600px){.st-row{grid-template-columns:1fr;gap:4px}.st-try{flex-direction:column}}

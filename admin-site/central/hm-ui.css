@@ -20,9 +20,6 @@ h1,h2,h3{letter-spacing:-.01em}
 :is(.kpi,.wr-kpi,.cv-stat) b{font-weight:700;letter-spacing:-.02em}
 :is(.kpi,.wr-kpi,.stat,.cv-stat) span{color:var(--muted)}
 /* ตัวเลขแรกของแถว = การ์ดเด่นสีเข้ม (แบบ "ภาพรวมทั้งหมด") */
-:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child){background:#1d1d1f!important;color:#fff}
-:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child) :is(span,small){color:rgba(255,255,255,.7)!important}
-:root:not([data-theme="dark"]) :is(#kpis>.kpi:first-child,#kpis>.wr-kpi:first-child) b{color:#fff!important}
 
 /* ปุ่ม/ตัวเลือกที่เลือกอยู่: สีหมึกเข้ม (เหมือนชิปในหน้าสรุป) */
 :root:not([data-theme="dark"]) :is(.seg button[aria-selected=true],.seg button[aria-pressed=true],.wr-roomtabs button[aria-selected=true]){background:#1d1d1f!important;color:#fff!important;box-shadow:none!important}

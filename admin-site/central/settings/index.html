@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=16">
-<link rel="stylesheet" href="./settings.css?v=1">
+<link rel="stylesheet" href="./settings.css?v=2">
 <script src="../icons.js?v=6"></script>
 </head>
 <body>
@@ -43,6 +43,16 @@
       <label class="st-row"><span>ชื่อที่แสดง</span><input id="st-name" maxlength="60" placeholder="เช่น แอดมินศูนย์" autocomplete="name"></label>
       <div class="st-row"><span>ธีม</span><div class="seg" id="st-theme" role="group" aria-label="ธีม"><button type="button" data-th="light">สว่าง</button><button type="button" data-th="dark">มืด</button></div></div>
     </section>
+    <section class="st-card st-dc" id="dc-card" hidden aria-labelledby="st-dc"><h2 id="st-dc"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M19.6 5.3A16.7 16.7 0 0 0 15.4 4l-.5 1.1a15.5 15.5 0 0 0-5.8 0L8.6 4a16.7 16.7 0 0 0-4.2 1.3C1.7 9.3 1 13.2 1.3 17a16.9 16.9 0 0 0 5.1 2.6l1.1-1.8c-.6-.2-1.2-.5-1.7-.8l.4-.3a12 12 0 0 0 11.6 0l.4.3-1.7.8 1.1 1.8a16.8 16.8 0 0 0 5.1-2.6c.4-4.4-.7-8.3-3.1-11.7zM8.8 14.7c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg> Discord <span class="st-tag" id="dc-tag">ยังไม่เชื่อม</span><span class="st-dot" id="dc-dot"></span></h2>
+      <label class="st-row"><span>Webhook URL</span><input id="dc-url" type="password" autocomplete="off" spellcheck="false" placeholder="https://discord.com/api/webhooks/…"></label>
+      <div class="st-row st-top"><span>แจ้งเตือน</span><div class="st-checks">
+        <label class="st-sw"><input type="checkbox" id="dc-newCrit"><span>เคสด่วนมากใหม่</span></label>
+        <label class="st-sw"><input type="checkbox" id="dc-sos"><span>SOS จากทีม</span></label>
+        <label class="st-sw"><input type="checkbox" id="dc-critWait"><span>เคสด่วนมากรอเกิน 30 นาที</span></label></div></div>
+      <label class="st-row"><span>สรุปโดย AI</span><select id="dc-sum"><option value="0">ไม่ส่ง</option><option value="1">ทุก 1 ชม.</option><option value="2">ทุก 2 ชม.</option><option value="3">ทุก 3 ชม.</option><option value="6">ทุก 6 ชม.</option><option value="12">ทุก 12 ชม.</option><option value="24">วันละครั้ง</option></select></label>
+      <div class="st-act"><button type="button" class="btn primary" id="dc-save">บันทึก</button><button type="button" class="btn ghost" id="dc-test">ส่งข้อความทดสอบ</button><button type="button" class="btn ghost" id="dc-now">ส่งสรุปเดี๋ยวนี้</button><span class="st-msg" id="dc-msg" role="status"></span></div>
+      <details class="st-help"><summary>เอา Webhook URL จากไหน?</summary><ul><li>ในห้อง Discord กด ⚙ แก้ไขช่อง → การเชื่อมต่อ (Integrations) → Webhooks → สร้าง Webhook → คัดลอก URL มาวาง</li><li>ข้อความใน Discord ไม่มีชื่อและเบอร์ผู้แจ้ง มีลิงก์เข้า CENTRAL (ต้องใช้รหัส)</li><li>ลบ URL แล้วบันทึก = ยกเลิกการเชื่อม</li></ul></details>
+    </section>
     <section class="st-card st-ai" aria-labelledby="st-ai"><h2 id="st-ai"><i data-ic="chat"></i> AI HELP <span class="st-tag">Local AI / คลาวด์</span><span class="st-dot" id="ai-dot" title="สถานะการเชื่อมต่อ"></span></h2>
       <label class="st-sw"><input type="checkbox" id="ai-on"><span>เปิดใช้ AI HELP บนเครื่องนี้</span></label>
       <div class="st-row"><span>ตัวรัน AI</span><div class="seg" id="ai-preset" role="group" aria-label="ตัวรัน AI"></div></div>
@@ -65,7 +75,7 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=2"></script>
 <script src="../localai.js?v=4"></script>
-<script src="./settings.js?v=3"></script>
+<script src="./settings.js?v=4"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=8"></script>
 <script src="../feedback.js?v=1"></script>

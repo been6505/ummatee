@@ -194,6 +194,72 @@ async function aiStream(b) {
   }
   return null;
 }
+/* ---------- Discord: AI HELP ส่งแจ้งเตือนเข้าห้อง (Webhook · ทางเดียว) ----------
+   ตั้งค่าที่หน้า ตั้งค่า (CENTRAL เท่านั้น) · cron ทุกนาที (hm_sync) เรียก discordTick
+   ส่ง: เคสด่วนมากใหม่ · SOS จากทีม · เคสด่วนมากรอเกิน 30 นาทีไม่มีทีม · สรุปสถานการณ์ทุก N ชม. (AI เขียน)
+   ไม่ส่งชื่อ/เบอร์ผู้แจ้ง · มีลิงก์เข้า CENTRAL (ต้องใช้รหัส) */
+const DC_DEF = { url: '', newCrit: true, sos: true, critWait: true, summaryH: 3, lastSum: 0, since: 0 };
+const DC_RE = /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/;
+async function dcCfg(db) { try { return { ...DC_DEF, ...JSON.parse(await getMeta(db, 'dc_cfg') || '{}') }; } catch (e) { return { ...DC_DEF }; } }
+const dcPublic = c => ({ ok: true, connected: !!c.url, hook: c.url ? '…' + c.url.slice(-6) : '', newCrit: c.newCrit, sos: c.sos, critWait: c.critWait, summaryH: c.summaryH, lastSum: c.lastSum || null });
+async function dcPost(url, body) {
+  const r = await fetch(url + '?wait=true', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'AI HELP', allowed_mentions: { parse: [] }, ...body }) });
+  return r.ok;
+}
+const dcLink = c => 'https://central.helpme4u.com/central.html#' + encodeURIComponent(c.src === 'helpme' ? 'hm-' + c.id : c.id);
+const dcAgo = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 60 ? m + ' นาที' : m < 1440 ? Math.floor(m / 60) + ' ชม.' : Math.floor(m / 1440) + ' วัน'; };
+const dcCase = c => `**${(String(c.needs || '').split(/\s*,\s*/).filter(Boolean).join(', ') || 'ขอความช่วยเหลือ').slice(0, 80)}** · ${c.people || 1} คน · ${[c.district, c.province].filter(Boolean).join(' ') || 'ไม่ระบุพื้นที่'} · แจ้ง ${dcAgo(c.createdAt)}ก่อน\n[เปิดเคส #${c.id}](${dcLink(c)})`;
+async function dcSummary(env, db) {
+  const { results } = await db.prepare("SELECT id,createdAt,status,urgency,needs,people,district,province,volunteer,src,doneAt,updatedAt FROM cases WHERE COALESCE(dupOf,'')=''").all();
+  const now = Date.now(), open = results.filter(c => c.status !== 'done'), wait = open.filter(c => c.status !== 'going');
+  const crit = wait.filter(c => Number(c.urgency) >= 3), done24 = results.filter(c => c.status === 'done' && (c.doneAt || c.updatedAt) > now - 864e5).length;
+  const { results: teams } = await db.prepare('SELECT name,status FROM roster WHERE active=1').all();
+  const byArea = {}; wait.forEach(c => { const k = c.district || c.province || 'ไม่ระบุ'; byArea[k] = (byArea[k] || 0) + 1; });
+  const areas = Object.entries(byArea).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `${k} ${n}`).join(' · ');
+  const facts = `รอช่วย ${wait.length} เคส (ด่วนมาก ${crit.length}) · กำลังไป ${open.length - wait.length} · ช่วยแล้ว 24 ชม. ${done24} · รอเกิน 24 ชม. ${wait.filter(c => now - c.createdAt > 864e5).length} · ทีม ${teams.length} (พร้อม ${teams.filter(t => t.status === 'ready').length}) · พื้นที่รอมากสุด: ${areas || '-'}`;
+  let text = '';
+  try {
+    const top = wait.sort((a, b) => (Number(b.urgency) || 1) - (Number(a.urgency) || 1) || a.createdAt - b.createdAt).slice(0, 12).map(c => `#${c.id} ระดับ${c.urgency || 1} ${String(c.needs || '').slice(0, 40)} ${c.people || 1}คน ${c.district || ''} รอ${dcAgo(c.createdAt)}`).join('\n');
+    const out = await env.AI.run(HERMES_MODELS[0], { messages: [{ role: 'system', content: 'คุณคือ AI HELP ผู้ช่วยศูนย์สั่งการภัยพิบัติ เขียนสรุปสถานการณ์สำหรับทีมงานใน Discord ภาษาไทย 3-5 ข้อสั้น ๆ บอกจุดน่าห่วงและสิ่งที่ควรทำต่อ ห้ามใส่ชื่อหรือเบอร์โทร' }, { role: 'user', content: facts + '\nเคสรอที่สำคัญ:\n' + top }], max_tokens: 400, temperature: 0.3 });
+    text = String(out && (out.response || '') || '').trim();
+  } catch (e) {}
+  return { facts, text };
+}
+async function discordTick(env, db, force) {
+  const c = await dcCfg(db); if (!c.url) return { ok: false, error: 'not_connected' };
+  const now = Date.now(); let sent = []; try { sent = JSON.parse(await getMeta(db, 'dc_sent') || '[]'); } catch (e) {}
+  const S = new Set(sent), embeds = [], mark = k => { S.add(k); sent.push(k); };
+  const { results } = await db.prepare("SELECT id,createdAt,status,urgency,needs,people,district,province,volunteer,src FROM cases WHERE status<>'done' AND COALESCE(dupOf,'')='' AND createdAt>?").bind(now - 3 * 864e5).all();
+  if (c.newCrit) for (const x of results) if (Number(x.urgency) >= 3 && x.createdAt > (c.since || now) && !S.has('n' + x.id)) { mark('n' + x.id); embeds.push({ color: 0xE5383B, title: '🚨 เคสด่วนมากใหม่', description: dcCase(x) }); }
+  if (c.critWait) for (const x of results) if (Number(x.urgency) >= 3 && x.status !== 'going' && !String(x.volunteer || '').trim() && now - x.createdAt > 30 * 60e3 && x.createdAt + 30 * 60e3 > (c.since || now) && !S.has('w' + x.id)) { mark('w' + x.id); embeds.push({ color: 0xF57C00, title: '⏰ เคสด่วนมากรอเกิน 30 นาที ยังไม่มีทีม', description: dcCase(x) }); }
+  if (c.sos) { const { sos } = await alertsList(db); for (const t of sos) { const k = 's' + t.id + ':' + t.sosAt; if (S.has(k) || t.sosAt < (c.since || now) - 60e3) continue; mark(k);
+    embeds.push({ color: 0xC62828, title: '🆘 SOS จากทีม ' + t.name, description: `กด SOS เมื่อ ${dcAgo(t.sosAt)}ก่อน${t.lat != null ? ` · [ตำแหน่งทีม](https://maps.google.com/?q=${(+t.lat).toFixed(5)},${(+t.lng).toFixed(5)})` : ''}\n[เปิด CENTRAL](https://central.helpme4u.com/central/warroom/)` }); } }
+  let posted = 0;
+  for (let i = 0; i < embeds.length && i < 30; i += 10) { if (await dcPost(c.url, { embeds: embeds.slice(i, i + 10) })) posted++; }
+  if (embeds.length && posted) await setMeta(db, 'dc_sent', JSON.stringify(sent.slice(-800))); // ส่งไม่ผ่าน = ลองใหม่รอบหน้า
+  if (force === 'summary' || (c.summaryH > 0 && now - (c.lastSum || 0) >= c.summaryH * 3600e3 && c.lastSum)) {
+    const s = await dcSummary(env, db);
+    await dcPost(c.url, { embeds: [{ color: 0x2D45C8, title: '📊 สรุปสถานการณ์ · ' + new Date(now).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), description: (s.text ? s.text + '\n\n' : '') + '`' + s.facts + '`\n[เปิดแดชบอร์ด](https://central.helpme4u.com/central/dashboard/)' }] });
+    c.lastSum = now; await setMeta(db, 'dc_cfg', JSON.stringify(c)); posted++;
+  } else if (!c.lastSum) { c.lastSum = now; await setMeta(db, 'dc_cfg', JSON.stringify(c)); }
+  return { ok: true, alerts: embeds.length, posted };
+}
+async function discordSave(db, b) {
+  if (WRC) return { ok: false, error: 'central_only' };
+  const c = await dcCfg(db), d = b.discord || {};
+  if (d.url !== undefined) { const u = String(d.url || '').trim(); if (u && !DC_RE.test(u)) return { ok: false, error: 'bad_webhook' }; if (u && u !== c.url) c.since = Date.now(); c.url = u; }
+  for (const k of ['newCrit', 'sos', 'critWait']) if (d[k] !== undefined) c[k] = !!d[k];
+  if (d.summaryH !== undefined) c.summaryH = [0, 1, 2, 3, 6, 12, 24].includes(Number(d.summaryH)) ? Number(d.summaryH) : 3;
+  await setMeta(db, 'dc_cfg', JSON.stringify(c));
+  return dcPublic(c);
+}
+async function discordTest(db, b) {
+  if (WRC) return { ok: false, error: 'central_only' };
+  const c = await dcCfg(db); if (!c.url) return { ok: false, error: 'not_connected' };
+  if (b.kind === 'summary') { await discordTick(ENV, db, 'summary'); return { ok: true }; }
+  const ok = await dcPost(c.url, { embeds: [{ color: 0x2E9E57, title: '✅ AI HELP เชื่อมต่อกับห้องนี้แล้ว', description: 'จะแจ้งเตือน: ' + [c.newCrit && 'เคสด่วนมากใหม่', c.sos && 'SOS จากทีม', c.critWait && 'เคสด่วนมากรอเกิน 30 นาที', c.summaryH && `สรุปทุก ${c.summaryH} ชม.`].filter(Boolean).join(' · ') }] });
+  return ok ? { ok: true } : { ok: false, error: 'discord_rejected' };
+}
 /* ข้อเสนอแนะ/แจ้งปัญหาจากทีมงาน (ปุ่มในทุกหน้า) · CENTRAL ดูและปิดได้ที่แดชบอร์ด */
 async function saveFeedback(db, b) {
   const text = clean(b.text, 1000);
@@ -1763,7 +1829,7 @@ async function api(request, env) {
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
-      case 'hm_sync': try { const r = await syncHelpme(env, db, false); let ai = 0; try { ai = await photoAiPass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
+      case 'hm_sync': try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
@@ -1775,6 +1841,7 @@ async function api(request, env) {
       case 'live_view': return json(await liveView(db, p.v));
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
+      case 'discord_cfg': return json(vol && !WRC ? dcPublic(await dcCfg(db)) : { ok: false, error: 'central_only' });
       case 'feedback_list': {
         if (!vol || WRC) return json({ ok: false, error: 'central_only' });
         const { results } = await db.prepare('SELECT * FROM feedback ORDER BY done, at DESC LIMIT 200').all();
@@ -1811,7 +1878,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

@@ -30,4 +30,15 @@ $('#ai-test').onclick=async()=>{const b=$('#ai-test');b.disabled=true;msg('ก�
   catch(e){msg('เชื่อมต่อไม่ได้: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจที่อยู่และ CORS'),false);dot('off')}finally{b.disabled=false}};
 $('#ai-ask').onclick=async()=>{const q=$('#ai-q').value.trim();if(!q){$('#ai-q').focus();return}const b=$('#ai-ask'),box=$('#ai-ans');b.disabled=true;box.hidden=false;box.textContent='AI HELP กำลังคิด…';
   try{box.textContent=(await LOCALAI.ask(q,{cfg:form()})).trim()||'(ไม่มีคำตอบ)';dot('on')}catch(e){box.textContent='เชื่อมต่อไม่ได้: '+(e.message||'');dot('off')}finally{b.disabled=false}};
-adminBoot({action:'chat_rev'},'rev',()=>{});
+/* ---------- Discord (CENTRAL เท่านั้น) ---------- */
+const DC=['newCrit','sos','critWait'];
+function dcShow(r){$('#dc-card').hidden=false;$('#dc-tag').textContent=r.connected?'เชื่อมแล้ว '+r.hook:'ยังไม่เชื่อม';$('#dc-dot').className='st-dot '+(r.connected?'on':'');
+  DC.forEach(k=>$('#dc-'+k).checked=!!r[k]);$('#dc-sum').value=String(r.summaryH??3);$('#dc-url').value='';$('#dc-url').placeholder=r.connected?'เชื่อมแล้ว · วาง URL ใหม่เพื่อเปลี่ยน':'https://discord.com/api/webhooks/…'}
+const dmsg=(t,ok)=>{const m=$('#dc-msg');m.textContent=t;m.className='st-msg'+(ok===true?' ok':ok===false?' bad':'')};
+async function dcLoad(){const r=await apiGet({action:'discord_cfg'}).catch(()=>null);if(r&&r.ok)dcShow(r)}
+$('#dc-save').onclick=async()=>{const d={summaryH:+$('#dc-sum').value};DC.forEach(k=>d[k]=$('#dc-'+k).checked);const u=$('#dc-url').value.trim();if(u)d.url=u;
+  dmsg('กำลังบันทึก…');const r=await apiPost({action:'discord_save',discord:d}).catch(()=>null);
+  if(r&&r.ok){dcShow(r);dmsg(u?'เชื่อมแล้ว · กด "ส่งข้อความทดสอบ" เพื่อลอง':'บันทึกแล้ว',true)}else dmsg(r&&r.error==='bad_webhook'?'URL ไม่ใช่ Webhook ของ Discord':'บันทึกไม่สำเร็จ',false)};
+$('#dc-test').onclick=async()=>{dmsg('กำลังส่ง…');const r=await apiPost({action:'discord_test'}).catch(()=>null);dmsg(r&&r.ok?'ส่งแล้ว · ดูในห้อง Discord':r&&r.error==='not_connected'?'ยังไม่ได้ใส่ Webhook URL':'ส่งไม่สำเร็จ · ตรวจ URL',!!(r&&r.ok))};
+$('#dc-now').onclick=async()=>{dmsg('AI HELP กำลังเขียนสรุป…');const r=await apiPost({action:'discord_test',kind:'summary'}).catch(()=>null);dmsg(r&&r.ok?'ส่งสรุปแล้ว':'ส่งไม่สำเร็จ',!!(r&&r.ok))};
+adminBoot({action:'chat_rev'},'rev',()=>{dcLoad()});

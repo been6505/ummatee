@@ -158,3 +158,15 @@
 .addr-sug li:hover,.addr-sug li:focus{background:var(--bg,#f2f3f7)}.addr-sug li b{font-size:14.5px;color:var(--ink,#1b1f3b)}.addr-sug li small{font-size:12.5px;color:var(--muted,#6e6e73)}
 .addr-sug li.none{cursor:default;color:var(--muted,#6e6e73);font-size:13px}
 .wr-dlg .chk-row{display:flex!important;align-items:center;gap:8px;font-weight:600;color:var(--ink,#1b1f3b)!important}.wr-dlg .chk-row input{min-height:0;width:20px;height:20px}
+/* แถบแท็บ War Room: แถวเดียว เลื่อนข้างได้ทุกขนาดจอ */
+.wr-sub{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.wr-sub::-webkit-scrollbar{display:none}.wr-sub button{flex:none!important;white-space:nowrap}
+/* คิวจัดทีม */
+.wr-dqbox{margin-bottom:12px}
+.wr-dq{display:grid;gap:8px;max-height:min(60vh,640px);overflow:auto;scrollbar-width:thin}
+.wr-dqi{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border-radius:14px;background:var(--bg,#f5f5f7);border-left:4px solid #94a3b8}
+.wr-dqi.u3{border-left-color:#E5383B}.wr-dqi.u2{border-left-color:#F57C00}
+.wr-dqi img,.wr-dqi .noimg{width:56px;height:56px;border-radius:10px;object-fit:cover;background:#dde2e8;display:block}
+.wr-dqi .tx{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;min-width:0}.wr-dqi .tx b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wr-dqi .tx small{grid-column:1/-1;color:var(--muted,#62656F);font-size:12.5px}
+.wr-dqi .tag{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;background:#e8ebfb;color:#2D45C8}.wr-dqi.u3 .tag{background:#E5383B;color:#fff}.wr-dqi.u2 .tag{background:#F57C00;color:#fff}
+.wr-dqi .act{display:flex;gap:6px;align-items:center}.wr-dqi select{min-height:36px;border-radius:10px;border:1px solid var(--line,#e8e8ec);padding:4px 8px;font:inherit;font-size:13.5px;max-width:260px;background:var(--surface,#fff);color:inherit}
+@media(max-width:760px){.wr-dqi{grid-template-columns:48px minmax(0,1fr)}.wr-dqi img,.wr-dqi .noimg{width:48px;height:48px}.wr-dqi .act{grid-column:1/-1;flex-wrap:wrap}.wr-dqi select{flex:1;max-width:none}}

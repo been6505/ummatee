@@ -35,6 +35,10 @@ const provOf=c=>{if(c.province)return c.province;const a=String(c.address||''),m
   if(/กรุงเทพ|กทม/.test(a)||BKK.includes(normD(c.district)))return 'กรุงเทพมหานคร';
   const am=String(c.district||'').match(/^อำเภอเมือง\s*([ก-๙]+)/);return am?(PROVINCES.find(p=>am[1].startsWith(p))||''):''};
 const isProv=r=>r&&r.kind==='province';
+/* "ใกล้เคียง" ของศูนย์จังหวัด = เคสนอกจังหวัดที่อยู่ห่างจุดกลางจังหวัดไม่เกิน 20 กม. */
+const NEAR_KM=20,PROV_LL={'กรุงเทพมหานคร':[13.756,100.502],'กระบี่':[8.086,98.906],'กาญจนบุรี':[14.023,99.533],'กาฬสินธุ์':[16.432,103.506],'กำแพงเพชร':[16.483,99.522],'ขอนแก่น':[16.441,102.836],'จันทบุรี':[12.611,102.104],'ฉะเชิงเทรา':[13.69,101.077],'ชลบุรี':[13.361,100.985],'ชัยนาท':[15.186,100.125],'ชัยภูมิ':[15.807,102.032],'ชุมพร':[10.493,99.18],'เชียงราย':[19.91,99.841],'เชียงใหม่':[18.788,98.985],'ตรัง':[7.558,99.611],'ตราด':[12.243,102.515],'ตาก':[16.884,99.126],'นครนายก':[14.206,101.213],'นครปฐม':[13.82,100.062],'นครพนม':[17.392,104.769],'นครราชสีมา':[14.979,102.098],'นครศรีธรรมราช':[8.432,99.963],'นครสวรรค์':[15.704,100.137],'นนทบุรี':[13.862,100.514],'นราธิวาส':[6.426,101.823],'น่าน':[18.783,100.779],'บึงกาฬ':[18.36,103.646],'บุรีรัมย์':[14.993,103.103],'ปทุมธานี':[14.02,100.525],'ประจวบคีรีขันธ์':[11.812,99.797],'ปราจีนบุรี':[14.05,101.372],'ปัตตานี':[6.869,101.25],'พระนครศรีอยุธยา':[14.353,100.568],'พะเยา':[19.166,99.902],'พังงา':[8.451,98.525],'พัทลุง':[7.617,100.078],'พิจิตร':[16.442,100.349],'พิษณุโลก':[16.821,100.265],'เพชรบุรี':[13.112,99.94],'เพชรบูรณ์':[16.419,101.16],'แพร่':[18.145,100.141],'ภูเก็ต':[7.89,98.398],'มหาสารคาม':[16.184,103.301],'มุกดาหาร':[16.545,104.723],'แม่ฮ่องสอน':[19.301,97.969],'ยโสธร':[15.794,104.145],'ยะลา':[6.541,101.281],'ร้อยเอ็ด':[16.053,103.652],'ระนอง':[9.966,98.635],'ระยอง':[12.682,101.278],'ราชบุรี':[13.536,99.817],'ลพบุรี':[14.8,100.653],'ลำปาง':[18.289,99.49],'ลำพูน':[18.574,99.008],'เลย':[17.486,101.722],'ศรีสะเกษ':[15.118,104.322],'สกลนคร':[17.155,104.148],'สงขลา':[7.189,100.595],'สตูล':[6.623,100.067],'สมุทรปราการ':[13.599,100.597],'สมุทรสงคราม':[13.409,100.002],'สมุทรสาคร':[13.547,100.274],'สระแก้ว':[13.824,102.065],'สระบุรี':[14.529,100.911],'สิงห์บุรี':[14.888,100.401],'สุโขทัย':[17.007,99.823],'สุพรรณบุรี':[14.474,100.117],'สุราษฎร์ธานี':[9.14,99.333],'สุรินทร์':[14.882,103.493],'หนองคาย':[17.878,102.742],'หนองบัวลำภู':[17.204,102.44],'อ่างทอง':[14.589,100.455],'อำนาจเจริญ':[15.866,104.626],'อุดรธานี':[17.415,102.787],'อุตรดิตถ์':[17.62,100.099],'อุทัยธานี':[15.383,100.025],'อุบลราชธานี':[15.244,104.847]};
+// จุดกลาง = ที่ตั้งศูนย์จังหวัด (ถ้าตั้งไว้) หรือตัวเมืองของจังหวัด
+function provCenter(r){return r.lat!=null&&r.lng!=null?[r.lat,r.lng]:PROV_LL[r.province]||null}
 const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
@@ -42,7 +46,7 @@ document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.d
 const allCases=r=>r&&r.districts.includes('*');   // War Room ที่ดูแลทุกเคสในระบบ (ไม่จำกัดพื้นที่)
 function inRoom(c,r){if(!r||allCases(r))return true;
   const pv=provOf(c);
-  if(isProv(r))return pv===r.province;
+  if(isProv(r))return pv===r.province||(hasPin(c)&&(()=>{const ctr=provCenter(r);return ctr&&km(ctr[0],ctr[1],+c.lat,+c.lng)<=NEAR_KM})()); // ในจังหวัด + ใกล้เคียง
   if(r.province&&pv&&pv!==r.province)return false;
   if(r.districts.length&&c.district&&r.districts.some(d=>normD(d).replace(/^อำเภอ/,'')===normD(c.district).replace(/^อำเภอ/,'')))return true;
   if(r.radius&&r.lat!=null&&hasPin(c))return km(r.lat,r.lng,+c.lat,+c.lng)*1000<=r.radius;
@@ -241,7 +245,7 @@ $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-
 
 /* ---------- แท็บ ทีม ---------- */
 function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
-  if(isProv(r)){const zs=zonesOf(r.province);
+  if(isProv(r)){dispatchQ(V);const zs=zonesOf(r.province);
     $('#t-hint').textContent=`ทีมในจังหวัด${r.province}: ${V.roster.length} ทีม ใน ${zs.length} War Room โซน · จัดทีมเข้าโซนได้ที่ War Room โซนนั้น`;
     $('#t-list').innerHTML=zs.length?zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="wr-tcard"><div class="h"><i class="rdot" style="background:${esc(z.color)}"></i><b>${esc(z.name)}</b><span class="st">${tn.length} ทีม</span></div>
       ${tn.map(t=>{const l=live.get(t.name),on=l&&mins(l.updatedAt)<10;return `<small><i class="dot ${on?'on':''}" style="display:inline-block;margin-right:6px"></i>${esc(t.name)} · ${esc(ST[t.status]||'')}${l?'':' · ไม่แชร์ตำแหน่ง'}</small>`}).join('')||'<small>ยังไม่มีทีม</small>'}
@@ -249,6 +253,7 @@ function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new 
     return}
   $('#t-hint').textContent=`ทีมใน ${r.name}: ${V.roster.length} ทีม · กด "เพิ่มเข้า War Room นี้" เพื่อย้ายทีมมาประจำห้องนี้ (ทีมอยู่ได้ทีละ 1 ห้อง) · แก้รายละเอียดทีมที่หน้า "จัดทีม"`;
   const all=W.roster.slice().sort((a,b)=>(b.warroom===r.id)-(a.warroom===r.id)||a.name.localeCompare(b.name,'th'));
+  dispatchQ(V);
   $('#t-list').innerHTML=all.map(t=>{const mine=t.warroom===r.id,other=!mine&&t.warroom&&rn.get(t.warroom),l=live.get(t.name),on=l&&mins(l.updatedAt)<10;
     return `<div class="wr-tcard${mine?' mine':''}"><div class="h"><i class="dot ${on?'on':''}"></i><b>${esc(t.name)}</b><span class="st">${esc(ST[t.status]||'')}</span></div>
       <small>${esc([t.leader?'หัวหน้า '+t.leader:'',t.members?t.members+' คน':'',t.vehicle||''].filter(Boolean).join(' · ')||'—')}</small>
@@ -259,6 +264,34 @@ $('#t-list').addEventListener('click',async e=>{const gz=e.target.closest('[data
   const b=e.target.closest('[data-tw]');if(!b)return;b.disabled=true;
   try{const r=await apiPost({action:'team_warroom',team:b.dataset.tw,warroom:b.dataset.to});if(r.ok){const t=W.roster.find(x=>x.name===b.dataset.tw);if(t)t.warroom=b.dataset.to;toast(b.dataset.to?'เพิ่มทีมเข้า War Room แล้ว':'นำทีมออกแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}render()});
+
+/* ---------- จัดทีมใน War Room: คิวเคสที่ยังไม่มีทีม + ทีมที่แนะนำ (ใกล้สุด/ว่าง) → กดมอบหมาย ---------- */
+const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
+function suggestTeams(c,teams){const live=new Map(W.live.map(l=>[l.team,l])),busy=new Map();W.cases.forEach(x=>{if(x.status==='going'){const v=vol(x);if(v)busy.set(v,(busy.get(v)||0)+1)}});
+  const needBoat=/เรือ/.test((c.needs||[]).join(' '))||['chest','roof'].includes(c.level);
+  return teams.map(t=>{const l=live.get(t.name),d=l&&hasPin(c)?km(l.lat,l.lng,+c.lat,+c.lng):null,b=busy.get(t.name)||0;
+    const score=(t.status==='ready'?0:t.status==='out'?20:60)+(d==null?15:Math.min(30,d*2))+b*8+(needBoat&&t.vehicle!=='boat'&&t.vehicle!=='truck'?25:0);
+    return {t,d,b,score}}).sort((a,b)=>a.score-b.score)}
+function dispatchQ(V){const box=$('#t-queue');if(!box)return;
+  const teams=V.roster.length?V.roster:W.roster,q=V.cases.filter(c=>c.status==='open'&&!vol(c)).sort((a,b)=>sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,40);
+  box.innerHTML=`<div class="wr-tools"><h2 style="margin:0;font-size:17px">คิวจัดทีม · ${q.length} เคสยังไม่มีทีม</h2>${V.r&&!isProv(V.r)?'<button type="button" class="btn primary sm" id="t-add">+ เพิ่มทีมใหม่ในห้องนี้</button>':''}</div>
+    ${!teams.length?'<p class="muted">ยังไม่มีทีม · กด "+ เพิ่มทีมใหม่ในห้องนี้"</p>':''}
+    <div class="wr-dq">${q.map(c=>{const sg=suggestTeams(c,teams),best=sg[0],ph=photos(c);
+      return `<div class="wr-dqi u${sev(c)}">${ph.length?`<img src="${thumb(ph[0],120)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:'<span class="noimg"></span>'}
+        <div class="tx"><span class="tag">${URG[sev(c)]}</span><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc([c.district?'เขต'+c.district:'',(c.people||1)+' คน','รอ '+waitTxt(c.createdAt)].filter(Boolean).join(' · '))}</small></div>
+        <div class="act"><select data-dq="${esc(c.id)}" aria-label="เลือกทีม">${sg.map((x,i)=>`<option value="${esc(x.t.name)}"${i===0?' selected':''}>${i===0?'แนะนำ: ':''}${esc(x.t.name)} · ${esc(ST[x.t.status]||'')}${x.d!=null?' · '+x.d.toFixed(1)+' กม.':''}${x.b?' · ถือ '+x.b:''}</option>`).join('')}</select>
+          <button type="button" class="btn primary sm" data-dqgo="${esc(c.id)}"${best?'':' disabled'}>มอบหมาย</button>${hasPin(c)?`<a class="btn ghost sm" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" title="นำทาง"><i data-ic="nav"></i></a>`:''}</div></div>`}).join('')||'<p class="muted">ไม่มีเคสค้างที่ยังไม่มีทีม 🎉</p>'}</div>`;
+  const add=$('#t-add');if(add)add.onclick=()=>teamForm()}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-dqgo]');if(!b)return;const id=b.dataset.dqgo,sel=$(`[data-dq="${CSS.escape(id)}"]`),team=sel&&sel.value,c=W.cases.find(x=>String(x.id)===id);if(!c||!team)return;
+  b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'going',volunteer:team});
+    if(r.ok){c.status='going';c.volunteer=team;toast(`มอบเคสให้ ${team} แล้ว`,true);render()}else{toast('มอบหมายไม่สำเร็จ: '+(r.error||''));b.disabled=false}}catch(err){toast('มอบหมายไม่สำเร็จ');b.disabled=false}});
+function teamForm(){const r=room();if(!r)return;
+  dlg(`<h2>เพิ่มทีมใหม่ใน ${esc(r.name)}</h2><label>ชื่อทีม<input name="name" required maxlength="60" placeholder="เช่น ทีมเรือ 4"></label>
+    <div class="row"><label>หัวหน้าทีม<input name="leader" maxlength="60"></label><label>เบอร์โทร<input name="phone" inputmode="tel" maxlength="20"></label></div>
+    <div class="row"><label>พาหนะ<select name="vehicle"><option value="">—</option>${Object.entries(VEH).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label>จำนวนคน<input name="members" type="number" min="1" max="999" inputmode="numeric"></label></div>`,async f=>{
+    const name=f.name.value.trim();const res=await apiPost({action:'roster_save',by:staffName()||'',team:{name,leader:f.leader.value,phone:f.phone.value,vehicle:f.vehicle.value,members:f.members.value,status:'ready'}});
+    if(!res.ok){toast(res.error==='duplicate_name'?'มีทีมชื่อนี้แล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
+    await apiPost({action:'team_warroom',team:name,warroom:r.id});toast('เพิ่มทีมแล้ว · ส่ง "ลิงก์ทีม" ให้ทีมได้ที่หน้าจัดทีม',true);await loadTeams();render()})}
 
 /* ---------- แท็บ สต็อก ---------- */
 function stockTab(V){const r=V.r,items=W.items.filter(i=>i.warroom===r.id),ids=new Set(items.map(i=>i.id));
@@ -351,12 +384,20 @@ $('#wr-new').onclick=()=>roomForm(null);
 /* ---------- ค้นหาที่อยู่ขณะพิมพ์ → แตะเลือกแล้วกรอกให้อัตโนมัติ ----------
    ค้นพร้อมกัน 2 แหล่งของ OpenStreetMap (Photon + Nominatim) แล้วรวมผล · ไม่เจอ → ลองตัดคำนำหน้า (โรงเรียน/ร.ร./รร) แล้วค้นใหม่ */
 async function geoSearch(q,c){
-  const ph=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6&lang=default&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}&bbox=97.3,5.6,105.7,20.5`).then(x=>x.json()).then(r=>(r.features||[]).filter(f=>!f.properties.countrycode||f.properties.countrycode==='TH').map(f=>{const p=f.properties||{};
-      return {name:p.name||[p.housenumber,p.street].filter(Boolean).join(' ')||p.district||'',sub:[p.street&&p.name?p.street:'',p.district,p.city||p.county,p.state].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', '),lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],province:p.state||'',district:p.district||p.county||''}})).catch(()=>[]);
-  const no=fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&countrycodes=th&limit=6&accept-language=th&addressdetails=1`).then(x=>x.json()).then(r=>(r||[]).map(x=>{const a=x.address||{};
+  const P=qq=>fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(qq)}&limit=8&lang=default&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}&bbox=97.3,5.6,105.7,20.5`).then(x=>x.json()).then(r=>(r.features||[]).filter(f=>!f.properties.countrycode||f.properties.countrycode==='TH').map(f=>{const p=f.properties||{};
+      return {name:p.name||[p.housenumber,p.street].filter(Boolean).join(' ')||p.district||'',sub:[p.street&&p.name?p.street:'',p.district,p.city||p.county,p.state].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', '),lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],province:p.state||(/กรุงเทพ/.test(p.city||p.county||'')?'กรุงเทพมหานคร':''),district:p.district||p.county||''}})).catch(()=>[]);
+  const N=qq=>fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(qq)}&format=jsonv2&countrycodes=th&limit=8&accept-language=th&addressdetails=1`).then(x=>x.json()).then(r=>(r||[]).map(x=>{const a=x.address||{};
       return {name:x.name||String(x.display_name||'').split(',')[0],sub:String(x.display_name||'').split(',').slice(1,5).join(',').trim(),lat:+x.lat,lng:+x.lon,province:a.state||a.province||(/กรุงเทพ/.test(a.city||'')?'กรุงเทพมหานคร':''),district:a.city_district||a.district||a.county||a.suburb||''}})).catch(()=>[]);
-  const all=[...await ph,...await no],seen=new Set();
-  return all.filter(x=>{const k=x.lat.toFixed(3)+','+x.lng.toFixed(3)+x.name;if(!x.name||seen.has(k))return false;seen.add(k);return true}).slice(0,8)}
+  // ใช้ข้อความทั้งหมด: ค้นทั้งแบบที่พิมพ์ และแบบเติม "ซอย" (เช่น "รามคำแหง 22" → "ซอยรามคำแหง 22")
+  const vs=[q];if(!/^(ซอย|ซ\.|ถนน|ถ\.)/.test(q)&&/\d/.test(q))vs.push('ซอย'+q.replace(/\s+(?=\d)/,' '));
+  const all=(await Promise.all([N(q),...vs.map(P)])).flat();
+  const norm=t=>String(t||'').toLowerCase().replace(/[\s.,()\-]/g,'').replace(/^ซ(?=\d)/,'ซอย');
+  const toks=q.split(/\s+/).map(norm).filter(Boolean),seen=new Set();
+  const scored=all.map(x=>{const t=norm(x.name+' '+x.sub),n=toks.filter(k=>t.includes(k)).length,exact=norm(x.name).includes(norm(q));return {...x,s:n*10+(exact?15:0)+(toks.length&&n===toks.length?20:0)}})
+    .filter(x=>{const k=x.lat.toFixed(4)+','+x.lng.toFixed(4)+x.name;if(!x.name||seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>b.s-a.s);
+  // มีผลที่ตรงครบทุกคำ → แสดงเฉพาะชุดนั้น · ไม่มี → แสดงที่ใกล้เคียงที่สุด
+  const full=scored.filter(x=>toks.length&&toks.every(k=>norm(x.name+' '+x.sub).includes(k)));
+  return (full.length?full:scored).slice(0,8)}
 function addrAuto(input,onPick){
   const box=document.createElement('ul');box.className='addr-sug';box.hidden=true;box.setAttribute('role','listbox');input.after(box);input.setAttribute('autocomplete','off');input.setAttribute('aria-autocomplete','list');
   let t=null,seq=0,items=[];

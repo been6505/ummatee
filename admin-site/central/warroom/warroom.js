@@ -251,15 +251,27 @@ function casesTab(V){
   const list=V.cases.filter(c=>(W.cst==='all'||c.status===W.cst)&&(!q||[(c.needs||[]).join(' '),c.district,c.address,vol(c)].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>(a.status==='done')-(b.status==='done')||sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,300);
   const teamOpts=sel=>`<option value="">— เลือกทีม —</option>`+V.roster.map(t=>`<option${t.name===sel?' selected':''}>${esc(t.name)}</option>`).join('');
-  $('#c-body').innerHTML=list.length?list.map(c=>{const ph=photos(c),v=vol(c);
-    return `<tr class="u${sev(c)}"><td class="ph">${ph.length?`<a href="${caseLink(c)}"><img src="${thumb(ph[0],120)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w120" alt="รูปจากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b>${ph.length}</b>`:''}</a>`:'<span class="none">–</span>'}</td>
-      <td><span class="tag">${URG[sev(c)]}</span></td>
-      <td><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน${c.src==='hm'?' · Help Me':''}</small></td>
-      <td>${esc(c.district?'เขต'+c.district:'')}<small>${esc(String(c.address||'').slice(0,80))}</small></td>
-      <td class="nw">${c.status==='done'?'—':esc(waitTxt(c.createdAt))}</td>
-      <td>${c.status!=='done'?`<select data-assign="${esc(c.id)}" aria-label="มอบทีม">${teamOpts(v)}</select>`:esc(v||'—')}<small>${esc(CST[c.status]||c.status)}</small></td>
-      <td class="act">${c.status!=='done'?`<button type="button" class="btn ghost sm" data-done="${esc(c.id)}">เสร็จ</button>`:''}${hasPin(c)?`<a class="btn ghost sm" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" title="นำทางด้วย Google Maps"><i data-ic="nav"></i> นำทาง</a>`:''}<a class="btn ghost sm" href="${caseLink(c)}">เปิด</a></td></tr>`}).join('')
-    :`<tr><td colspan="7" class="muted">ไม่มีเคส${V.r?' ในพื้นที่ของ War Room นี้ (ตั้งเขต/รัศมีได้ที่แท็บโปรไฟล์)':''}</td></tr>`;
+  // รายการแบบ helpme4u.com: แถวสั้น (รูป · ระดับ · ไอคอนความต้องการ · จำนวนคน · พื้นที่ · รอ) กดแล้วขยายรายละเอียด + ปุ่มจัดการ
+  const NI=[[/อาหาร/,'food'],[/น้ำดื่ม|น้ำ/,'water'],[/ยา|การแพทย์|แพทย์/,'pill'],[/อพยพ|เรือ/,'boat'],[/ผู้ป่วย|ผู้สูงอายุ|ติดเตียง|พิการ/,'patient']];
+  const nIc=c=>{const seen=[];(c.needs||[]).forEach(n=>{const m=NI.find(([re])=>re.test(n));const k=m?m[1]:'more';if(!seen.includes(k))seen.push(k)});return seen};
+  const UC={3:'u3',2:'u2',1:'u1'},row=(l,v)=>v?`<dt>${l}</dt><dd>${v}</dd>`:'';
+  $('#c-body').innerHTML=list.length?list.map(c=>{const ph=photos(c),v=vol(c),ics=nIc(c),u=sev(c),id=String(c.id),open=W.copen===id,tel=String(c.phone||'').replace(/[^\d+]/g,'');
+    return `<article class="wr-ci ${UC[u]} cs-${esc(c.status)}${open?' is-open':''}" data-cid="${esc(id)}">
+      <button type="button" class="wr-ci-h" aria-expanded="${open}" data-ctog="${esc(id)}">
+        <span class="ph">${ph.length?`<img src="${thumb(ph[0],160)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w160" alt="" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b>${ph.length}</b>`:''}`:ic('image')}</span>
+        <span class="lv"><i></i>${c.status==='done'?'ช่วยแล้ว':c.status==='going'?'กำลังไป':URG[u]}</span>
+        <span class="nd" title="${esc((c.needs||[]).join(', '))}">${ics.slice(0,2).map(k=>ic(k)).join('')}${ics.length>2?`<small>+${ics.length-2}</small>`:''}</span>
+        <span class="pp"><b>${esc(c.people||1)}</b> <span>${esc(c.district||c.province||'–')}</span></span>
+        <span class="wt">${c.status==='done'?'—':esc(waitTxt(c.createdAt))}</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+      ${open?`<div class="wr-ci-b"><dl>${row('ต้องการ',esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ'))}${row('สถานะ',esc(CST[c.status]||c.status)+(v?' · '+esc(v):''))}${row('จำนวนคน',esc(c.people||1)+' คน')}
+          ${row('ระดับน้ำ',esc(c.levelText||''))}${row('ที่อยู่',esc(c.address||''))}${row('ผู้แจ้ง',esc([c.name,c.phone].filter(Boolean).join(' · ')))}${row('หมายเหตุ',esc(c.notes||''))}
+          ${row('แจ้งเมื่อ',c.createdAt?esc(waitTxt(c.createdAt))+'ที่แล้ว'+(c.src==='hm'?' · Help Me':''):'')}</dl>
+        ${ph.length?`<div class="wr-ci-ph">${ph.slice(0,6).map(x=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(x)}/view" target="_blank" rel="noopener"><img src="${thumb(x,320)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(x)}&sz=w320" alt="รูปจากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}
+        ${c.status!=='done'?`<label class="wr-ci-as">มอบทีม<select data-assign="${esc(id)}" aria-label="มอบทีม">${teamOpts(v)}</select></label>`:''}
+        <div class="wr-ci-a">${tel?`<a class="btn call" href="tel:${esc(tel)}">${ic('phone')} โทร</a>`:''}${hasPin(c)?`<a class="btn ghost" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener">${ic('nav')} นำทาง</a>`:''}
+          ${c.status!=='done'?`<button type="button" class="btn ghost" data-done="${esc(id)}">${ic('check')} เสร็จ</button>`:''}<a class="btn ghost" href="${caseLink(c)}">${ic('next')} เปิดเคส</a></div></div>`:''}</article>`}).join('')
+    :`<p class="muted wr-empty">ไม่มีเคส${V.r?' ในพื้นที่ของ War Room นี้ (ตั้งเขต/รัศมีได้ที่แท็บโปรไฟล์)':''}</p>`;
+  $('#c-count').textContent=`${list.length} เคส`
 }
 $('#c-st').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;W.cst=b.dataset.st;casesTab(view())});
 $('#c-q').addEventListener('input',e=>{W.cq=e.target.value;casesTab(view())});
@@ -267,6 +279,7 @@ $('#c-body').addEventListener('change',async e=>{const s=e.target.closest('[data
   const team=s.value;s.disabled=true;
   try{const r=await apiPost({action:'update',id:c.id,status:team?'going':'open',volunteer:team});if(r.ok){c.volunteer=team;c.status=team?'going':'open';toast(team?`มอบเคสให้ ${team} แล้ว`:'ยกเลิกการมอบทีมแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}finally{s.disabled=false;render()}});
+$('#c-body').addEventListener('click',e=>{const t=e.target.closest('[data-ctog]');if(!t)return;W.copen=W.copen===t.dataset.ctog?'':t.dataset.ctog;casesTab(view())});
 $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('ปิดเคสนี้ว่าช่วยเสร็จแล้ว?'))return;
   b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c)});if(r.ok){c.status='done';toast('ปิดเคสแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 

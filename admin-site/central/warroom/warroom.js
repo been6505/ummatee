@@ -373,7 +373,7 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
       <dt>ที่ตั้ง</dt><dd>${esc(r.address||'—')}${r.lat!=null?` · <button type="button" class="lnk" data-fly2="${+r.lat},${+r.lng}">ดูบนแผนที่</button>`:''}</dd>
       <dt>พื้นที่รับผิดชอบ</dt><dd>${allCases(r)?'<b>ทุกเคสในระบบ</b> (ไม่จำกัดพื้นที่)':''}${!allCases(r)&&isProv(r)?'ทั้งจังหวัด'+esc(r.province):''}${!isProv(r)&&!allCases(r)&&r.districts.length?'เขต '+esc(r.districts.join(', ')):''}${r.districts.length&&r.radius?' และ ':''}${r.radius?`รัศมี ${esc((r.radius/1000).toLocaleString('th-TH',{maximumFractionDigits:1}))} กม. จากจุดที่ตั้ง`:''}${!isProv(r)&&!allCases(r)&&!r.districts.length&&!r.radius?'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>':''}</dd>
       <dt>สถานการณ์</dt><dd>เคสค้าง ${act} · วิกฤต ${crit} · ทีม ${V.roster.length} · ทีมงานประจำ ${staff.length} คน</dd>${r.note?`<dt>หมายเหตุ</dt><dd>${esc(r.note)}</dd>`:''}</dl>`;
-  $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
+  $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl wr-stf"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
   $('#pf-edit').onclick=()=>roomForm(r);
   // ลิงก์ประจำห้อง (สร้างอัตโนมัติ · เห็นเฉพาะศูนย์กลาง)
@@ -476,11 +476,19 @@ function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
   d.showModal();setTimeout(()=>{const i=f.querySelector('input');if(i)i.focus()},30)}
 
 /* ---------- วาดทั้งหมด ---------- */
-function render(){roomsBar();const V=view();
+function render(){roomsBar();const V=view();chatScope(V);
   if(W.tab==='over'){kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
   else if(!V.r&&W.tab==='struct')structTab();
   else if(V.r&&W.tab==='cases')casesTab(V);else if(V.r&&W.tab==='teams')teamsTab(V);else if(V.r&&W.tab==='stock')stockTab(V);else if(V.r&&W.tab==='prof')profTab(V);
   $("#status").textContent=`${V.r?V.r.name+' · ':''}อัปเดต ${new Date(W.at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · เคส ${V.cases.length} · อัปเดตเองทุก 30 วินาที`;}
+
+/* แชทใน War Room = แชทกับทีมที่ลงพื้นที่ของห้องนี้ (ทีมที่ออกงาน/มีเคสที่รับอยู่ขึ้นก่อน) */
+function chatScope(V){if(typeof CHAT==='undefined'||!CHAT.setScope)return;const r=V.r;
+  const info=name=>{const t=W.roster.find(x=>x.name===name),cs=V.cases.filter(c=>c.status==='going'&&vol(c)===name),l=W.live.find(x=>x.team===name),on=l&&mins(l.updatedAt)<10;
+    if(!t&&!cs.length)return null;const field=cs.length>0||(t&&t.status==='out');
+    return {field,tag:field?'ลงพื้นที่':(t&&ST[t.status])||'ทีม',text:[field?`ลงพื้นที่${cs.length?' · '+cs.length+' เคส':''}`:(t&&ST[t.status])||'',cs[0]?(cs[0].needs||[]).slice(0,2).join(', ')+(cs[0].district?' · '+cs[0].district:''):'',on?'ออนไลน์':''].filter(Boolean).join(' · ')}};
+  CHAT.setScope({title:r?'แชททีมลงพื้นที่ · '+r.name:'แชททีมลงพื้นที่',teams:r?V.roster.map(t=>t.name):null,info,
+    note:r?`ทีมของ ${r.name} · ${V.roster.filter(t=>(info(t.name)||{}).field).length} ทีมกำลังลงพื้นที่`:'ทุกทีม · ทีมที่กำลังลงพื้นที่ขึ้นก่อน'})}
 
 /* ---------- เวลา / เต็มจอ / รีเฟรช ---------- */
 function clock(){$('#clock').textContent=new Date().toLocaleString('th-TH',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}

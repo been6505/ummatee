@@ -237,7 +237,7 @@ html[data-theme="dark"]:not(.dash) .leaflet-container :is(img,video,canvas,.cam-
 .chat-in{flex:1;border:1px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit;font-size:15px}
 .chat-send{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--primary);color:#fff;font-size:16px;cursor:pointer}
 @media(max-width:760px){.chat-fab{bottom:calc(var(--tab-h,64px) + 24px + var(--safe-b));right:14px;width:50px;height:50px}
-  .chat-win{right:8px;left:8px;width:auto;bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b));height:calc(100vh - 210px)}}
+  .chat-win{right:8px;left:8px;width:auto;bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b));height:min(52vh,calc(100vh - 210px));min-height:300px}}
 html[data-theme="dark"]:not(.dash) .chat-root{filter:none}
 html.dash[data-theme="dark"] .chat-win{background:#1B1F33;color:var(--ink)}html.dash[data-theme="dark"] .chat-msgs{background:#0F1222}
 html.dash[data-theme="dark"] .chat-m.them,html.dash[data-theme="dark"] .chat-in{background:#24294A;color:var(--ink);border-color:rgba(255,255,255,.1)}
@@ -410,3 +410,9 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 .um-pin2 .pin-thumb img{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:center}
 .um-pin2 .pin-thumb b{z-index:2}
 .um-pin2 .pin-thumb b{right:3px!important;bottom:3px!important;border-width:1.5px}
+
+/* หัวแชท: ชื่อ + บรรทัดสถานะทีม · ป้ายลงพื้นที่ (ใช้ใน War Room) */
+.chat-tw{flex:1;min-width:0;display:grid}.chat-tw .chat-title{flex:none}.chat-sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-tag{display:inline-block;vertical-align:1px;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--bg,#f2f2f5);color:var(--muted)}
+.chat-tag.on{background:#E6F5EC;color:#1F7A43}
+.chat-note{margin:6px 10px 4px;font-size:12.5px;color:var(--muted)}

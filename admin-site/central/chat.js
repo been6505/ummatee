@@ -8,7 +8,11 @@ const CHAT=(()=>{
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const me=()=>{try{return localStorage.getItem('uh_staff')||localStorage.getItem('uh_team')||'ศูนย์'}catch(e){return 'ศูนย์'}};
-  const S={open:false,team:null,threads:[],roster:[],msgs:[],last:0,rev:null,timer:null,unread:0,alerts:{sos:[],calls:[]},ring:null};
+  const S={scope:null,open:false,team:null,threads:[],roster:[],msgs:[],last:0,rev:null,timer:null,unread:0,alerts:{sos:[],calls:[]},ring:null};
+  /* ขอบเขต (War Room): เหลือเฉพาะทีมของห้อง · info(team) = สถานะลงพื้นที่/เคสที่รับอยู่ */
+  const inScope=t=>!S.scope||!S.scope.teams||S.scope.teams.includes(t);
+  const title=()=>S.scope&&S.scope.title||'แชทกับทีม';
+  const info=t=>S.scope&&S.scope.info?S.scope.info(t):null;
   const seenCall=()=>{try{return +localStorage.getItem('uh_call_seen')||0}catch(e){return 0}},setSeen=n=>{try{localStorage.setItem('uh_call_seen',String(n))}catch(e){}};
   const api=async p=>{const r=await fetch('/api?'+new URLSearchParams({...p,key:KEY(),t:Date.now()}),{cache:'no-store'});return r.json()};
   const post=async b=>{const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,key:KEY()})});return r.json()};
@@ -19,7 +23,7 @@ const CHAT=(()=>{
     root=document.createElement('div');root.className='chat-root';
     root.innerHTML=`<button type="button" class="chat-fab" aria-label="แชทกับทีม" aria-expanded="false"><i data-ic="chat"></i><b class="chat-badge" hidden></b></button>
       <section class="chat-win" hidden aria-label="แชทกับทีม">
-        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><b class="chat-title">แชทกับทีม</b><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
+        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><span class="chat-tw"><b class="chat-title">แชทกับทีม</b><small class="chat-sub" hidden></small></span><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
         <div class="chat-list"></div>
         <div class="chat-msgs" hidden aria-live="polite"></div>
         <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
@@ -39,14 +43,20 @@ const CHAT=(()=>{
       try{const r=await post({action:'chat_send',team:S.team,from:'hq',name:me(),text:t});if(!r.ok)throw 0}catch(err){i.value=t}poll(true)}}
   function toggle(on){S.open=on==null?!S.open:on;root.querySelector('.chat-win').hidden=!S.open;root.querySelector('.chat-fab').setAttribute('aria-expanded',String(S.open));if(S.open){view();poll(true)}schedule()}
   function view(){const inTeam=!!S.team;root.querySelector('.chat-list').hidden=inTeam;root.querySelector('.chat-msgs').hidden=!inTeam;root.querySelector('.chat-form').hidden=!inTeam;
-    root.querySelector('.chat-back').hidden=!inTeam;root.querySelector('.chat-title').textContent=inTeam?S.team:'แชทกับทีม';
+    root.querySelector('.chat-back').hidden=!inTeam;root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
     share();
     if(inTeam){drawMsgs();setTimeout(()=>root.querySelector('.chat-in').focus(),30)}else drawList()}
   function share(){const sh=root.querySelector('.chat-share'),tk=S.team&&(S.roster.find(r=>r.name===S.team)||{}).token;sh.hidden=!tk;if(tk)sh.href='/team/?id='+encodeURIComponent(tk)}
-  function drawList(){const known=new Set(S.threads.map(t=>t.team));
-    const others=S.roster.map(r=>r.name).filter(n=>n&&!known.has(n));
-    root.querySelector('.chat-list').innerHTML=(S.threads.length?S.threads.map(t=>`<button type="button" class="chat-row${t.unread?' new':''}" data-chat-team="${esc(t.team)}"><span class="chat-av">${esc(String(t.team).slice(0,1))}</span><span class="chat-rt"><b>${esc(t.team)}</b><small>${t.last?esc((t.last.sender==='hq'?'คุณ: ':'')+(t.last.kind==='sos'?'SOS · ':'')+(t.last.text||(t.last.lat!=null?'ส่งตำแหน่ง':''))):''}</small></span><span class="chat-rm"><small>${t.at?esc(Date.now()-t.at<864e5?hhmm(t.at):day(t.at)):''}</small>${t.unread?`<b class="chat-n">${t.unread}</b>`:''}</span></button>`).join(''):'<p class="chat-empty">ยังไม่มีแชท · เลือกทีมด้านล่างเพื่อเริ่มคุย</p>')
-      +(others.length?`<p class="chat-sec">เริ่มคุยกับทีม</p>`+others.map(n=>`<button type="button" class="chat-row" data-chat-team="${esc(n)}"><span class="chat-av">${esc(n.slice(0,1))}</span><span class="chat-rt"><b>${esc(n)}</b><small>ยังไม่เคยคุย</small></span></button>`).join(''):'')}
+  function drawList(){if(!root)return;const th=S.threads.filter(t=>inScope(t.team)),known=new Set(th.map(t=>t.team));
+    const pool=S.scope&&S.scope.teams?S.scope.teams:S.roster.map(r=>r.name);
+    const tag=t=>{const f=info(t);return f?`<span class="chat-tag ${f.field?'on':''}">${esc(f.tag)}</span>`:''};
+    const fieldFirst=(a,b)=>((info(b)||{}).field?1:0)-((info(a)||{}).field?1:0);
+    const others=pool.filter(n=>n&&!known.has(n)).sort(fieldFirst);
+    const last=t=>t.last?(t.last.sender==='hq'?'คุณ: ':'')+(t.last.kind==='sos'?'SOS · ':'')+(t.last.text||(t.last.lat!=null?'ส่งตำแหน่ง':'')):'';
+    root.querySelector('.chat-list').innerHTML=(S.scope&&S.scope.note?`<p class="chat-note">${esc(S.scope.note)}</p>`:'')
+      +th.map(t=>`<button type="button" class="chat-row${t.unread?' new':''}" data-chat-team="${esc(t.team)}"><span class="chat-av">${esc(String(t.team).slice(0,1))}</span><span class="chat-rt"><b>${esc(t.team)} ${tag(t.team)}</b><small>${esc(last(t))}</small></span><span class="chat-rm"><small>${t.at?esc(Date.now()-t.at<864e5?hhmm(t.at):day(t.at)):''}</small>${t.unread?`<b class="chat-n">${t.unread}</b>`:''}</span></button>`).join('')
+      +(others.length?`<p class="chat-sec">${S.scope?'ทีมของห้องนี้ · เริ่มคุย':'เริ่มคุยกับทีม'}</p>`+others.map(n=>{const f=info(n);return `<button type="button" class="chat-row" data-chat-team="${esc(n)}"><span class="chat-av">${esc(n.slice(0,1))}</span><span class="chat-rt"><b>${esc(n)} ${tag(n)}</b><small>${esc(f&&f.text||'ยังไม่เคยคุย')}</small></span></button>`}).join(''):'')
+      ||`<p class="chat-note">${S.scope?'ยังไม่มีทีมในห้องนี้ · เพิ่มทีมที่แท็บ "ทีม"':'ยังไม่มีทีม'}</p>`}
   function drawMsgs(){const box=root.querySelector('.chat-msgs');const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;let lastDay='';
     box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==lastDay?`<p class="chat-day">${esc(d)}</p>`:'';lastDay=d;
       const loc=m.lat!=null?`<a class="chat-loc" href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่งของทีม · เปิดแผนที่</a>`:'';
@@ -57,12 +67,12 @@ const CHAT=(()=>{
   async function poll(force){if(!KEY())return;S.lastPoll=Date.now();
     try{if(S.open&&S.team){const r=await api({action:'chat',team:S.team});if(r.ok){const changed=r.messages.length!==S.msgs.filter(m=>!m.pending).length||(r.messages.slice(-1)[0]||{}).n!==(S.msgs.slice(-1)[0]||{}).n||r.messages.some((m,i)=>S.msgs[i]&&m.readTeam!==S.msgs[i].readTeam);
           S.msgs=r.messages;if(changed||force)drawMsgs();if(r.messages.some(m=>m.sender==='team'&&!m.readHq))post({action:'chat_read',team:S.team,side:'hq'})}}
-      const t=await api({action:'chat_threads'});if(t.ok){S.threads=t.threads;if(t.alerts){S.alerts=t.alerts;drawAlerts()}const n=t.threads.reduce((a,x)=>a+(x.team===S.team&&S.open?0:x.unread),0);
+      const t=await api({action:'chat_threads'});if(t.ok){S.threads=t.threads;if(t.alerts){S.alerts=t.alerts;drawAlerts()}const n=t.threads.filter(x=>inScope(x.team)).reduce((a,x)=>a+(x.team===S.team&&S.open?0:x.unread),0);
         if(n>S.unread&&S.unread!==null&&!force)ding();S.unread=n;const b=root.querySelector('.chat-badge');b.hidden=!n;b.textContent=n>99?'99+':n;
         if(S.open&&!S.team)drawList()}
       if(S.open&&!S.roster.length){const r=await api({action:'roster'});if(r.ok){S.roster=r.roster||[];if(!S.team)drawList();else share()}}}catch(e){}}
   /* แถบแจ้งเตือน: SOS (จนกว่าจะรับทราบ) + สายเข้าจากทีม (ดังจนกด รับ/ไม่รับ หรือครบ 2 นาที) */
-  function drawAlerts(){if(!S.al)return;const calls=S.alerts.calls.filter(c=>c.n>seenCall()),sos=S.alerts.sos||[];
+  function drawAlerts(){if(!S.al)return;const calls=S.alerts.calls.filter(c=>c.n>seenCall()&&inScope(c.team)),sos=(S.alerts.sos||[]).filter(x=>inScope(x.name));
     S.al.innerHTML=sos.map(s=>`<div class="al al-sos" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(s.name)}</b><small>${esc(hhmm(s.sosAt))}${s.lat!=null?` · <a href="https://maps.google.com/?q=${+s.lat},${+s.lng}" target="_blank" rel="noopener">ตำแหน่ง</a>`:''}</small>
         <span>${String(s.phone||'').replace(/\D/g,'').length>=9?`<a class="al-b" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}"><i data-ic="phone"></i></a>`:''}<button class="al-b" data-al="chat" data-v="${esc(s.name)}" aria-label="แชท"><i data-ic="chat"></i></button><button class="al-b al-ok" data-al="ack" data-v="${esc(s.id)}">รับทราบ</button></span></div>`).join('')
       +calls.map(c=>`<div class="al al-call" role="alert"><b><i data-ic="phone"></i> ${esc(c.team)} โทรมา</b><small>${esc(c.text)}${c.name?' · '+esc(c.name):''}</small>
@@ -75,5 +85,8 @@ const CHAT=(()=>{
   function start(){if(root||!KEY()||document.documentElement.classList.contains('embed'))return;build();poll(true);schedule()}
   /* เริ่มเมื่อเข้าระบบแล้ว (หน้าเข้าระบบยังไม่มีรหัส) */
   const wait=setInterval(()=>{if(KEY()&&!document.getElementById('app')?.hidden){clearInterval(wait);start()}},1500);
-  return {open:name=>{start();openTeam(name)}}
+  function setScope(sc){S.scope=sc||null;if(!root)return;if(S.open)view();else drawList();drawAlerts();
+    const n=S.threads.filter(x=>inScope(x.team)).reduce((a,x)=>a+x.unread,0),b=root.querySelector('.chat-badge');S.unread=n;b.hidden=!n;b.textContent=n>99?'99+':n;
+    root.querySelector('.chat-fab').setAttribute('aria-label',title())}
+  return {open:name=>{start();openTeam(name)},setScope}
 })();

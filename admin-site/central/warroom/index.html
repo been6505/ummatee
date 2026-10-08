@@ -13,10 +13,10 @@
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=14">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=32">
+<link rel="stylesheet" href="../helpme-skin.css?v=33">
 <link rel="stylesheet" href="../hm-ui.css?v=9">
 <link rel="stylesheet" href="./wr-map.css?v=2">
-<link rel="stylesheet" href="./warroom.css?v=20">
+<link rel="stylesheet" href="./warroom.css?v=22">
 <script src="../icons.js?v=5"></script>
 </head>
 <body>
@@ -102,10 +102,9 @@
       <div class="wr-prof">
         <section class="wr-card" id="pf-info"></section>
         <article class="wr-doc" aria-label="ปรึกษาคุณหมอจิตอาสา">
-          <div class="wr-doc-hero"><span class="wr-doc-av" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a4 4 0 0 0 8 0V3"/><path d="M9 12v3a5 5 0 0 0 10 0v-2"/><circle cx="19" cy="11" r="2" fill="#E5383B" stroke="none"/></svg></span>
-            <small>ปรึกษาแพทย์ทางโทรศัพท์ · คุณหมอจิตอาสา</small><h2>พญ. โศภิณา วงศ์เสงี่ยม</h2><span class="wr-doc-tag">หู คอ จมูก</span></div>
-          <div class="wr-doc-b"><small>เบอร์ติดต่อ</small><b>098-940-6537</b>
-            <div class="wr-doc-a"><a class="call" href="tel:0989406537"><i data-ic="phone"></i> โทรเลย</a><button type="button" id="doc-copy"><i data-ic="copy"></i> คัดลอก</button></div></div>
+          <span class="wr-doc-av" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a4 4 0 0 0 8 0V3"/><path d="M9 12v3a5 5 0 0 0 10 0v-2"/><circle cx="19" cy="11" r="2" fill="#E5383B" stroke="none"/></svg></span>
+          <div class="wr-doc-t"><small>ปรึกษาคุณหมอจิตอาสา · หู คอ จมูก</small><b>พญ. โศภิณา วงศ์เสงี่ยม</b><span>098-940-6537</span></div>
+          <div class="wr-doc-a"><a class="call" href="tel:0989406537" aria-label="โทรหาคุณหมอ 098-940-6537"><i data-ic="phone"></i><span>โทร</span></a><button type="button" id="doc-copy" aria-label="คัดลอกเบอร์คุณหมอ"><i data-ic="copy"></i></button></div>
         </article>
         <section class="wr-card"><div class="wr-tools"><h2 style="margin:0">ทีมงานประจำ War Room</h2><button class="btn primary sm" id="pf-add" type="button">+ เพิ่มคน</button></div><div id="pf-staff"></div></section>
       </div>
@@ -121,9 +120,9 @@
 <script src="../camlive.js?v=8"></script>
 <script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=11"></script>
-<script src="./warroom.js?v=26"></script>
+<script src="./warroom.js?v=28"></script>
 <script src="../theme-toggle.js?v=2"></script>
-<script src="../chat.js?v=5"></script>
+<script src="../chat.js?v=6"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 </body>

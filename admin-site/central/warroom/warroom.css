@@ -287,17 +287,28 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
 .wr-hero-n span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wr-hero-n{align-items:start!important}
 @media(max-width:400px){.wr-hero-n span{font-size:12.5px!important}.wr-hero-n>div{padding:0 9px!important}.wr-hero-n b{font-size:24px!important}}
 
-/* การ์ดปรึกษาคุณหมอจิตอาสา (แบบแท็บ "หมอ" ของ helpme4u.com) */
-.wr-doc{border-radius:32px;overflow:hidden;background:var(--surface,#fff);box-shadow:var(--shadow-soft)}
-.wr-doc-hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#5FB5A3 0%,#3F8B7B 45%,#336F64 100%);color:#fff;text-align:center;padding:26px 18px 24px;display:grid;justify-items:center;gap:6px}
-.wr-doc-hero:after{content:"";position:absolute;right:-60px;bottom:-90px;width:230px;height:230px;border-radius:50%;background:rgba(255,255,255,.06)}
-.wr-doc-av{width:96px;height:96px;border-radius:50%;background:#fff;color:#2F7466;display:grid;place-items:center;box-shadow:0 0 0 12px rgba(255,255,255,.14);margin-bottom:10px}.wr-doc-av svg{width:44px;height:44px}
-.wr-doc-hero small{font-size:14px;opacity:.85}.wr-doc-hero h2{margin:0;font-size:26px;font-weight:800;color:#fff}
-.wr-doc-tag{border:1.5px solid rgba(255,255,255,.4);border-radius:999px;padding:4px 16px;font-weight:700;font-size:14px;margin-top:4px}
-.wr-doc-b{padding:18px 22px 22px;display:grid;justify-items:center;gap:4px}.wr-doc-b small{color:var(--muted);font-size:14px}
-.wr-doc-b>b{font-size:38px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-.wr-doc-a{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px;width:100%;margin-top:12px}
-.wr-doc-a>*{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;border-radius:20px;font:inherit;font-weight:700;font-size:18px;text-decoration:none;border:0;cursor:pointer}
-.wr-doc-a .call{background:linear-gradient(180deg,#5BAE6E,#448B57);color:#fff!important;box-shadow:0 8px 20px rgba(68,139,87,.3)}
-.wr-doc-a button{background:var(--bg,#f2f2f5);color:var(--ink)}.wr-doc-a svg{width:22px;height:22px}
+/* การ์ดปรึกษาคุณหมอจิตอาสา: แถวเดียวกะทัดรัด (สีเขียวแบบแท็บ "หมอ" ของ helpme4u.com) */
+.wr-doc{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:24px;background:linear-gradient(135deg,#EAF6F2,#F6FBF9);box-shadow:inset 0 0 0 1px #D3EBE3;min-width:0}
+.wr-doc-av{flex:none;width:48px;height:48px;border-radius:50%;background:linear-gradient(160deg,#5FB5A3,#336F64);color:#fff;display:grid;place-items:center}.wr-doc-av svg{width:26px;height:26px}
+.wr-doc-av circle{fill:#fff}
+.wr-doc-t{flex:1;min-width:0;display:grid;gap:1px}.wr-doc-t small{font-size:12px;color:#3F7F72;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-doc-t b{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wr-doc-t span{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.wr-doc-a{flex:none;display:flex;gap:6px}
+.wr-doc-a>*{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;min-width:44px;border-radius:999px;border:0;font:inherit;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;white-space:nowrap}
+.wr-doc-a .call{background:linear-gradient(180deg,#5BAE6E,#448B57);color:#fff!important;padding:0 16px}
+.wr-doc-a button{background:#fff;color:var(--ink);box-shadow:inset 0 0 0 1px #D3EBE3}.wr-doc-a svg{width:19px;height:19px}
+:root[data-theme="dark"] .wr-doc{background:#14261F;box-shadow:inset 0 0 0 1px #24453B}:root[data-theme="dark"] .wr-doc-t small{color:#8FD3C1}:root[data-theme="dark"] .wr-doc-a button{background:#1B1F33;color:var(--ink)}
+@media(max-width:380px){.wr-doc-a .call span{display:none}.wr-doc-a .call{padding:0 13px}}
 @media(min-width:1000px){.wr-prof>.wr-card:last-child{grid-column:2;grid-row:1/span 2;align-self:start}.wr-prof>#pf-info,.wr-prof>.wr-doc{grid-column:1}}
+/* มือถือ: การ์ดคุณหมอให้ชื่อขึ้นครบ · ตารางทีมงานเป็นการ์ดแถวละคน */
+@media(max-width:760px){
+  .wr-doc{align-items:center}.wr-doc-t b{white-space:normal;line-height:1.3}.wr-doc-t small{white-space:normal}
+  .wr-doc-a .call span{display:none}.wr-doc-a .call{padding:0 14px}
+  .wr-stf thead{display:none}.wr-stf,.wr-stf tbody{display:block}
+  .wr-stf tr{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;padding:10px 2px;border-bottom:1px solid var(--line,#ececf0)}
+  .wr-stf td{display:block;border:0!important;padding:0!important;font-size:14px}
+  .wr-stf td:nth-child(1){grid-column:1;font-size:15.5px}
+  .wr-stf td:nth-child(2),.wr-stf td:nth-child(3),.wr-stf td:nth-child(4){grid-column:1;color:var(--muted)}
+  .wr-stf td:nth-child(4):before{content:"เวร ";}
+  .wr-stf td:nth-child(5){grid-column:2;grid-row:1/span 4;align-self:center;display:flex;gap:6px}
+}

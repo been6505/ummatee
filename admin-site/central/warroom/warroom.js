@@ -39,7 +39,8 @@ const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
 /* ---------- ขอบเขตของ War Room ---------- */
-function inRoom(c,r){if(!r)return true;
+const allCases=r=>r&&r.districts.includes('*');   // War Room ที่ดูแลทุกเคสในระบบ (ไม่จำกัดพื้นที่)
+function inRoom(c,r){if(!r||allCases(r))return true;
   const pv=provOf(c);
   if(isProv(r))return pv===r.province;
   if(r.province&&pv&&pv!==r.province)return false;
@@ -295,7 +296,7 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
   $('#pf-info').innerHTML=`<div class="wr-tools"><h2 style="margin:0"><i class="rdot" style="background:${esc(r.color)}"></i> ${esc(r.name)}</h2><button type="button" class="btn ghost sm" id="pf-edit">แก้ไขข้อมูล War Room</button></div>
     <dl class="wr-dl"><dt>ประเภท</dt><dd>${isProv(r)?'ศูนย์ประสานงานจังหวัด (Provincial Coordination)':'War Room โซน'}${r.province?' · จังหวัด'+esc(r.province):''}</dd>${isProv(r)?`<dt>War Room โซน</dt><dd>${zonesOf(r.province).map(z=>`<button type="button" class="lnk" data-gozone2="${esc(z.id)}">${esc(z.name)}</button>`).join(' · ')||'ยังไม่มี'}</dd>`:''}<dt>หัวหน้า</dt><dd>${esc(r.lead||'—')}</dd><dt>เบอร์ติดต่อ</dt><dd>${r.phone?`<a href="tel:${esc(telOf(r.phone))}">${esc(r.phone)}</a>`:'—'}</dd>
       <dt>ที่ตั้ง</dt><dd>${esc(r.address||'—')}${r.lat!=null?` · <button type="button" class="lnk" data-fly2="${+r.lat},${+r.lng}">ดูบนแผนที่</button>`:''}</dd>
-      <dt>พื้นที่รับผิดชอบ</dt><dd>${isProv(r)?'ทั้งจังหวัด'+esc(r.province):''}${!isProv(r)&&r.districts.length?'เขต '+esc(r.districts.join(', ')):''}${r.districts.length&&r.radius?' และ ':''}${r.radius?`รัศมี ${esc((r.radius/1000).toLocaleString('th-TH',{maximumFractionDigits:1}))} กม. จากจุดที่ตั้ง`:''}${!isProv(r)&&!r.districts.length&&!r.radius?'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>':''}</dd>
+      <dt>พื้นที่รับผิดชอบ</dt><dd>${allCases(r)?'<b>ทุกเคสในระบบ</b> (ไม่จำกัดพื้นที่)':''}${!allCases(r)&&isProv(r)?'ทั้งจังหวัด'+esc(r.province):''}${!isProv(r)&&!allCases(r)&&r.districts.length?'เขต '+esc(r.districts.join(', ')):''}${r.districts.length&&r.radius?' และ ':''}${r.radius?`รัศมี ${esc((r.radius/1000).toLocaleString('th-TH',{maximumFractionDigits:1}))} กม. จากจุดที่ตั้ง`:''}${!isProv(r)&&!allCases(r)&&!r.districts.length&&!r.radius?'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>':''}</dd>
       <dt>สถานการณ์</dt><dd>เคสค้าง ${act} · วิกฤต ${crit} · ทีม ${V.roster.length} · ทีมงานประจำ ${staff.length} คน</dd>${r.note?`<dt>หมายเหตุ</dt><dd>${esc(r.note)}</dd>`:''}</dl>`;
   $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
@@ -320,7 +321,8 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     <div class="row"><label>หัวหน้า War Room<input name="lead" maxlength="60" value="${esc(r.lead||'')}"></label><label>เบอร์ติดต่อ<input name="phone" inputmode="tel" maxlength="20" value="${esc(r.phone||'')}"></label></div>
     <label class="addr-wrap">ที่ตั้ง (พิมพ์ชื่อสถานที่/ที่อยู่ แล้วเลือกจากรายการ)<input name="address" maxlength="200" value="${esc(r.address||'')}" placeholder="เช่น โรงเรียนรีเจ้นท์ ลาดกระบัง"></label>
     <fieldset><legend>พื้นที่รับผิดชอบ (ใส่อย่างใดอย่างหนึ่งหรือทั้งสอง)</legend>
-      <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
+      <label class="chk-row"><input type="checkbox" name="allcases"${(r.districts||[]).includes('*')?' checked':''}> ดูแลทุกเคสในระบบ (ไม่จำกัดพื้นที่)</label>
+      <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).filter(d=>d!=='*').join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
       <div class="row"><label>จุดที่ตั้ง (ละติจูด, ลองจิจูด)<input name="ll" maxlength="40" value="${r.lat!=null?esc(r.lat+', '+r.lng):''}" placeholder="13.7563, 100.5018"></label><label>รัศมี (กม.)<input name="radius" type="number" min="0" step="0.5" inputmode="decimal" value="${r.radius?esc(r.radius/1000):''}"></label></div>
       <div class="acts"><button type="button" class="btn ghost sm" id="ll-map">ใช้จุดกลางแผนที่ตอนนี้</button><button type="button" class="btn ghost sm" id="ll-me">ใช้ตำแหน่งของฉัน</button></div></fieldset>
     <label>สี<span class="colors">${COLORS.map(x=>`<label class="sw"><input type="radio" name="color" value="${x}"${x===(r.color||COLORS[W.rooms.length%COLORS.length])?' checked':''}><i style="background:${x}"></i></label>`).join('')}</span></label>
@@ -330,7 +332,7 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     if(rad&&!m){toast('ใส่จุดที่ตั้งก่อนกำหนดรัศมี');return false}
     const kind=f.kind.value,pv=f.province.value.trim();if(kind==='province'&&!pv){toast('ศูนย์ประสานงานจังหวัดต้องระบุจังหวัด');return false}
     if(kind==='zone'&&!f.name.value.trim()){toast('ใส่ชื่อ War Room โซน');return false}
-    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,districts:f.districts.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
+    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,districts:(f.allcases.checked?'*, ':'')+f.districts.value,color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
     if(!res.ok){toast(res.error==='province_exists'?'จังหวัดนี้มีศูนย์ประสานงานแล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     toast('บันทึกแล้ว',true);await loadRooms();W.room=res.id;W.fitted='';if(!r.id)W.tab='prof';try{history.replaceState(null,'','?wr='+encodeURIComponent(res.id))}catch(e){}render()});
   const f=$('#dlg-f');

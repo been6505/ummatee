@@ -192,3 +192,48 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
 
 /* iPhone: ช่องกรอกต้อง ≥ 16px ไม่อย่างนั้น Safari ซูมหน้าตอนแตะแล้วค้างอยู่ (ขอบจอโดนตัด) */
 @media(max-width:760px){input,textarea,select,.chat-in,.hz-f input{font-size:16px!important}}
+/* ---------- การ์ดเคส (มือถือ/จอแคบ): จัดเป็นชั้น ๆ อ่านง่าย ----------
+   [ระดับ · Help Me ........ สถานะ]
+   [ความต้องการ (ตัวหนา) + ระดับน้ำ]
+   [รูป]
+   [ชิปผลตรวจ · ชิปพื้นที่มอบแล้ว · คะแนน]
+   [คน ........ ถุงยังชีพ]
+   [ที่อยู่]  [ผู้ติดต่อ · เบอร์]  [ทีม ........ เวลา #รหัส] */
+@media(max-width:900px){
+  #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
+    gap:8px 10px!important;padding:14px 16px!important;border-radius:20px!important;border:0!important;box-shadow:inset 5px 0 0 var(--lc,#E0B53A),0 1px 3px rgba(22,27,61,.06)!important;background:var(--surface,#fff)!important;margin-bottom:12px!important}
+  #list .tbl tbody tr.u3{--lc:#E5383B}#list .tbl tbody tr.u2{--lc:#F57C00}#list .tbl tbody tr.s-going{--lc:#7B8CE8}#list .tbl tbody tr.s-done{--lc:#2E9E57}
+  #list .tbl tbody td{min-width:0;max-width:none!important;text-align:left!important}
+  #list .tbl tbody td:nth-child(1){grid-area:lv!important;display:flex!important;align-items:center;gap:6px}
+  #list .tbl tbody td:nth-child(2){grid-area:chips!important;display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-start!important}
+  #list .tbl tbody td:nth-child(3){grid-area:st!important;display:flex!important;align-items:center;justify-content:flex-end;gap:6px}
+  #list .tbl tbody td:nth-child(4){grid-area:needs}
+  #list .tbl tbody td:nth-child(5){grid-area:ppl!important;align-self:center;font-weight:700}
+  #list .tbl tbody td:nth-child(6){grid-area:bag!important;display:flex!important;align-items:center;gap:6px;justify-content:flex-end}
+  #list .tbl tbody td:nth-child(7){grid-area:addr!important;color:var(--muted);font-size:14px}
+  #list .tbl tbody td:nth-child(8){grid-area:who!important;font-size:14.5px}
+  #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
+  #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  #list .tbl tbody td:nth-child(11){display:none!important}
+  /* หัวการ์ด */
+  #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
+  #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
+  #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
+  /* ความต้องการ + รูป */
+  #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
+  #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
+  #list .tbl .row-photos{margin-top:8px;gap:6px}#list .tbl .row-photos img,#list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
+  /* ชิปผลตรวจ */
+  #list .tbl td.vr-cell .cov,#list .tbl td.vr-cell .vr,#list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
+  /* คน · ถุงยังชีพ */
+  #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
+  #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
+  #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
+  #list .tbl td.bag small{font-size:13px;color:var(--muted)}
+  /* ผู้ติดต่อ · ทีม · เวลา */
+  #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
+  #list .tbl td.time small{display:block;font-size:11px}
+  #list .tbl td.addr small{display:inline-block;margin-left:6px}
+}
+.stat .hm-tag{display:none!important}

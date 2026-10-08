@@ -29,7 +29,7 @@ async function loadAll(){
     LD.loaded=Date.now();render();toParent({type:'count',n:LD.leads.filter(l=>l.status==='new').length})}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
-setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},90000);
+setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},30000);
 
 function nearby(l){
   if(!pin(l))return null;

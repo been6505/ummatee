@@ -13,8 +13,9 @@
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=14">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=33">
-<link rel="stylesheet" href="../hm-ui.css?v=9">
+<link rel="stylesheet" href="../helpme-skin.css?v=34">
+<link rel="stylesheet" href="../hm-ui.css?v=12">
+<link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="./wr-map.css?v=2">
 <link rel="stylesheet" href="./warroom.css?v=24">
 <script src="../icons.js?v=5"></script>
@@ -44,7 +45,7 @@
       <button type="button" data-tab="struct" aria-selected="false"><i data-ic="users"></i> จัดการ War Room</button><button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
     </div>
     <div class="wr-pane wr-over" id="p-over">
-    <section class="wr-kpis" id="kpis" aria-label="สรุปสถานการณ์"></section>
+    <section class="wr-kpis hm-sum" id="kpis" aria-label="สรุปสถานการณ์"></section>
     <div class="wr-grid">
       <section class="wr-mapcard mapcard" aria-label="แผนที่สถานการณ์">
         <div class="dmap-wrap"><div class="wr-map" id="wmap"></div>
@@ -120,7 +121,8 @@
 <script src="../camlive.js?v=8"></script>
 <script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=11"></script>
-<script src="./warroom.js?v=30"></script>
+<script src="../summary.js?v=1"></script>
+<script src="./warroom.js?v=32"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=6"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>

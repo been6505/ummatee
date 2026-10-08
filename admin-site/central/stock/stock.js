@@ -10,7 +10,7 @@ async function loadAll(){$('#sync').textContent='กำลังโหลด…'
   try{const [r,ro]=await Promise.all([apiGet({action:'stock'}),apiGet({action:'roster'}).catch(()=>null)]);if(r&&r.ok){S.items=r.items||[];S.log=r.log||[];if(ro&&ro.ok)S.roster=ro.roster||[];S.loaded=Date.now();render()}else throw 0}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
-setInterval(()=>{if(ADM.key&&!document.hidden&&$('#drawer').hidden)loadAll()},60000);
+setInterval(()=>{if(ADM.key&&!document.hidden&&$('#drawer').hidden)loadAll()},20000);
 
 function expTag(i){if(!i.expiry)return '';const d=Math.ceil((Date.parse(i.expiry)-Date.now())/864e5);if(isNaN(d))return '';const t=new Date(i.expiry).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});return d<0?` · <span class="needtag">หมดอายุแล้ว (${t})</span>`:d<=30?` · <span class="warn">หมดอายุใน ${d} วัน</span>`:` · หมดอายุ ${t}`}
 const received=i=>S.log.filter(l=>l.itemId===i.id).reduce((s,l)=>s+Math.max(0,Number(l.delta)||0),0);

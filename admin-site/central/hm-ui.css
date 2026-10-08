@@ -30,32 +30,45 @@ h1,h2,h3{letter-spacing:-.01em}
 
 /* ---------- คอมพิวเตอร์ (≥ 1024px) ---------- */
 @media(min-width:1024px){
-  /* หัวเว็บ: แถบเดียว สูง ~56px โปร่งแสงเบลอ แทนแคปซูลลอยสามก้อน */
-  .top{position:sticky!important;top:0;z-index:1200;padding:8px clamp(14px,1.6vw,28px)!important;gap:14px!important;pointer-events:auto!important;
-    background:rgba(245,245,247,.82)!important;-webkit-backdrop-filter:saturate(1.8) blur(20px)!important;backdrop-filter:saturate(1.8) blur(20px)!important;border-bottom:1px solid var(--line)}
-  [data-theme="dark"] .top{background:rgba(20,22,40,.82)!important}
-  .top::before{display:none!important}
-  .top :is(.brand,.tabs,.top-r){background:transparent!important;box-shadow:none!important;border:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0!important}
+  /* หัวเว็บแบบ helpme4u.com: โลโก้แคปซูลขาวซ้าย · ปุ่มในแคปซูลกระจกขวา · ไม่มีแถบเต็มความกว้าง */
+  .top{position:sticky!important;top:0;z-index:1200;padding:12px clamp(14px,1.6vw,28px) 6px!important;gap:14px!important;background:transparent!important;border:0!important;
+    display:flex!important;justify-content:space-between;align-items:center;pointer-events:none}
+  .top>*{pointer-events:auto}.top::before{display:none!important}
+  .top .brand{background:#fff!important;border-radius:999px!important;padding:8px 16px 8px 12px!important;box-shadow:var(--shadow)!important;border:0!important}
   .brand img{height:26px!important}.brand span{font-size:15px}
-  .tabs{gap:2px!important;flex:1;justify-content:center}
-  .tabs a{padding:6px 12px!important;font-size:14px!important;font-weight:600;color:var(--muted)!important}
-  .tabs a:hover{background:rgba(0,0,0,.05)!important;color:var(--ink)!important}
-  :root:not([data-theme="dark"]) .tabs a[aria-current=page]{background:#1d1d1f!important;color:#fff!important}
-  .top-r{gap:2px!important}.top-r .btn{min-height:34px!important;padding:4px 10px!important;font-size:13.5px!important}
-  .wrap{padding-top:14px!important}
+  .top .top-r{background:var(--glass,rgba(255,255,255,.72))!important;-webkit-backdrop-filter:blur(18px) saturate(1.7)!important;backdrop-filter:blur(18px) saturate(1.7)!important;
+    border:1px solid var(--glass-b,rgba(255,255,255,.7))!important;box-shadow:var(--shadow)!important;border-radius:999px!important;padding:5px!important;gap:4px!important}
+  [data-theme="dark"] .top .top-r{background:rgba(27,31,51,.8)!important;border-color:rgba(255,255,255,.08)!important}[data-theme="dark"] .top .brand{background:#1B1F33!important}
+  .top-r .btn{min-height:40px!important;padding:4px 14px!important;font-size:13.5px!important;border-radius:999px!important}
+  .top-r .btn.theme-btn,.top-r #refresh{width:44px;padding:0!important;justify-content:center}
+  /* เมนูหลัก = แถบลอยด้านล่างแบบ helpme4u.com (ไอคอนบน ชื่อล่าง) ทุกขนาดจอ */
+  .tabs{position:fixed!important;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b,0px) + 14px);top:auto;margin:0!important;
+    display:flex!important;gap:4px!important;padding:6px!important;width:auto!important;max-width:calc(100% - 24px);flex:none!important;justify-content:center;
+    background:rgba(255,255,255,.72)!important;-webkit-backdrop-filter:blur(22px) saturate(1.8)!important;backdrop-filter:blur(22px) saturate(1.8)!important;
+    border:1px solid rgba(255,255,255,.8)!important;border-radius:999px!important;box-shadow:0 10px 30px rgba(22,27,61,.18)!important}
+  [data-theme="dark"] .tabs{background:rgba(27,31,51,.82)!important;border-color:rgba(255,255,255,.08)!important}
+  .tabs a{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:84px;min-height:52px;padding:4px 12px!important;
+    border-radius:999px!important;font-size:12.5px!important;font-weight:600;color:var(--muted)!important;background:none!important}
+  .tabs a .tab-ic{display:block!important;width:25px;height:25px}
+  .tabs a:hover{background:rgba(0,0,0,.04)!important;color:var(--ink)!important}
+  .tabs a[aria-current=page]{background:var(--tint)!important;color:var(--primary)!important;font-weight:700}
+  .wrap,main{padding-bottom:calc(var(--tab-h,64px) + var(--safe-b,0px) + 40px)!important}
+  .toasts{bottom:calc(var(--tab-h,64px) + 40px)!important}
+  body.map-fs .tabs,body.noscroll .tabs{display:none!important}
+  .wrap{padding-top:8px!important}
 
   /* แดชบอร์ด: การ์ด 3 คอลัมน์ (เดิม 2) → เลื่อนน้อยลงเกือบครึ่ง */
-  #main>.grid,.stock-sec>.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  #main>.grid>.span2,.stock-sec>.grid>.span2{grid-column:span 2!important}
-  #main>.grid>.stock-sec{grid-column:1/-1!important}
+  #main>.grid,#main>.dcol>.grid,.stock-sec>.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  #main>.grid>.span2,#main>.dcol>.grid>.span2,.stock-sec>.grid>.span2{grid-column:span 2!important}
+  #main>.grid>.stock-sec,#main>.dcol>.grid>.stock-sec{grid-column:1/-1!important}
 }
-@media(min-width:1600px){#main>.grid,.stock-sec>.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media(min-width:1600px){#main>.grid,#main>.dcol>.grid,.stock-sec>.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 
 /* ---------- หน้าจัดการเคส: "แผนที่ + รายการ" บนจอกว้าง = แผนที่ซ้าย (ค้างไว้) · รายการขวา (เลื่อนเฉพาะรายการ) ---------- */
 @media(min-width:1280px){
   main.wrap:has(>#map-wrap.compact:not([hidden])){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(460px,1fr);column-gap:16px;align-items:start}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>*{grid-column:1/-1;min-width:0}
-  main.wrap>#map-wrap.compact:not([hidden]){grid-column:1;position:sticky;top:70px;margin:0!important}
+  main.wrap>#map-wrap.compact:not([hidden]){grid-column:1;position:sticky;top:76px;margin:0!important}
   main.wrap>#map-wrap.compact .map-body{grid-template-columns:1fr!important}
   main.wrap>#map-wrap.compact .map-side{display:none!important}
   main.wrap>#map-wrap.compact #map{height:calc(100vh - 110px)!important;min-height:520px}
@@ -80,9 +93,9 @@ h1,h2,h3{letter-spacing:-.01em}
 }
 @media(min-width:1024px){
   /* แดชบอร์ด: ตัวเลขสำคัญขึ้นก่อนแผนที่ · แผนที่สูงพอดีจอ */
-  #main:has(>.mapcard){display:flex;flex-direction:column}
-  #main>.mapcard{order:3}#main>#kpis{order:2}#main>#hm-kpis{order:2}#main>.grid{order:4}
-  #main>.mapcard .dmap,#main>.mapcard #dmap{height:min(52vh,520px)!important;min-height:360px}
+  #main:has(>.dcol){display:flex;flex-direction:column}
+  #main .dcol-m{order:3}#main #kpis{order:2}#main #hm-kpis{order:2}#main .dcol>.grid{order:4}#main .cov-sec{order:5}
+  #main .mapcard .dmap,#main .mapcard #dmap{height:min(52vh,520px)!important;min-height:360px}
   /* จัดทีม: แผนที่เตี้ยลง · รายชื่อทีมกับคิวเคสเลื่อนในกรอบของตัวเอง (หน้าไม่ยาว) */
   .trk .trk-map{height:min(40vh,420px)!important;min-height:300px}
   .cols>.panel{max-height:calc(100vh - 84px);overflow:auto;position:sticky;top:72px;scrollbar-width:thin}
@@ -164,3 +177,6 @@ h1,h2,h3{letter-spacing:-.01em}
 .leaflet-container{isolation:isolate;z-index:0}
 .top{z-index:1300!important}
 .tabs{z-index:1400!important}
+
+/* อัปเดตเองแบบเรียลไทม์ทุกหน้า: ไม่ต้องมีปุ่มรีเฟรช */
+.top-r #refresh,#refresh{display:none!important}

@@ -35,11 +35,14 @@ async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').clas
   try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
     api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
     api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});
+    if(!D.rosterN)api({action:'roster',key:D.key}).then(r=>{if(r&&r.ok){D.rosterN=(r.roster||[]).length;summary()}}).catch(()=>{});
     D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
 let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key)return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
 $('#refresh').addEventListener('click',load);
+// อัปเดตเอง: เช็กการเปลี่ยนแปลงถี่ ๆ (poll) + โหลดใหม่ทั้งหมดทุก 60 วิ (รวมเคส Help Me) และเมื่อกลับมาที่แท็บ
+setInterval(()=>{if(D.key&&!document.hidden)load()},60000);document.addEventListener('visibilitychange',()=>{if(D.key&&!document.hidden)load()});
 
 /* ---------- range ---------- */
 function startOfDay(t){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()}
@@ -92,6 +95,7 @@ const escT=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt
 async function drawMap(L0){
   try{await loadLeaflet()}catch(e){$('#dmap').textContent='โหลดแผนที่ไม่สำเร็จ';return}
   if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);
+    if('ResizeObserver' in window)new ResizeObserver(()=>M.map&&M.map.invalidateSize()).observe($('#dmap'));
     M.map.zoomControl.setPosition('bottomright');M.map.attributionControl.setPrefix(false);M.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
     L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(M.map);let b='road';try{b=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(DBASES[b]?b:'road');
     M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable());if(typeof MAPL!=='undefined')MAPL.attach(M.map)}
@@ -137,7 +141,11 @@ $('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigato
 ['#mt-done','#mt-flood','#mt-cov','#mt-leads','#mt-live'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
 /* ---------- render ---------- */
-function render(){
+/* การ์ดสรุปแบบหน้า "สรุป" ของ helpme4u.com: ทุกเคส (Help Me + ในระบบ) ไม่ขึ้นกับช่วงเวลา */
+function summary(){if(typeof hmSummary!=='function')return;const all=(D.hmc||[]).concat(D.cases);if(!all.length&&!D.hmcDone)return;
+  const online=new Set((D.live||[]).filter(t=>Date.now()-t.updatedAt<10*60e3).map(t=>t.team)).size;
+  hmSummary($('#sumbox'),{cases:all,title:'ภาพรวมทั้งหมด',online,teams:D.rosterN||(D.live||[]).length,sev})}
+function render(){summary();
   const from=rangeStart(),L=D.cases.filter(c=>!from||c.createdAt>=from),act=L.filter(c=>c.status!=='done');
   drawMap(L);
   $('#sync').textContent=D.loaded?'อัปเดต '+new Date(D.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
@@ -332,3 +340,4 @@ const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
     if(D.loaded)render()});
   sync()})();
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
+$('#sumbox').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(b)location.href='../../central.html'});

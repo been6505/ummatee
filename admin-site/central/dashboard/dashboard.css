@@ -212,3 +212,46 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
 /* พื้นที่มอบแล้ว (ฝังในแดชบอร์ด) */
 .cov-sec{margin-top:18px;scroll-margin-top:80px}.cov-sec .sec-h small{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
 #cov-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:24px;background:transparent}
+#sumbox{margin:4px 0 18px}#sumbox .wr-sti{cursor:pointer}
+/* ต่ำกว่าจอใหญ่: คอลัมน์ไม่มีผลต่อการจัดวาง (ลูกเรียงต่อกันตามเดิม) */
+.dcol{display:contents}
+/* จอใหญ่ (≥1280px): เห็นทั้งหมดในจอเดียว ไม่ต้องเลื่อนทั้งหน้า
+   ซ้าย = ภาพรวม + ช่วงเวลา · กลาง = แผนที่เต็มความสูง · ขวา = ตัวเลข กราฟ พื้นที่มอบแล้ว (เลื่อนในคอลัมน์) */
+@media(min-width:1280px){
+  html,body{overflow:hidden}
+  #main.wrap{max-width:none!important;display:grid!important;grid-template-columns:minmax(300px,21%) minmax(0,1fr) minmax(300px,21%);gap:14px;
+    height:calc(100vh - 76px - 96px);padding:6px clamp(14px,1.6vw,28px) 0!important;margin:0}
+  .dcol{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;scrollbar-width:thin;padding:2px 4px 12px;border-radius:24px}
+  #main .dcol{order:0!important}.dcol-l{grid-column:1}.dcol-m{grid-column:2}.dcol-r{grid-column:3}
+  .dcol>*{flex:none;margin:0!important}
+  .dcol-l .wr-st{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .dcol-l #sumbox{grid-template-columns:minmax(0,1fr)!important}
+  .dcol-l .wr-hero{padding:18px 20px!important}.dcol-l .wr-hero-t b.pc{font-size:48px!important}.dcol-l .wr-ring{width:100px!important;height:100px!important}
+  .dcol-l .wr-hero-n b{font-size:24px!important}.dcol-l .wr-sti b{font-size:30px!important}.dcol-l .wr-sti{padding:12px 14px!important}
+  .dcol-l .wr-ppl{grid-template-columns:repeat(2,minmax(0,1fr))}.dcol-l .wr-ppl>div:last-child{grid-column:1/-1}
+  .dcol-m .mapcard{flex:1;display:flex;flex-direction:column;min-height:0}
+  .dcol-m .dmap-wrap{flex:1;min-height:0;position:relative}
+  #main.wrap .dcol-m .mapcard .dmap,#main.wrap .dcol-m .mapcard #dmap{position:absolute!important;inset:0;height:auto!important;min-height:0!important;margin:0!important}
+  #main .dcol-r>.grid{grid-template-columns:minmax(0,1fr)!important}
+  #main .dcol-r>.grid>*{grid-column:auto!important}
+  .dcol-r #kpis,.dcol-r #hm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .dcol-r #cov-frame{height:80vh}
+  .cov-sec{margin-top:0}
+}
+@media(min-width:1280px){
+  /* ตัวเลขด้านข้างกะทัดรัด → แผนที่ตรงกลางใหญ่ขึ้น */
+  .dcol-l .wr-hero{padding:14px 16px!important;border-radius:24px!important}.dcol-l .wr-hero-top{font-size:12.5px}
+  .dcol-l .wr-hero-t{padding:6px 0 12px!important;margin-bottom:10px}.dcol-l .wr-hero-t b.pc{font-size:38px!important}.dcol-l .wr-hero-t>div:first-child span{font-size:13px}
+  .dcol-l .wr-ring{width:78px!important;height:78px!important}.dcol-l .wr-ring b{font-size:16px!important}.dcol-l .wr-ring span{font-size:10.5px}
+  .dcol-l .wr-hero-n b{font-size:19px!important}.dcol-l .wr-hero-n span{font-size:11.5px!important}.dcol-l .wr-hero-n>div{padding:0 8px!important}
+  .dcol-l .wr-now{padding:14px!important;border-radius:24px!important;gap:10px!important}.dcol-l .wr-now-h b{font-size:16px}.dcol-l .wr-now-h span{font-size:11.5px}
+  .dcol-l .wr-st{gap:8px!important}.dcol-l .wr-sti{padding:8px 12px!important;border-radius:16px!important;gap:2px!important}.dcol-l .wr-sti b{font-size:24px!important}.dcol-l .wr-sti span{font-size:12.5px!important}
+  .dcol-l .wr-ppl{gap:6px}.dcol-l .wr-ppl>div{padding:6px 10px;border-radius:12px}.dcol-l .wr-ppl b{font-size:16px}.dcol-l .wr-ppl span{font-size:11px}
+  .dcol-l .sec-h{font-size:15px}.dcol-l .filters{gap:6px;padding:8px!important}.dcol-l .filters button{min-height:32px;padding:4px 10px;font-size:13px}
+  .dcol-r #kpis,.dcol-r #hm-kpis{gap:8px!important}
+  .dcol-r .kpi{padding:10px 12px!important;min-height:0!important}.dcol-r .kpi b{font-size:22px!important;line-height:1.15}.dcol-r .kpi span{font-size:12px!important}
+  .dcol-r .kpi small{font-size:11px!important}.dcol-r .hm-tag{font-size:10px!important;padding:0 5px!important}
+  .dcol-r .hm-src{font-size:11.5px}
+  .dcol-r .card{padding:12px 14px!important}.dcol-r .card h2{font-size:15px}.dcol-r .card .sub{font-size:12px}
+  .dcol-m .mapcard{padding:12px!important}.dcol-m .map-h h2{font-size:16px}.dcol-m .map-h .sub{font-size:12px}
+}

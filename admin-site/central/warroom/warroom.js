@@ -105,28 +105,8 @@ $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-r
 $('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
 /* ---------- ภาพรวม ---------- */
-function kpis(V){
-  const act=V.cases.filter(c=>c.status!=='done'),open=act.filter(c=>c.status!=='going'),crit=open.filter(c=>sev(c)===3),going=act.filter(c=>c.status==='going');
-  const t0=today0(),doneToday=V.cases.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>=t0);
-  const fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
-  const ppl=crit.reduce((a,c)=>a+Math.max(1,Number(c.people)||1),0);
-  const oldest=open.reduce((m,c)=>Math.min(m,c.createdAt||Infinity),Infinity);
-  // แบบหน้า "สรุป" ของ helpme4u.com: การ์ดดำตัวเลขใหญ่ · สถานะตอนนี้ (จุดสี) · แถบสัดส่วน · ตัวเลขคน
-  const done=V.cases.filter(c=>c.status==='done'),pp=c=>Math.max(1,Number(c.people)||1),sum=l=>l.reduce((a,c)=>a+pp(c),0),n=x=>Number(x).toLocaleString('th-TH');
-  const tot=V.cases.length||1,seg=(x,c)=>x?`<i style="flex:${x};background:${c}"></i>`:'';
-  const st=[[open.length,'รอช่วย','#2F3FC4','open'],[open.filter(c=>sev(c)>=2).length,'ด่วนมาก + วิกฤต','#D9473F','crit'],[going.length,'กำลังไป','#D4A537','going'],[done.length,'ช่วยแล้ว','#4C9A5A','done']];
-  const pctv=V.cases.length?done.length/V.cases.length*100:0,pct=pctv.toFixed(1).replace(/\.0$/,''),rm=room(),now=new Date();
-  const tm=now.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';
-  $('#kpis').innerHTML=`<div class="wr-hero"><div class="wr-hero-top"><span>${rm?esc(rm.name):'ภาพรวมทั้งหมด'}</span><span class="tm">${ic('clock')} ${esc(tm)}</span></div>
-    <div class="wr-hero-t"><div><b class="pc">${pct}<i>%</i></b><span>ของเคสช่วยเสร็จแล้ว</span></div>
-      <div class="wr-ring"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" fill="none" stroke="#8C98F5" stroke-width="4.5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#6FD98A" stroke-width="4.5" pathLength="100" stroke-dasharray="${pctv.toFixed(2)} 100" transform="rotate(-90 22 22)"/></svg><div><b>${n(done.length)}</b><span>ช่วยแล้ว</span></div></div></div>
-    <div class="wr-hero-n"><div><b>${n(V.cases.length)}</b><span>เคสทั้งหมด</span></div><div><b>${n(sum(V.cases))}</b><span>คนที่แจ้ง</span></div><div><b>${n(sum(done))}</b><span>คนได้รับการช่วย</span></div></div></div>
-    <div class="wr-now"><div class="wr-now-h"><b>สถานะตอนนี้</b><span>แตะเพื่อดูรายการ</span></div>
-      <div class="wr-st">${st.map(([v,l,c,f])=>`<button type="button" class="wr-sti" data-cst="${f}"><i style="background:${c}"></i><b>${n(v)}</b><span>${l}</span></button>`).join('')}</div>
-      <div class="wr-bar" aria-hidden="true">${seg(open.length-crit.length,'#2D45C8')}${seg(crit.length,'#E5383B')}${seg(going.length,'#D4A017')}${seg(done.length,'#2E9E57')}${V.cases.length?'':'<i style="flex:1;background:var(--line,#e8e8ec)"></i>'}</div>
-      <div class="wr-ppl"><div><b>${n(sum(open))}<small> คน</small></b><span>คนที่ยังรอ</span></div><div class="r"><b>${n(ppl)}<small> คน</small></b><span>คนในเคสวิกฤต</span></div>
-        <div><b>${fresh.size}<small> /${V.roster.length} ทีม</small></b><span>ทีมออนไลน์</span></div><div><b>${n(doneToday.length)}<small> เคส</small></b><span>ช่วยแล้ววันนี้</span></div>
-        <div><b>${isFinite(oldest)?waitTxt(oldest):'–'}</b><span>เคสรอนานสุด</span></div></div></div>`;
+function kpis(V){const rm=room(),fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
+  hmSummary($('#kpis'),{cases:V.cases,title:rm?rm.name:'ภาพรวมทั้งหมด',online:fresh.size,teams:V.roster.length,sev})
 }
 $('#kpis').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(!b||!room())return;const f=b.dataset.cst;W.cst=f==='crit'?'open':f;W.tab='cases';render()});
 function alerts(V){
@@ -537,7 +517,8 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
   setInterval(async()=>{if(busy())return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
   setInterval(pollLive,3000); // ตำแหน่งทีมแบบเรียลไทม์
-  setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},30000);
+  setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
+  document.addEventListener('visibilitychange',async()=>{if(document.hidden||busy())return;await Promise.all([loadCases(),loadTeams(),loadRooms()]);render()});
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});
 
 $('#doc-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('0989406537');toast('คัดลอกเบอร์แล้ว',true)}catch(e){toast('คัดลอกไม่ได้ · 098-940-6537')}});

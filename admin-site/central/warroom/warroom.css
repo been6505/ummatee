@@ -187,35 +187,6 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
   body.wr-locked .wr-sub button[aria-selected=true]{background:var(--tint)!important;color:var(--primary)!important}
   body.map-fs .wr-sub,body.noscroll .wr-sub{display:none!important}
 }
-/* สรุป War Room แบบหน้า "สรุป" ของ helpme4u.com */
-#kpis.wr-kpis{display:grid!important;grid-template-columns:minmax(0,4fr) minmax(0,8fr)!important;gap:12px!important;align-items:stretch}
-.wr-hero{background:#1d1d1f;color:#fff;border-radius:28px;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;box-shadow:var(--shadow-soft);min-width:0}
-.wr-hero-t{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.14)}
-.wr-hero-t>div{display:grid;gap:2px;min-width:0}.wr-hero-t b{font-size:26px!important}
-.wr-ring{width:84px;height:84px;flex:none}
-.wr-hero-n{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end}
-.wr-hero-n>div{padding:0 14px;border-left:1px solid rgba(255,255,255,.18);min-width:0}.wr-hero-n>div:first-child{padding-left:0;border:0}
-.wr-hero b{display:block;font-size:34px;line-height:1.1;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wr-hero span{font-size:13.5px;color:rgba(255,255,255,.62)}
-.wr-now{background:var(--surface,#fff);border-radius:28px;padding:16px 18px;box-shadow:var(--shadow-soft);display:grid;gap:10px;min-width:0}
-.wr-now-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.wr-now-h b{font-size:17px}.wr-now-h span{font-size:12.5px;color:var(--muted)}
-.wr-st{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.wr-sti{all:unset;box-sizing:border-box;cursor:pointer;border:1.5px solid var(--line,#e8e8ec);border-radius:20px;padding:10px 14px;display:grid;gap:2px;min-width:0}
-.wr-sti:hover{border-color:var(--tint-2,#f3c5c6)}.wr-sti:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
-.wr-sti i{width:11px;height:11px;border-radius:50%}.wr-sti b{font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.wr-sti span{font-size:13px;color:var(--muted)}
-.wr-bar{display:flex;gap:4px;height:9px}.wr-bar i{border-radius:999px;min-width:6px}
-.wr-ppl{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.wr-ppl>div{background:var(--bg,#f5f5f7);border-radius:16px;padding:8px 12px;min-width:0}
-.wr-ppl b{display:block;font-size:20px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}.wr-ppl b small{font-size:12px;font-weight:600;color:var(--muted)}
-.wr-ppl .r b{color:#c62828}.wr-ppl span{font-size:12px;color:var(--muted)}
-:root[data-theme="dark"] .wr-hero{background:#000;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
-@media(max-width:1100px){#kpis.wr-kpis{grid-template-columns:minmax(0,1fr)!important}}
-@media(max-width:760px){
-  .wr-hero{padding:16px 16px;border-radius:24px}.wr-hero b{font-size:24px}.wr-hero-n>div{padding:0 10px}.wr-hero-t b{font-size:21px!important}.wr-ring{width:60px;height:60px}.wr-hero-t{padding-bottom:10px}.wr-hero span{font-size:12px}
-  .wr-now{padding:14px;border-radius:24px}.wr-st{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-sti b{font-size:28px}
-  .wr-ppl{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-ppl>div:last-child{grid-column:1/-1}
-}
 /* รายการเคสแบบ helpme4u.com: แถบสีซ้ายตามระดับ · รูปคอลัมน์แรก · กดขยาย */
 .wr-clist{background:var(--surface,#fff);border-radius:24px;box-shadow:var(--shadow-soft);overflow:hidden}
 .wr-ch{margin:0;padding:14px 18px 10px;font-size:17px;text-align:center}
@@ -256,31 +227,6 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
 @media(max-width:400px){.wr-ci .nd small{display:none}}
 /* ลิงก์ War Room บนมือถือ: ไม่ต้องมีแถวเมนู CENTRAL (ใช้แถบล่างของห้องแทน · จัดการเคสอยู่ในแท็บ "เคส") */
 @media(max-width:760px){body.wr-locked .top .tabs{display:none!important}body.wr-locked .top{flex-wrap:nowrap!important}}
-
-/* สรุปแบบ helpme4u.com/#stats (ตรงตามหน้าสรุปบนโทรศัพท์) */
-.wr-hero{background:#11131A!important;border-radius:32px!important;padding:24px 26px!important;gap:0!important}
-.wr-hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px;color:rgba(255,255,255,.6);letter-spacing:.02em}
-.wr-hero-top span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wr-hero-top .tm{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.wr-hero-top svg{width:17px;height:17px}
-.wr-hero-t{border-bottom:1px solid rgba(255,255,255,.14);padding:10px 0 18px!important;margin-bottom:16px}
-.wr-hero-t b.pc{font-size:62px!important;line-height:1;font-weight:800;letter-spacing:-.04em}.wr-hero-t b.pc i{font-style:normal;color:#6FD98A;font-size:.55em;letter-spacing:0;margin-left:2px}
-.wr-hero-t>div:first-child span{font-size:17px;color:rgba(255,255,255,.72);margin-top:6px}
-.wr-ring{position:relative;width:128px!important;height:128px!important;flex:none}.wr-ring svg{width:100%;height:100%;display:block}
-.wr-ring>div{position:absolute;inset:0;display:grid;place-content:center;text-align:center}.wr-ring b{font-size:21px!important;font-weight:500;line-height:1.2}.wr-ring span{font-size:12px;color:rgba(255,255,255,.6)}
-.wr-hero-n b{font-size:32px!important;font-weight:800!important}.wr-hero-n span{font-size:15px!important;color:rgba(255,255,255,.6)!important}
-.wr-now{border-radius:32px!important;padding:20px 22px!important;gap:14px!important}
-.wr-now-h b{font-size:22px;font-weight:800}.wr-now-h span{font-size:15px}
-.wr-sti{border-radius:22px!important;padding:16px 18px!important;gap:6px!important;border-color:#E6E6EA!important}.wr-sti i{width:12px!important;height:12px!important}
-.wr-sti b{font-size:40px!important;font-weight:800!important}.wr-sti span{font-size:16px!important}
-.wr-bar{height:10px!important;gap:5px!important}
-@media(max-width:760px){
-  .wr-hero{padding:20px 22px!important;border-radius:28px!important}.wr-hero-top{font-size:14px}
-  .wr-hero-t b.pc{font-size:52px!important}.wr-hero-t>div:first-child span{font-size:15.5px}.wr-ring{width:112px!important;height:112px!important}
-  .wr-hero-n b{font-size:26px!important}.wr-hero-n span{font-size:13.5px!important}.wr-hero-n>div{padding:0 12px!important}.wr-hero-n>div:first-child{padding-left:0!important}
-  .wr-now{padding:18px 18px!important;border-radius:28px!important}.wr-now-h b{font-size:20px}.wr-now-h span{font-size:13.5px}
-  .wr-st{gap:12px!important}.wr-sti{padding:14px 16px!important}.wr-sti b{font-size:36px!important}.wr-sti span{font-size:15px!important}
-}
-.wr-hero-n span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wr-hero-n{align-items:start!important}
-@media(max-width:400px){.wr-hero-n span{font-size:12.5px!important}.wr-hero-n>div{padding:0 9px!important}.wr-hero-n b{font-size:24px!important}}
 
 /* การ์ดปรึกษาคุณหมอจิตอาสา: แถวเดียวกะทัดรัด (สีเขียวแบบแท็บ "หมอ" ของ helpme4u.com) */
 .wr-doc{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:24px;background:linear-gradient(135deg,#EAF6F2,#F6FBF9);box-shadow:inset 0 0 0 1px #D3EBE3;min-width:0}

@@ -177,3 +177,15 @@ h1,h2,h3{letter-spacing:-.01em}
 
 /* อัปเดตเองแบบเรียลไทม์ทุกหน้า: ไม่ต้องมีปุ่มรีเฟรช */
 .top-r #refresh,#refresh{display:none!important}
+/* ข้อความน้อย ดูสะอาดแบบ helpme4u.com: ซ่อนคำอธิบายรอง (ตัวเลข/หัวข้อ/ปุ่มยังอยู่ครบ) */
+main p.sub,main .card>.sub,main .map-h .sub,.hm-src,.sec-h small,.wr-now-h span,
+main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.small,
+.kpi>small,.kpi .hm-tag,.hm-k small,main details>summary~.chart-note{display:none!important}
+.kpi{min-height:0!important}
+.card h2{margin-bottom:6px}
+@media(max-width:760px){
+  /* ตัวเลขสรุปบนมือถือ: 3 ช่องต่อแถว กะทัดรัด */
+  main .kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+  main .kpis .kpi{padding:10px 12px!important;border-radius:16px!important}
+  main .kpis .kpi b{font-size:22px!important;line-height:1.15}main .kpis .kpi span{font-size:12px!important;line-height:1.3}
+}

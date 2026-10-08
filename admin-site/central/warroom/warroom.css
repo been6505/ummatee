@@ -173,5 +173,5 @@
 /* ลิงก์ประจำ War Room */
 .wr-link{margin-top:12px;padding:12px;border-radius:14px;background:var(--bg,#f5f5f7);display:grid;gap:6px}
 .wr-link-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.wr-link-row input{flex:1 1 220px;min-width:0;min-height:38px;border-radius:10px;border:1px solid var(--line,#e8e8ec);padding:4px 10px;font:inherit;font-size:13px;background:var(--surface,#fff);color:inherit}
-/* เข้าด้วยลิงก์ของห้อง: ล็อกที่ห้องนั้น ซ่อนเมนูหน้าอื่น */
-body.wr-locked .tabs{display:none!important}
+/* เข้าด้วยลิงก์ของห้อง: เหลือเมนู War Room ของห้อง + จัดการเคส */
+body.wr-locked .tabs a:not(.wr-keep){display:none!important}

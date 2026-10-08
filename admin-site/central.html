@@ -36,6 +36,8 @@
   <header class="top">
     <a class="brand" href="./central.html"><img class="brand-logo" src="./assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
     <nav class="tabs" aria-label="เมนู CENTRAL"><a href="./central/dashboard/">แดชบอร์ด</a><a href="./central.html" aria-current="page">จัดการเคส</a><a href="./central/warroom/">War Room</a><a href="./central/teams/">จัดทีม</a><a href="./central/stock/">สต็อก</a><a href="./central/covered/">พื้นที่มอบแล้ว</a><a href="./central/news/">ข่าว</a><a href="./central/broadcast/">ประกาศ</a></nav>
+    <script>/* เข้าผ่านลิงก์ War Room: เหลือเมนู จัดการเคส + War Room ของห้อง */(()=>{let k='';try{k=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}
+      if(!k.startsWith('wr_'))return;document.querySelectorAll('nav.tabs a').forEach(a=>{const h=a.getAttribute('href');if(!/central\.html|warroom/.test(h))a.remove()})})()</script>
     <div class="top-r">
       <span class="sync" id="sync"></span>
       <button class="btn ghost sm" id="refresh" title="โหลดใหม่"><i data-ic="refresh"></i> โหลดใหม่</button>

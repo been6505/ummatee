@@ -157,9 +157,18 @@ function loadLeaflet(){if(window.L)return Promise.resolve();return leafP||(leafP
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';s.onload=res;s.onerror=()=>{leafP=null;rej()};document.head.append(s)}))}
 async function drawMap(V){
   try{await loadLeaflet()}catch(e){$('#map-note').textContent='โหลดแผนที่ไม่ได้';return}
-  if(!W.map){W.map=L.map('wmap',{zoomControl:true}).setView([13.75,100.6],11);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(W.map);
-    W.map.attributionControl.setPrefix(false);W.lr=L.layerGroup().addTo(W.map);W.lc=L.layerGroup().addTo(W.map);W.lt=L.layerGroup().addTo(W.map)}
+  if(!W.map){W.map=L.map('wmap',{zoomControl:true,scrollWheelZoom:true}).setView([13.75,100.6],11);
+    // ชุดเดียวกับแดชบอร์ด: แบบแผนที่ ถนน/ดาวเทียม/มืด · ชั้นข้อมูล (เรดาร์ฝน ดาวเทียม เครือข่าย ศูนย์พักพิง กล้อง) · ปุ่มลอย · เต็มจอ
+    W.map.zoomControl.setPosition('bottomright');W.map.attributionControl.setPrefix(false);W.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
+    L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(W.map);let bs='road';try{bs=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(['road','sat','dark'].includes(bs)?bs:'road');
+    W.lf=L.layerGroup();W.lr=L.layerGroup().addTo(W.map);W.lc=L.layerGroup().addTo(W.map);W.lt=L.layerGroup().addTo(W.map);if(typeof MAPL!=='undefined')MAPL.attach(W.map)}
+  // ถนนน้ำท่วม (Floodboard ผ่าน verify.js) · ทีม · ช่วยแล้ว ตามสวิตช์ในเมนูชั้นข้อมูล
+  const on=id=>{const e=document.getElementById(id);return !!(e&&e.checked)},F=typeof VERIFY!=='undefined'?VERIFY.F:null;
+  if(F&&W.floodAt!==F.loaded){W.floodAt=F.loaded;W.lf.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':'#fbc02d';
+    r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${esc(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(W.lf))})}
+  if(on('mt-flood'))W.lf.addTo(W.map);else W.lf.remove();
+  if(on('mt-live'))W.lt.addTo(W.map);else W.lt.remove();
+  const dl=$('#dleg');if(dl){dl.querySelector('.lg-done').hidden=!on('mt-done');dl.querySelector('.lg-flood').hidden=!on('mt-flood');dl.querySelector('.lg-live').hidden=!on('mt-live')}
   W.lc.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;
   // ขอบเขต War Room: ห้องที่เลือก หรือทุกห้อง (ภาพรวม)
   (V.r?[V.r]:W.rooms).forEach(r=>{if(r.lat==null||!r.radius)return;
@@ -452,7 +461,31 @@ function clock(){$('#clock').textContent=new Date().toLocaleString('th-TH',{week
 $('#fs').onclick=()=>{const d=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else(d.requestFullscreen||d.webkitRequestFullscreen||(()=>{})).call(d)};
 document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('wr-fs',!!document.fullscreenElement);setTimeout(()=>W.map&&W.map.invalidateSize(),200)});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-fly]');if(!b||!W.map)return;const [a,o]=b.dataset.fly.split(',').map(Number);W.map.flyTo([a,o],16);$('#wmap').scrollIntoView({block:'nearest',behavior:'smooth'})});
-$('#mt-done').onchange=()=>drawMap(view());
+['mt-done','mt-flood','mt-live'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>drawMap(view()))});
+/* แบบแผนที่ (เหมือนแดชบอร์ด): ถนน / ดาวเทียม / มืด · OpenFreeMap ป้ายไทยเมื่อโหลดได้ */
+const DESRI='https://server.arcgisonline.com/ArcGIS/rest/services/';
+function setBase(name){const m=W.map,t=(u,a,o={})=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true,...o});if(W.base)m.removeLayer(W.base);
+  if(name==='sat')W.base=L.layerGroup([t(DESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(DESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(DESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
+  else if(name==='dark')W.base=L.layerGroup([t(DESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri',{maxZoom:16,maxNativeZoom:16}),t(DESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
+  else W.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
+  W.base.addTo(m);const tok=W.baseTok=(W.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==W.baseTok)return;m.removeLayer(W.base);W.base=l;l.addTo(m)});
+  try{localStorage.setItem('uh_base',name)}catch(e){}document.querySelectorAll('[data-dbase]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.dbase===name)))}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-dbase]');if(b&&W.map){setBase(b.dataset.dbase);return}
+  const menu=$('#dlayer');if(menu&&!menu.hidden&&!e.target.closest('#dlayer')&&!e.target.closest('#fs-lay')){menu.hidden=true;$('#fs-lay').setAttribute('aria-expanded','false');$('#fs-lay').classList.remove('on')}});
+$('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigator.geolocation||!W.map){toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}btn.classList.add('busy');
+  navigator.geolocation.getCurrentPosition(p=>{btn.classList.remove('busy');const ll=[p.coords.latitude,p.coords.longitude];if(!W.me)W.me=L.marker(ll,{icon:L.divIcon({className:'me-dot',html:'<span></span>',iconSize:[22,22]}),interactive:false,zIndexOffset:2000}).addTo(W.map);W.me.setLatLng(ll);W.map.setView(ll,Math.max(W.map.getZoom(),14))},
+    ()=>{btn.classList.remove('busy');toast('หาตำแหน่งไม่ได้')},{enableHighAccuracy:true,timeout:15000})});
+(()=>{const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+    ICON_CLOSE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  const card=document.querySelector('.wr-mapcard'),btn=$('#fs-btn'),lay=$('#fs-lay');if(!card||!btn)return;
+  const fix=()=>setTimeout(()=>{if(W.map)W.map.invalidateSize()},80);
+  function set(on,fromPop){if(on===card.classList.contains('fs'))return;card.classList.toggle('fs',on);document.body.classList.toggle('map-fs',on);
+    btn.innerHTML=on?ICON_CLOSE:ICON_FULL;btn.setAttribute('aria-label',on?'ออกจากเต็มจอ':'ขยายแผนที่เต็มจอ');btn.title=btn.getAttribute('aria-label');
+    if(on){try{history.pushState({mapfs:1},'')}catch(e){}}else if(!fromPop&&history.state&&history.state.mapfs)try{history.back()}catch(e){}fix()}
+  btn.addEventListener('click',()=>set(!card.classList.contains('fs')));btn.innerHTML=ICON_FULL;
+  lay.addEventListener('click',()=>{const m=$('#dlayer'),o=m.hidden;m.hidden=!o;lay.setAttribute('aria-expanded',String(o));lay.classList.toggle('on',o)});
+  window.addEventListener('popstate',()=>set(false,true));
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const m=$('#dlayer');if(m&&!m.hidden){m.hidden=true;lay.setAttribute('aria-expanded','false');lay.classList.remove('on');return}if(card.classList.contains('fs'))set(false)})})();
 async function full(){$('#refresh').disabled=true;try{await Promise.all([loadCases(),loadTeams(),loadRooms(),W.tab==='stock'?loadStock():null]);render()}finally{$('#refresh').disabled=false}}
 $('#refresh').onclick=full;
 adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warroom');if(typeof VERIFY!=='undefined'){VERIFY.onUpdate=()=>render();VERIFY.load().then(render,render)}clock();setInterval(clock,1000);

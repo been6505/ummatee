@@ -15,7 +15,8 @@
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=32">
 <link rel="stylesheet" href="../hm-ui.css?v=9">
-<link rel="stylesheet" href="./warroom.css?v=10">
+<link rel="stylesheet" href="./wr-map.css?v=2">
+<link rel="stylesheet" href="./warroom.css?v=11">
 <script src="../icons.js?v=5"></script>
 </head>
 <body>
@@ -34,7 +35,7 @@
 <div id="app" hidden>
   <header class="top">
     <a class="brand" href="../../central.html"><img class="brand-logo" src="../../assets/helpme-logo.png" alt="Helpme+" width="166" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
-    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html">จัดการเคส</a><a href="../warroom/" aria-current="page">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a></nav>
+    <nav class="tabs" aria-label="เมนู CENTRAL"><a href="../dashboard/">แดชบอร์ด</a><a href="../../central.html" class="wr-keep">จัดการเคส</a><a class="wr-keep" href="../warroom/" aria-current="page">War Room</a><a href="../teams/">จัดทีม</a><a href="../stock/">สต็อก</a><a href="../covered/">พื้นที่มอบแล้ว</a><a href="../news/">ข่าว</a><a href="../broadcast/">ประกาศ</a></nav>
     <div class="top-r"><span class="sync" id="sync"></span><span class="wr-clock" id="clock"></span><button class="btn ghost sm" id="fs" type="button"><i data-ic="expand"></i> เต็มจอ</button><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
   </header>
   <main class="wrap wr" id="main">
@@ -45,10 +46,29 @@
     <div class="wr-pane wr-over" id="p-over">
     <section class="wr-kpis" id="kpis" aria-label="สรุปสถานการณ์"></section>
     <div class="wr-grid">
-      <section class="wr-mapcard" aria-label="แผนที่สถานการณ์">
-        <div class="wr-map" id="wmap"></div>
-        <div class="wr-leg"><span><i class="lg danger"></i>วิกฤต</span><span><i class="lg urgent"></i>เร่งด่วน</span><span><i class="lg open"></i>รอช่วย</span><span><i class="lg going"></i>กำลังไป</span><span><i class="lg team"></i>ทีม (ตำแหน่งสด)</span><span><i class="lg sos"></i>SOS</span>
-          <label><input type="checkbox" id="mt-done"> แสดงที่ช่วยแล้ววันนี้</label><span class="muted" id="map-note"></span></div>
+      <section class="wr-mapcard mapcard" aria-label="แผนที่สถานการณ์">
+        <div class="dmap-wrap"><div class="wr-map" id="wmap"></div>
+        <div class="mx-legend" id="dleg" aria-label="คำอธิบายสีบนแผนที่"><span><i class="lp danger"></i>วิกฤต</span><span><i class="lp urgent"></i>เร่งด่วน</span><span><i class="lp open"></i>รอช่วย</span><span><i class="lp going"></i>กำลังไป</span><span class="lg-done" hidden><i class="lp done"></i>ช่วยแล้ว</span><i class="lg-sep"></i><span class="lg-flood"><i class="ln" style="background:#f57c00"></i>ถนนน้ำท่วม</span><span class="lg-live"><i style="background:#0e9f6e"></i>ทีม (ตำแหน่งสด)</span><span><i style="background:#E5383B;box-shadow:0 0 0 3px rgba(229,56,59,.3)"></i>SOS</span></div>
+        <div class="mx-fabs">
+          <button type="button" class="fab" id="fs-lay" aria-label="แบบแผนที่และชั้นข้อมูล" title="แบบแผนที่และชั้นข้อมูล" aria-haspopup="dialog" aria-expanded="false" aria-controls="dlayer"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
+          <button type="button" class="fab" id="fs-loc" aria-label="ตำแหน่งของฉัน" title="ตำแหน่งของฉัน"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></button>
+          <button type="button" class="fab" id="fs-btn" aria-label="ขยายแผนที่เต็มจอ" title="ขยายแผนที่เต็มจอ"></button>
+        </div>
+        <div class="layer-menu hm-layers" id="dlayer" role="dialog" aria-label="แบบแผนที่และชั้นข้อมูล" hidden>
+          <div class="lm-bases"><button type="button" data-dbase="road"><span aria-hidden="true"><i data-ic="road"></i></span>ถนน</button><button type="button" data-dbase="sat"><span aria-hidden="true"><i data-ic="sat"></i></span>ดาวเทียม</button><button type="button" data-dbase="dark"><span aria-hidden="true"><i data-ic="moon"></i></span>มืด</button></div>
+          <label class="lcard"><span class="lic" style="--c:#2D45C8"><i data-ic="rain"></i></span><span class="ltx"><b>เรดาร์ฝน</b><small data-sub="mt-rain">ฝนตกตรงไหน · ดูย้อนหลัง 2 ชม. ได้</small><span class="lchips"><span class="lchip rain-grad"><i></i>ฝนเบา → ฝนหนัก</span><span class="lchip">กด <i data-ic="play"></i> บนแผนที่เพื่อดูทิศทางฝน</span></span></span><input type="checkbox" class="sw" id="mt-rain"></label>
+          <label class="lcard"><span class="lic" style="--c:#E5383B"><i data-ic="drop"></i></span><span class="ltx"><b>ถนนน้ำท่วม</b><small>ระดับน้ำบนถนนล่าสุด · Floodboard</small><span class="lchips"><span class="lchip"><i class="ln" style="background:#d32f2f"></i>ผ่านไม่ได้ · ใช้เรือ</span><span class="lchip"><i class="ln" style="background:#f57c00"></i>เสี่ยง</span><span class="lchip"><i class="ln" style="background:#fbc02d"></i>น้ำขัง · รถสูงผ่านได้</span></span></span><input type="checkbox" class="sw" id="mt-flood" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#0E7490"><i data-ic="sat"></i></span><span class="ltx"><b>พื้นที่น้ำท่วมจากดาวเทียม</b><small data-sub="mt-gistda">GISTDA · ขอบเขตน้ำท่วมจากภาพดาวเทียม</small><span class="lchips gistda-range" role="group" aria-label="ช่วงเวลา"><button type="button" class="lchip" data-gr="1day">1 วัน</button><button type="button" class="lchip" data-gr="3days">3 วัน</button><button type="button" class="lchip" data-gr="7days">7 วัน</button><button type="button" class="lchip" data-gr="30days">30 วัน</button><button type="button" class="lchip" data-gr="freq">ท่วมซ้ำซาก</button></span></span><input type="checkbox" class="sw" id="mt-gistda"></label>
+          <a class="lcard" href="https://water.longdo.com/" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490"><i data-ic="wave"></i></span><span class="ltx"><b>ระดับน้ำคลองและแม่น้ำ</b><small>Longdo Water · ข้อมูลสำนักการระบายน้ำ กทม. และคลังข้อมูลน้ำแห่งชาติ</small></span><span class="lext" aria-hidden="true">↗</span></a>
+          <a class="lcard" href="https://flood.pop.in.th/#overview" target="_blank" rel="noopener"><span class="lic" style="--c:#0E7490"><i data-ic="drop"></i></span><span class="ltx"><b>แผนที่จุดวัดน้ำ กทม.</b><small>POPNIX Flood · ระดับน้ำคลองเทียบระดับเตือนภัย</small></span><span class="lext" aria-hidden="true">↗</span></a>
+          <label class="lcard"><span class="lic" style="--c:#7C3AED"><i data-ic="hand"></i></span><span class="ltx"><b>ทีมกู้ภัยและเครือข่ายช่วยเหลือ</b><small>จุดที่องค์กรต่าง ๆ ลงพื้นที่แล้ว (Help Me + พื้นที่มอบแล้ว)</small><span class="lchips" id="net-chips"></span></span><input type="checkbox" class="sw" id="mt-cov" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#C2410C"><i data-ic="home"></i></span><span class="ltx"><b>ศูนย์พักพิง / จุดเครือข่าย</b><small data-sub="mt-places">จาก Google Sheet ของ Help Me (แท็บ ศูนย์พักพิง · เครือข่าย)</small></span><input type="checkbox" class="sw" id="mt-places" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#2E9E57"><i data-ic="live"></i></span><span class="ltx"><b>ทีมที่แชร์ตำแหน่ง</b><small>ตำแหน่งสดของทีม Helpme+ ภายใน 3 ชม.</small></span><input type="checkbox" class="sw" id="mt-live" checked></label>
+          <label class="lcard"><span class="lic" style="--c:#161B3D"><i data-ic="cam"></i></span><span class="ltx"><b>กล้อง CCTV</b><small data-sub="mt-cctv">ภาพสดจากกล้องทั่วกรุงเทพฯ</small></span><input type="checkbox" class="sw" id="mt-cctv"></label>
+          <label class="lcard"><span class="lic" style="--c:#2E9E57"><i data-ic="check"></i></span><span class="ltx"><b>เคสที่ช่วยแล้ว</b><small>แสดงหมุดเคสที่ปิดแล้วด้วย</small></span><input type="checkbox" class="sw" id="mt-done"></label>
+        </div>
+        </div>
+        <div class="wr-leg"><span class="muted" id="map-note"></span></div>
       </section>
       <div class="wr-side">
         <section class="wr-card wr-alerts" id="alerts-card" aria-labelledby="h-al"><h2 id="h-al"><i data-ic="alert"></i> แจ้งเตือน</h2><div id="alerts"></div></section>
@@ -90,8 +110,12 @@
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
+<script src="../covered.js?v=9"></script>
+<script src="../ofm.js?v=1"></script>
+<script src="../camlive.js?v=8"></script>
+<script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=11"></script>
-<script src="./warroom.js?v=19"></script>
+<script src="./warroom.js?v=20"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=5"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>

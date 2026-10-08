@@ -10,6 +10,8 @@ const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],
   room:'',tab:new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
 /* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
+  // คนที่เข้า CENTRAL ด้วยรหัสหลักอยู่แล้ว: เปิดห้องนั้นแบบปกติ ไม่ทับรหัส CENTRAL และไม่ล็อกหน้า
+  const cur=store.get('uh_vol_key');if(k&&wr&&cur&&!cur.startsWith('wr_')){try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}return}
   if(k&&wr){store.set('uh_vol_key','wr_'+k,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',wr,true);ADM.key='wr_'+k;
     try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}}})();
 const LOCK=()=>String(ADM.key||'').startsWith('wr_')?store.get('uh_wr_lock'):'';

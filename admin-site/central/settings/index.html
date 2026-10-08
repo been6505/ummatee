@@ -43,15 +43,15 @@
       <label class="st-row"><span>ชื่อที่แสดง</span><input id="st-name" maxlength="60" placeholder="เช่น แอดมินศูนย์" autocomplete="name"></label>
       <div class="st-row"><span>ธีม</span><div class="seg" id="st-theme" role="group" aria-label="ธีม"><button type="button" data-th="light">สว่าง</button><button type="button" data-th="dark">มืด</button></div></div>
     </section>
-    <section class="st-card st-ai" aria-labelledby="st-ai"><h2 id="st-ai"><i data-ic="chat"></i> Local AI <span class="st-tag">Hermes Agent</span><span class="st-dot" id="ai-dot" title="สถานะการเชื่อมต่อ"></span></h2>
-      <label class="st-sw"><input type="checkbox" id="ai-on"><span>เปิดใช้ Local AI บนเครื่องนี้</span></label>
+    <section class="st-card st-ai" aria-labelledby="st-ai"><h2 id="st-ai"><i data-ic="chat"></i> AI HELP <span class="st-tag">Local AI / คลาวด์</span><span class="st-dot" id="ai-dot" title="สถานะการเชื่อมต่อ"></span></h2>
+      <label class="st-sw"><input type="checkbox" id="ai-on"><span>เปิดใช้ AI HELP บนเครื่องนี้</span></label>
       <div class="st-row"><span>ตัวรัน AI</span><div class="seg" id="ai-preset" role="group" aria-label="ตัวรัน AI"></div></div>
       <label class="st-row"><span>ที่อยู่ API</span><input id="ai-url" inputmode="url" spellcheck="false" placeholder="http://localhost:8642/v1"></label>
       <label class="st-row"><span>โมเดล</span><span class="st-in2"><input id="ai-model" spellcheck="false" list="ai-models" placeholder="hermes-agent"><datalist id="ai-models"></datalist><button type="button" class="btn ghost sm" id="ai-list">ดึงรายชื่อ</button></span></label>
       <label class="st-row"><span>API key</span><input id="ai-key" type="password" autocomplete="off" placeholder="ไม่มีก็เว้นว่าง"></label>
       <label class="st-row st-top"><span>บทบาท</span><textarea id="ai-sys" rows="2"></textarea></label>
       <div class="st-act"><button type="button" class="btn primary" id="ai-save">บันทึก</button><button type="button" class="btn ghost" id="ai-test">ทดสอบการเชื่อมต่อ</button><span class="st-msg" id="ai-msg" role="status"></span></div>
-      <div class="st-try"><textarea id="ai-q" rows="2" placeholder="ลองถาม Hermes เช่น สรุปสิ่งที่ต้องเตรียมเมื่อน้ำท่วมสูง 1 เมตร"></textarea><button type="button" class="btn ghost" id="ai-ask">ถาม</button></div>
+      <div class="st-try"><textarea id="ai-q" rows="2" placeholder="ลองถาม AI HELP เช่น สรุปสิ่งที่ต้องเตรียมเมื่อน้ำท่วมสูง 1 เมตร"></textarea><button type="button" class="btn ghost" id="ai-ask">ถาม</button></div>
       <div class="st-ans" id="ai-ans" hidden></div>
       <details class="st-help"><summary>เชื่อมต่อไม่ได้?</summary>
         <ul><li><b>มือถือ / เครื่องที่ไม่ได้รัน AI เอง:</b> เลือก "คลาวด์ (ใช้ได้ทุกเครื่อง)" ใช้ AI SEA-LION (เก่งภาษาไทย) บน Cloudflare ของระบบ ใช้ได้ทันที ข้อมูลส่งผ่านเซิร์ฟเวอร์ CENTRAL · ตัว Hermes ต้องรันในเครื่อง</li><li>ตัวรันในเครื่อง (Hermes Agent / Ollama / LM Studio): ตั้งค่าเก็บเฉพาะเบราว์เซอร์นี้ และเบราว์เซอร์เรียกเครื่อง AI โดยตรง ข้อมูลไม่ผ่านเซิร์ฟเวอร์ CENTRAL</li>
@@ -64,12 +64,12 @@
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=2"></script>
-<script src="../localai.js?v=3"></script>
-<script src="./settings.js?v=2"></script>
+<script src="../localai.js?v=4"></script>
+<script src="./settings.js?v=3"></script>
 <script src="../theme-toggle.js?v=2"></script>
-<script src="../chat.js?v=7"></script>
+<script src="../chat.js?v=8"></script>
 <script src="../feedback.js?v=1"></script>
-<script src="../hermes.js?v=8"></script>
+<script src="../hermes.js?v=9"></script>
 <script src="../kbfit.js?v=1"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>

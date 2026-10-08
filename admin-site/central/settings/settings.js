@@ -28,6 +28,6 @@ $('#ai-list').onclick=async()=>{msg('กำลังดึงรายชื่�
 $('#ai-test').onclick=async()=>{const b=$('#ai-test');b.disabled=true;msg('กำลังทดสอบ…');const t0=performance.now();
   try{const a=await LOCALAI.ask('ตอบคำเดียวว่า พร้อม',{cfg:form(),timeout:60000});msg(`เชื่อมต่อได้ · ${Math.round(performance.now()-t0)} ms · "${a.trim().slice(0,40)}"`,true);dot('on')}
   catch(e){msg('เชื่อมต่อไม่ได้: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจที่อยู่และ CORS'),false);dot('off')}finally{b.disabled=false}};
-$('#ai-ask').onclick=async()=>{const q=$('#ai-q').value.trim();if(!q){$('#ai-q').focus();return}const b=$('#ai-ask'),box=$('#ai-ans');b.disabled=true;box.hidden=false;box.textContent='Hermes กำลังคิด…';
+$('#ai-ask').onclick=async()=>{const q=$('#ai-q').value.trim();if(!q){$('#ai-q').focus();return}const b=$('#ai-ask'),box=$('#ai-ans');b.disabled=true;box.hidden=false;box.textContent='AI HELP กำลังคิด…';
   try{box.textContent=(await LOCALAI.ask(q,{cfg:form()})).trim()||'(ไม่มีคำตอบ)';dot('on')}catch(e){box.textContent='เชื่อมต่อไม่ได้: '+(e.message||'');dot('off')}finally{b.disabled=false}};
 adminBoot({action:'chat_rev'},'rev',()=>{});

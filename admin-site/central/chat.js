@@ -26,7 +26,7 @@ const CHAT=(()=>{
         <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><span class="chat-tw"><b class="chat-title">แชทกับทีม</b><small class="chat-sub" hidden></small></span><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
         <div class="chat-list"></div>
         <div class="chat-msgs" hidden aria-live="polite"></div>
-        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-draft" type="button" title="ให้ Hermes ร่างคำตอบ (แก้ก่อนส่งได้)" hidden>✦ ร่าง</button><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
+        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-draft" type="button" title="ให้ AI HELP ร่างคำตอบ (แก้ก่อนส่งได้)" hidden>✦ ร่าง</button><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
       </section>`;
     document.body.append(root);
     const al=document.createElement('div');al.className='alert-stack';al.setAttribute('aria-live','assertive');document.body.append(al);S.al=al;

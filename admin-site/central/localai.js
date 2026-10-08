@@ -5,7 +5,7 @@ const LOCALAI=(()=>{
   const PRESETS={cloud:{label:'คลาวด์ (ใช้ได้ทุกเครื่อง)',url:'cloud',model:'sea-lion-v4-27b',cloud:true},hermes:{label:'Hermes Agent',url:'http://localhost:8642/v1',model:'hermes-agent'},
     ollama:{label:'Ollama',url:'http://localhost:11434/v1',model:'hermes3'},
     lmstudio:{label:'LM Studio',url:'http://localhost:1234/v1',model:'hermes-3-llama-3.1-8b'},custom:{label:'กำหนดเอง',url:'',model:''}};
-  const DEF={enabled:false,preset:'hermes',url:PRESETS.hermes.url,model:PRESETS.hermes.model,key:'',system:'คุณคือ Hermes ผู้ช่วยศูนย์สั่งการภัยพิบัติ HELP ME CENTRAL ตอบภาษาไทย สั้น ชัด ใช้ได้จริง'};
+  const DEF={enabled:false,preset:'hermes',url:PRESETS.hermes.url,model:PRESETS.hermes.model,key:'',system:'คุณคือ AI HELP ผู้ช่วยศูนย์สั่งการภัยพิบัติ HELP ME CENTRAL ตอบภาษาไทย สั้น ชัด ใช้ได้จริง'};
   const cfg=()=>{try{return {...DEF,...JSON.parse(localStorage.getItem('uh_ai')||'{}')}}catch(e){return {...DEF}}};
   const save=c=>{try{localStorage.setItem('uh_ai',JSON.stringify({...cfg(),...c}))}catch(e){}};
   const base=c=>String(c.url||'').trim().replace(/\/+$/,'');

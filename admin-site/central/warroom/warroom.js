@@ -109,11 +109,22 @@ function kpis(V){
   const fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
   const ppl=crit.reduce((a,c)=>a+Math.max(1,Number(c.people)||1),0);
   const oldest=open.reduce((m,c)=>Math.min(m,c.createdAt||Infinity),Infinity);
-  const k=[[crit.length,'วิกฤต รอช่วย',crit.length?'crit':''],[open.length,'รอช่วยทั้งหมด',open.length>20?'warn':''],[going.length,'กำลังไป / หน้างาน',''],
-    [`${fresh.size}<small>/${V.roster.length}</small>`,'ทีมออนไลน์',''],[doneToday.length,'ช่วยแล้ววันนี้','ok'],[ppl,'คนในเคสวิกฤต',ppl?'crit':''],
-    [isFinite(oldest)?waitTxt(oldest):'–','เคสรอนานสุด','']];
-  $('#kpis').innerHTML=k.map(([v,l,c])=>`<div class="wr-kpi ${c}"><b>${v}</b><span>${l}</span></div>`).join('');
+  // แบบหน้า "สรุป" ของ helpme4u.com: การ์ดดำตัวเลขใหญ่ · สถานะตอนนี้ (จุดสี) · แถบสัดส่วน · ตัวเลขคน
+  const done=V.cases.filter(c=>c.status==='done'),pp=c=>Math.max(1,Number(c.people)||1),sum=l=>l.reduce((a,c)=>a+pp(c),0),n=x=>Number(x).toLocaleString('th-TH');
+  const tot=V.cases.length||1,seg=(x,c)=>x?`<i style="flex:${x};background:${c}"></i>`:'';
+  const st=[[open.length,'รอช่วย','#2D45C8','open'],[crit.length,'วิกฤต · รอช่วย','#E5383B','crit'],[going.length,'กำลังไป','#D4A017','going'],[done.length,'ช่วยแล้ว','#2E9E57','done']];
+  const pct=V.cases.length?Math.round(done.length/V.cases.length*100):0,rm=room();
+  $('#kpis').innerHTML=`<div class="wr-hero"><div class="wr-hero-t"><div><span>สรุป${rm?' · '+esc(rm.name):'ทุก War Room'}</span><b>ช่วยแล้ว ${pct}%</b><span>${n(done.length)} จาก ${n(V.cases.length)} เคส</span></div>
+      <svg class="wr-ring" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="6"/><circle cx="22" cy="22" r="18" fill="none" stroke="#34C759" stroke-width="6" stroke-linecap="round" pathLength="100" stroke-dasharray="${pct} 100" transform="rotate(-90 22 22)"/></svg></div>
+    <div class="wr-hero-n"><div><b>${n(V.cases.length)}</b><span>เคสทั้งหมด</span></div><div><b>${n(sum(V.cases))}</b><span>คนที่แจ้ง</span></div><div><b>${n(sum(done))}</b><span>คนได้รับการช่วย</span></div></div></div>
+    <div class="wr-now"><div class="wr-now-h"><b>สถานะตอนนี้</b><span>แตะเพื่อดูรายการ</span></div>
+      <div class="wr-st">${st.map(([v,l,c,f])=>`<button type="button" class="wr-sti" data-cst="${f}"><i style="background:${c}"></i><b>${n(v)}</b><span>${l}</span></button>`).join('')}</div>
+      <div class="wr-bar" aria-hidden="true">${seg(open.length-crit.length,'#2D45C8')}${seg(crit.length,'#E5383B')}${seg(going.length,'#D4A017')}${seg(done.length,'#2E9E57')}${V.cases.length?'':'<i style="flex:1;background:var(--line,#e8e8ec)"></i>'}</div>
+      <div class="wr-ppl"><div><b>${n(sum(open))}<small> คน</small></b><span>คนที่ยังรอ</span></div><div class="r"><b>${n(ppl)}<small> คน</small></b><span>คนในเคสวิกฤต</span></div>
+        <div><b>${fresh.size}<small> /${V.roster.length} ทีม</small></b><span>ทีมออนไลน์</span></div><div><b>${n(doneToday.length)}<small> เคส</small></b><span>ช่วยแล้ววันนี้</span></div>
+        <div><b>${isFinite(oldest)?waitTxt(oldest):'–'}</b><span>เคสรอนานสุด</span></div></div></div>`;
 }
+$('#kpis').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(!b||!room())return;const f=b.dataset.cst;W.cst=f==='crit'?'open':f;W.tab='cases';render()});
 function alerts(V){
   const sos=V.alerts.sos,calls=V.alerts.calls,live=W.warn.filter(w=>(!w.start||w.start<=Date.now())&&(!w.end||w.end>=Date.now()));
   const rows=[...sos.map(s=>`<div class="wr-al sos"><b><i data-ic="alert"></i> SOS · ${esc(s.name)}</b><small>${esc(ago(s.sosAt))}${s.phone?` · <a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:''}${s.lat!=null?` · <button type="button" class="lnk" data-fly="${+s.lat},${+s.lng}">ดูบนแผนที่</button>`:''}</small></div>`),

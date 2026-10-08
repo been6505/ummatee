@@ -95,8 +95,8 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   if(lk){if(W.room!==lk)W.room=lk;const r0=W.rooms.find(r=>r.id===lk);$('#rooms').innerHTML=r0?chip(r0):'<span class="muted">ไม่พบ War Room ของลิงก์นี้ (อาจถูกปิดหรือสร้างลิงก์ใหม่แล้ว)</span>'}
   else $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
-  const r=room();$('#subtabs').hidden=false;
-  const tabs=!r?['struct','over']:['over','cases','teams','stock','prof'];if(!tabs.includes(W.tab))W.tab=tabs[0];
+  const r=room();$('#subtabs').hidden=!r;
+  const tabs=!r?['struct']:['over','cases','teams','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้วif(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
   document.body.classList.toggle('wr-overview',W.tab==='over')}

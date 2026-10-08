@@ -96,6 +96,7 @@ async function drawMap(L0){
   try{await loadLeaflet()}catch(e){$('#dmap').textContent='โหลดแผนที่ไม่สำเร็จ';return}
   if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);
     if('ResizeObserver' in window)new ResizeObserver(()=>M.map&&M.map.invalidateSize()).observe($('#dmap'));
+    if(matchMedia('(min-width:1280px)').matches)M.map.scrollWheelZoom.enable(); // แผนที่พื้นหลังบนจอใหญ่: เลื่อนล้อเพื่อซูมได้
     M.map.zoomControl.setPosition('bottomright');M.map.attributionControl.setPrefix(false);M.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
     L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(M.map);let b='road';try{b=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(DBASES[b]?b:'road');
     M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable());if(typeof MAPL!=='undefined')MAPL.attach(M.map)}

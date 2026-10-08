@@ -255,3 +255,23 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   .dcol-r .card{padding:12px 14px!important}.dcol-r .card h2{font-size:15px}.dcol-r .card .sub{font-size:12px}
   .dcol-m .mapcard{padding:12px!important}.dcol-m .map-h h2{font-size:16px}.dcol-m .map-h .sub{font-size:12px}
 }
+/* จอใหญ่: แผนที่เป็นพื้นหลังเต็มหน้า (แบบ helpme4u.com) · แผงซ้าย/ขวาลอยอยู่บนแผนที่ */
+@media(min-width:1280px){
+  :root{--side-w:max(300px,21%)}
+  body{background:#e9edf0}
+  #main.wrap{position:relative;z-index:1;pointer-events:none;grid-template-columns:var(--side-w) minmax(0,1fr) var(--side-w)!important}
+  #main.wrap>.dcol-l,#main.wrap>.dcol-r{pointer-events:auto;position:relative;z-index:2}
+  #main.wrap>.dcol-m{position:fixed;inset:0;z-index:0;padding:0;overflow:hidden;pointer-events:auto;border-radius:0}
+  #main.wrap .dcol-m .mapcard{flex:1;height:100%;margin:0!important;padding:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+  .dcol-m .map-h,.dcol-m .map-note,#fs-btn{display:none!important}
+  #main.wrap .dcol-m .dmap-wrap,#main.wrap .dcol-m .mapcard #dmap{border-radius:0!important}
+  /* ปุ่ม/คำอธิบาย/ซูม ย้ายมาอยู่ระหว่างแผงซ้ายและขวา ไม่ถูกบัง */
+  .dcol-m .mx-legend{left:calc(var(--side-w) + clamp(14px,1.6vw,28px) + 26px);top:84px}
+  .dcol-m .mx-fabs{right:calc(var(--side-w) + clamp(14px,1.6vw,28px) + 26px);top:84px}
+  .dcol-m #dlayer{right:calc(var(--side-w) + clamp(14px,1.6vw,28px) + 86px)!important;top:84px!important}
+  .dcol-m .leaflet-bottom.leaflet-right{right:calc(var(--side-w) + clamp(14px,1.6vw,28px) + 16px);bottom:96px}
+  .dcol-m .leaflet-bottom.leaflet-left{left:calc(var(--side-w) + clamp(14px,1.6vw,28px) + 16px);bottom:96px}
+  /* แผงลอย: กระจกโปร่ง เห็นแผนที่ด้านหลัง */
+  .dcol-l,.dcol-r{background:rgba(245,245,247,.55);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding:10px!important;box-shadow:0 8px 28px rgba(22,27,61,.12)}
+  [data-theme="dark"] .dcol-l,[data-theme="dark"] .dcol-r{background:rgba(15,18,34,.6)}
+}

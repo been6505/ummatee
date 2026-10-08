@@ -304,7 +304,7 @@ function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return l
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';s.onload=res;s.onerror=()=>{leafletP=null;rej()};document.head.append(s)});return leafletP}
 async function drawMap(list){
   try{await loadLeaflet()}catch(e){$('#map').innerHTML='<p class="empty">โหลดแผนที่ไม่สำเร็จ</p>';return}
-  if(!A.map){A.map=L.map('map',{preferCanvas:true}).setView([13.7563,100.5018],11);if(typeof HZ!=='undefined')HZ.attach(A.map);
+  if(!A.map){A.map=L.map('map',{preferCanvas:true}).setView([13.7563,100.5018],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC'}).addTo(A.map);A.flood=L.layerGroup().addTo(A.map);A.layer=L.layerGroup().addTo(A.map);A.fitted=false;
     if(typeof MX!=='undefined')MX.attach(A.map)}
   if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return; // แบบ Floodboard: แสดงเฉพาะถนนที่มีน้ำขัง/เสี่ยง/ผ่านไม่ได้

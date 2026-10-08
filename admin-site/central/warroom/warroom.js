@@ -146,7 +146,7 @@ function loadLeaflet(){if(window.L)return Promise.resolve();return leafP||(leafP
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';s.onload=res;s.onerror=()=>{leafP=null;rej()};document.head.append(s)}))}
 async function drawMap(V){
   try{await loadLeaflet()}catch(e){$('#map-note').textContent='โหลดแผนที่ไม่ได้';return}
-  if(!W.map){W.map=L.map('wmap',{zoomControl:true}).setView([13.75,100.6],11);if(typeof HZ!=='undefined')HZ.attach(W.map);
+  if(!W.map){W.map=L.map('wmap',{zoomControl:true}).setView([13.75,100.6],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(W.map);
     W.map.attributionControl.setPrefix(false);W.lr=L.layerGroup().addTo(W.map);W.lc=L.layerGroup().addTo(W.map);W.lt=L.layerGroup().addTo(W.map)}
   W.lc.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;

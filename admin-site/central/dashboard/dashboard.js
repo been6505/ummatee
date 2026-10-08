@@ -91,7 +91,7 @@ const caseColor=c=>c.status==='done'?'#0ca30c':c.status==='going'?'#2a78d6':sev(
 const escT=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 async function drawMap(L0){
   try{await loadLeaflet()}catch(e){$('#dmap').textContent='โหลดแผนที่ไม่สำเร็จ';return}
-  if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);if(typeof HZ!=='undefined')HZ.attach(M.map);
+  if(!M.map){M.map=L.map($('#dmap'),{preferCanvas:true,scrollWheelZoom:false}).setView([13.7563,100.5018],11);
     M.map.zoomControl.setPosition('bottomright');M.map.attributionControl.setPrefix(false);M.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
     L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(M.map);let b='road';try{b=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(DBASES[b]?b:'road');
     M.flood=L.layerGroup().addTo(M.map);M.cases=L.layerGroup().addTo(M.map);M.map.on('focus',()=>M.map.scrollWheelZoom.enable());if(typeof MAPL!=='undefined')MAPL.attach(M.map)}

@@ -10,14 +10,15 @@ markTheme();
 /* ---------- Local AI ---------- */
 const P=LOCALAI.PRESETS;let cur=LOCALAI.cfg();
 $('#ai-preset').innerHTML=Object.entries(P).map(([k,v])=>`<button type="button" data-p="${k}">${esc(v.label)}</button>`).join('');
-function fill(c){$('#ai-on').checked=!!c.enabled;$('#ai-url').value=c.url||'';$('#ai-model').value=c.model||'';$('#ai-key').value=c.key||'';$('#ai-sys').value=c.system||'';
+const cloudRows=on=>['ai-url','ai-key'].forEach(id=>{const r=$('#'+id).closest('.st-row');if(r)r.hidden=on});$('#ai-list').hidden=false;
+function fill(c){cloudRows(c.preset==='cloud');$('#ai-on').checked=!!c.enabled;$('#ai-url').value=c.url||'';$('#ai-model').value=c.model||'';$('#ai-key').value=c.key||'';$('#ai-sys').value=c.system||'';
   $$('#ai-preset [data-p]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.p===(c.preset||'custom'))))}
 const form=()=>({enabled:$('#ai-on').checked,preset:($('#ai-preset [aria-pressed=true]')||{dataset:{p:'custom'}}).dataset.p,url:$('#ai-url').value.trim(),model:$('#ai-model').value.trim(),key:$('#ai-key').value.trim(),system:$('#ai-sys').value.trim()});
 const msg=(t,ok)=>{const m=$('#ai-msg');m.textContent=t;m.className='st-msg'+(ok===true?' ok':ok===false?' bad':'')};
 const dot=s=>{$('#ai-dot').className='st-dot '+(s||'')};
 fill(cur);
 $('#ai-preset').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;const p=P[b.dataset.p];
-  $$('#ai-preset [data-p]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));if(p.url){$('#ai-url').value=p.url;$('#ai-model').value=p.model}});
+  $$('#ai-preset [data-p]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));cloudRows(b.dataset.p==='cloud');if(p.url){$('#ai-url').value=p.url;$('#ai-model').value=p.model}});
 ['ai-url','ai-model'].forEach(id=>$('#'+id).addEventListener('input',()=>$$('#ai-preset [data-p]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.p==='custom')))));
 $('#ai-save').onclick=()=>{LOCALAI.save(form());cur=LOCALAI.cfg();msg('บันทึกแล้ว',true)};
 $('#ai-on').addEventListener('change',()=>{LOCALAI.save({enabled:$('#ai-on').checked});msg($('#ai-on').checked?'เปิดใช้แล้ว':'ปิดแล้ว',true)});

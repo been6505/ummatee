@@ -158,6 +158,24 @@ async function createCase(db, b, ip) {
   await bumpRev(db);
   return { ok: true, id, urgency: u, token };
 }
+/* Hermes บนคลาวด์ (Cloudflare Workers AI) สำหรับเครื่องที่ไม่มี Local AI เช่น มือถือ · ใช้ได้เฉพาะผู้มีรหัสอาสา/ลิงก์ War Room */
+const HERMES_MODELS = ['@cf/aisingapore/gemma-sea-lion-v4-27b-it', '@cf/meta/llama-3.3-70b-instruct-fp8-fast']; // ภาษาไทยดี · สำรอง (Hermes ถูกถอดจาก Workers AI แล้ว)
+async function aiChat(db, b) {
+  if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
+  const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
+  if (!msgs.length) return { ok: false, error: 'empty' };
+  let total = msgs.reduce((a, m) => a + m.content.length, 0);
+  while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
+  let err = '';
+  for (const model of HERMES_MODELS) {
+    try {
+      const out = await ENV.AI.run(model, { messages: msgs, max_tokens: Math.min(Number(b.max_tokens) || 900, 1500), temperature: Math.min(Math.max(Number(b.temperature) || 0.3, 0), 1) });
+      const content = out && (typeof out.response === 'string' ? out.response : out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content) || '';
+      if (content) return { ok: true, model, content };
+    } catch (e) { err = String(e && e.message || e).slice(0, 200); }
+  }
+  return { ok: false, error: 'ai_failed', detail: err };
+}
 /* ข้อเสนอแนะ/แจ้งปัญหาจากทีมงาน (ปุ่มในทุกหน้า) · CENTRAL ดูและปิดได้ที่แดชบอร์ด */
 async function saveFeedback(db, b) {
   const text = clean(b.text, 1000);
@@ -1768,7 +1786,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

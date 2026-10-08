@@ -99,8 +99,8 @@
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=7"></script>
 <script src="../feedback.js?v=1"></script>
-<script src="../localai.js?v=1"></script>
-<script src="../hermes.js?v=1"></script>
+<script src="../localai.js?v=2"></script>
+<script src="../hermes.js?v=3"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 </body>

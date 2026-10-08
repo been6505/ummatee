@@ -50,7 +50,7 @@ const HERMES=(()=>{
   function caseLine(c){return `#${c.id} | ${URG[sevOf(c)]} | ${STS[c.status]||c.status} | ต้องการ: ${(c.needs||[]).join(', ')||'-'} | ${c.people||1} คน | ระดับน้ำ: ${c.levelText||c.level||'-'} | ${[c.district,c.province].filter(Boolean).join(' ')||'-'} | ที่อยู่: ${String(c.address||'').slice(0,80)||'-'} | ผู้แจ้ง: ${c.name||'-'} ${String(c.phone||'').replace(/^'/,'')} | รอ ${wait(c.createdAt)} | ทีม: ${vol(c)||'-'}${pin(c)?` | พิกัด ${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}`:''}`}
   function context(d,P){const open=d.cases.filter(c=>c.status!=='done'),crit=open.filter(c=>sevOf(c)===3&&c.status!=='going');
     const done7=d.cases.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>Date.now()-7*864e5).length;
-    const top=open.slice().sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,35);
+    const top=open.slice().sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,typeof LOCALAI!=='undefined'&&LOCALAI.isCloud&&LOCALAI.isCloud(LOCALAI.cfg())?18:35); // คลาวด์รุ่นเล็ก: ส่งข้อมูลน้อยลง
     const teams=d.roster.map(t=>{const p=teamPos(d,t.name),g=d.cases.filter(c=>c.status==='going'&&vol(c)===t.name);
       return `${t.name} | ${TST[t.status]||t.status||'-'} | พาหนะ ${t.vehicle||'-'} | ${t.members||'?'} คน | ${p?`ตำแหน่ง ${p.lat.toFixed(4)},${p.lng.toFixed(4)} (${p.src})`:'ไม่ทราบตำแหน่ง'} | รับอยู่ ${g.length} เคส${g.length?' ('+g.map(c=>'#'+c.id).join(', ')+')':''}`});
     let s=`ขอบเขต: ${d.title}\nเวลา: ${new Date().toLocaleString('th-TH')}\nตัวชี้วัด: เคสค้าง ${open.length} · วิกฤตยังไม่มีทีม ${crit.length} · กำลังไป ${open.filter(c=>c.status==='going').length} · ช่วยแล้ว 7 วัน ${done7} · รอเกิน 24 ชม. ${open.filter(c=>c.status!=='going'&&mins(c.createdAt)>1440).length}\n\nทีม (${d.roster.length}):\n${teams.join('\n')||'-'}\n\nเคสค้างที่สำคัญ (${top.length} จาก ${open.length}):\n${top.map(caseLine).join('\n')}`;
@@ -135,7 +135,7 @@ const HERMES=(()=>{
       const sys=(LOCALAI.cfg().system||'')+SYS;
       const msgs=[{role:'system',content:sys},{role:'user',content:'ข้อมูลปัจจุบัน:\n'+ctx},{role:'assistant',content:'รับทราบข้อมูลแล้ว'},...hist.slice(-6),{role:'user',content:q}];
       const ans=await LOCALAI.ask(msgs,{timeout:180000});wait1.remove();hist.push({role:'user',content:q},{role:'assistant',content:ans});
-      const {text,acts}=parseActions(ans,d);add(E(text||'(ไม่มีข้อความ)'),'hz-m a');acts.forEach(a=>actCard(a,d));
+      const {text,acts}=parseActions(ans,d);add(E(String(text||'(ไม่มีข้อความ)').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'')),'hz-m a');acts.forEach(a=>actCard(a,d));
       if(o.plan&&!acts.length&&P.plan.length)note('ใช้แผนที่ระบบคำนวณด้านบนได้เลย')}
     catch(e){wait1.remove();note('ถาม Hermes ไม่สำเร็จ: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจการตั้งค่า Local AI'))}
     finally{S.busy=false}}

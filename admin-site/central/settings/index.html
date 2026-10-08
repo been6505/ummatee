@@ -54,7 +54,7 @@
       <div class="st-try"><textarea id="ai-q" rows="2" placeholder="ลองถาม Hermes เช่น สรุปสิ่งที่ต้องเตรียมเมื่อน้ำท่วมสูง 1 เมตร"></textarea><button type="button" class="btn ghost" id="ai-ask">ถาม</button></div>
       <div class="st-ans" id="ai-ans" hidden></div>
       <details class="st-help"><summary>เชื่อมต่อไม่ได้?</summary>
-        <ul><li>ตั้งค่าเก็บไว้เฉพาะเบราว์เซอร์เครื่องนี้ และเบราว์เซอร์เรียกเครื่อง AI โดยตรง ข้อมูลไม่ผ่านเซิร์ฟเวอร์ CENTRAL</li>
+        <ul><li><b>มือถือ / เครื่องที่ไม่ได้รัน AI เอง:</b> เลือก "คลาวด์ (ใช้ได้ทุกเครื่อง)" ใช้ AI SEA-LION (เก่งภาษาไทย) บน Cloudflare ของระบบ ใช้ได้ทันที ข้อมูลส่งผ่านเซิร์ฟเวอร์ CENTRAL · ตัว Hermes ต้องรันในเครื่อง</li><li>ตัวรันในเครื่อง (Hermes Agent / Ollama / LM Studio): ตั้งค่าเก็บเฉพาะเบราว์เซอร์นี้ และเบราว์เซอร์เรียกเครื่อง AI โดยตรง ข้อมูลไม่ผ่านเซิร์ฟเวอร์ CENTRAL</li>
         <li><b>Hermes Agent:</b> เปิด API server ของ Hermes (OpenAI-compatible) แล้วใส่ที่อยู่ เช่น <code>http://localhost:8642/v1</code> และอนุญาต origin <code>https://central.helpme4u.com</code> (CORS)</li>
         <li><b>Ollama:</b> <code>ollama pull hermes3</code> แล้วรันด้วย <code>OLLAMA_ORIGINS=https://central.helpme4u.com ollama serve</code></li>
         <li><b>LM Studio:</b> เปิด Local Server และติ๊ก Enable CORS</li>
@@ -64,12 +64,12 @@
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=1"></script>
-<script src="../localai.js?v=1"></script>
-<script src="./settings.js?v=1"></script>
+<script src="../localai.js?v=2"></script>
+<script src="./settings.js?v=2"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=7"></script>
 <script src="../feedback.js?v=1"></script>
-<script src="../hermes.js?v=1"></script>
+<script src="../hermes.js?v=3"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 </body>

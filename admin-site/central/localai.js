@@ -15,14 +15,24 @@ const LOCALAI=(()=>{
   async function models(c=cfg()){if(isCloud(c))return ['sea-lion-v4-27b'];const r=await fetch(base(c)+'/models',{headers:hdr(c)});if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();return (j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean)}
   async function ask(q,o={}){const c={...cfg(),...(o.cfg||{})};if(!base(c))throw new Error('ยังไม่ได้ตั้งค่าที่อยู่ Local AI');
     const messages=Array.isArray(q)?q:[{role:'system',content:c.system},{role:'user',content:String(q)}];
+    if(isCloud(c)&&o.onToken){const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'ai_chat',key:KEY(),messages,stream:true,max_tokens:o.max_tokens,temperature:o.temperature??0.3})});
+      if(!(r.headers.get('content-type')||'').includes('event-stream')){const j=await r.json().catch(()=>({}));throw new Error(j.error==='not_volunteer'?'ต้องเข้าระบบก่อน':'AI บนคลาวด์ไม่ตอบ ('+(j.error||r.status)+')')}
+      return sse(r,o.onToken)}
     if(isCloud(c)){const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'ai_chat',key:KEY(),messages,temperature:o.temperature??0.3})}).then(x=>x.json());
       if(!r.ok)throw new Error(r.error==='not_volunteer'?'ต้องเข้าระบบก่อน':'AI บนคลาวด์ไม่ตอบ ('+(r.error||'')+')');return r.content||''}
     const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),o.timeout||120000);
-    try{const r=await fetch(base(c)+'/chat/completions',{method:'POST',headers:hdr(c),signal:o.signal||ctl.signal,body:JSON.stringify({model:c.model,messages,stream:false,temperature:o.temperature??0.3})});
+    try{const r=await fetch(base(c)+'/chat/completions',{method:'POST',headers:hdr(c),signal:o.signal||ctl.signal,body:JSON.stringify({model:c.model,messages,stream:!!o.onToken,temperature:o.temperature??0.3,...(o.max_tokens?{max_tokens:o.max_tokens}:{})})});
+      if(r.ok&&o.onToken&&(r.headers.get('content-type')||'').includes('event-stream'))return await sse(r,o.onToken);
       if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text().catch(()=>'')).slice(0,160));
       const j=await r.json();return (j.choices&&j.choices[0]&&(j.choices[0].message||{}).content)||j.message?.content||''}
     catch(e){if(e.name!=='AbortError'&&/localhost|127\.0\.0\.1/.test(base(c))&&/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent))throw new Error('มือถือเชื่อม localhost ไม่ได้ (Hermes ไม่ได้รันบนเครื่องนี้) · เลือก "คลาวด์ (ใช้ได้ทุกเครื่อง)" ในหน้าตั้งค่า');
       if(e.name!=='AbortError'&&/failed|NetworkError|Load failed/i.test(e.message||''))throw new Error('ติดต่อ '+base(c)+' ไม่ได้ · ตรวจว่า Hermes เปิดอยู่และอนุญาต CORS');throw e}
     finally{clearTimeout(t)}}
+  /* อ่านคำตอบแบบทยอย (SSE): Workers AI {response} · OpenAI {choices[0].delta.content} */
+  async function sse(r,on){const rd=r.body.getReader(),dec=new TextDecoder();let buf='',all='';
+    for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
+      while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;const d=line.slice(5).trim();if(!d||d==='[DONE]')continue;
+        try{const j=JSON.parse(d),t=typeof j.response==='string'?j.response:(j.choices&&j.choices[0]&&((j.choices[0].delta||{}).content||(j.choices[0].message||{}).content))||'';if(t){all+=t;on(all,t)}}catch(e){}}}
+    return all}
   return {PRESETS,cfg,save,models,ask,isCloud,on:()=>cfg().enabled&&!!base(cfg())};
 })();

@@ -24,9 +24,11 @@ const HERMES=(()=>{
   async function data(){
     if(S.scope&&S.scope.cases)return {cases:S.scope.cases,roster:S.scope.roster||[],live:S.scope.live||[],title:S.scope.title||'War Room'};
     if(S.data&&Date.now()-S.at<30000)return S.data;
+    if(S.loading)return S.loading; // โหลดอยู่แล้ว: ใช้ผลเดียวกัน ไม่ดึงซ้ำ
+    return S.loading=(async()=>{try{
     const [h,o,r,t]=await Promise.all([get({action:'helpme_cases'}).catch(()=>null),get({action:'list'}).catch(()=>null),get({action:'roster'}).catch(()=>null),get({action:'teams'}).catch(()=>null)]);
     const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
-    S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}
+    S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
   const teamPos=(d,name)=>{const l=d.live.find(x=>x.team===name&&Date.now()-x.updatedAt<30*60e3);if(l)return {lat:+l.lat,lng:+l.lng,src:'สด '+mins(l.updatedAt)+' นาทีก่อน'};
     const g=d.cases.filter(c=>c.status==='going'&&vol(c)===name&&pin(c));if(g.length)return {lat:g.reduce((a,c)=>a+ +c.lat,0)/g.length,lng:g.reduce((a,c)=>a+ +c.lng,0)/g.length,src:'จากเคสที่รับอยู่'};return null};
 
@@ -106,9 +108,9 @@ const HERMES=(()=>{
     w.querySelector('.hz-f').onsubmit=e=>{e.preventDefault();const i=w.querySelector('.hz-f input'),q=i.value.trim();if(!q)return;i.value='';ask(q)};
     w.querySelector('.hz-log').addEventListener('click',onAct);
     const css2=document.createElement('style');css2.textContent='.chat-fab[aria-expanded=true]~.hz-fab{display:none}';document.head.append(css2);
-    drawerHook()}
+    drawerHook();setTimeout(()=>data().catch(()=>{}),1500)}
   function toggle(on){if(!S.el)build();if(!S.el)return;const v=on==null?S.el.hidden:on;S.el.hidden=!v;S.fab.hidden=v;
-    if(v){S.el.querySelector('.hz-sc').textContent=S.scope&&S.scope.title?S.scope.title:'ภาพรวมทั้งหมด';const on2=typeof LOCALAI!=='undefined'&&LOCALAI.on();S.el.querySelector('.hz-dot').className='hz-dot'+(on2?' on':'');
+    if(v){data().catch(()=>{});S.el.querySelector('.hz-sc').textContent=S.scope&&S.scope.title?S.scope.title:'ภาพรวมทั้งหมด';const on2=typeof LOCALAI!=='undefined'&&LOCALAI.on();S.el.querySelector('.hz-dot').className='hz-dot'+(on2?' on':'');
       if(!S.log.length)note(on2?'ถามได้เลย หรือกดปุ่มด้านบน · ทุกการกระทำต้องกดยืนยันก่อน':'ยังไม่ได้เปิด Local AI · กด ⚙ เพื่อตั้งค่า (ปุ่ม "จัดเคสให้ทีม" ใช้ได้แม้ไม่มี AI)');setTimeout(()=>S.el.querySelector('.hz-f input').focus(),40)}}
   const log=()=>S.el.querySelector('.hz-log');
   function add(html,cls){const d=document.createElement('div');d.className=cls;d.innerHTML=html;log().append(d);log().scrollTop=log().scrollHeight;S.log.push(1);return d}
@@ -129,16 +131,21 @@ const HERMES=(()=>{
 
   /* ---------- ถาม / ปุ่มลัด ---------- */
   const hist=[];
-  async function ask(q,o={}){if(S.busy)return;S.busy=true;add(E(o.label||q),'hz-m u');const wait1=note('Hermes กำลังคิด…');
+  async function ask(q,o={}){if(S.busy){note('รอคำตอบก่อนหน้าให้เสร็จก่อน');return}S.busy=true;add(E(o.label||q),'hz-m u');
+    const t0=Date.now(),wait1=note('Hermes กำลังคิด…'),tick=setInterval(()=>{wait1.textContent=`Hermes กำลังคิด… ${Math.round((Date.now()-t0)/1000)} วิ`},1000);
+    let bub=null;
     try{const d=await data(),P=o.plan||null,ctx=context(d,P);
       if(typeof LOCALAI==='undefined'||!LOCALAI.on()){wait1.remove();note('ยังไม่ได้เปิด Local AI · กด ⚙ เพื่อตั้งค่า');return}
       const sys=(LOCALAI.cfg().system||'')+SYS;
-      const msgs=[{role:'system',content:sys},{role:'user',content:'ข้อมูลปัจจุบัน:\n'+ctx},{role:'assistant',content:'รับทราบข้อมูลแล้ว'},...hist.slice(-6),{role:'user',content:q}];
-      const ans=await LOCALAI.ask(msgs,{timeout:180000});wait1.remove();hist.push({role:'user',content:q},{role:'assistant',content:ans});
-      const {text,acts}=parseActions(ans,d);add(E(String(text||'(ไม่มีข้อความ)').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'')),'hz-m a');acts.forEach(a=>actCard(a,d));
-      if(o.plan&&!acts.length&&P.plan.length)note('ใช้แผนที่ระบบคำนวณด้านบนได้เลย')}
-    catch(e){wait1.remove();note('ถาม Hermes ไม่สำเร็จ: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจการตั้งค่า Local AI'))}
-    finally{S.busy=false}}
+      const msgs=[{role:'system',content:sys},{role:'user',content:'ข้อมูลปัจจุบัน:\n'+ctx},{role:'assistant',content:'รับทราบข้อมูลแล้ว'},...hist.slice(-6),{role:'user',content:q+'\n(ตอบกระชับ ไม่เกิน 10 บรรทัด)'}];
+      const clean=t=>String(t).split('```')[0].replace(/<actions>[\s\S]*/,'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'').trim();
+      const ans=await LOCALAI.ask(msgs,{timeout:180000,max_tokens:700,onToken:all=>{if(!bub){clearInterval(tick);wait1.remove();bub=add('','hz-m a')}bub.textContent=clean(all);log().scrollTop=log().scrollHeight}});
+      clearInterval(tick);wait1.remove();hist.push({role:'user',content:q},{role:'assistant',content:ans});
+      const {text,acts}=parseActions(ans,d);if(!bub)bub=add('','hz-m a');bub.textContent=clean(text)||'(ไม่มีข้อความ)';acts.forEach(a=>actCard(a,d));
+      if(o.plan&&!acts.length&&P.plan.length)note('ใช้แผนที่ระบบคำนวณด้านบนได้เลย');
+      if(acts.length)note(`เสนอ ${acts.length} รายการ · ${Math.round((Date.now()-t0)/1000)} วิ`)}
+    catch(e){clearInterval(tick);wait1.remove();note('ถาม Hermes ไม่สำเร็จ: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจการตั้งค่า Local AI'))}
+    finally{clearInterval(tick);S.busy=false}}
   async function quick(k){
     if(k==='sum')return ask('สรุปสถานการณ์ตอนนี้: จุดที่น่าห่วงที่สุด 3 ข้อ ทีมพร้อมแค่ไหน และควรทำอะไรต่อทันที',{label:'สรุปสถานการณ์'});
     if(k==='first')return ask('เคสไหนควรส่งทีมก่อน 5 อันดับ พร้อมเหตุผลสั้น ๆ และเสนอทีมที่เหมาะ (ใส่ actions)',{label:'เคสไหนก่อน'});
@@ -147,7 +154,7 @@ const HERMES=(()=>{
       const P=plan(d);if(!P.plan.length){note(P.teams?'ไม่มีเคสค้างที่ยังไม่มีทีม':'ไม่มีทีมว่างตอนนี้');return}
       note(`ระบบคำนวณ: ${P.teams} ทีมว่าง · จัดได้ ${P.plan.reduce((a,x)=>a+x.cases.length,0)} เคส · ยังเหลือ ${P.left} เคส`);
       P.plan.forEach(x=>actCard({type:'assign',team:x.team,cases:x.cases.map(c=>String(c.id)),why:x.why},d));
-      if(typeof LOCALAI!=='undefined'&&LOCALAI.on())ask('ตรวจแผนจัดเคสที่ระบบคำนวณ (อยู่ท้ายข้อมูล) ว่าเหมาะไหม มีจุดเสี่ยงอะไร ถ้าควรปรับให้เสนอ actions ใหม่ ถ้าดีแล้วตอบสั้น ๆ',{label:'ให้ Hermes ตรวจแผน',plan:P})}}
+      if(typeof LOCALAI!=='undefined'&&LOCALAI.on()){const go=()=>S.busy?setTimeout(go,600):ask('ตรวจแผนจัดเคสที่ระบบคำนวณ (อยู่ท้ายข้อมูล) ว่าเหมาะไหม มีจุดเสี่ยงอะไร ถ้าควรปรับให้เสนอ actions ใหม่ ถ้าดีแล้วตอบสั้น ๆ',{label:'ให้ Hermes ตรวจแผน',plan:P});go()}}}
   /* ปุ่มสรุปในรายละเอียดเคส (หน้าจัดการเคส) */
   function drawerHook(){const dr=document.getElementById('drawer');if(!dr)return;
     new MutationObserver(()=>{const sm=dr.querySelector('.d-head small');if(!sm||dr.querySelector('.hz-sum'))return;const b=document.createElement('button');b.type='button';b.className='hz-sum';b.innerHTML='✦ สรุปด้วย Hermes';

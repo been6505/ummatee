@@ -176,6 +176,24 @@ async function aiChat(db, b) {
   }
   return { ok: false, error: 'ai_failed', detail: err };
 }
+function aiMsgs(b) {
+  const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
+  let total = msgs.reduce((a, m) => a + m.content.length, 0);
+  while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
+  return msgs;
+}
+async function aiStream(b) {
+  if (!ENV || !ENV.AI) return null;
+  const msgs = aiMsgs(b);
+  if (!msgs.length) return null;
+  for (const model of HERMES_MODELS) {
+    try {
+      const st = await ENV.AI.run(model, { messages: msgs, stream: true, max_tokens: Math.min(Number(b.max_tokens) || 700, 1500), temperature: Math.min(Math.max(Number(b.temperature) || 0.3, 0), 1) });
+      return new Response(st, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', 'x-ai-model': model } });
+    } catch (e) {}
+  }
+  return null;
+}
 /* ข้อเสนอแนะ/แจ้งปัญหาจากทีมงาน (ปุ่มในทุกหน้า) · CENTRAL ดูและปิดได้ที่แดชบอร์ด */
 async function saveFeedback(db, b) {
   const text = clean(b.text, 1000);
@@ -1780,6 +1798,11 @@ async function api(request, env) {
     if (WRC) {
       if (WR_DENY.includes(b.action) || (b.action === 'warroom_save' && clean((b.warroom || {}).id, 20) !== WRC.id)) return json({ ok: false, error: 'central_only' });
       b.key = env.VOLUNTEER_KEY;
+    }
+    if (b.action === 'ai_chat' && b.stream) {   // ตอบแบบทยอยส่งทีละคำ (SSE) ให้ผู้ใช้เห็นคำตอบทันที
+      if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });
+      const r = await aiStream(b);
+      return r || json({ ok: false, error: 'ai_failed' });
     }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));

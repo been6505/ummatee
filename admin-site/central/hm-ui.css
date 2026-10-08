@@ -26,7 +26,7 @@ h1,h2,h3{letter-spacing:-.01em}
 :root:not([data-theme="dark"]) .seg{background:#fff!important;box-shadow:var(--shadow-soft)!important}
 
 /* ---------- คอมพิวเตอร์ (≥ 1024px) ---------- */
-@media(min-width:1024px){
+@media(min-width:761px){ /* แท็บเล็ตขึ้นไปใช้หัวเว็บ/เมนูแบบเดสก์ท็อป */
   /* หัวเว็บแบบ helpme4u.com: โลโก้แคปซูลขาวซ้าย · ปุ่มในแคปซูลกระจกขวา · ไม่มีแถบเต็มความกว้าง */
   .top{position:sticky!important;top:0;z-index:1200;padding:12px clamp(14px,1.6vw,28px) 6px!important;gap:14px!important;background:transparent!important;border:0!important;
     display:flex!important;justify-content:space-between;align-items:center;pointer-events:none}
@@ -62,8 +62,8 @@ h1,h2,h3{letter-spacing:-.01em}
 @media(min-width:1600px){#main>.grid,#main>.dcol>.grid,.stock-sec>.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 
 /* ---------- หน้าจัดการเคส: "แผนที่ + รายการ" บนจอกว้าง = แผนที่ซ้าย (ค้างไว้) · รายการขวา (เลื่อนเฉพาะรายการ) ---------- */
-@media(min-width:1280px){
-  main.wrap:has(>#map-wrap.compact:not([hidden])){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(460px,1fr);column-gap:16px;align-items:start}
+@media(min-width:1024px){
+  main.wrap:has(>#map-wrap.compact:not([hidden])){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(380px,1fr);column-gap:16px;align-items:start}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>*{grid-column:1/-1;min-width:0}
   main.wrap>#map-wrap.compact:not([hidden]){grid-column:1;position:sticky;top:76px;margin:0!important}
   main.wrap>#map-wrap.compact .map-body{grid-template-columns:1fr!important}
@@ -73,7 +73,7 @@ h1,h2,h3{letter-spacing:-.01em}
   /* สรุปตัวเลขเคส + แถบค้นหา อยู่แถวเดียวกันให้กินที่ด้านบนน้อยลง */
   main.wrap>.stats{margin-bottom:8px!important}
 }
-@media(min-width:1280px){
+@media(min-width:1024px){
   /* รายการเคสข้างแผนที่: แสดงเป็นการ์ด (ตารางกว้างไม่พอ) */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl thead{display:none}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list :is(.tbl,.tbl tbody,.tbl tr,.tbl td){display:block;width:100%}
@@ -97,7 +97,7 @@ h1,h2,h3{letter-spacing:-.01em}
   .trk .trk-map{height:min(40vh,420px)!important;min-height:300px}
   .cols>.panel{max-height:calc(100vh - 84px);overflow:auto;position:sticky;top:72px;scrollbar-width:thin}
 }
-@media(min-width:1280px){
+@media(min-width:1024px){
   /* รายการเคสเลื่อนในกรอบข้างแผนที่ (ทั้งหน้าไม่ต้องเลื่อนยาว) */
   main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;scrollbar-width:thin;padding-right:4px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) .bar-row .btn#export{order:9}
@@ -115,7 +115,7 @@ h1,h2,h3{letter-spacing:-.01em}
   .tbl td.vr-cell .vr-score{font-size:12px}
   .tbl td.needs{grid-row:3}
 }
-@media(min-width:1280px){
+@media(min-width:1024px){
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr{grid-template-columns:auto auto minmax(0,1fr)!important;align-items:start}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ระดับ"]{grid-column:1;grid-row:1}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="สถานะ"]{grid-column:2;grid-row:1;display:flex!important;flex-wrap:wrap;gap:4px;align-items:center}
@@ -237,3 +237,44 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
   #list .tbl td.addr small{display:inline-block;margin-left:6px}
 }
 .stat .hm-tag{display:none!important}
+
+/* แท็บเล็ต/คอมพิวเตอร์: รายการข้างแผนที่ใช้การ์ดแบบเดียวกับมือถือ (จัดเป็นชั้น ไม่ซ้อนกัน) */
+@media(min-width:1024px){
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
+    gap:8px 10px!important;padding:14px 16px!important;border-radius:20px!important;border:0!important;box-shadow:inset 5px 0 0 var(--lc,#E0B53A),0 1px 3px rgba(22,27,61,.06)!important;background:var(--surface,#fff)!important;margin-bottom:12px!important}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.u3{--lc:#E5383B}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.u2{--lc:#F57C00}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.s-going{--lc:#7B8CE8}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.s-done{--lc:#2E9E57}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td{min-width:0;max-width:none!important;text-align:left!important}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(1){grid-area:lv!important;display:flex!important;align-items:center;gap:6px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(2){grid-area:chips!important;display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-start!important}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(3){grid-area:st!important;display:flex!important;align-items:center;justify-content:flex-end;gap:6px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(4){grid-area:needs}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(5){grid-area:ppl!important;align-self:center;font-weight:700}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(6){grid-area:bag!important;display:flex!important;align-items:center;gap:6px;justify-content:flex-end}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(7){grid-area:addr!important;color:var(--muted);font-size:14px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(8){grid-area:who!important;font-size:14.5px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(11){display:none!important}
+  /* หัวการ์ด */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
+  /* ความต้องการ + รูป */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos{margin-top:8px;gap:6px}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos img,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
+  /* ชิปผลตรวจ */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .cov,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
+  /* คน · ถุงยังชีพ */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag small{font-size:13px;color:var(--muted)}
+  /* ผู้ติดต่อ · ทีม · เวลา */
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.time small{display:block;font-size:11px}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.addr small{display:inline-block;margin-left:6px}
+}
+@media(min-width:1024px){main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
+  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell>*{margin:0!important}}

@@ -72,7 +72,9 @@ async function init(db) {
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
     // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
-      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
+      ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
+      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -168,7 +170,7 @@ async function updateCase(db, b) {
     sets.push('cctv=?'); vals.push(b.cctv ? b.cctv + '|' + t : '');
   }
   if (!meta) {
-    sets.push('status=?', 'updatedAt=?'); vals.push(b.status, Date.now());
+    sets.push('status=?', 'updatedAt=?', 'localAt=?'); vals.push(b.status, Date.now(), Date.now()); // localAt: ศูนย์แก้เอง (ใช้ตัดสินกับข้อมูลที่ซิงก์จาก Help Me)
     if (b.status === 'open') sets.push("volunteer=''");
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }
@@ -1429,15 +1431,103 @@ async function fillProvinces(db, cases) {
   }
   need.forEach(c => { const v = known.get(key(c)); if (v && v !== '-') c.province = v; });
 }
+/* ---------- ซิงก์เคส Help Me (Google Sheet) → ฐานข้อมูลของเรา (ตาราง cases, src='helpme') ----------
+   ทุก 1 นาที (cron ของตัวกลางโดเมนเรียก hm_sync) + ทุกครั้งที่ CENTRAL ขอเคส Help Me (ถ้าซิงก์ล่าสุดเกิน 45 วินาที)
+   เขียนเฉพาะแถวที่ข้อมูลเปลี่ยน (เทียบ hmHash) · สถานะ/ทีม: ฝั่งที่แก้ทีหลังชนะ
+   (Help Me เปลี่ยนสถานะ/ทีมหลังจากที่ศูนย์แก้ → ใช้ของ Help Me · ศูนย์แก้หลังจากนั้น → คงของศูนย์ · ไม่ส่งกลับไปที่ชีต Help Me) */
+const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+let hmSyncP = null;
+async function syncHelpme(env, db, force) {
+  if (hmSyncP) return hmSyncP;
+  const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
+  if (!force && Date.now() - last < 45e3) return { ok: true, skipped: true, at: last };
+  hmSyncP = (async () => {
+    await setMeta(db, 'hm_sync_at', String(Date.now()));
+    const cases = (await sheetCases(env)).filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
+    await fillDistricts(db, cases); await checkPins(db, cases); await fillProvinces(db, cases);
+    const known = new Map(), ids = cases.map(c => String(c.id));
+    for (let i = 0; i < ids.length; i += 90) {
+      const part = ids.slice(i, i + 90), { results } = await db.prepare(`SELECT id,hmHash,status,volunteer,hmStatus,hmVolunteer,localAt FROM cases WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+      results.forEach(r => known.set(r.id, r));
+    }
+    const now = Date.now(), stmts = []; let inserted = 0, updated = 0;
+    for (const c of cases) {
+      const level = hmLevelCode(c.level), needs = (c.needs || []).join(', '), photos = JSON.stringify(c.photos || []), pin = c.pinCheck ? JSON.stringify(c.pinCheck) : '';
+      const vol = String(c.volunteer || '').replace(/^'/, '');
+      const data = [c.createdAt, c.updatedAt, c.status, vol, c.name, c.phone, c.notes, c.people, c.address, c.district, c.province, c.lat, c.lng, level, c.level, needs, c.org, c.pickedAt, c.doneAt, photos, pin, c.urgency];
+      const hash = fnv(JSON.stringify(data)), row = known.get(String(c.id));
+      if (row && row.hmHash === hash) continue;
+      const fields = 'createdAt=?,hmUpdatedAt=?,name=?,phone=?,notes=?,people=?,address=?,district=?,province=?,lat=?,lng=?,level=?,levelText=?,needs=?,org=?,pickedAt=?,doneAt=?,photos=?,pinCheck=?,urgency=?,src=?,hmHash=?,hmStatus=?,hmVolunteer=?';
+      const fv = [c.createdAt || now, c.updatedAt || null, clean(c.name, MAX.name), clean(c.phone, MAX.phone), clean(c.notes, MAX.notes), clampInt(c.people, 1, 99999, 1), clean(c.address, MAX.address),
+        clean(c.district, MAX.district), clean(c.province, 40), c.lat, c.lng, level, clean(c.level, 60), needs, clean(c.org, 80), c.pickedAt || null, c.doneAt || null, photos, pin, clampInt(c.urgency, 1, 3, 1), 'helpme', hash, c.status, clean(vol, MAX.volunteer)];
+      if (!row) {
+        stmts.push(db.prepare(`INSERT INTO cases (id,status,volunteer,updatedAt,token,${fields.replace(/=\?/g, '')}) VALUES (?,?,?,?,?,${fv.map(() => '?').join(',')})`)
+          .bind(String(c.id), c.status, clean(vol, MAX.volunteer), c.updatedAt || now, rand(16), ...fv)); inserted++;
+      } else {
+        // Help Me เปลี่ยนสถานะ/ทีมเอง และเปลี่ยนหลังจากที่ศูนย์แก้ล่าสุด → ใช้ค่าของ Help Me
+        const hmMoved = c.status !== row.hmStatus || clean(vol, MAX.volunteer) !== (row.hmVolunteer || '');
+        const takeHm = hmMoved && (!row.localAt || (c.updatedAt || now) >= row.localAt);
+        stmts.push(db.prepare(`UPDATE cases SET ${fields},status=?,volunteer=?,updatedAt=? WHERE id=?`)
+          .bind(...fv, takeHm ? c.status : row.status, takeHm ? clean(vol, MAX.volunteer) : row.volunteer, now, String(c.id))); updated++;
+      }
+    }
+    for (let i = 0; i < stmts.length; i += 50) await db.batch(stmts.slice(i, i + 50));
+    if (stmts.length) await bumpRev(db);
+    const out = { ok: true, total: cases.length, inserted, updated, unchanged: cases.length - inserted - updated, at: Date.now() };
+    await setMeta(db, 'hm_sync_result', JSON.stringify(out));
+    return out;
+  })().finally(() => { hmSyncP = null; });
+  return hmSyncP;
+}
+/* ---------- AI ดูรูปที่ผู้แจ้งส่งมา (Workers AI vision) → น้ำท่วมจริงไหม ลึกเท่าไร มีคนเสี่ยงอันตรายไหม ----------
+   ทำตอนซิงก์จาก cron (ไม่ทำระหว่างที่คนเปิดหน้า) ทีละ 4 เคสต่อรอบ เคสที่ยังไม่เสร็จก่อน · เก็บผลใน cases.photoAi (ตรวจใหม่เมื่อรูปเปลี่ยน) */
+const PHOTO_AI_PROMPT = 'This photo was sent by a person asking for flood rescue in Thailand. Look only at what is visible. ' +
+  'Answer ONLY JSON: {"flood":"yes|no|unclear","depth_cm":number|null,"inside_house":true|false,"danger":"high|medium|low","note":"<=12 words, Thai"}. ' +
+  'flood=yes only if standing flood water is clearly visible (not a wet road, puddle, river in its banks or reflection). depth_cm = water depth where people/houses are, estimated from legs, doors, cars, steps; null if unsure. ' +
+  'inside_house=true if water is inside a building. danger=high if water is about waist-deep or more, fast current, people/elderly/children/patients stranded, or water near electrical outlets; medium if knee-deep; low otherwise.';
+async function photoAiOne(env, id) {
+  const r = await fetch(`https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800`, { headers: UA, redirect: 'follow', signal: AbortSignal.timeout(15000) });
+  if (!r.ok || !String(r.headers.get('content-type') || '').startsWith('image/')) return null;
+  const buf = await r.arrayBuffer();
+  if (buf.byteLength < 2000 || buf.byteLength > 3_000_000) return null;
+  const out = await env.AI.run(CCTV_AI_MODEL, { messages: [{ role: 'user', content: [{ type: 'text', text: PHOTO_AI_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64(buf) } }] }], max_tokens: 140, temperature: 0 });
+  const raw = out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content));
+  let j = raw && typeof raw === 'object' ? raw : {};
+  if (typeof raw === 'string') { const m = raw.match(/\{[\s\S]*\}/); try { j = m ? JSON.parse(m[0]) : {}; } catch (e) {} }
+  let flood = ['yes', 'no', 'unclear'].includes(j.flood) ? j.flood : 'unclear'; const depth = Number(j.depth_cm);
+  if (flood === 'yes' && isFinite(depth) && depth > 0 && depth < 5) flood = 'unclear';
+  return { flood, depth: flood === 'yes' && isFinite(depth) && depth > 0 ? Math.min(400, Math.round(depth)) : null, inside: !!j.inside_house && flood === 'yes', danger: ['high', 'medium', 'low'].includes(j.danger) ? j.danger : 'low', note: clean(j.note, 80) };
+}
+async function photoAiPass(env, db, max = 4) {
+  if (!env.AI) return 0;
+  const { results } = await db.prepare("SELECT id,photos,photoAi,status FROM cases WHERE src='helpme' AND photos IS NOT NULL AND photos NOT IN ('','[]') ORDER BY CASE status WHEN 'done' THEN 1 ELSE 0 END, createdAt DESC").all();
+  let n = 0;
+  for (const c of results) {
+    if (n >= max) break;
+    let ids = []; try { ids = JSON.parse(c.photos || '[]').filter(x => /^[-\w]{25,}$/.test(x)).slice(0, 3); } catch (e) {}
+    if (!ids.length) continue;
+    const key = fnv(ids.join(',')); let prev = null; try { prev = c.photoAi ? JSON.parse(c.photoAi) : null; } catch (e) {}
+    if (prev && prev.key === key) continue;
+    n++;
+    const res = (await Promise.all(ids.map(id => photoAiOne(env, id).catch(() => null)))).filter(Boolean);
+    const yes = res.filter(x => x.flood === 'yes'), rank = { high: 3, medium: 2, low: 1 };
+    const sum = { key, at: Date.now(), n: res.length, flood: yes.length ? 'yes' : res.some(x => x.flood === 'no') ? 'no' : 'unclear',
+      depth: yes.reduce((m, x) => Math.max(m, x.depth || 0), 0) || null, inside: yes.some(x => x.inside),
+      danger: res.reduce((m, x) => rank[x.danger] > rank[m] ? x.danger : m, 'low'), note: (yes[0] || res[0] || {}).note || '' };
+    await db.prepare('UPDATE cases SET photoAi=? WHERE id=?').bind(JSON.stringify(sum), c.id).run();
+  }
+  if (n) await bumpRev(db);
+  return n;
+}
 async function helpmeCases(env, db) {
-  const cases = await sheetCases(env); await fillDistricts(db, cases); await checkPins(db, cases); await fillProvinces(db, cases);
-  const all = cases.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
-  return { ok: true, time: Date.now(), cases: all.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
-    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs, address: c.address, district: c.district, province: c.province || '', volunteer: c.volunteer,
+  try { await syncHelpme(env, db); } catch (e) {}   // ชีตล่ม/ช้า: ยังตอบจากฐานข้อมูลของเราได้
+  const { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all();
+  const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+  return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
+    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, photos: c.photos || [],
-    pinCheck: c.pinCheck || null,
-    level: hmLevelCode(c.level), levelText: c.level || '' })) };
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, photos: J(c.photos, []), pinCheck: J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {
   return cached('helpme-stats-v4', 60, async () => {
@@ -1574,7 +1664,7 @@ async function api(request, env) {
     switch (p.action) {
       case 'list': {
         const since = Number(p.since) || 0;
-        const { results } = await db.prepare('SELECT * FROM cases WHERE updatedAt>? ORDER BY createdAt').bind(since).all();
+        const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme' ORDER BY createdAt").bind(since).all(); // เคส Help Me ส่งผ่าน helpme_cases
         if (vol) { try { await fixOwnPins(db, results); } catch (e) {} }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
@@ -1593,6 +1683,7 @@ async function api(request, env) {
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
+      case 'hm_sync': try { const r = await syncHelpme(env, db, false); let ai = 0; try { ai = await photoAiPass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });

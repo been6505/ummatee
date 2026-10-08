@@ -226,17 +226,17 @@ function casesTab(V){
       <td><b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน${c.src==='hm'?' · Help Me':''}</small></td>
       <td>${esc(c.district?'เขต'+c.district:'')}<small>${esc(String(c.address||'').slice(0,80))}</small></td>
       <td class="nw">${c.status==='done'?'—':esc(waitTxt(c.createdAt))}</td>
-      <td>${c.src==='own'&&c.status!=='done'?`<select data-assign="${esc(c.id)}" aria-label="มอบทีม">${teamOpts(v)}</select>`:esc(v||'—')}<small>${esc(CST[c.status]||c.status)}</small></td>
-      <td class="act">${c.src==='own'&&c.status!=='done'?`<button type="button" class="btn ghost sm" data-done="${esc(c.id)}">เสร็จ</button>`:''}${hasPin(c)?`<a class="btn ghost sm" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" title="นำทางด้วย Google Maps"><i data-ic="nav"></i> นำทาง</a>`:''}<a class="btn ghost sm" href="${caseLink(c)}">เปิด</a></td></tr>`}).join('')
+      <td>${c.status!=='done'?`<select data-assign="${esc(c.id)}" aria-label="มอบทีม">${teamOpts(v)}</select>`:esc(v||'—')}<small>${esc(CST[c.status]||c.status)}</small></td>
+      <td class="act">${c.status!=='done'?`<button type="button" class="btn ghost sm" data-done="${esc(c.id)}">เสร็จ</button>`:''}${hasPin(c)?`<a class="btn ghost sm" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener" title="นำทางด้วย Google Maps"><i data-ic="nav"></i> นำทาง</a>`:''}<a class="btn ghost sm" href="${caseLink(c)}">เปิด</a></td></tr>`}).join('')
     :`<tr><td colspan="7" class="muted">ไม่มีเคส${V.r?' ในพื้นที่ของ War Room นี้ (ตั้งเขต/รัศมีได้ที่แท็บโปรไฟล์)':''}</td></tr>`;
 }
 $('#c-st').addEventListener('click',e=>{const b=e.target.closest('[data-st]');if(!b)return;W.cst=b.dataset.st;casesTab(view())});
 $('#c-q').addEventListener('input',e=>{W.cq=e.target.value;casesTab(view())});
-$('#c-body').addEventListener('change',async e=>{const s=e.target.closest('[data-assign]');if(!s)return;const c=W.cases.find(x=>x.src==='own'&&String(x.id)===s.dataset.assign);if(!c)return;
+$('#c-body').addEventListener('change',async e=>{const s=e.target.closest('[data-assign]');if(!s)return;const c=W.cases.find(x=>String(x.id)===s.dataset.assign);if(!c)return;
   const team=s.value;s.disabled=true;
   try{const r=await apiPost({action:'update',id:c.id,status:team?'going':'open',volunteer:team});if(r.ok){c.volunteer=team;c.status=team?'going':'open';toast(team?`มอบเคสให้ ${team} แล้ว`:'ยกเลิกการมอบทีมแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}finally{s.disabled=false;render()}});
-$('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>x.src==='own'&&String(x.id)===b.dataset.done);if(!c||!confirm('ปิดเคสนี้ว่าช่วยเสร็จแล้ว?'))return;
+$('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('ปิดเคสนี้ว่าช่วยเสร็จแล้ว?'))return;
   b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c)});if(r.ok){c.status='done';toast('ปิดเคสแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
 /* ---------- แท็บ ทีม ---------- */

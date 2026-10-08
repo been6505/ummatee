@@ -9,5 +9,6 @@
     { "pattern": "admin.helpme4u.com", "custom_domain": true },
     { "pattern": "center.helpme4u.com", "custom_domain": true },
     { "pattern": "central.helpme4u.com", "custom_domain": true }
-  ]
+  ],
+  "triggers": { "crons": ["* * * * *"] }
 }

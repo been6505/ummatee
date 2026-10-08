@@ -14,6 +14,8 @@ const isCenterPath = p => ['/api', '/admin', '/center', '/central', '/team', '/c
 const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 
 export default {
+  // ซิงก์เคส Help Me (Google Sheet) เข้าฐานข้อมูล CENTRAL ทุก 1 นาที + ให้ AI ตรวจรูปผู้แจ้งทีละไม่กี่เคส
+  async scheduled(event, env, ctx) { ctx.waitUntil(fetch(ADMIN + '/api?action=hm_sync', { headers: { 'user-agent': 'helpme4u-router-cron' } }).catch(() => {})); },
   async fetch(req) {
     const url = new URL(req.url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }

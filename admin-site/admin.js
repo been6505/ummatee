@@ -48,6 +48,7 @@ function setCases(r){A.own=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.nee
 const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
+const apiId=id=>isHM(id)?String(id).slice(3):id; // เคส Help Me อยู่ในฐานข้อมูลเราด้วยรหัสเดิม (ซิงก์ทุก 1 นาที) จึงแก้สถานะ/ทีม/ถุงได้
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
     if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render()}
@@ -160,10 +161,10 @@ function renderList(list){
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}" title="ระดับที่ระบบตัดสินจากข้อมูลผู้แจ้ง + ข้อมูลระบบ">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
-      <td data-l="สถานะ">${c.hm?`<span class="st st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</span> <small class="hm-tag">Help Me</small>`:`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}</td>
+      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
-      <td data-l="ถุงยังชีพ" class="bag">${c.hm?'<small>—</small>':`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
+      <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
       <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?(pinWarn(c)?'<small class="warn">หมุดอาจผิด</small>':c.pinCheck?'<small class="muted">หมุดปรับจากที่อยู่</small>':''):'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
       <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
@@ -176,12 +177,12 @@ $('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');
 $('#list').addEventListener('focusout',e=>{if(e.target.matches('.bag-in')&&A.pendingList){A.pendingList=false;setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('.bag-in'))render()},0)}});
 $('#list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.bag-in'))e.target.blur()});
 /* ---------- ถุงยังชีพ ---------- */
-async function saveBags(id,val,inp){if(isHM(id))return;
+async function saveBags(id,val,inp){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   const v=String(val).trim()===''?'':Math.max(0,Math.min(9999,Math.round(Number(val)||0)));
   if(String(v)===String(c.bags==null?'':c.bags))return;
   const prev=c.bags;c.bags=v;if(inp)inp.disabled=true;
-  try{const r=await post({action:'update',key:A.key,id,status:c.status,volunteer:c.volunteer||'',bags:v,bagsOnly:true});
+  try{const r=await post({action:'update',key:A.key,id:apiId(id),status:c.status,volunteer:c.volunteer||'',bags:v,bagsOnly:true});
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
     if(!r.bagsSupported){c.bags=prev;toast('ยังบันทึกถุงยังชีพไม่ได้ ต้องอัปเดต Code.gs ก่อน');render();return}
     toast(v===''?`เคส #${id} · ล้างจำนวนถุงแล้ว`:`เคส #${id} · ถุงยังชีพ ${v} ถุง`,true);render()}
@@ -189,13 +190,13 @@ async function saveBags(id,val,inp){if(isHM(id))return;
   finally{if(inp)inp.disabled=false}}
 
 /* ---------- เปลี่ยนสถานะ ---------- */
-async function changeStatus(id,status,sel,team){if(isHM(id)){toast('เคส Help Me เปลี่ยนสถานะที่ Help Me');return}
+async function changeStatus(id,status,sel,team){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   if(status===c.status&&!team)return;
   if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
   if(team)store.set('uh_team',team,true);
   const prev={status:c.status,volunteer:c.volunteer};c.status=status;if(status==='open')c.volunteer='';else if(team)c.volunteer=team;render();
-  try{const r=await post({action:'update',key:A.key,id,status,volunteer:team||c.volunteer||''});
+  try{const r=await post({action:'update',key:A.key,id:apiId(id),status,volunteer:team||c.volunteer||''});
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
     toast(`เคส #${id} → ${ST[status]}`,true)}
   catch(e){Object.assign(c,prev);render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
@@ -234,7 +235,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-copyll]');
 async function saveCctv(id,val){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   const prev=c.cctv,now=new Date();c.cctv=val?val+'|'+now.toLocaleDateString('sv-SE')+' '+now.toTimeString().slice(0,5):'';render();
-  try{const r=await post({action:'update',key:A.key,id,status:c.status,volunteer:c.volunteer||'',cctv:val,metaOnly:true});
+  try{const r=await post({action:'update',key:A.key,id:apiId(id),status:c.status,volunteer:c.volunteer||'',cctv:val,metaOnly:true});
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
     if(!r.bagsSupported){c.cctv=prev;render();toast('ยังบันทึกผลกล้องไม่ได้ ต้องอัปเดต Code.gs ก่อน');return}
     toast(val?`บันทึกผลกล้องแล้ว · ${vr(c).result.t}`:'ล้างผลกล้องแล้ว',true)}
@@ -278,15 +279,13 @@ function renderDrawer(){
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
       <button class="btn ghost" id="d-copy">คัดลอกข้อมูลเคส</button>
     </div>
-    ${c.hm?`<fieldset class="d-status"><legend>สถานะ (ข้อมูลจาก Help Me)</legend>
-      <p class="small">เคสนี้มาจาก Google Sheet ของ Help Me${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} — เปลี่ยนสถานะ/รับเคสที่ Help Me แล้วหน้านี้จะอัปเดตเอง</p>
-      <a class="btn primary" target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดเคสใน Help Me ↗</a></fieldset>`:`<fieldset class="d-status"><legend>เปลี่ยนสถานะ</legend>
+    ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}${`<fieldset class="d-status"><legend>เปลี่ยนสถานะ</legend>
       <input id="d-team" placeholder="ชื่อทีม / อาสา" value="${esc(c.volunteer||store.get('uh_team'))}" maxlength="60">
       <div class="d-st-btns">${Object.entries(ST).map(([k,v])=>`<button class="btn ${c.status===k?'primary':'ghost'}" data-dst="${k}">${v}</button>`).join('')}</div>
     </fieldset>`}
     </div></div>`;
   $('#d-close').onclick=closeDrawer;
-  d.querySelectorAll('[data-cctv]').forEach(b=>{if(c.hm)b.remove();else b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
+  d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
   if(keep){const t=d.querySelector('#d-team');if(t&&keep.team!=null)t.value=keep.team;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}

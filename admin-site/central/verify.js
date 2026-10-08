@@ -100,13 +100,23 @@ const VERIFY=(()=>{
     const cctv=parseCctv(c.cctv);
     const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],vulCrit,deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
     const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
+    const photoEv=()=>{
+    // 4.5) AI ดูรูปที่ผู้แจ้งส่งมา (น้ำท่วมจริงไหม ลึกเท่าไร อันตรายไหม) — ระบบตรวจภาพ จึงนับเป็นคะแนนฝั่งระบบ (สูงสุด 20)
+    const pa=c.photoAi;
+    if(pa&&pa.n){if(pa.flood==='yes'){const d=pa.depth||0,pts=Math.min(20,(d>=100?18:d>=50?14:d>=20?9:5)+(pa.inside?2:0)+(pa.danger==='high'?3:0));out.E+=pts;out.photoFlood=d||10;
+        out.ev.push(`AI ดูรูปผู้แจ้ง ${pa.n} รูป: เห็นน้ำท่วม${d?` ลึก ~${d} ซม.`:''}${pa.inside?' · น้ำเข้าบ้าน':''}${pa.danger==='high'?' · อันตรายสูง':''}${pa.note?' · '+pa.note:''}`);
+        chip(`รูป: น้ำ${d?' ~'+d+' ซม.':'ท่วม'}${pa.inside?' ในบ้าน':''}`,d>=50||pa.danger==='high'?'bad':'warn')}
+      else if(pa.flood==='no'){out.ev.push(`AI ดูรูปผู้แจ้ง ${pa.n} รูป: ไม่เห็นน้ำท่วมในภาพ`);chip('รูป: ไม่เห็นน้ำ','na')}
+      else out.ev.push(`AI ดูรูปผู้แจ้ง ${pa.n} รูป: ภาพไม่ชัดพอจะบอกได้`)}
+    else if(Array.isArray(c.photos)&&c.photos.length)out.ev.push('รูปจากผู้แจ้ง: รอ AI ตรวจภาพ');
+    };
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
     // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
     const addrTxt=[c.address,c.district].filter(Boolean).join(' ').replace(/[\s\-–—.,]/g,''),clearAddr=addrTxt.length>=6;
     if(!hasPin||!clearAddr){out.result=RESULT.nopin;
       if(!hasPin){out.ev.push('ไม่มีพิกัด จึงเทียบกับแผนที่น้ำท่วมไม่ได้');chip('ไม่มีหมุด','na')}
       if(!clearAddr){out.ev.push('ไม่มีที่อยู่ / จุดสังเกตที่ชัดเจน ทีมหาบ้านไม่เจอ');chip('ที่อยู่ไม่ชัด','na')}
-      if(!hasPin){if(cctv)applyCctv(out,reporterSevere);return finish(out,reporterSevere,false)}}
+      if(!hasPin){photoEv();if(cctv)applyCctv(out,reporterSevere);return finish(out,reporterSevere,false)}}
     const lat=+c.lat,lng=+c.lng;
     // 2) ถนนน้ำท่วมจาก Floodboard (ใกล้สุดใน 800 ม.)
     let near=null;F.roads.forEach(r=>{const d=distToLines(lat,lng,r.lines);if(d<=800&&(!near||d<near.d))near={...r,d}});
@@ -136,6 +146,7 @@ const VERIFY=(()=>{
       else if(sat.dM!=null&&sat.dM<=1000){out.E+=6;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)} · ${sat.near} จุดใน 500 ม.`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'warn')}
       else{out.ev.push('ดาวเทียม GISTDA (7 วัน): ไม่พบน้ำท่วมใน 1 กม. · ในเมือง/ใต้หลังคาดาวเทียมอาจมองไม่เห็น');chip('ดาวเทียม: ไม่พบ','na')}}
     else if(ev2&&!sat)out.ev.push('ดาวเทียม GISTDA: ยังไม่ได้เปิดใช้');
+    photoEv();
     // 5) ฝน: ปริมาณฝนรายจุด (Open-Meteo) + สถานีวัดฝนใกล้สุด (ThaiWater ≤ 10 กม.)
     const rain=ev2&&ev2.rain,g=nearestGauge(lat,lng),r24=Math.max(rain?rain.h24:0,g?g.h24:0);
     if(rain||g){const pts=r24>=90?12:r24>=50?8:r24>=20?4:0;out.E+=pts;
@@ -143,14 +154,14 @@ const VERIFY=(()=>{
       if(r24>=20)chip(`ฝน 24 ชม. ${Math.round(r24)} มม.`,r24>=50?'bad':'warn');
       if(rain&&rain.next3>=10){out.E+=4;chip(`ฝนหนักใน 3 ชม. (${rain.next3} มม.)`,'bad')}else if(rain&&rain.next3>=5)chip('ฝนจะตกใน 3 ชม.','warn')}
     if(sensorClear&&!active.length&&!near)out.sensorClear=true;
-    if(!near&&!active.length&&!cctv&&!sn&&!(sat&&(sat.inside||sat.dM<=1000))){out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');chip(F.loaded?'ไม่มีข้อมูลใกล้จุด':'กำลังโหลดข้อมูล','na')}
+    if(!near&&!active.length&&!cctv&&!sn&&!(sat&&(sat.inside||sat.dM<=1000))&&!(c.photoAi&&c.photoAi.flood==='yes')){out.ev.push(F.loaded?'ไม่พบข้อมูลน้ำท่วมจาก Floodboard ใกล้จุดนี้ (อาจยังไม่มีคนรายงาน ไม่ได้แปลว่าไม่ท่วม)':'ยังโหลดข้อมูลน้ำท่วมไม่ได้');chip(F.loaded?'ไม่มีข้อมูลใกล้จุด':'กำลังโหลดข้อมูล','na')}
     return finish(out,reporterSevere,recentlyCleared);
   }
   function applyCctv(out,severe){if(out.cctv.s==='flood'){out.E+=25;out.ev.push('กล้อง CCTV: เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: เห็นน้ำ',k:'bad'})}else{out.E-=20;out.ev.push('กล้อง CCTV: ไม่เห็นน้ำท่วม'+(out.cctv.t?` (ตรวจ ${out.cctv.t})`:''));out.chips.unshift({t:'กล้อง: ไม่เห็นน้ำ',k:'ok'})}}
   /* ระดับที่ระบบตัดสิน (1 ปกติ · 2 เร่งด่วน · 3 วิกฤต) */
   function decide(out){const strong=out.E>=25,some=out.E>=10,sat=out.satInside,cam=out.cctv&&out.cctv.s==='flood',contra=out.result===RESULT.conflict;
     let lv=1,why='';
-    if(!contra&&(out.score>=65&&strong||cam&&out.veryDeep||sat&&out.veryDeep||out.vulCrit&&out.deep&&strong)){lv=3;why='ข้อมูลระบบยืนยันว่าน้ำท่วมรุนแรง'+(out.vulCrit?' และมีผู้ป่วยติดเตียง/ออกซิเจน/ฟอกไต':'')}
+    if(!contra&&(out.score>=65&&strong||cam&&out.veryDeep||sat&&out.veryDeep||out.vulCrit&&out.deep&&strong||out.photoFlood>=80&&out.E>=20)){lv=3;why='ข้อมูลระบบยืนยันว่าน้ำท่วมรุนแรง'+(out.vulCrit?' และมีผู้ป่วยติดเตียง/ออกซิเจน/ฟอกไต':'')}
     else if(out.score>=45&&some||strong){lv=2;why='มีข้อมูลระบบยืนยันว่ามีน้ำท่วมใกล้จุด'}
     else if(out.veryDeep||out.vulCrit||out.R>=24){lv=2;why='ข้อมูลผู้แจ้งบ่งว่ารุนแรง แต่ระบบยังยืนยันไม่ได้ · โทรยืนยันก่อน'}
     else why='ยังไม่มีข้อมูลยืนยันความรุนแรง';
@@ -170,7 +181,7 @@ const VERIFY=(()=>{
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
   /* ระดับความเร่งด่วนที่ระบบตัดสิน (ใช้แทน urgency ที่ผู้แจ้งเลือก) · แคชตามข้อมูลที่ใช้คำนวณ */
   const LC=new Map();
-  function level(c){const k=[c.id,F.loaded,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
+  function level(c){const k=[c.id,F.loaded,c.photoAi&&c.photoAi.at,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
     const v=assess(c).level||1;LC.set(c.id,{k,v});return v}
   const VERIFY={F,load,assess,level,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

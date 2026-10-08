@@ -26,7 +26,7 @@ const CHAT=(()=>{
         <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><span class="chat-tw"><b class="chat-title">แชทกับทีม</b><small class="chat-sub" hidden></small></span><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
         <div class="chat-list"></div>
         <div class="chat-msgs" hidden aria-live="polite"></div>
-        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
+        <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-draft" type="button" title="ให้ Hermes ร่างคำตอบ (แก้ก่อนส่งได้)" hidden>✦ ร่าง</button><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
       </section>`;
     document.body.append(root);
     const al=document.createElement('div');al.className='alert-stack';al.setAttribute('aria-live','assertive');document.body.append(al);S.al=al;
@@ -38,12 +38,14 @@ const CHAT=(()=>{
     root.querySelector('.chat-x').onclick=()=>toggle(false);
     root.querySelector('.chat-back').onclick=()=>{S.team=null;view()};
     root.querySelector('.chat-list').onclick=e=>{const b=e.target.closest('[data-chat-team]');if(b)openTeam(b.dataset.chatTeam)};
+    root.querySelector('.chat-draft').onclick=async e=>{const b=e.currentTarget,i=root.querySelector('.chat-in');if(!S.team||typeof HERMES==='undefined')return;b.disabled=true;const old=b.textContent;b.textContent='กำลังร่าง…';
+      try{i.value=await HERMES.draft(S.team,S.msgs);i.focus()}catch(err){alert(err.message||'ร่างไม่สำเร็จ')}finally{b.disabled=false;b.textContent=old}};
     root.querySelector('.chat-form').onsubmit=async e=>{e.preventDefault();const i=root.querySelector('.chat-in'),t=i.value.trim();if(!t||!S.team)return;i.value='';
       S.msgs.push({n:0,sender:'hq',name:me(),text:t,at:Date.now(),pending:true});drawMsgs();
       try{const r=await post({action:'chat_send',team:S.team,from:'hq',name:me(),text:t});if(!r.ok)throw 0}catch(err){i.value=t}poll(true)}}
   function toggle(on){S.open=on==null?!S.open:on;root.querySelector('.chat-win').hidden=!S.open;root.querySelector('.chat-fab').setAttribute('aria-expanded',String(S.open));if(S.open){view();poll(true)}schedule()}
   function view(){const inTeam=!!S.team;root.querySelector('.chat-list').hidden=inTeam;root.querySelector('.chat-msgs').hidden=!inTeam;root.querySelector('.chat-form').hidden=!inTeam;
-    root.querySelector('.chat-back').hidden=!inTeam;root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
+    root.querySelector('.chat-back').hidden=!inTeam;root.querySelector('.chat-draft').hidden=!(inTeam&&typeof LOCALAI!=='undefined'&&LOCALAI.on());root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
     share();
     if(inTeam){drawMsgs();setTimeout(()=>root.querySelector('.chat-in').focus(),30)}else drawList()}
   function share(){const sh=root.querySelector('.chat-share'),tk=S.team&&(S.roster.find(r=>r.name===S.team)||{}).token;sh.hidden=!tk;if(tk)sh.href='/team/?id='+encodeURIComponent(tk)}

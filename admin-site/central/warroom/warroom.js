@@ -476,6 +476,7 @@ function chatScope(V){if(typeof CHAT==='undefined'||!CHAT.setScope)return;const 
   const info=name=>{const t=W.roster.find(x=>x.name===name),cs=V.cases.filter(c=>c.status==='going'&&vol(c)===name),l=W.live.find(x=>x.team===name),on=l&&mins(l.updatedAt)<10;
     if(!t&&!cs.length)return null;const field=cs.length>0||(t&&t.status==='out');
     return {field,tag:field?'ลงพื้นที่':(t&&ST[t.status])||'ทีม',text:[field?`ลงพื้นที่${cs.length?' · '+cs.length+' เคส':''}`:(t&&ST[t.status])||'',cs[0]?(cs[0].needs||[]).slice(0,2).join(', ')+(cs[0].district?' · '+cs[0].district:''):'',on?'ออนไลน์':''].filter(Boolean).join(' · ')}};
+  if(typeof HERMES!=='undefined')HERMES.setScope(r?{title:r.name,cases:V.cases,roster:V.roster,live:V.live}:null);
   CHAT.setScope({title:r?'แชททีมลงพื้นที่ · '+r.name:'แชททีมลงพื้นที่',teams:r?V.roster.map(t=>t.name):null,info,
     note:r?`ทีมของ ${r.name} · ${V.roster.filter(t=>(info(t.name)||{}).field).length} ทีมกำลังลงพื้นที่`:'ทุกทีม · ทีมที่กำลังลงพื้นที่ขึ้นก่อน'})}
 
@@ -523,3 +524,7 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
 
 $('#doc-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('0989406537');toast('คัดลอกเบอร์แล้ว',true)}catch(e){toast('คัดลอกไม่ได้ · 098-940-6537')}});
 $('#st-new').onclick=()=>roomForm(null);
+
+/* ถาม Hermes (Local AI) · หลังยืนยันการกระทำ โหลดข้อมูลใหม่ */
+$('#wr-ai').onclick=()=>{if(typeof HERMES!=='undefined')HERMES.open()};
+window.addEventListener('hermes:done',async()=>{await Promise.all([loadCases(),loadTeams()]);render()});

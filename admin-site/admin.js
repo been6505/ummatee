@@ -333,3 +333,5 @@ if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}els
 
 /* ลิ้นชักเคสวาดใหม่ทุกครั้งที่ข้อมูลอัปเดต: หยุดสตรีมเดิมแล้วเริ่มกล้องในลิ้นชักใหม่ */
 {const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}
+
+window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});

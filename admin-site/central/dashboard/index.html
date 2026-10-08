@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="./dashboard.css?v=116">
 <link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=34">
+<link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=15">
 <script src="../icons.js?v=6"></script>
 </head>
@@ -130,8 +130,10 @@
 <script src="../maplayers.js?v=7"></script>
 <script src="../summary.js?v=1"></script>
 <script src="./dashboard.js?v=40"></script>
-<script src="../chat.js?v=6"></script>
+<script src="../chat.js?v=7"></script>
 <script src="../feedback.js?v=1"></script>
+<script src="../localai.js?v=1"></script>
+<script src="../hermes.js?v=1"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 <script>/* กรอบพื้นที่มอบแล้ว: โหลดเมื่อใกล้ถึง · สูงเกือบเต็มจอ เลื่อนดูในกรอบ · #covered เลื่อนมาที่ส่วนนี้ */

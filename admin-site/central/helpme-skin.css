@@ -420,3 +420,5 @@ html.dash[data-theme="dark"] .chat-row{color:var(--ink)}html.dash[data-theme="da
 /* หน้าต่างแชทเลื่อนลงมาทับปุ่มแชท (ปิดด้วยปุ่ม × บนหัวแชท) */
 .chat-fab[aria-expanded=true]{visibility:hidden}
 @media(min-width:761px){.chat-win{bottom:18px}}
+/* เปิดแชท/Hermes อยู่: ซ่อนแถบประกาศชั่วคราว ไม่ให้บังช่องพิมพ์ */
+body:has(.chat-win:not([hidden])) #hmbc,body:has(.hz-win:not([hidden])) #hmbc{display:none!important}

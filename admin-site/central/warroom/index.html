@@ -13,11 +13,11 @@
 <link rel="stylesheet" href="../../admin.css?v=7">
 <link rel="stylesheet" href="../pages.css?v=14">
 <link rel="stylesheet" href="../theme.css?v=2">
-<link rel="stylesheet" href="../helpme-skin.css?v=34">
+<link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=15">
 <link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="./wr-map.css?v=2">
-<link rel="stylesheet" href="./warroom.css?v=24">
+<link rel="stylesheet" href="./warroom.css?v=25">
 <script src="../icons.js?v=6"></script>
 </head>
 <body>
@@ -40,7 +40,7 @@
     <div class="top-r"><span class="sync" id="sync"></span><span class="wr-clock" id="clock"></span><button class="btn ghost sm" id="fs" type="button"><i data-ic="expand"></i> เต็มจอ</button><button class="btn ghost sm" id="refresh"><i data-ic="refresh"></i> โหลดใหม่</button><button class="btn ghost sm theme-btn" id="logout" type="button" aria-label="ออกจากระบบ" title="ออกจากระบบ"><i data-ic="logout"></i></button></div>
   </header>
   <main class="wrap wr" id="main">
-    <div class="wr-rooms"><div class="wr-roomtabs" id="rooms" role="tablist" aria-label="เลือก War Room"></div><button class="btn primary sm" id="wr-new" type="button">+ สร้างศูนย์จังหวัด / War Room</button></div>
+    <div class="wr-rooms"><div class="wr-roomtabs" id="rooms" role="tablist" aria-label="เลือก War Room"></div><button class="btn sm wr-ai" id="wr-ai" type="button">✦ ถาม Hermes</button><button class="btn primary sm" id="wr-new" type="button">+ สร้างศูนย์จังหวัด / War Room</button></div>
     <div class="wr-sub" id="subtabs" role="tablist" aria-label="เมนู War Room">
       <button type="button" data-tab="struct" aria-selected="false"><i data-ic="users"></i> จัดการ War Room</button><button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
     </div>
@@ -122,10 +122,12 @@
 <script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=11"></script>
 <script src="../summary.js?v=1"></script>
-<script src="./warroom.js?v=33"></script>
+<script src="./warroom.js?v=34"></script>
 <script src="../theme-toggle.js?v=2"></script>
-<script src="../chat.js?v=6"></script>
+<script src="../chat.js?v=7"></script>
 <script src="../feedback.js?v=1"></script>
+<script src="../localai.js?v=1"></script>
+<script src="../hermes.js?v=1"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 </body>

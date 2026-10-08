@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="./leads.css?v=2">
 <script>/* หน้านี้อยู่ในแท็บ "จัดการเคส" แล้ว (admin.html#leads) — เปิดตรง ๆ จะพาไปที่นั่น */
 if(!/[?&]embed=1/.test(location.search))location.replace('../../central.html#leads');else document.documentElement.classList.add('embed')</script>
-<link rel="stylesheet" href="../helpme-skin.css?v=34">
+<link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=15">
 <script src="../icons.js?v=6"></script>
 </head>
@@ -70,8 +70,10 @@ if(!/[?&]embed=1/.test(location.search))location.replace('../../central.html#lea
 <script src="../teamcall.js?v=5"></script>
 <script src="./leads.js?v=9"></script>
 <script src="../theme-toggle.js?v=2"></script>
-<script src="../chat.js?v=6"></script>
+<script src="../chat.js?v=7"></script>
 <script src="../feedback.js?v=1"></script>
+<script src="../localai.js?v=1"></script>
+<script src="../hermes.js?v=1"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

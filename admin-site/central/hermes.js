@@ -129,8 +129,8 @@ const HERMES=(()=>{
     if(a.type==='message'){const r=await post({action:'chat_send',team:a.team,from:'hq',name:me(),text:a.text});if(!r.ok)throw new Error(r.error||'chat')}}
 
   /* ---------- หน้าต่าง Hermes ---------- */
-  const CSS=`.hz-fab{position:fixed;right:18px;bottom:86px;z-index:2490;height:46px;min-width:46px;padding:0 14px;border-radius:999px;border:0;cursor:pointer;display:flex;align-items:center;gap:6px;
-      font:700 14px/1 inherit;color:#fff;background:linear-gradient(135deg,#17181C,#3a2c6e);box-shadow:0 8px 22px rgba(22,27,61,.3)}.hz-fab svg{width:20px;height:20px}
+  const CSS=`.hz-fab{position:fixed;right:18px;bottom:86px;z-index:2490;width:52px;height:52px;padding:0;justify-content:center;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;gap:6px;
+      font:700 14px/1 inherit;color:#fff;background:linear-gradient(135deg,#17181C,#3a2c6e);box-shadow:0 8px 22px rgba(22,27,61,.3)}.hz-fab svg{width:24px;height:24px}
     .hz-win{position:fixed;right:18px;bottom:18px;z-index:2600;width:min(440px,calc(100vw - 24px));height:min(640px,calc(100vh - 110px));background:var(--surface,#fff);color:var(--ink);border-radius:24px;box-shadow:0 18px 48px rgba(22,27,61,.28);display:flex;flex-direction:column;overflow:hidden}
     .hz-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line,#ececf0)}.hz-h b{font-size:16px}.hz-h small{color:var(--muted);font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .hz-h a,.hz-h button{border:0;background:var(--bg,#f2f2f5);border-radius:50%;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:inherit}.hz-h svg{width:17px;height:17px}
@@ -148,11 +148,11 @@ const HERMES=(()=>{
     .hz-f button{border:0;border-radius:999px;padding:0 16px;font:700 14px inherit;background:#17181C;color:#fff;cursor:pointer}
     .hz-sum{margin-left:8px;border:0;border-radius:999px;padding:4px 10px;font:700 12.5px inherit;background:#efe8fb;color:#5B2BA8;cursor:pointer;vertical-align:middle}
     .chat-draft{flex:none;border:0;border-radius:999px;padding:0 12px;font:700 13px inherit;background:#efe8fb;color:#5B2BA8;cursor:pointer}
-    @media(max-width:760px){.hz-fab{bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b,0px));right:14px}.hz-win{left:8px;right:8px;width:auto;bottom:calc(var(--tab-h,64px) + 24px + var(--safe-b,0px));height:min(70vh,calc(100vh - 150px))}}
+    @media(max-width:760px){.hz-fab{bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b,0px));right:14px;width:50px;height:50px}.hz-win{left:8px;right:8px;width:auto;bottom:calc(var(--tab-h,64px) + 24px + var(--safe-b,0px));height:min(70vh,calc(100vh - 150px))}}
     body.map-fs .hz-fab,body.noscroll .hz-fab{display:none}`;
   const SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>';
   function build(){if(S.el||!KEY())return;const st=document.createElement('style');st.textContent=CSS;document.head.append(st);
-    const fab=document.createElement('button');fab.type='button';fab.className='hz-fab';fab.innerHTML=SPARK+'<span>AI</span>';fab.title='AI HELP';fab.onclick=()=>toggle();document.body.append(fab);
+    const fab=document.createElement('button');fab.type='button';fab.className='hz-fab';fab.innerHTML=SPARK;fab.title='AI HELP';fab.setAttribute('aria-label','AI HELP');fab.onclick=()=>toggle();document.body.append(fab);
     const w=document.createElement('section');w.className='hz-win';w.hidden=true;w.setAttribute('aria-label','AI HELP');
     w.innerHTML=`<header class="hz-h"><i class="hz-dot"></i><b>AI HELP</b><small class="hz-sc"></small><a href="${location.pathname.includes('/central/')?'../settings/':'./central/settings/'}" title="ตั้งค่า Local AI">${I('settings')}</a><button type="button" class="hz-x" aria-label="ปิด">${I('close')}</button></header>
       <div class="hz-chips"><button data-q="sum">สรุปสถานการณ์</button><button data-q="plan">จัดเคสให้ทีม</button><button data-m="near">กลุ่มเคสใกล้กัน</button><button data-m="dup">หาเคสซ้ำ</button><button data-m="stock">เคส ↔ สต็อก</button><button data-q="first">เคสไหนก่อน</button><button data-q="msg">ร่างข้อความถึงทีม</button></div>

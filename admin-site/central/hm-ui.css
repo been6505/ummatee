@@ -154,3 +154,9 @@ h1,h2,h3{letter-spacing:-.01em}
 :root:not([data-theme="dark"]) .st-open{background:var(--open-tint)!important;color:var(--open)!important}
 :root:not([data-theme="dark"]) .st-going{background:var(--going-tint)!important;color:var(--going-ink)!important}
 :root:not([data-theme="dark"]) .st-done{background:var(--ok-tint)!important;color:var(--ok-ink)!important}
+/* พื้นที่มอบแล้ว (มือถือ): ชื่อองค์กรแถวเดียว เลื่อนไปด้านข้าง */
+@media(max-width:760px){
+  .cv-tools #orgs{flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-radius:999px!important;flex:1 1 100%;min-width:0}
+  .cv-tools #orgs::-webkit-scrollbar{display:none}
+  .cv-tools #orgs button{flex:none!important;white-space:nowrap}
+}

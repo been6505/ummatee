@@ -160,3 +160,7 @@ h1,h2,h3{letter-spacing:-.01em}
   .cv-tools #orgs::-webkit-scrollbar{display:none}
   .cv-tools #orgs button{flex:none!important;white-space:nowrap}
 }
+/* แผนที่ไม่ทะลุหัวเว็บ/แถบเมนู: ให้แต่ละแผนที่เป็นชั้นของตัวเอง (Leaflet ใช้ z-index 400–1000 ภายใน) */
+.leaflet-container{isolation:isolate;z-index:0}
+.top{z-index:1300!important}
+.tabs{z-index:1400!important}

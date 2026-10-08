@@ -75,7 +75,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -124,6 +124,7 @@ async function bumpRev(db) { await db.prepare("INSERT INTO meta (k,v) VALUES ('r
 const km = (a, b, c, d) => { const R = 6371, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
+const aiText = out => { if (!out) return ''; if (typeof out.response === 'string') return out.response; if (out.response && typeof out.response === 'object') return JSON.stringify(out.response); const m = out.choices && out.choices[0] && out.choices[0].message; return m && typeof m.content === 'string' ? m.content : ''; };
 const noPin = r => r.lat == null || r.lat === '' || !Number(r.lat);
 function outCase(r, full) {
   const o = { id: r.id, createdAt: r.createdAt, status: r.status, urgency: r.urgency, name: r.name || '', phone: r.phone || '', district: r.district || '',
@@ -198,6 +199,32 @@ async function geoLookup(q, prov, must = []) {
   } catch (e) {}
   return null;
 }
+/* AI อ่านที่อยู่ที่กำกวม (ชื่อมัสยิด/หมู่บ้าน/ซอย/คลอง สะกดผิด เขียนติดกัน) → จังหวัด/อำเภอ/ตำบล + คำค้น แล้วค้นหมุด
+   ยอมรับเฉพาะผลที่อยู่ในจังหวัดที่ AI ระบุ (และอำเภอ/ตำบลตรงถ้ามี) · AI ไม่มั่นใจ = ไม่ปักหมุด */
+const AI_GEO = false;
+async function aiGeo(env, c) {
+  if (!env.AI) return null;
+  let j = null;
+  try {
+    const out = await env.AI.run(HERMES_MODELS[0], { messages: [
+      { role: 'system', content: 'คุณเป็นผู้เชี่ยวชาญภูมิศาสตร์ประเทศไทย อ่านที่อยู่ภาษาไทยที่เขียนไม่ครบ/สะกดผิด แล้วตอบเป็น JSON อย่างเดียว: {"province":"ชื่อจังหวัดเต็ม","amphoe":"อำเภอหรือเขต (ไม่มีคำนำหน้า)","tambon":"ตำบลหรือแขวง (ไม่มีคำนำหน้า)","place":"ชื่อสถานที่สำคัญ/หมู่บ้าน/มัสยิด/วัด ถ้ามี","road":"ถนนหรือซอย ถ้ามี","queries":["คำค้นแผนที่ 1-3 แบบ เรียงจากละเอียดไปกว้าง"],"confidence":0-100} ถ้าไม่รู้ให้เว้นว่าง ห้ามเดามั่ว' },
+      { role: 'user', content: `ที่อยู่: ${c.address}\nเขต/อำเภอที่ระบบรู้: ${c.district || '-'}\nจังหวัดที่ระบบรู้: ${c.province || '-'}` }], max_tokens: 300, temperature: 0 });
+    const t = aiText(out); const m = t.match(/\{[\s\S]*\}/); j = m ? JSON.parse(m[0]) : null;
+  } catch (e) { return null; }
+  if (!j || (Number(j.confidence) || 0) < 50 || !j.province) return null;
+  const prov = String(j.province).replace(/^จังหวัด/, '').replace(/^กรุงเทพฯ?$|^กทม$/, 'กรุงเทพมหานคร').trim();
+  if (c.province && !String(c.province).includes(prov) && !prov.includes(String(c.province))) return null; // ขัดกับจังหวัดที่รู้อยู่แล้ว
+  const am = String(j.amphoe || '').replace(/^(อำเภอ|เขต)/, '').trim(), tb = String(j.tambon || '').replace(/^(ตำบล|แขวง)/, '').trim();
+  const must = [tb, am].map(x => x.replace(/^เมือง/, '')).filter(x => /^[ก-๙]{2,}/.test(x));
+  const qs = [...(Array.isArray(j.queries) ? j.queries : []).map(String), [j.place, am, prov].filter(Boolean).join(' '), [j.road, am, prov].filter(Boolean).join(' '), tb && `${tb} ${am} ${prov}`, am && `${am} ${prov}`]
+    .map(x => String(x || '').trim()).filter((x, i, a) => x.length > 3 && a.indexOf(x) === i).slice(0, 5);
+  // AI เดาภูมิศาสตร์ผิดได้: ยอมรับเฉพาะผลที่ชื่อสถานที่ (ตามโครงพยัญชนะ ทนคำสะกดผิด) ปรากฏในที่อยู่เดิม
+  const sk = x => String(x || '').replace(/[ะ-ฺเ-๎\s.\-,()/]/g, '');
+  const addrSk = sk(c.address), GEN = /^(คลอง|หมู่|บ้าน|ซอย|ถนน|มัสยิด|วัด|ตลาด|โรงเรียน|ชุมชน|จังหวัด|อำเภอ|ตำบล|แขวง|เขต|สถานี|ประเทศไทย|เมือง|บึง|หนอง|ทุ่ง|นา)/,
+    inAddr = label => String(label).split(/[·,\s]+/).map(w => w.replace(GEN, '')).filter(w => !/\d/.test(w)).map(sk).some(t => t.length >= 4 && addrSk.includes(t)); // ต้องตรงชื่อเฉพาะ ไม่ใช่คำทั่วไป
+  for (const q of qs) { const hit = await geoLookup(q, prov, must.filter(m => addrSk.includes(sk(m)))); if (hit && inAddr(hit.label)) return { ...hit, level: 'AI อ่านที่อยู่' + (j.place && q.includes(j.place) ? '' : am ? ' (อำเภอ/ตำบล)' : '') }; }
+  return null;
+}
 async function geocodePass(env, db, n = 4) {
   const now = Date.now();
   const { results } = await db.prepare("SELECT id,address,district,province FROM cases WHERE (lat IS NULL OR lat='' OR lat=0) AND glat IS NULL AND status<>'done' AND COALESCE(dupOf,'')='' AND COALESCE(address,'')<>'' AND COALESCE(gtry,0)<? ORDER BY createdAt DESC LIMIT ?").bind(now - 6 * 3600e3, n).all();
@@ -208,8 +235,16 @@ async function geocodePass(env, db, n = 4) {
     if (hit) { found++; await db.prepare('UPDATE cases SET glat=?,glng=?,glabel=?,gtry=?,updatedAt=? WHERE id=?').bind(hit.lat, hit.lng, `ระดับ${hit.level} · ${hit.label}`.slice(0, 160), now, now, c.id).run(); }
     else await db.prepare('UPDATE cases SET gtry=? WHERE id=?').bind(now, c.id).run();
   }
+  // เคสที่วิธีปกติหาไม่เจอ: ให้ AI ช่วยอ่าน — ปิดไว้ (AI_GEO=false): ทดสอบแล้ว AI เดาภูมิศาสตร์ไทยผิดบ่อย หมุดผิดอันตรายกว่าไม่มีหมุด
+  const { results: hard } = AI_GEO ? await db.prepare("SELECT id,address,district,province FROM cases WHERE (lat IS NULL OR lat='' OR lat=0) AND glat IS NULL AND status<>'done' AND COALESCE(dupOf,'')='' AND COALESCE(address,'')<>'' AND gtry IS NOT NULL AND COALESCE(gai,0)<? ORDER BY createdAt DESC LIMIT 2").bind(now - 864e5).all() : { results: [] };
+  let ai = 0;
+  for (const c of hard) {
+    const hit = await aiGeo(env, c);
+    if (hit) { ai++; found++; await db.prepare('UPDATE cases SET glat=?,glng=?,glabel=?,gai=?,updatedAt=? WHERE id=?').bind(hit.lat, hit.lng, `ระดับ${hit.level} · ${hit.label}`.slice(0, 160), now, now, c.id).run(); }
+    else await db.prepare('UPDATE cases SET gai=? WHERE id=?').bind(now, c.id).run();
+  }
   if (found) await bumpRev(db);
-  return { tried: results.length, found };
+  return { tried: results.length, found, ai, aiTried: hard.length };
 }
 /* Hermes บนคลาวด์ (Cloudflare Workers AI) สำหรับเครื่องที่ไม่มี Local AI เช่น มือถือ · ใช้ได้เฉพาะผู้มีรหัสอาสา/ลิงก์ War Room */
 const HERMES_MODELS = ['@cf/aisingapore/gemma-sea-lion-v4-27b-it', '@cf/meta/llama-3.3-70b-instruct-fp8-fast']; // ภาษาไทยดี · สำรอง (Hermes ถูกถอดจาก Workers AI แล้ว)
@@ -274,7 +309,7 @@ async function dcSummary(env, db) {
   try {
     const top = wait.sort((a, b) => (Number(b.urgency) || 1) - (Number(a.urgency) || 1) || a.createdAt - b.createdAt).slice(0, 12).map(c => `#${c.id} ระดับ${c.urgency || 1} ${String(c.needs || '').slice(0, 40)} ${c.people || 1}คน ${c.district || ''} รอ${dcAgo(c.createdAt)}`).join('\n');
     const out = await env.AI.run(HERMES_MODELS[0], { messages: [{ role: 'system', content: 'คุณคือ AI HELP ผู้ช่วยศูนย์สั่งการภัยพิบัติ เขียนสรุปสถานการณ์สำหรับทีมงานใน Discord ภาษาไทย 3-5 ข้อสั้น ๆ บอกจุดน่าห่วงและสิ่งที่ควรทำต่อ ห้ามใส่ชื่อหรือเบอร์โทร' }, { role: 'user', content: facts + '\nเคสรอที่สำคัญ:\n' + top }], max_tokens: 400, temperature: 0.3 });
-    text = String(out && (out.response || '') || '').trim();
+    text = aiText(out).trim();
   } catch (e) {}
   return { facts, text };
 }

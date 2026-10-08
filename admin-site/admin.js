@@ -131,8 +131,8 @@ function aiBlock(c){if(!hasPin(c)||c.status==='done')return '';const a=AI.get(St
   return `<div class="vr-ai"><div class="vr-ai-h"><i data-ic="cam"></i> กล้อง CCTV (ตรวจอัตโนมัติ): ${line}</div>${shots}</div>`}
 async function loadFlood(force){try{await VERIFY.load(force)}catch(e){}render();if(typeof COVERED!=='undefined')COVERED.load(API_URL,A.key).then(render,render)}
 const cov=c=>typeof COVERED!=='undefined'?COVERED.match(c):null;
-function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} เคยส่งมอบใกล้เคียง</span>`}
-function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b><i data-ic="hand"></i> มีองค์กรอื่นเคยส่งมอบใกล้เคียง</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
+function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} เคยมอบใกล้เคียง</span>`}
+function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b><i data-ic="hand"></i> มีองค์กรอื่นเคยมอบใกล้เคียง</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
 setInterval(()=>{if(A.key&&!document.hidden)loadFlood()},10*60e3);
 VERIFY.onUpdate=()=>render(); // ฝน/ดาวเทียมรายจุดมาถึงทีหลัง → วาดผลตรวจใหม่
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
@@ -322,7 +322,7 @@ async function drawMap(list){
 
 /* ---------- ส่งออก CSV ---------- */
 $('#export').addEventListener('click',()=>{const list=filtered();
-  const head=['เลขเคส','แจ้งเมื่อ','ระดับ','สถานะ','ความต้องการ','จำนวนคน','ครัวเรือน','ถุงยังชีพ','ระดับน้ำ','ที่อยู่','เขต','lat','lng','ชื่อ','เบอร์โทร','ทีม','ต้องดูแลเป็นพิเศษ','ผลตรวจพื้นที่','คะแนนวิกฤต','องค์กรอื่นเคยส่งมอบใกล้เคียง','สถานการณ์'];
+  const head=['เลขเคส','แจ้งเมื่อ','ระดับ','สถานะ','ความต้องการ','จำนวนคน','ครัวเรือน','ถุงยังชีพ','ระดับน้ำ','ที่อยู่','เขต','lat','lng','ชื่อ','เบอร์โทร','ทีม','ต้องดูแลเป็นพิเศษ','ผลตรวจพื้นที่','คะแนนวิกฤต','องค์กรอื่นเคยมอบใกล้เคียง','สถานการณ์'];
   const rows=list.map(c=>[c.id,fullTime(c.createdAt),URG[sev(c)],ST[c.status],(c.needs||[]).join(', '),c.people||1,hh(c)||'',bagsOf(c)==null?'':bagsOf(c),LEVEL[c.level]||'',c.address,c.district,c.lat,c.lng,c.name,String(c.phone||'').replace(/^'/,''),c.volunteer,vul(c).join(', '),vr(c).result.t,vr(c).score,(cov(c)?cov(c).best.r.org+' · '+cov(c).best.r.area:''),notesOf(c)]);
   const cell=v=>{let s=String(v==null?'':v);if(/^[=+\-@]/.test(s))s="'"+s;return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
   const csv='﻿'+[head,...rows].map(r=>r.map(cell).join(',')).join('\r\n');

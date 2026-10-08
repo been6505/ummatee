@@ -424,6 +424,7 @@ const TEAM_POST = {
   call_start: (db, t, b) => callStart(db, t.name, 'team', b),
   chat_send: (db, t, b) => chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }),
   team_gmaps: (db, t, b) => setTeamGmaps(db, t.name, b.gmaps),
+  env_check: (db, t, b) => envCheck(ENV, b),   // หน้าทีมใช้ข้อมูลฝน/ดาวเทียมคำนวณระดับเคสแบบเดียวกับ CENTRAL
   chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
 };
 /* SOS ที่ยังไม่มีใครรับทราบ + สายที่ทีมโทรเข้ามาภายใน 2 นาที (แสดงทุกหน้าหลังบ้าน) */

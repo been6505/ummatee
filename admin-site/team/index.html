@@ -97,6 +97,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
 </style>
+<script src="../central/verify.js?v=9"></script>
 <script src="../central/icons.js?v=5"></script>
 </head>
 <body>
@@ -199,7 +200,7 @@ const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'
 const hhmm=t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),day=t=>new Date(t).toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
 const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'},LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
-const sev=c=>Math.min(3,Math.max(1,+c.urgency||1)),hasPin=c=>c.lat!==''&&c.lat!=null&&isFinite(+c.lat);
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):1,hasPin=c=>c.lat!==''&&c.lat!=null&&isFinite(+c.lat);
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.append(d);setTimeout(()=>d.remove(),3200)}
 function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 function tone(f=880,ms=180,v=.08){try{const a=S.ac||(S.ac=new (window.AudioContext||window.webkitAudioContext)()),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+ms/1000)}catch(e){}}
@@ -274,6 +275,8 @@ $('#wake').checked=st.get('uh_tm_wake')==='1';$('#wake').onchange=e=>{st.set('uh
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wake').checked)wake(true);if(S.me){pollChat();refresh();if(TR.pos)ping()}}});
 
 /* ---------- หน้างาน ---------- */
+/* ระดับเคสคำนวณแบบเดียวกับ CENTRAL (ข้อมูลที่ผู้แจ้งกรอก + ฝน/ดาวเทียม/น้ำท่วม/กล้อง) */
+if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
 function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
   $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');

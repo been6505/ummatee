@@ -43,10 +43,10 @@ function drawMap(hit){
     M.mk.set(r,m)});
   if($('#mt-cases').checked)P.cases.filter(c=>c.status!=='done'&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)).forEach(c=>{
     // หมุดหยดน้ำแบบหน้าแดชบอร์ด/จัดการเคส: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป
-    const u=Math.min(3,Math.max(1,Number(c.urgency)||1)),k=c.status==='going'?'going':u===3?'danger':u===2?'urgent':'open';
+    const u=typeof VERIFY!=='undefined'?VERIFY.level(c):1,k=c.status==='going'?'going':u===3?'danger':u===2?'urgent':'open';
     L.marker([+c.lat,+c.lng],{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../central.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   const miss=rows.filter(r=>r.lat==null).length;$('#map-miss').textContent=COVERED.C.loading?'กำลังหาตำแหน่ง…':miss?`ไม่พบตำแหน่ง ${miss} พื้นที่`:'';
-  if(!M.fitted&&pts.length&&!COVERED.C.loading){M.fitted=true;M.map.fitBounds(pts,{padding:[30,30],maxZoom:14})}
+  if(!M.fitted&&pts.length&&!COVERED.C.loading){M.fitted=true;M.map.fitBounds(pts,{padding:[30,30],maxZoom:P.org?15:14})}
   setTimeout(()=>M.map.invalidateSize(),50);
 }
 $('#tb').addEventListener('click',e=>{const b=e.target.closest('.cv-go');if(!b)return;const r=COVERED.C.rows[+b.dataset.i],m=M.mk.get(r);if(!m)return;
@@ -55,10 +55,13 @@ $('#tb').addEventListener('click',e=>{const b=e.target.closest('.cv-go');if(!b)r
 $('#mt-cases').addEventListener('change',()=>render());
 COVERED.C.onupdate=()=>render();
 function load(){render();return COVERED.load(API_URL,ADM.key).then(render,render)}
-$('#orgs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.org=b.dataset.o;render()});
+$('#orgs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.org=b.dataset.o;M.fitted=false;
+  // เลือกองค์กร: แผนที่แสดงเฉพาะพื้นที่ขององค์กรนั้น (ซ่อนจุดเคส) แล้วซูมไปพื้นที่นั้น · "ทั้งหมด" = กลับมาแสดงทุกอย่าง
+  const mc=$('#mt-cases');if(mc){if(P.org){if(P.casesWas==null)P.casesWas=mc.checked;mc.checked=false}else if(P.casesWas!=null){mc.checked=P.casesWas;P.casesWas=null}}
+  b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});render()});
 $('#q').addEventListener('input',e=>{P.q=e.target.value;render()});
 $('#refresh').addEventListener('click',async()=>{COVERED.C.loaded=0;const r=await apiGet({action:'list'}).catch(()=>null);if(r&&r.cases)P.cases=r.cases;load()});
 setInterval(()=>{if(!document.hidden)load()},5*60e3);
-adminBoot({action:'list'},'cases',r=>{P.cases=r.cases||[];render();load()});
+adminBoot({action:'list'},'cases',r=>{P.cases=r.cases||[];render();load();if(typeof VERIFY!=='undefined'){VERIFY.onUpdate=()=>render();VERIFY.load().then(render,render)}});
 // เข้าระบบไว้แล้ว: โหลดข้อมูลชีตทันที ไม่ต้องรอรายการเคส (Apps Script ช้า)
 if(ADM.key)load();

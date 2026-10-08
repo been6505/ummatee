@@ -214,7 +214,7 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.re
 
 /* ---------- ภาพรวมจาก Help Me (ตัวเลขชุดเดียวกับหน้า #stats ของ helpme-th.pages.dev) · ตัวเลขรวมจากเซิร์ฟเวอร์ ไม่มีข้อมูลส่วนตัว ---------- */
 function renderHelpme(){
-  const h=D.hm;document.querySelectorAll('.hm-part').forEach(e=>e.hidden=!h);if(!h)return;
+  let h=D.hm;document.querySelectorAll('.hm-part').forEach(e=>e.hidden=!h);if(!h)return;
   // การ์ดแถวบนรวมตัวเลขชุดนี้แล้ว: แสดงชุดสำรองนี้เฉพาะเมื่อโหลดรายการเคส Help Me ไม่สำเร็จ (ไม่ขึ้นระหว่างรอโหลด)
   $('#hm-kpis').hidden=!!D.hmc||!D.hmcDone;
   document.querySelectorAll('.hm-dup').forEach(e=>e.hidden=!!D.hmc); // สถานะ/ความต้องการ/เขต/ทีม: กราฟหลักใช้เคส Help Me แล้ว
@@ -227,6 +227,9 @@ function renderHelpme(){
   $('#hm-bar').innerHTML=`<div class="hm-seg">${parts.filter(p=>p[2]).map(p=>`<span class="s-${p[0]}" style="flex:${p[2]}"></span>`).join('')}</div>
     <div class="hm-legend">${parts.map(p=>`<span><i class="s-${p[0]}"></i>${p[1]} <b>${nf(p[2])}</b> <small>${Math.round(p[2]/sum*100)}%</small></span>`).join('')}</div>`;
   /* การ์ดตัวเลข */
+  // จำนวนวิกฤตใช้ระดับที่ระบบคำนวณ (ไม่ใช้ระดับที่ส่งมาจาก Help Me) เมื่อมีรายการเคส Help Me แล้ว
+  const hmAct=Array.isArray(D.hmc)?D.hmc.filter(c=>c.status!=='done'):null,hCrit=hmAct?hmAct.filter(c=>sev(c)===3):null;
+  if(hCrit){h={...h,urgent:hCrit.length,people:{...h.people,urgent:hCrit.reduce((a,c)=>a+Math.max(1,Number(c.people)||1),0)}}}
   const T=[['alert','red','รอช่วย',h.open,`วิกฤต ${nf(h.urgent)} เคส`],['route','blue','ทีมกำลังไป',h.going,'กำลังเดินทาง / อยู่หน้างาน'],['check','green','ช่วยแล้ว',h.done,`วันนี้ ${nf(h.doneToday)} เคส`],
     ['list','navy','เคสทั้งหมด',h.total,`ใหม่วันนี้ ${nf(h.today)} เคส`],['users','orange','คนที่ยังรอ',h.people.act,`ในเคสวิกฤต ${nf(h.people.urgent)} คน`],['heart','green','คนที่ช่วยแล้ว',h.people.done,'ได้รับความช่วยเหลือ']];
   $('#hm-kpis').innerHTML=T.map(([icn,c,l,v,sub])=>`<div class="kpi hm-k t-${c}"><b>${nf(v)}</b><span>${l} <small class="hm-tag">Help Me</small></span><small><i></i>${esc2(sub)}</small></div>`).join('');

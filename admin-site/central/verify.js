@@ -75,8 +75,8 @@ const VERIFY=(()=>{
     if((!v||Date.now()-v._t>30*60e3)&&Date.now()-asked>(v?30*60e3:2*60e3)){F.envPending.add(k);clearTimeout(F.envTimer);F.envTimer=setTimeout(flushEnv,400)}
     return v||null}
   async function flushEnv(){const ks=[...F.envPending].slice(0,300);F.envPending.clear();if(!ks.length)return;const now=Date.now();ks.forEach(k=>F.envAsk.set(k,now));
-    let key='';try{key=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}if(!key)return;
-    try{const r=await fetch((typeof API_URL!=='undefined'?API_URL:'/api'),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'env_check',key,points:ks.map(k=>{const [a,o]=k.split(',');return {lat:+a,lng:+o}})})}).then(x=>x.json());
+    let key='';try{key=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}const ab=typeof VERIFY.authBody==='function'?VERIFY.authBody():VERIFY.authBody,auth=ab||(key?{key}:null);if(!auth)return;
+    try{const r=await fetch((typeof API_URL!=='undefined'?API_URL:'/api'),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'env_check',...auth,points:ks.map(k=>{const [a,o]=k.split(',');return {lat:+a,lng:+o}})})}).then(x=>x.json());
       if(r&&r.ok){Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat)F.env.set(k,{...v,_t:Date.now()})});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
   function nearestGauge(lat,lng){let g=null;F.gauges.forEach(x=>{const d=dist(lat,lng,x.lat,x.lng);if(d<=10000&&(!g||d<g.d))g={...x,d}});return g}
 

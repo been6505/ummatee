@@ -9,7 +9,6 @@
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
   room:'',tab:'over',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
 const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
-const claim=c=>Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ผู้แจ้งเลือกเอง (ใช้เป็นข้อมูลประกอบเท่านั้น)
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
 const ST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const CST={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'};

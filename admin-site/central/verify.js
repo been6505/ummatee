@@ -11,7 +11,9 @@ const VERIFY=(()=>{
   const LV_CM={ankle:10,knee:45,waist:90,chest:120,roof:180};
   /* เกณฑ์ (ต.ค. 69): คะแนนผู้แจ้งเต็ม 40 · คะแนนระบบ (ข้อมูลภายนอก) เต็ม 60
      ระดับ วิกฤต/เร่งด่วน/ปกติ ระบบเป็นผู้ตัดสินจากทั้งสองฝั่ง — ผู้แจ้งเลือก "วิกฤต" เองไม่ทำให้เป็นวิกฤต ต้องมีข้อมูลระบบยืนยัน */
-  const LV_PTS={ankle:2,knee:4,waist:8,chest:12,roof:16};
+  // ผู้แจ้งไม่กำหนดระดับเอง: คะแนนฝั่งผู้แจ้งมาจาก "ข้อมูล" ที่กรอกเท่านั้น (ระดับน้ำ กลุ่มเปราะบาง สิ่งที่ต้องการ จำนวนคน รูป)
+  const LV_PTS={ankle:3,knee:6,waist:12,chest:18,roof:24};
+  const NEED_PTS=[[/อพยพ|ติดอยู่|ติดค้าง/,8],[/ผู้ป่วย|ป่วย|ยา|ออกซิเจน|ฟอกไต|บาดเจ็บ/,6],[/เรือ|รถสูง/,4]];
   const R_MAX=40,E_MAX=60,E_SCALE=1.2;
   const VERDICT_TH={blocked:'ผ่านไม่ได้',risky:'เสี่ยง',caution:'ระวัง',ok:'ผ่านได้'};
   const RESULT={
@@ -83,18 +85,20 @@ const VERIFY=(()=>{
   function sevPts(d,v,closed){if(v==='blocked'||closed||(d!=null&&d>=50))return 40;if(v==='risky'||(d!=null&&d>=30))return 30;if(v==='caution'||(d!=null&&d>=10))return 18;return 8}
   function recency(t){if(!t)return .5;const h=(Date.now()-t)/36e5;return h<=24?1:h<=72?.7:.4}
   function assess(c){
-    const sev=Math.min(3,Math.max(1,Number(c.urgency)||1)),vul=(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
+    const vul=(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
     // 1) ข้อมูลจากผู้แจ้ง (0–50)
     const LV_TH={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว/หลังคา'};
-    let R=({3:18,2:11,1:4})[sev]+(LV_PTS[c.level]||0);
+    const needTxt=(c.needs||[]).join(' ')+' '+String(c.notes||'').slice(0,300);
+    let R=LV_PTS[c.level]||0,needPts=0;NEED_PTS.forEach(([re,p])=>{if(re.test(needTxt))needPts=Math.max(needPts,p)});R+=needPts;
+    const ppl=Number(c.people)||1;R+=ppl>=50?4:ppl>=10?2:0;if(Array.isArray(c.photos)&&c.photos.length)R+=2;
     const vulCrit=vul.some(v=>['bedridden','oxygen','dialysis'].includes(v));
-    R+=vulCrit?6:vul.length?3:0;R=Math.min(R_MAX,R);
+    R+=vulCrit?8:vul.length?4:0;R=Math.min(R_MAX,R);
     // ที่มาของคะแนนฝั่งผู้แจ้ง (แสดงให้แอดมินเห็นว่า "วิกฤต" มาจากอะไร)
-    const why=[`ผู้แจ้งเลือกระดับ "${({3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'})[sev]}"`];if(c.level)why.push('น้ำถึง'+(LV_TH[c.level]||c.level));
+    const why=[];if(c.level)why.push('น้ำถึง'+(LV_TH[c.level]||c.level));else why.push('ไม่ระบุระดับน้ำ');if(needPts)why.push('ต้องการ '+(c.needs||[]).join(', '));
     if(vul.length)why.push('มีกลุ่มเปราะบาง'+(vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?' (ติดเตียง/ออกซิเจน/ฟอกไต)':''));if(Number(c.people)>=10)why.push(c.people+' คน');
-    const reporterSevere=sev===3||c.level==='chest'||c.level==='roof';
+    const reporterSevere=c.level==='chest'||c.level==='roof'||vul.some(v=>['bedridden','oxygen','dialysis'].includes(v)); // ไม่ใช้ระดับที่ส่งมาจากผู้แจ้ง
     const cctv=parseCctv(c.cctv);
-    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],claim:sev,vulCrit,deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
+    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],vulCrit,deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
     const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
     const hasPin=c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
     // ต้องมีทั้งพิกัดและที่อยู่ที่ชัดเจน ไม่งั้นถือว่า "ยืนยันไม่ได้"
@@ -148,7 +152,7 @@ const VERIFY=(()=>{
     let lv=1,why='';
     if(!contra&&(out.score>=65&&strong||cam&&out.veryDeep||sat&&out.veryDeep||out.vulCrit&&out.deep&&strong)){lv=3;why='ข้อมูลระบบยืนยันว่าน้ำท่วมรุนแรง'+(out.vulCrit?' และมีผู้ป่วยติดเตียง/ออกซิเจน/ฟอกไต':'')}
     else if(out.score>=45&&some||strong){lv=2;why='มีข้อมูลระบบยืนยันว่ามีน้ำท่วมใกล้จุด'}
-    else if(out.claim===3||out.veryDeep||out.vulCrit){lv=2;why='ผู้แจ้งบอกรุนแรง แต่ระบบยังยืนยันไม่ได้ · โทรยืนยันก่อน'}
+    else if(out.veryDeep||out.vulCrit||out.R>=24){lv=2;why='ข้อมูลผู้แจ้งบ่งว่ารุนแรง แต่ระบบยังยืนยันไม่ได้ · โทรยืนยันก่อน'}
     else why='ยังไม่มีข้อมูลยืนยันความรุนแรง';
     out.level=lv;out.levelWhy=why;return out}
   function finish(out,severe,cleared){
@@ -166,7 +170,7 @@ const VERIFY=(()=>{
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
   /* ระดับความเร่งด่วนที่ระบบตัดสิน (ใช้แทน urgency ที่ผู้แจ้งเลือก) · แคชตามข้อมูลที่ใช้คำนวณ */
   const LC=new Map();
-  function level(c){const k=[c.id,F.loaded,c.urgency,c.level,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
+  function level(c){const k=[c.id,F.loaded,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
     const v=assess(c).level||1;LC.set(c.id,{k,v});return v}
   const VERIFY={F,load,assess,level,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

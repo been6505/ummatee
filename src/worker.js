@@ -75,7 +75,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -124,12 +124,14 @@ async function bumpRev(db) { await db.prepare("INSERT INTO meta (k,v) VALUES ('r
 const km = (a, b, c, d) => { const R = 6371, x = (c - a) * Math.PI / 180, y = (d - b) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
 async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].slice(0, 8).map(x => x.toString(16).padStart(2, '0')).join(''); }
 
+const noPin = r => r.lat == null || r.lat === '' || !Number(r.lat);
 function outCase(r, full) {
   const o = { id: r.id, createdAt: r.createdAt, status: r.status, urgency: r.urgency, name: r.name || '', phone: r.phone || '', district: r.district || '',
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
     bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '' };
+  if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
   if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; }
   return o;
 }
@@ -157,6 +159,57 @@ async function createCase(db, b, ip) {
     .bind(id, now, u, c.name, c.phone, c.district, c.people, c.address, c.lat, c.lng, c.level, c.needs.join(', '), c.vulnerable.join(', '), c.notes, now, token, cid || null, c.households, ipHash).run();
   await bumpRev(db);
   return { ok: true, id, urgency: u, token };
+}
+/* ---------- หาหมุดจากที่อยู่ ให้เคสที่ไม่มีพิกัด ----------
+   cron ทุกนาที ทำครั้งละ 4 เคส · Photon → Nominatim · จำกัดในประเทศไทย · ขยายคำย่อ ต./อ./จ.
+   เก็บใน glat/glng/glabel (ไม่ทับ lat/lng ที่ซิงจากชีต Help Me) · ค้นไม่เจอ = รอ 6 ชม. แล้วลองใหม่ */
+const TH_BOX = [97.3, 5.6, 105.7, 20.5];
+const inTH = (lat, lng) => lng >= TH_BOX[0] && lng <= TH_BOX[2] && lat >= TH_BOX[1] && lat <= TH_BOX[3];
+function geoQueries(c) {
+  const cut = x => String(x || '').split(/แขวง|ตำบล|เขต|อำเภอ|จังหวัด|กรุงเทพ|กทม|\d{5}/)[0].replace(/[.\/,()]+$/g, '').trim();
+  let a = String(c.address || '').replace(/\(?จุดสังเกต[^)]*\)?/g, ' ').replace(/(^|[\s.])ต\.\s*/g, '$1ตำบล').replace(/(^|[\s.])อ\.\s*/g, '$1อำเภอ').replace(/(^|[\s.])จ\.\s*/g, '$1จังหวัด')
+    .replace(/กทม\.?|กรุงเทพฯ/g, ' กรุงเทพมหานคร ').replace(/\s+/g, ' ').trim();
+  const bkk = /กรุงเทพ/.test(a + (c.province || ''));
+  let prov = bkk ? 'กรุงเทพมหานคร' : cut(String(c.province || '').replace(/^จังหวัด/, '')) || cut((a.match(/จังหวัด\s*(\S+)/) || [])[1]);
+  if (!prov) { const m = a.match(/(ฉะเชิงเทรา|ปทุมธานี|นนทบุรี|สมุทรปราการ|พระนครศรีอยุธยา|อยุธยา|นครนายก|ปราจีนบุรี|อุดรธานี|นครปฐม)/); if (m) prov = m[1] === 'อยุธยา' ? 'พระนครศรีอยุธยา' : m[1]; }
+  const tambon = cut((a.match(/(?:ตำบล|แขวง)\s*([ก-ฮ][^\s,]*)/) || [])[1]);
+  const amphoe = cut((a.match(/(?:อำเภอ|เขต)\s*([ก-ฮ][^\s,]*)/) || [])[1]) || cut(c.district);
+  const T = bkk ? 'แขวง' : 'ตำบล', A = bkk ? 'เขต' : 'อำเภอ', q = [];
+  if (a) q.push([a.replace(/\b\d{5}\b/g, '').trim(), 'ที่อยู่']);
+  if (tambon) { q.push([`${T}${tambon} ${amphoe ? A + amphoe : ''} ${prov}`.replace(/\s+/g, ' ').trim(), T]); q.push([`${tambon} ${prov}`.trim(), T]); }
+  if (amphoe) q.push([`${A}${amphoe} ${prov}`.trim(), A]);
+  const must = [tambon, amphoe].map(x => String(x || '').replace(/^เมือง/, '')).filter(x => /^[ก-๙]{2,}/.test(x));
+  return { q: must.length ? q.filter((x, i, arr) => x[0] && arr.findIndex(y => y[0] === x[0]) === i) : [], prov, must }; // ไม่มีตำบล/อำเภอ = ที่อยู่กว้างเกิน ไม่เดา
+}
+async function geoLookup(q, prov, must = []) {
+  const ok = label => !must.length || must.some(m => label.includes(m));
+  const UA = { 'user-agent': 'HelpMe-CENTRAL/1.0 (central.helpme4u.com)', 'accept-language': 'th' };
+  try {
+    const r = await fetch('https://photon.komoot.io/api?limit=5&lang=default&bbox=' + TH_BOX.join(',') + '&q=' + encodeURIComponent(q), { headers: UA, cf: { cacheTtl: 86400 } });
+    if (r.ok) { const j = await r.json(); const f = (j.features || []).map(x => ({ lat: x.geometry.coordinates[1], lng: x.geometry.coordinates[0], p: x.properties || {} }))
+      .filter(x => inTH(x.lat, x.lng)).sort((a, b) => (prov && String(b.p.state || '').includes(prov) ? 1 : 0) - (prov && String(a.p.state || '').includes(prov) ? 1 : 0))[0];
+      const lb = f ? [f.p.name, f.p.district || f.p.county, f.p.city, f.p.state].filter(Boolean).join(' · ') : '';
+      if (f && (!prov || String(f.p.state || '').includes(prov) || String(f.p.name || '').includes(prov)) && ok(lb)) return { lat: f.lat, lng: f.lng, label: lb }; }
+  } catch (e) {}
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=th&q=' + encodeURIComponent(q), { headers: UA, cf: { cacheTtl: 86400 } });
+    if (r.ok) { const j = await r.json(); const f = (j || []).find(x => inTH(+x.lat, +x.lon) && (!prov || String(x.display_name || '').includes(prov)));
+      if (f && ok(String(f.display_name || ''))) return { lat: +f.lat, lng: +f.lon, label: String(f.display_name || '').split(',').slice(0, 3).join(' · ') }; }
+  } catch (e) {}
+  return null;
+}
+async function geocodePass(env, db, n = 4) {
+  const now = Date.now();
+  const { results } = await db.prepare("SELECT id,address,district,province FROM cases WHERE (lat IS NULL OR lat='' OR lat=0) AND glat IS NULL AND status<>'done' AND COALESCE(dupOf,'')='' AND COALESCE(address,'')<>'' AND COALESCE(gtry,0)<? ORDER BY createdAt DESC LIMIT ?").bind(now - 6 * 3600e3, n).all();
+  let found = 0;
+  for (const c of results) {
+    const { q, prov, must } = geoQueries(c); let hit = null;
+    for (const [qq, lv] of q) { hit = await geoLookup(qq, prov, must); if (hit) { hit.level = lv; break; } }
+    if (hit) { found++; await db.prepare('UPDATE cases SET glat=?,glng=?,glabel=?,gtry=?,updatedAt=? WHERE id=?').bind(hit.lat, hit.lng, `ระดับ${hit.level} · ${hit.label}`.slice(0, 160), now, now, c.id).run(); }
+    else await db.prepare('UPDATE cases SET gtry=? WHERE id=?').bind(now, c.id).run();
+  }
+  if (found) await bumpRev(db);
+  return { tried: results.length, found };
 }
 /* Hermes บนคลาวด์ (Cloudflare Workers AI) สำหรับเครื่องที่ไม่มี Local AI เช่น มือถือ · ใช้ได้เฉพาะผู้มีรหัสอาสา/ลิงก์ War Room */
 const HERMES_MODELS = ['@cf/aisingapore/gemma-sea-lion-v4-27b-it', '@cf/meta/llama-3.3-70b-instruct-fp8-fast']; // ภาษาไทยดี · สำรอง (Hermes ถูกถอดจาก Workers AI แล้ว)
@@ -1668,9 +1721,9 @@ async function helpmeCases(env, db) {
   else if (Date.now() - last > 180e3 && CTX && CTX.waitUntil) CTX.waitUntil(syncHelpme(env, db).catch(() => {}));
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
-    people: c.people, lat: c.lat, lng: c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
+    people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', photos: J(c.photos, []), pinCheck: J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {
@@ -1829,7 +1882,7 @@ async function api(request, env) {
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
-      case 'hm_sync': try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
+      case 'hm_sync': try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} let geo = null; try { geo = await geocodePass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });

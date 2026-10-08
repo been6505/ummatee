@@ -165,7 +165,7 @@ function renderList(list){
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
       <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
-      <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?(pinWarn(c)?'<small class="warn">หมุดอาจผิด</small>':c.pinCheck?'<small class="muted">หมุดปรับจากที่อยู่</small>':''):'<small class="warn">ไม่มีหมุด</small>'}</td>
+      <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?(pinWarn(c)?'<small class="warn">หมุดอาจผิด</small>':c.pinCheck&&c.pinCheck.status==='geocoded'?`<small class="muted" title="${esc(c.pinCheck.label||'')}">📍 หมุดจากที่อยู่ (${esc((String(c.pinCheck.label||'').match(/^ระดับ(\S+)/)||[])[1]||'ประมาณ')})</small>`:c.pinCheck?'<small class="muted">หมุดปรับจากที่อยู่</small>':''):'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
       <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
       <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
@@ -251,10 +251,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawe
 /* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
 // ผลตรวจหมุดเทียบที่อยู่ (หลังบ้านตรวจให้ เฉพาะเคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต)
-function pinNote(c){const p=c.pinCheck;if(!p)return '';const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
+function pinNote(c){const p=c.pinCheck;if(!p)return '';if(p.status==='geocoded')return `<br><small class="muted">📍 หมุดหาจากที่อยู่อัตโนมัติ (${esc(p.label||'ประมาณ')}) · ตรวจตำแหน่งก่อนส่งทีม</small>`;const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
   if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
   return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
-const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed';
+const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed'&&c.pinCheck.status!=='geocoded';
 // รูปจากผู้แจ้ง (เคส Help Me): รหัสไฟล์ Google Drive ที่ Help Me แชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
 // โหลดรูปจาก lh3 ตรง ๆ (ไม่ต้องผ่าน redirect ของ drive.google.com) ถ้าไม่ขึ้นค่อยลองลิงก์ thumbnail ของ Drive
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.altSrc&&i.src!==i.dataset.altSrc){i.src=i.dataset.altSrc;delete i.dataset.altSrc}},true);

@@ -630,9 +630,11 @@ async function setTeamGmaps(db, team, link) {
 const WR_ROLES = ['lead', 'ops', 'dispatch', 'stock', 'comms', 'medic', 'staff'];
 async function listWarrooms(db) {
   const { results: rooms } = await db.prepare('SELECT * FROM warrooms WHERE active=1 ORDER BY createdAt').all();
+  // ทุกห้องมีลิงก์เข้าระบบเสมอ (ห้องเก่าที่ยังไม่มี → สร้างให้)
+  const miss = rooms.filter(r => !r.token); if (miss.length) { miss.forEach(r => { r.token = rand(12); }); await db.batch(miss.map(r => db.prepare('UPDATE warrooms SET token=? WHERE id=?').bind(r.token, r.id))); }
   const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
   const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
-  return { ok: true, warrooms: rooms.map(({ token, ...r }) => ({ ...r, hasLink: !!token, kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
+  return { ok: true, warrooms: rooms.map(({ token, ...r }) => ({ ...r, ...(WRC ? {} : { linkKey: token }), kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
 }
 async function saveWarroom(db, b) {
   const w = b.warroom || {}, id = clean(w.id, 20).replace(/[^\w-]/g, '') || ('W' + rand(3)), now = Date.now();
@@ -647,10 +649,10 @@ async function saveWarroom(db, b) {
   if (!name) return { ok: false, error: 'missing_name' };
   const lat = num(w.lat, -90, 90), lng = num(w.lng, -180, 180);
   const districts = (Array.isArray(w.districts) ? w.districts : String(w.districts || '').split(/[,\n]/)).map(x => clean(x, 40).replace(/^เขต\s*/, '')).filter(Boolean).slice(0, 60).join(',');
-  await db.prepare(`INSERT INTO warrooms (id,kind,province,name,color,lat,lng,radius,districts,address,phone,lead,note,active,createdAt,updatedAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?)
+  await db.prepare(`INSERT INTO warrooms (id,kind,province,name,color,lat,lng,radius,districts,address,phone,lead,note,active,createdAt,updatedAt,by_,token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET kind=excluded.kind,province=excluded.province,name=excluded.name,color=excluded.color,lat=excluded.lat,lng=excluded.lng,radius=excluded.radius,districts=excluded.districts,address=excluded.address,phone=excluded.phone,lead=excluded.lead,note=excluded.note,active=1,updatedAt=excluded.updatedAt,by_=excluded.by_`)
     .bind(id, kind, province, name, /^#[0-9a-f]{6}$/i.test(w.color || '') ? w.color : '#2D45C8', lat, lng, clampInt(w.radius, 0, 200000, 0) || null, districts, clean(w.address, 200),
-      clean(w.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(w.lead, 60), clean(w.note, 500), now, now, clean(b.by, 60)).run();
+      clean(w.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(w.lead, 60), clean(w.note, 500), now, now, clean(b.by, 60), rand(12)).run();
   return { ok: true, id };
 }
 async function saveWarroomStaff(db, b) {

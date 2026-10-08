@@ -193,11 +193,11 @@ function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.roo
   $('#st-tree').innerHTML=`<div class="node central"><b>HELP ME CENTRAL</b><span class="muted small">Common Operating Picture · ข้อมูล / มาตรฐาน / สนับสนุน</span><div class="kk">${chipsOf(stats(W.cases,W.roster.map(t=>t.name)))}</div></div>
     <div class="lvl">${provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv),pc=W.cases.filter(c=>pv?provOf(c)===pv:!provOf(c));
       const pnames=W.roster.filter(t=>zs.some(z=>z.id===t.warroom)).map(t=>t.name),po=pc.filter(c=>c.status!=='done'&&!zs.some(z=>inRoom(c,z))).length;
-      return `<div class="branch"><div class="node prov${pr?'':' missing'}">${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
+      return `<div class="branch"><div class="node prov${pr?'':' missing'}">${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>${pr.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(pr))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
           <span class="muted small">${pv?'Provincial Coordination':'เคส/โซนที่ยังไม่ระบุจังหวัด'}${pr&&pr.lead?' · '+esc(pr.lead):''}${pr&&pr.phone?` · <a href="tel:${esc(telOf(pr.phone))}">${esc(pr.phone)}</a>`:''}</span>
           <div class="kk">${chipsOf(stats(pc,pnames))}${po?`<span class="k warn">${po} เคสนอกโซน</span>`:''}</div>
           ${!pr&&pv?`<button type="button" class="btn ghost sm" data-newprov="${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>`:''}</div>
-        <div class="lvl">${zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="branch"><div class="node zone"><button type="button" class="lnk ttl" data-go="${esc(z.id)}"><i class="rdot" style="background:${esc(z.color)}"></i> ${esc(z.name)}</button>
+        <div class="lvl">${zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="branch"><div class="node zone"><button type="button" class="lnk ttl" data-go="${esc(z.id)}"><i class="rdot" style="background:${esc(z.color)}"></i> ${esc(z.name)}</button>${z.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(z))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}
             <span class="muted small">War Room โซน${z.lead?' · '+esc(z.lead):''}${z.districts.length?' · '+esc(z.districts.slice(0,4).join(', '))+(z.districts.length>4?'…':''):''}</span>
             <div class="kk">${chipsOf(stats(W.cases.filter(c=>inRoom(c,z)),tn.map(t=>t.name)))}</div>
             <div class="tms">${tn.map(t=>`<span class="tm">${esc(t.name)}</span>`).join('')||'<span class="muted small">ยังไม่มีทีม</span>'}</div></div></div>`}).join('')}
@@ -341,16 +341,16 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
   $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
   $('#pf-edit').onclick=()=>roomForm(r);
-  // ลิงก์ประจำห้อง (เฉพาะศูนย์กลาง)
-  if(!LOCK())$('#pf-info').insertAdjacentHTML('beforeend',`<div class="wr-link"><b><i data-ic="link"></i> ลิงก์สำหรับทีม War Room นี้</b>
+  // ลิงก์ประจำห้อง (สร้างอัตโนมัติ · เห็นเฉพาะศูนย์กลาง)
+  if(!LOCK()&&r.linkKey){const url=wrUrl(r),msg=`HELP ME CENTRAL · ${r.name}\nลิงก์เข้าระบบ War Room (ส่งเฉพาะทีมงาน): ${url}`;
+    $('#pf-info').insertAdjacentHTML('beforeend',`<div class="wr-link"><b><i data-ic="link"></i> ลิงก์สำหรับทีม War Room นี้</b>
     <p class="muted small">ส่งให้ทีมงานของห้องนี้ เปิดแล้วเข้าระบบได้เลย (ไม่ต้องใช้รหัสกลาง) · จัดการเคส จัดทีม สต็อก และโปรไฟล์ของห้องนี้ได้ · ส่งต่อเฉพาะคนในทีม</p>
-    <div class="wr-link-row" id="wl-row">${r.hasLink?'<button type="button" class="btn ghost sm" id="wl-show">แสดงลิงก์</button>':'<button type="button" class="btn primary sm" id="wl-show">สร้างลิงก์</button>'}</div></div>`);
-  const sh=$('#wl-show');if(sh)sh.onclick=()=>wrLink(r,false)}
-async function wrLink(r,renew){if(renew&&!confirm('สร้างลิงก์ใหม่? ลิงก์เดิมจะใช้ไม่ได้ทันที (คนที่เข้าด้วยลิงก์เดิมจะถูกออกจากระบบ)'))return;
-  const res=await apiPost({action:'warroom_link',id:r.id,renew:!!renew}).catch(()=>({}));if(!res.ok){toast('สร้างลิงก์ไม่สำเร็จ');return}
-  const url=location.origin+'/central/warroom/?wr='+encodeURIComponent(r.id)+'&k='+res.token,msg=`HELP ME CENTRAL · ${r.name}\nลิงก์เข้าระบบ War Room (ส่งเฉพาะทีมงาน): ${url}`;r.hasLink=true;
-  $('#wl-row').innerHTML=`<input readonly value="${esc(url)}" onclick="this.select()" aria-label="ลิงก์ War Room"><button type="button" class="btn primary sm" id="wl-copy">คัดลอก</button><a class="btn ghost sm" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><button type="button" class="btn ghost sm" id="wl-renew">สร้างลิงก์ใหม่</button>`;
-  $('#wl-copy').onclick=async()=>{try{await navigator.clipboard.writeText(url);toast('คัดลอกลิงก์แล้ว',true)}catch(e){$('#wl-row input').select()}};$('#wl-renew').onclick=()=>wrLink(r,true)}
+    <div class="wr-link-row"><input readonly value="${esc(url)}" onclick="this.select()" aria-label="ลิงก์ War Room"><button type="button" class="btn primary sm" data-wlcopy="${esc(url)}">คัดลอก</button><a class="btn ghost sm" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><button type="button" class="btn ghost sm" id="wl-renew">สร้างลิงก์ใหม่</button></div></div>`);
+    $('#wl-renew').onclick=()=>wrLink(r,true)}}
+const wrUrl=r=>location.origin+'/central/warroom/?wr='+encodeURIComponent(r.id)+'&k='+r.linkKey;
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-wlcopy]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.wlcopy);toast('คัดลอกลิงก์ War Room แล้ว',true)}catch(err){}});
+async function wrLink(r,renew){if(!confirm('สร้างลิงก์ใหม่? ลิงก์เดิมจะใช้ไม่ได้ทันที (คนที่เข้าด้วยลิงก์เดิมจะถูกออกจากระบบ)'))return;
+  const res=await apiPost({action:'warroom_link',id:r.id,renew:true}).catch(()=>({}));if(!res.ok){toast('สร้างลิงก์ไม่สำเร็จ');return}r.linkKey=res.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งลิงก์ใหม่ให้ทีม',true);render()}
 $('#p-prof').addEventListener('click',async e=>{const gz=e.target.closest('[data-gozone2]');if(gz){W.room=gz.dataset.gozone2;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
   const ed=e.target.closest('[data-pedit]');if(ed){staffForm(W.staff.find(s=>s.id===ed.dataset.pedit));return}
   const del=e.target.closest('[data-pdel]');if(del&&confirm('ลบรายชื่อนี้?')){const r=await apiPost({action:'warroom_staff',staff:{id:del.dataset.pdel,active:false}}).catch(()=>({}));if(r.ok){await loadRooms();render()}else toast('ลบไม่สำเร็จ')}

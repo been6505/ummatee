@@ -259,3 +259,5 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
   .wr-ci-a .btn{flex:1 1 auto;justify-content:center}
 }
 @media(max-width:400px){.wr-ci .nd small{display:none}}
+/* ลิงก์ War Room บนมือถือ: ไม่ต้องมีแถวเมนู CENTRAL (ใช้แถบล่างของห้องแทน · จัดการเคสอยู่ในแท็บ "เคส") */
+@media(max-width:760px){body.wr-locked .top .tabs{display:none!important}body.wr-locked .top{flex-wrap:nowrap!important}}

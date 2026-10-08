@@ -29,6 +29,15 @@ const HERMES=(()=>{
     const [h,o,r,t]=await Promise.all([get({action:'helpme_cases'}).catch(()=>null),get({action:'list'}).catch(()=>null),get({action:'roster'}).catch(()=>null),get({action:'teams'}).catch(()=>null)]);
     const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
     S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
+  /* สต็อก/ถุงยังชีพ (แคช 60 วิ) · War Room เห็นคลังของห้อง + คลังกลาง */
+  async function stock(){if(S.stk&&Date.now()-S.stkAt<60000)return S.stk;const r=await get({action:'stock'}).catch(()=>null);S.stk=r&&r.ok?r.items||[]:[];S.stkAt=Date.now();return S.stk}
+  function stockText(items,d){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);if(!its.length)return 'สต็อก: ไม่มีข้อมูล';
+    const byId=new Map(items.map(i=>[i.id,i]));
+    const lines=its.map(i=>{const low=i.min!==''&&i.min!=null&&+i.qty<=+i.min;let t=`${i.name}: ${i.qty} ${i.unit||''}${low?' (ใกล้หมด · ขั้นต่ำ '+i.min+')':''}${+i.qty<=0?' (หมด)':''}${i.needed?' (ต้องการเพิ่ม)':''}${i.warroom?' · คลัง '+i.warroom:''}`;
+      if(Array.isArray(i.kit)&&i.kit.length){const can=Math.min(...i.kit.map(k=>{const c=byId.get(k.id);return c&&+k.qty>0?Math.floor(+c.qty/+k.qty):0}));
+        t+=` · ชุดละ: ${i.kit.map(k=>(byId.get(k.id)||{}).name+' ×'+k.qty).join(', ')} · ประกอบเพิ่มได้อีก ${isFinite(can)?can:0} ชุด`}return t});
+    const open=d.cases.filter(c=>c.status!=='done'),need=open.reduce((a,c)=>a+(Number(c.bags)||0),0),noBags=open.filter(c=>c.bags===''||c.bags==null).length;
+    return `สต็อก (${its.length} รายการ):\n${lines.join('\n')}\nถุงยังชีพที่เคสค้างต้องการ (ที่ระบุแล้ว): ${need} ถุง · เคสค้างที่ยังไม่ระบุจำนวนถุง ${noBags} เคส`}
   const teamPos=(d,name)=>{const l=d.live.find(x=>x.team===name&&Date.now()-x.updatedAt<30*60e3);if(l)return {lat:+l.lat,lng:+l.lng,src:'สด '+mins(l.updatedAt)+' นาทีก่อน'};
     const g=d.cases.filter(c=>c.status==='going'&&vol(c)===name&&pin(c));if(g.length)return {lat:g.reduce((a,c)=>a+ +c.lat,0)/g.length,lng:g.reduce((a,c)=>a+ +c.lng,0)/g.length,src:'จากเคสที่รับอยู่'};return null};
 
@@ -49,14 +58,15 @@ const HERMES=(()=>{
     return {plan:out,left:open.filter(x=>!used.has(x.c.id)).length,teams:teams.length}}
 
   /* ---------- สรุปข้อมูลให้ Hermes (เฉพาะที่จำเป็น) ---------- */
-  function caseLine(c){return `#${c.id} | ${URG[sevOf(c)]} | ${STS[c.status]||c.status} | ต้องการ: ${(c.needs||[]).join(', ')||'-'} | ${c.people||1} คน | ระดับน้ำ: ${c.levelText||c.level||'-'} | ${[c.district,c.province].filter(Boolean).join(' ')||'-'} | ที่อยู่: ${String(c.address||'').slice(0,80)||'-'} | ผู้แจ้ง: ${c.name||'-'} ${String(c.phone||'').replace(/^'/,'')} | รอ ${wait(c.createdAt)} | ทีม: ${vol(c)||'-'}${pin(c)?` | พิกัด ${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}`:''}`}
-  function context(d,P){const open=d.cases.filter(c=>c.status!=='done'),crit=open.filter(c=>sevOf(c)===3&&c.status!=='going');
+  function caseLine(c){return `#${c.id} | ${URG[sevOf(c)]} | ${STS[c.status]||c.status} | ต้องการ: ${(c.needs||[]).join(', ')||'-'} | ${c.people||1} คน | ระดับน้ำ: ${c.levelText||c.level||'-'} | ${[c.district,c.province].filter(Boolean).join(' ')||'-'} | ที่อยู่: ${String(c.address||'').slice(0,80)||'-'} | ผู้แจ้ง: ${c.name||'-'} ${String(c.phone||'').replace(/^'/,'')} | ถุงยังชีพ ${c.bags===''||c.bags==null?'ยังไม่ระบุ':c.bags+' ถุง'} | รอ ${wait(c.createdAt)} | ทีม: ${vol(c)||'-'}${pin(c)?` | พิกัด ${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}`:''}`}
+  function context(d,P,stk){const open=d.cases.filter(c=>c.status!=='done'),crit=open.filter(c=>sevOf(c)===3&&c.status!=='going');
     const done7=d.cases.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>Date.now()-7*864e5).length;
     const top=open.slice().sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,typeof LOCALAI!=='undefined'&&LOCALAI.isCloud&&LOCALAI.isCloud(LOCALAI.cfg())?18:35); // คลาวด์รุ่นเล็ก: ส่งข้อมูลน้อยลง
     const teams=d.roster.map(t=>{const p=teamPos(d,t.name),g=d.cases.filter(c=>c.status==='going'&&vol(c)===t.name);
       return `${t.name} | ${TST[t.status]||t.status||'-'} | พาหนะ ${t.vehicle||'-'} | ${t.members||'?'} คน | ${p?`ตำแหน่ง ${p.lat.toFixed(4)},${p.lng.toFixed(4)} (${p.src})`:'ไม่ทราบตำแหน่ง'} | รับอยู่ ${g.length} เคส${g.length?' ('+g.map(c=>'#'+c.id).join(', ')+')':''}`});
     let s=`ขอบเขต: ${d.title}\nเวลา: ${new Date().toLocaleString('th-TH')}\nตัวชี้วัด: เคสค้าง ${open.length} · วิกฤตยังไม่มีทีม ${crit.length} · กำลังไป ${open.filter(c=>c.status==='going').length} · ช่วยแล้ว 7 วัน ${done7} · รอเกิน 24 ชม. ${open.filter(c=>c.status!=='going'&&mins(c.createdAt)>1440).length}\n\nทีม (${d.roster.length}):\n${teams.join('\n')||'-'}\n\nเคสค้างที่สำคัญ (${top.length} จาก ${open.length}):\n${top.map(caseLine).join('\n')}`;
     if(P&&P.plan.length)s+=`\n\nแผนที่ระบบคำนวณ (ทีมว่าง × เคสสำคัญ + รวมเคสใกล้กัน):\n${P.plan.map(x=>`- ${x.team}: ${x.cases.map(c=>'#'+c.id).join(', ')} (${x.why})`).join('\n')}\nเคสที่ยังไม่มีทีมพอ: ${P.left}`;
+    if(stk)s+='\n\n'+stockText(stk,d);
     if(S.focus){const f=d.cases.find(c=>String(c.id)===S.focus);if(f)s+=`\n\nเคสที่กำลังดู:\n${caseLine(f)}\nหมายเหตุผู้แจ้ง: ${f.notes||'-'}\nคนกลุ่มเปราะบาง: ${(f.vulnerable||[]).join(', ')||'-'}`}
     return s}
   const SYS=`\n\nกติกา:\n- ใช้เฉพาะข้อมูลที่ให้ ห้ามแต่งรหัสเคสหรือชื่อทีม ถ้าข้อมูลไม่พอให้บอกตรง ๆ\n- ตอบภาษาไทย สั้น เป็นข้อ ๆ\n- ถ้าจะเสนอการกระทำ ให้ใส่บล็อกนี้ท้ายคำตอบ (คนจะกดยืนยันเองทีละรายการ):\n\`\`\`actions\n[{"type":"assign","case":"<รหัสเคส>","team":"<ชื่อทีม>","reason":"<เหตุผลสั้น>"},{"type":"message","team":"<ชื่อทีม>","text":"<ข้อความถึงทีม>"}]\n\`\`\``;
@@ -89,7 +99,7 @@ const HERMES=(()=>{
     .hz-act label{font-size:13px;display:flex;gap:6px;align-items:center}.hz-act .row{display:flex;gap:6px;flex-wrap:wrap}
     .hz-act .row button{border:0;border-radius:999px;padding:7px 14px;font:700 13.5px/1 inherit;cursor:pointer}.hz-act .ok{background:#2E9E57;color:#fff}.hz-act .no{background:var(--bg,#f2f2f5);color:inherit}
     .hz-act.done{opacity:.6;box-shadow:inset 4px 0 0 #2E9E57}
-    .hz-f{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line,#ececf0)}.hz-f input{flex:1;min-width:0;border:1px solid var(--line,#e8e8ec);border-radius:999px;padding:10px 14px;font:inherit;font-size:15px;background:var(--surface,#fff);color:inherit}
+    .hz-f{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line,#ececf0)}.hz-f input{flex:1;min-width:0;border:1px solid var(--line,#e8e8ec);border-radius:999px;padding:10px 14px;font:inherit;font-size:16px;background:var(--surface,#fff);color:inherit}
     .hz-f button{border:0;border-radius:999px;padding:0 16px;font:700 14px inherit;background:#17181C;color:#fff;cursor:pointer}
     .hz-sum{margin-left:8px;border:0;border-radius:999px;padding:4px 10px;font:700 12.5px inherit;background:#efe8fb;color:#5B2BA8;cursor:pointer;vertical-align:middle}
     .chat-draft{flex:none;border:0;border-radius:999px;padding:0 12px;font:700 13px inherit;background:#efe8fb;color:#5B2BA8;cursor:pointer}
@@ -108,7 +118,7 @@ const HERMES=(()=>{
     w.querySelector('.hz-f').onsubmit=e=>{e.preventDefault();const i=w.querySelector('.hz-f input'),q=i.value.trim();if(!q)return;i.value='';ask(q)};
     w.querySelector('.hz-log').addEventListener('click',onAct);
     const css2=document.createElement('style');css2.textContent='.chat-fab[aria-expanded=true]~.hz-fab{display:none}';document.head.append(css2);
-    drawerHook();setTimeout(()=>data().catch(()=>{}),1500)}
+    drawerHook();setTimeout(()=>{data().catch(()=>{});stock()},1500)}
   function toggle(on){if(!S.el)build();if(!S.el)return;const v=on==null?S.el.hidden:on;S.el.hidden=!v;S.fab.hidden=v;
     if(v){data().catch(()=>{});S.el.querySelector('.hz-sc').textContent=S.scope&&S.scope.title?S.scope.title:'ภาพรวมทั้งหมด';const on2=typeof LOCALAI!=='undefined'&&LOCALAI.on();S.el.querySelector('.hz-dot').className='hz-dot'+(on2?' on':'');
       if(!S.log.length)note(on2?'ถามได้เลย หรือกดปุ่มด้านบน · ทุกการกระทำต้องกดยืนยันก่อน':'ยังไม่ได้เปิด Local AI · กด ⚙ เพื่อตั้งค่า (ปุ่ม "จัดเคสให้ทีม" ใช้ได้แม้ไม่มี AI)');setTimeout(()=>S.el.querySelector('.hz-f input').focus(),40)}}
@@ -134,7 +144,7 @@ const HERMES=(()=>{
   async function ask(q,o={}){if(S.busy){note('รอคำตอบก่อนหน้าให้เสร็จก่อน');return}S.busy=true;add(E(o.label||q),'hz-m u');
     const t0=Date.now(),wait1=note('Hermes กำลังคิด…'),tick=setInterval(()=>{wait1.textContent=`Hermes กำลังคิด… ${Math.round((Date.now()-t0)/1000)} วิ`},1000);
     let bub=null;
-    try{const d=await data(),P=o.plan||null,ctx=context(d,P);
+    try{const [d,stk]=await Promise.all([data(),stock()]),P=o.plan||null,ctx=context(d,P,stk);
       if(typeof LOCALAI==='undefined'||!LOCALAI.on()){wait1.remove();note('ยังไม่ได้เปิด Local AI · กด ⚙ เพื่อตั้งค่า');return}
       const sys=(LOCALAI.cfg().system||'')+SYS;
       const msgs=[{role:'system',content:sys},{role:'user',content:'ข้อมูลปัจจุบัน:\n'+ctx},{role:'assistant',content:'รับทราบข้อมูลแล้ว'},...hist.slice(-6),{role:'user',content:q+'\n(ตอบกระชับ ไม่เกิน 10 บรรทัด)'}];

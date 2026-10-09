@@ -90,6 +90,7 @@ const STM=[
   {h:'ทางลัด',rows:[{href:'../warroom/',ic:'map',t:'War Room และบัญชีผู้ใช้',s:'ลิงก์ War Room ย่อย · บัญชีทีมงาน · ใบสมัคร',k:'warroom บัญชี ผู้ใช้ สมัคร'},
     {href:'../teams/',ic:'users',t:'ทีมและลิงก์ทีม',s:'เพิ่มทีม · ลิงก์ / QR ทีม · เบอร์ศูนย์',k:'ทีม qr เบอร์ศูนย์'},
     {href:'../broadcast/',ic:'megaphone',t:'ประกาศ · ข่าวและเตือนภัย',s:'ประกาศรายพื้นที่ · ข่าว',k:'ประกาศ ข่าว'},
+    {fb:true,ic:'note',t:'ส่งข้อเสนอแนะ / แจ้งปัญหา',s:'บอกทีมพัฒนาว่าอะไรใช้ยาก หรืออยากให้เพิ่มอะไร',k:'feedback ข้อเสนอแนะ ปัญหา'},
     {logout:true,ic:'logout',t:'ออกจากระบบ',s:'',k:'logout ออก'}]}];
 const stIc=n=>typeof ic==='function'?ic(n):'';
 // War Room ย่อยเห็นเฉพาะผู้ใช้งาน + AI · CENTRAL เห็นทุกหัวข้อเสมอ (การ์ดที่ยังโหลดไม่เสร็จจะโหลดตอนเปิด)
@@ -98,12 +99,12 @@ function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`)
 function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
   $('#st-menu').innerHTML=STM.map(sec=>{const rows=sec.rows.filter(r=>(!r.p||stAvail(r.p))&&(!q||(r.t+' '+r.s+' '+(r.k||'')).toLowerCase().includes(q)));if(!rows.length)return '';
     return `<section class="stm-sec"><h2>${esc(sec.h)}</h2>${rows.map(r=>{const st=r.st?r.st():'';const inner=`<span class="stm-ic">${stIc(r.ic)}</span><span class="stm-tx"><b>${esc(r.t)}</b>${r.s?`<small>${esc(r.s)}</small>`:''}</span>${st?`<em>${esc(st)}</em>`:''}<span class="stm-chev">${r.logout?'':stIc('chev')}</span>`;
-      return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
+      return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':r.fb?'data-stfb':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
 function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
   if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
   m.dataset.view=p;$('#st-title').textContent=row.t;window.scrollTo(0,0);
   const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
-$('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click()});
+$('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click();if(e.target.closest('[data-stfb]')){const f=document.getElementById('fb-btn');if(f)f.click()}});
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);
 addEventListener('hashchange',()=>stGo(location.hash.slice(1)));

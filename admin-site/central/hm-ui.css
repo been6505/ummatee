@@ -414,3 +414,4 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-status .d-save{margin-top:2px}
 /* ปุ่มออกจากระบบย้ายไปอยู่ในหน้าตั้งค่า (แถว "ออกจากระบบ") */
 .top #logout,.top-r #logout{display:none!important}
+.top #fb-btn,.top-r #fb-btn{display:none!important} /* ข้อเสนอแนะย้ายไปหน้าตั้งค่า */

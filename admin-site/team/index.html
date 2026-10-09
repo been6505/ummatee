@@ -164,6 +164,8 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 @keyframes ldp{50%{box-shadow:0 0 0 9px rgba(46,158,87,.08)}}
 .top .st{margin-left:0!important}
 .locbar.ok-hide{display:none!important}
+#call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
+#call-pane .cp-back{position:absolute;left:12px;top:calc(var(--sat) + 10px);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:700;padding:8px 14px}
 /* หน้าโทร: ปุ่มอยู่กลางจอ (ระหว่างหัวกับเมนูล่าง) */
 main#v-call:not([hidden]){display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - var(--sat) - 190px);max-width:520px;margin:0 auto;width:100%;padding:0 14px}
 main#v-call .hint{text-align:center}
@@ -625,8 +627,14 @@ $('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',
   navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>send('',{lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6)}),()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
 
 /* ---------- โทร: เบอร์ศูนย์ · โทรผ่านเน็ต (ห้องเสียง/วิดีโอ ศูนย์เห็นสายเข้า) ---------- */
-async function callHq(mode){const w=window.open('about:blank','_blank');if(w)w.opener=null;
-  try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;const u=new URL(r.link,location.href).href;if(w)w.location=u;else location.href=u;toast('กำลังเรียกศูนย์…')}catch(e){w&&w.close();toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
+/* โทรในหน้าเดิม: เปิดหน้าจอโทรเป็นกรอบเต็มจอ (ไม่ออกจากแอป/ไม่เปิดแท็บใหม่) · จบสาย = ปิดกรอบกลับมาหน้าเดิมเอง */
+function callPane(link){const old=document.getElementById('call-pane');if(old)old.remove();
+  const d=document.createElement('div');d.id='call-pane';d.innerHTML=`<iframe src="${esc(new URL(link,location.href).href)}" allow="microphone; camera; autoplay" title="หน้าจอโทร"></iframe><button type="button" class="cp-back" aria-label="กลับ">‹ กลับ</button>`;
+  document.body.append(d);d.querySelector('.cp-back').onclick=()=>{d.remove();pollChat()}}
+addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.hmCall==='ended'){const d=document.getElementById('call-pane');if(d)setTimeout(()=>{d.remove();pollChat()},1200)}});
+document.addEventListener('click',e=>{const a=e.target.closest('a.join,#r-yes');if(!a||!a.getAttribute('href'))return;e.preventDefault();callPane(a.getAttribute('href'))},true);
+async function callHq(mode){
+  try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;callPane(r.link)}catch(e){toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
 function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),video=m.text==='วิดีโอคอล';
   lay.innerHTML=`<div class="ring" role="alertdialog" aria-label="สายเข้าจากศูนย์"><div><div class="av"><i data-ic="${video?'video':'phone'}"></i></div><h2>ศูนย์โทรมา</h2><p>${esc(m.name||'ศูนย์ประสานงาน')} · ${video?'วิดีโอคอล':'โทรด้วยเสียง'}</p>
     <div class="row"><div><button class="no" type="button" id="r-no" aria-label="ไม่รับ"><i data-ic="close"></i></button><small>ไม่รับ</small></div><div><a class="yes" id="r-yes" href="${esc(m.link)}" target="_blank" rel="noopener" style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:var(--ok);color:#fff" aria-label="รับสาย"><i data-ic="phone"></i></a><small>รับสาย</small></div></div></div></div>`;

@@ -69,19 +69,21 @@ function hbars(id,rows,opt={}){const box=$(id);if(!rows.length||!rows.some(r=>r[
   box.replaceChildren(wrap)}
 
 /* ---------- column chart (SVG) ---------- */
-function columns(id,buckets){const box=$(id);const W=Math.max(320,box.clientWidth||600),H=220,pl=34,pr=8,pt=18,pb=26;
+function columns(id,buckets){const box=$(id);const W=Math.max(320,box.clientWidth||600),H=230,pl=34,pr=8,pt=26,pb=26;
   const dual=buckets.some(b=>b.k!=null),max=Math.max(...buckets.map(b=>Math.max(b.v,b.k||0)),0);if(!max){box.replaceChildren(el('p','empty','ยังไม่มีเคสในช่วงนี้'));return}
   const step=max<=5?1:max<=10?2:Math.ceil(max/4/5)*5,top=Math.ceil(max/step)*step;
   const s=svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'กราฟเคสใหม่'}),iw=W-pl-pr,ih=H-pt-pb,y=v=>pt+ih-(v/top)*ih;
   for(let v=0;v<=top;v+=step){s.append(svgEl('line',{x1:pl,x2:W-pr,y1:y(v),y2:y(v),stroke:v?'var(--grid)':'var(--axis)','stroke-width':1}));const t=svgEl('text',{x:pl-6,y:y(v)+4,'text-anchor':'end','font-size':11,fill:'var(--muted)'});t.textContent=nf(v);s.append(t)}
   const n=buckets.length,band=iw/n,bw=Math.min(dual?16:24,Math.max(dual?2:3,(band-2)/(dual?2.2:1)));
-  const every=Math.ceil(n/(W<500?6:12));let peak=buckets.reduce((a,b)=>b.v>a.v?b:a,buckets[0]);
+  const every=n<=8?1:Math.ceil(n/(W<500?6:12));let peak=buckets.reduce((a,b)=>b.v>a.v?b:a,buckets[0]);
   const bar=(x,v,fill)=>{const h=(v/top)*ih;if(!v)return;const r=Math.min(4,bw/2,h),y0=pt+ih;s.append(svgEl('path',{d:`M${x},${y0}V${y0-h+r}Q${x},${y0-h} ${x+r},${y0-h}H${x+bw-r}Q${x+bw},${y0-h} ${x+bw},${y0-h+r}V${y0}Z`,fill}))};
   buckets.forEach((b,i)=>{const x=pl+band*i+(band-bw*(dual?2:1)-(dual?2:0))/2;
     bar(x,b.v,dual?'#2D45C8':'var(--s1)');if(dual)bar(x+bw+2,b.k,'#2E9E57');
     const hit=svgEl('rect',{x:pl+band*i,y:pt,width:band,height:ih,fill:'transparent'});hover(hit,dual?`ใหม่ ${nf(b.v)} · ช่วยเสร็จ ${nf(b.k)}`:nf(b.v)+' เคส',b.full);s.append(hit);
     if(i%every===0||i===n-1){const t=svgEl('text',{x:pl+band*i+band/2,y:H-8,'text-anchor':'middle','font-size':11,fill:'var(--muted)'});t.textContent=b.lab;s.append(t)}
-    if(b===peak&&b.v){const t=svgEl('text',{x:dual?x+bw/2:pl+band*i+band/2,y:y(b.v)-5,'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:'var(--ink-2)'});t.textContent=nf(b.v);s.append(t)}});
+    // ตัวเลขบนยอดทุกแท่ง (ถ้าแท่งไม่แคบเกินไป · แคบมากแสดงเฉพาะแท่งสูงสุด)
+    const lbl=(cx,v,fill)=>{if(!v)return;const t=svgEl('text',{x:cx,y:y(v)-5,'text-anchor':'middle','font-size':band<26?10:11.5,'font-weight':700,fill});t.textContent=nf(v);s.append(t)};
+    if(band>=18||b===peak){lbl(dual?x+bw/2:pl+band*i+band/2,b.v,dual?'#2D45C8':'var(--ink-2)');if(dual&&band>=18)lbl(x+bw+2+bw/2,b.k,'#2E9E57')}});
   if(!dual){box.replaceChildren(s);return}
   const lg=el('div','hm-legend sm');lg.innerHTML='<span><i class="b-new"></i>เคสใหม่</span><span><i class="b-done"></i>ช่วยเสร็จ</span>';box.replaceChildren(s,lg)}
 
@@ -203,10 +205,10 @@ const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.re
   let buckets=[];
   if(D.range==='today'){const s0=startOfDay(Date.now()),h=new Date().getHours();for(let i=0;i<=h;i++)buckets.push({t:s0+i*36e5,v:0,k:fin?0:null,lab:i+':00',full:`${i}:00–${i}:59 น.`});
     cr.forEach(t=>{const b=buckets[Math.floor((t-s0)/36e5)];if(b)b.v++});(fin||[]).forEach(t=>{const b=buckets[Math.floor((t-s0)/36e5)];if(b)b.k++});$('#t-trend').textContent='เคสใหม่รายชั่วโมง (วันนี้)'}
-  else{const first=from||startOfDay(Math.min(...cr.filter(Boolean),Date.now())),days=Math.max(1,Math.round((startOfDay(Date.now())-first)/864e5)+1);
+  else{const first=startOfDay(Date.now()-6*864e5),days=7; // กราฟรายวัน: 7 วันล่าสุดเสมอ (ดูช่วงอื่นได้จากตารางด้านล่าง)
     for(let i=0;i<days;i++){const t=startOfDay(first+i*864e5+36e5);const d=new Date(t);buckets.push({t,v:0,k:fin?0:null,lab:d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}),full:d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'})})}
     const byDay=new Map(buckets.map(b=>[b.t,b]));cr.forEach(t=>{const b=byDay.get(startOfDay(t));if(b)b.v++});(fin||[]).forEach(t=>{const b=byDay.get(startOfDay(t));if(b)b.k++});
-    $('#t-trend').textContent=fin?'เคสใหม่ และเคสที่ช่วยเสร็จต่อวัน':'เคสใหม่ต่อวัน'}
+    $('#t-trend').textContent=fin?'เคสใหม่ และเคสที่ช่วยเสร็จ · 7 วันล่าสุด':'เคสใหม่ · 7 วันล่าสุด'}
   if(HM){const tg=el('small','hm-tag','Help Me');$('#t-trend').append(' ',tg)}
   const peak=buckets.reduce((a,b)=>b.v>a.v?b:a,{v:0});$('#s-trend').textContent=(peak.v?`มากที่สุด ${nf(peak.v)} เคส · ${peak.full}`:'')+(HM?(peak.v?' · ':'')+'จาก Google Sheet ของ Help Me':'');
   columns('#c-trend',buckets);table('#tb-trend',fin?['ช่วงเวลา','เคสใหม่','ช่วยเสร็จ']:['ช่วงเวลา','เคสใหม่'],buckets.map(b=>fin?[b.full,b.v,b.k]:[b.full,b.v]));

@@ -79,3 +79,31 @@ async function lgUndo(id,btn){const x=LG.items.find(i=>i.id===id);if(!x)return;
 $('#lg-list').onclick=e=>{const u=e.target.closest('[data-undo]');if(u){lgUndo(+u.dataset.undo,u);return}const b=e.target.closest('[data-lg]');if(!b)return;const id=+b.dataset.lg;LG.open.has(id)?LG.open.delete(id):LG.open.add(id);lgDraw()};
 setInterval(lgPoll,20000);
 adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});
+
+/* ---------- หน้าตั้งค่าแบบรายการ (เหมือนแอป): หัวข้อเป็นหมวด · แตะแถวเพื่อเปิด · ค้นหาด้านบน · ปุ่มย้อนกลับของมือถือใช้ได้ (#หน้า) ---------- */
+const STM=[
+  {h:'บัญชีของคุณ',rows:[{p:'user',ic:'user',t:'ผู้ใช้งาน',s:'ชื่อที่แสดงในประวัติ · ธีมสว่าง / มืด',k:'ชื่อ ธีม โหมดมืด dark'}]},
+  {h:'การแจ้งเตือนและการเชื่อมต่อ',rows:[{p:'discord',ic:'chat',t:'Discord',s:'แจ้งเตือนเคสด่วน · SOS · สรุปโดย AI',k:'webhook แจ้งเตือน',st:()=>$('#dc-tag')&&$('#dc-tag').textContent},
+    {p:'sms',ic:'send',t:'รับตำแหน่งทีมทาง SMS',s:'ทีมส่งตำแหน่งได้แม้ไม่มีเน็ต',k:'sms ส่งต่อ ตำแหน่ง'}]},
+  {h:'AI',rows:[{p:'ai',ic:'chat',t:'AI HELP',s:'Local AI (Hermes Agent) หรือคลาวด์ · ทดสอบถาม',k:'ai hermes ollama โมเดล',st:()=>{const d=$('#ai-dot');return d&&d.classList.contains('on')?'เชื่อมแล้ว':''}}]},
+  {h:'ความปลอดภัยและการตรวจสอบ',rows:[{p:'log',ic:'clock',t:'ประวัติการเปลี่ยนแปลง',s:'ใคร ทำอะไร เมื่อไร · ย้อนกลับการแก้ไข',k:'audit log ประวัติ ย้อนกลับ undo'}]},
+  {h:'ทางลัด',rows:[{href:'../warroom/',ic:'map',t:'War Room และบัญชีผู้ใช้',s:'ลิงก์ War Room ย่อย · บัญชีทีมงาน · ใบสมัคร',k:'warroom บัญชี ผู้ใช้ สมัคร'},
+    {href:'../teams/',ic:'users',t:'ทีมและลิงก์ทีม',s:'เพิ่มทีม · ลิงก์ / QR ทีม · เบอร์ศูนย์',k:'ทีม qr เบอร์ศูนย์'},
+    {href:'../broadcast/',ic:'megaphone',t:'ประกาศ · ข่าวและเตือนภัย',s:'ประกาศรายพื้นที่ · ข่าว',k:'ประกาศ ข่าว'},
+    {logout:true,ic:'logout',t:'ออกจากระบบ',s:'',k:'logout ออก'}]}];
+const stIc=n=>typeof ic==='function'?ic(n):'';
+function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`);return c&&!c.hidden}
+function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
+  $('#st-menu').innerHTML=STM.map(sec=>{const rows=sec.rows.filter(r=>(!r.p||stAvail(r.p))&&(!q||(r.t+' '+r.s+' '+(r.k||'')).toLowerCase().includes(q)));if(!rows.length)return '';
+    return `<section class="stm-sec"><h2>${esc(sec.h)}</h2>${rows.map(r=>{const st=r.st?r.st():'';const inner=`<span class="stm-ic">${stIc(r.ic)}</span><span class="stm-tx"><b>${esc(r.t)}</b>${r.s?`<small>${esc(r.s)}</small>`:''}</span>${st?`<em>${esc(st)}</em>`:''}<span class="stm-chev">${r.logout?'':stIc('chev')}</span>`;
+      return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
+function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
+  if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
+  m.dataset.view=p;$('#st-title').textContent=row.t;window.scrollTo(0,0)}
+$('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click()});
+$('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
+$('#st-q').addEventListener('input',stMenu);
+addEventListener('hashchange',()=>stGo(location.hash.slice(1)));
+// การ์ดบางอันขึ้นเมื่อโหลดข้อมูลเสร็จ (Discord / SMS / ประวัติ): วาดรายการใหม่เมื่อเปลี่ยน
+new MutationObserver(()=>{if($('#main').dataset.view==='menu')stMenu();else stGo(location.hash.slice(1))}).observe($('#main'),{attributes:true,subtree:true,attributeFilter:['hidden','class']});
+stGo(location.hash.slice(1));

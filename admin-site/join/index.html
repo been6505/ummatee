@@ -12,16 +12,20 @@
 :root{--primary:#DD2027;--tint:#FDEDEE;--ink:#17181C;--muted:#62656F;--line:#E8E8EC;--bg:#F5F5F7;--ok:#2E9E57;--blue:#2D45C8;--blue-t:#EEF1FD}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;font-size:16px;line-height:1.5}
 .wrap{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 60px}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px}.brand img{height:30px}.brand b{font-size:15px;color:var(--muted)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px}.brand{display:inline-flex;align-items:center;background:#fff;border-radius:999px;padding:10px 18px;box-shadow:0 2px 10px rgba(22,27,61,.08)}.brand img{height:24px;width:auto;display:block}
+.tag{font-size:13px;font-weight:600;color:var(--muted);background:#fff;border-radius:999px;padding:8px 14px;box-shadow:0 2px 10px rgba(22,27,61,.06);white-space:nowrap}
 h1{font-size:26px;margin:4px 0 4px}.lead{color:var(--muted);margin:0 0 16px}
 .seg{display:flex;background:#fff;border-radius:999px;padding:5px;box-shadow:0 1px 3px rgba(22,27,61,.08);margin-bottom:16px}
 .seg button{flex:1;border:0;background:none;border-radius:999px;padding:11px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
 .card{background:#fff;border-radius:24px;padding:18px;box-shadow:0 1px 3px rgba(22,27,61,.06);margin-bottom:14px;display:grid;gap:14px}
 .card h2{margin:0;font-size:18px}.card h2 small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
 .kind{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.kind button{border:2px solid var(--line);background:#fff;border-radius:20px;padding:16px 12px;text-align:left;font:inherit;cursor:pointer;display:grid;gap:4px;color:inherit}
-.kind button b{font-size:17px}.kind button small{color:var(--muted);font-size:13px;line-height:1.45}.kind button span{font-size:26px}
-.kind button[aria-pressed=true]{border-color:var(--primary);background:var(--tint)}
+.kind button{position:relative;border:1.5px solid var(--line);background:#fff;border-radius:22px;padding:14px;text-align:left;font:inherit;cursor:pointer;display:flex;align-items:center;gap:12px;color:inherit;box-shadow:0 1px 3px rgba(22,27,61,.05);transition:border-color .15s,background .15s}
+.ki{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--bg);color:var(--muted);transition:background .15s,color .15s}
+.kt{display:grid;gap:1px;min-width:0}.kt b{font-size:17px}.kt small{color:var(--muted);font-size:13px;line-height:1.4}
+.kc{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);background:#fff}
+.kind button[aria-pressed=true]{border-color:var(--primary);background:var(--tint)}.kind button[aria-pressed=true] .ki{background:var(--primary);color:#fff}
+.kind button[aria-pressed=true] .kc{border:0;background:var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/13px no-repeat}
 label{display:grid;gap:5px;font-weight:600;font-size:14.5px}label small{font-weight:400;color:var(--muted)}
 input,select,textarea{font:inherit;font-size:16px;min-height:46px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff;color:inherit;width:100%}
 textarea{min-height:80px;resize:vertical}
@@ -37,20 +41,21 @@ textarea{min-height:80px;resize:vertical}
 .status{border-radius:20px;padding:16px;display:grid;gap:8px}.status.pending{background:#FFF4DE}.status.approved{background:#E9F7EF}.status.rejected{background:#FDECEC}
 .muted{color:var(--muted)}.small{font-size:13.5px}[hidden]{display:none!important}
 .pw{position:relative}.pw button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:18px;cursor:pointer}
-@media(max-width:520px){.row2,.row3{grid-template-columns:1fr}.kind button{padding:12px 10px}.kind button small{font-size:12px}}
+@media(max-width:520px){.row2,.row3{grid-template-columns:1fr}.kind button{flex-direction:column;align-items:flex-start;gap:8px;padding:14px 12px}.ki{width:44px;height:44px}.kt b{font-size:16px}.kt small{font-size:12.5px}.tag{display:none}}
+.pw button{display:grid;place-items:center;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="brand"><img src="../assets/helpme-logo.png" alt="Help Me" width="166" height="24"><b>· เข้าร่วมเครือข่ายช่วยเหลือ</b></div>
+  <div class="top"><a class="brand" href="/join/"><img src="../assets/helpme-logo.png" alt="Help Me" width="166" height="24"></a><span class="tag">เครือข่ายช่วยเหลือ</span></div>
   <h1 id="h1">เข้าร่วม Help Me</h1>
-  <p class="lead">สำหรับศูนย์ช่วยเหลือ (War Room) และจิตอาสาที่ต้องการลงพื้นที่ช่วยผู้ประสบภัย</p>
+  <p class="lead">ศูนย์ช่วยเหลือและจิตอาสา ร่วมช่วยผู้ประสบภัยไปด้วยกัน</p>
   <div class="seg" role="tablist"><button type="button" data-m="login" aria-pressed="true">เข้าสู่ระบบ</button><button type="button" data-m="apply" aria-pressed="false">สมัครใหม่</button></div>
 
   <!-- ===== เลือกประเภท ===== -->
   <div class="kind" id="kind">
-    <button type="button" data-k="warroom" aria-pressed="true"><span>🏢</span><b>War Room</b><small>ศูนย์ประสานงาน/องค์กร ที่ดูแลพื้นที่ มีทีมและของช่วยเหลือ</small></button>
-    <button type="button" data-k="volunteer" aria-pressed="false"><span>🙋</span><b>จิตอาสา</b><small>บุคคลหรือกลุ่มที่พร้อมลงพื้นที่ ขับเรือ ขนของ ทำอาหาร ฯลฯ</small></button>
+    <button type="button" data-k="warroom" aria-pressed="true"><span class="ki"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"/><path d="M15 9h4a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8 8h3M8 12h3M8 16h3"/><path d="M17 13h0M17 17h0"/></svg></span><span class="kt"><b>War Room</b><small>ศูนย์/องค์กรที่ดูแลพื้นที่</small></span><span class="kc"></span></button>
+    <button type="button" data-k="volunteer" aria-pressed="false"><span class="ki"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/><path d="M12 5 9 8a2.2 2.2 0 0 0 0 3c.8.8 2.1.9 3 .1l2.1-1.9a2.8 2.8 0 0 1 3.8 0l3 2.7"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg></span><span class="kt"><b>จิตอาสา</b><small>บุคคล/กลุ่มที่พร้อมลงพื้นที่</small></span><span class="kc"></span></button>
   </div>
   <div style="height:14px"></div>
 
@@ -59,7 +64,7 @@ textarea{min-height:80px;resize:vertical}
     <h2 id="lg-h">เข้าสู่ระบบ War Room</h2>
     <label id="lg-room-w">War Room ของคุณ<select id="lg-room"><option value="">กำลังโหลดรายชื่อ…</option></select></label>
     <label>ชื่อผู้ใช้<input id="lg-user" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
-    <label>รหัสผ่าน<span class="pw"><input id="lg-pass" type="password" autocomplete="current-password" required><button type="button" data-eye="lg-pass" aria-label="แสดงรหัส">👁</button></span></label>
+    <label>รหัสผ่าน<span class="pw"><input id="lg-pass" type="password" autocomplete="current-password" required><button type="button" data-eye="lg-pass" aria-label="แสดงรหัส"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
     <button class="btn red" id="lg-go">เข้าสู่ระบบ</button>
     <p class="err" id="lg-err" role="alert"></p>
     <div id="lg-status" hidden></div>
@@ -75,7 +80,7 @@ textarea{min-height:80px;resize:vertical}
       <div class="row2"><label>LINE ID<input name="lineId" maxlength="40"></label><label>จังหวัด *<select name="province" required class="prov"></select></label></div>
       <label>เขต/อำเภอที่ดูแล<small>คั่นด้วย ,</small><input name="districts" maxlength="300" placeholder="เช่น มีนบุรี, หนองจอก, ลาดกระบัง"></label>
       <label>ที่ตั้งศูนย์<input name="address" maxlength="200"></label>
-      <button type="button" class="btn ghost" data-loc="wr">📍 ใช้ตำแหน่งปัจจุบันเป็นที่ตั้งศูนย์</button><p class="muted small" id="loc-wr"></p>
+      <button type="button" class="btn ghost" data-loc="wr"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg> ใช้ตำแหน่งปัจจุบันเป็นที่ตั้งศูนย์</button><p class="muted small" id="loc-wr"></p>
     </div>
     <div class="card"><h2>ความสามารถของ War Room<small>ช่วยให้ CENTRAL ส่งเคสและของได้ตรงกับศักยภาพ</small></h2>
       <div class="q"><b>ให้บริการด้านใดได้บ้าง</b><div class="chips" data-name="services">กู้ภัยทางน้ำ|อพยพผู้ประสบภัย|แจกอาหาร/ถุงยังชีพ|ครัวกลาง|ศูนย์พักพิง|การแพทย์/ปฐมพยาบาล|ดูแลผู้ป่วยติดเตียง/ผู้สูงอายุ|ดูแลสัตว์|ฟื้นฟูหลังน้ำลด|ประสานงาน/คอลเซ็นเตอร์|รับบริจาค/คลังสินค้า</div></div>

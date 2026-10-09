@@ -140,6 +140,7 @@ const VERIFY=(()=>{
     if(cctv)applyCctv(out,reporterSevere);
     // 4) ดาวเทียม GISTDA (7 วัน) — เห็นน้ำท่วมในพื้นที่โล่ง/ชุมชนริมน้ำ · ในเมืองหนาแน่นมักมองไม่เห็น จึงไม่หักคะแนนเมื่อไม่พบ
     const ev2=envOf(lat,lng),sat=ev2&&ev2.sat;
+    if(sat&&!sat.error)out.sat=sat;
     if(sat&&!sat.error){const dd=sat.date?new Date(sat.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'',fresh=sat.date&&Date.now()-Date.parse(sat.date)<3*864e5;
       if(sat.inside){out.satInside=true;out.E+=fresh?25:15;out.ev.push(`ดาวเทียม GISTDA: จุดนี้อยู่ในพื้นที่น้ำท่วม${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วม'+(dd?' '+dd:''),'bad')}
       else if(sat.dM!=null&&sat.dM<=300){out.E+=fresh?15:10;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)}${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'bad')}

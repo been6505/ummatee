@@ -225,6 +225,7 @@ function vrSection(c){
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
     ${hasPin(c)?`<figure class="vr-fig"><div class="vr-fig-map" id="vr-map" role="img" aria-label="ภาพประกอบรอบจุดเคส"></div><div class="vr-fig-sw" role="group" aria-label="ภาพพื้นหลัง"><button type="button" data-vrbase="sat" aria-pressed="true">ดาวเทียม</button><button type="button" data-vrbase="map" aria-pressed="false">แผนที่</button></div>
       <figcaption><span><i class="lg lg-case"></i>จุดเคส</span>${v.road?'<span><i class="lg lg-road"></i>ถนนที่รายงาน</span>':''}<span><i class="lg lg-sat"></i>น้ำท่วมจากดาวเทียม (7 วัน)</span>${v.sensor?'<span><i class="lg lg-sen"></i>เซ็นเซอร์น้ำ</span>':''}${v.reports.length?'<span><i class="lg lg-rep"></i>รายงานน้ำท่วม</span>':''}<span><i class="lg lg-cam"></i>กล้อง</span><span class="muted">วงประ = 1 กม.</span></figcaption></figure>`:''}
+    ${hasPin(c)?vrPics(c,v):''}
     ${aiBlock(c)}
     ${hasPin(c)&&VERIFY.F.cams.length?(()=>{ /* ตรวจจากกล้องได้เลยในหน้านี้: กล้องภาพสดใกล้สุด (8 กม.) + กล้องที่ยังส่งภาพอยู่ 2 ตัวใกล้สุด (ข้ามกล้องที่ไม่อัปเดตเกิน 3 ชม.) */
       const fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600,near=VERIFY.nearCams(+c.lat,+c.lng,40,8000).filter(fresh);
@@ -380,6 +381,31 @@ if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}els
 
 /* ลิ้นชักเคสวาดใหม่ทุกครั้งที่ข้อมูลอัปเดต: หยุดสตรีมเดิมแล้วเริ่มกล้องในลิ้นชักใหม่ */
 {const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}
+/* ภาพถนน (กล้อง CCTV ที่ใกล้ถนนที่รายงานที่สุด) + ภาพจาก GISTDA (ภาพดาวเทียม + พื้นที่น้ำท่วม 7 วัน) */
+function roadCam(c,v){const lat=+c.lat,lng=+c.lng,fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600;
+  let cams=VERIFY.nearCams(lat,lng,60,4000).filter(fresh);if(!cams.length)cams=VERIFY.nearCams(lat,lng,60,4000).filter(k=>k.img);if(!cams.length)return null; // ไม่มีกล้องที่ยังส่งภาพ = ใช้ภาพล่าสุดที่มี (ติดป้ายภาพเก่า)
+  if(v.road&&v.road.lines){const r=cams.map(k=>({k,dr:VERIFY.distToLines(k.lat,k.lng,v.road.lines)})).sort((a,b)=>a.dr-b.dr)[0];if(r.dr<=1500)return {k:r.k,dr:r.dr}}
+  return {k:cams[0],dr:null}}
+function vrPics(c,v){const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',rc=roadCam(c,v),s=v.sat,rd=v.road;
+  const sd=s&&s.date?new Date(s.date).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'';
+  const old=rc&&!rc.k.hls&&rc.k.at&&Date.now()/1000-rc.k.at>3*3600,road=rc?`${typeof CAMLIVE!=='undefined'?CAMLIVE.html(rc.k):''}<span class="vr-pic-tag${old?' old':''}">${rc.k.hls?'● สด':old?'ภาพเก่า · '+esc(agoT(rc.k.at*1000)):'ภาพล่าสุด'}</span>`:`<div class="vr-pic-none"><i data-ic="road"></i><span>ไม่มีกล้องถนนที่ส่งภาพใกล้จุดนี้</span></div>`;
+  const rcap=rd?`<b>ถนน ${esc(rd.name)}</b> · ห่างเคส ${m(rd.d)} · ${rd.depth!=null?'ลึก ~'+rd.depth+' ซม.':esc(VERIFY.VERDICT_TH[rd.verdict]||'มีน้ำ')}${rd.updated?' · '+esc(agoT(rd.updated)):''}`:'<b>ถนนใกล้จุด</b> · ไม่มีรายงานน้ำบนถนนใน 800 ม.';
+  const scap=s?(s.inside?'<b class="t-bad">จุดเคสอยู่ในพื้นที่น้ำท่วม</b>':s.dM!=null&&s.dM<=1000?`<b>พบน้ำท่วมห่าง ${m(s.dM)}</b>`:'<b>ไม่พบน้ำท่วมใน 1 กม.</b>')+(sd?` · ภาพ ${sd}`:''):'<b>ยังไม่มีข้อมูลดาวเทียมของจุดนี้</b>';
+  return `<div class="vr-pics">
+    <figure class="vr-pic"><div class="vr-pic-h"><i data-ic="road"></i> ภาพถนน</div><div class="vr-pic-body">${road}</div><figcaption>${rcap}${rc?`<br><small>กล้อง ${esc(rc.k.title)}${rc.dr!=null?' · ห่างถนน '+m(rc.dr):' · ห่างเคส '+m(rc.k.d)}</small>`:''}</figcaption></figure>
+    <figure class="vr-pic"><div class="vr-pic-h"><i data-ic="sat"></i> ภาพจาก GISTDA</div><div class="vr-pic-body"><div class="vr-gis" id="vr-gis" role="img" aria-label="ภาพดาวเทียมและพื้นที่น้ำท่วมจาก GISTDA"></div></div><figcaption>${scap}<br><small>สีน้ำเงิน = น้ำท่วมที่ดาวเทียมเห็น (7 วัน) · GISTDA</small></figcaption></figure>
+  </div>`}
+function vrGis(){const el=document.getElementById('vr-gis');
+  if(VRF.gis&&(!el||VRF.gis.getContainer()!==el)){try{VRF.gis.remove()}catch(e){}VRF.gis=null}
+  if(!el||VRF.gis||typeof L==='undefined')return;const c=A.cases.find(x=>String(x.id)===A.openId);if(!c||!hasPin(c))return;
+  const g=L.map(el,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,tap:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false});VRF.gis=g;
+  g.setView([+c.lat,+c.lng],15,{animate:false});
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(g);
+  L.tileLayer(API_URL.replace(/\/?$/,'')+'/gistda/7days/{z}/{x}/{y}.png',{opacity:.85,maxNativeZoom:17,errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAAAAACw='}).addTo(g);
+  L.circle([+c.lat,+c.lng],{radius:500,color:'#fff',weight:1.5,dashArray:'4 6',fill:false,interactive:false}).addTo(g);
+  L.circleMarker([+c.lat,+c.lng],{radius:8,color:'#fff',weight:3,fillColor:'#dc2626',fillOpacity:1,interactive:false}).addTo(g);
+  g.fitBounds(L.latLng(+c.lat,+c.lng).toBounds(1100),{animate:false})}
+{const _rd3=renderDrawer;renderDrawer=function(){_rd3();vrGis()}}
 /* ภาพประกอบผลตรวจพื้นที่: แผนที่ย่อรอบจุดเคส (ภาพดาวเทียม/แผนที่ + พื้นที่น้ำท่วม GISTDA 7 วัน + ถนนที่รายงาน + เซ็นเซอร์ + รายงาน + กล้อง) */
 const VRF={map:null,base:'sat',id:''};
 function vrFig(){const el=document.getElementById('vr-map');

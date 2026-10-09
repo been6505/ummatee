@@ -317,3 +317,21 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .vr-fig .lg-road{width:16px;height:4px;border-radius:2px;border:0;background:linear-gradient(90deg,#22c55e 50%,#ef4444 50%)}
 .vr-fig .lg-sat{border-radius:3px;background:rgba(37,99,235,.55)}
 .vr-cams{margin-top:10px}
+/* ภาพถนน + ภาพจาก GISTDA */
+.vr-pics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 4px}
+@media (max-width:520px){.vr-pics{grid-template-columns:1fr}}
+.vr-pic{margin:0;border-radius:16px;overflow:hidden;background:var(--card,#fff);border:1px solid var(--line,#e6e8ef);display:flex;flex-direction:column}
+.vr-pic-h{display:flex;align-items:center;gap:6px;padding:8px 12px;font-size:13px;font-weight:700}
+.vr-pic-h svg{width:16px;height:16px}
+.vr-pic-body{position:relative;aspect-ratio:16/10;background:#1f2937;overflow:hidden}
+.vr-pic-body .cam-pop{height:100%;display:block}.vr-pic-body .cam-pop>b,.vr-pic-body .cam-pop>small,.vr-pic-body .cam-golive{display:none}
+.vr-pic-body .cam-img,.vr-pic-body .cam-live,.vr-pic-body video{width:100%;height:100%;object-fit:cover;display:block;margin:0;border-radius:0}
+.vr-pic-body .cam-msg.static{color:#cbd5e1;padding:12px;margin:0;font-size:13px}
+.vr-gis{position:absolute;inset:0}
+.vr-pic-none{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:6px;color:#cbd5e1;font-size:13px;text-align:center;padding:12px}
+.vr-pic-none svg{width:28px;height:28px;opacity:.7}
+.vr-pic figcaption{padding:8px 12px 10px;font-size:12.5px;line-height:1.45}
+.vr-pic figcaption small{color:var(--muted,#64748b)}
+.vr-pic .t-bad{color:#b42318}
+.vr-pic-tag{position:absolute;left:8px;top:8px;z-index:2;padding:3px 9px;border-radius:999px;background:rgba(17,24,39,.75);color:#fff;font-size:11.5px;font-weight:700}
+.vr-pic-tag.old{background:rgba(180,83,9,.9)}

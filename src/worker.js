@@ -83,7 +83,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -140,7 +140,7 @@ function outCase(r, full) {
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
-    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', teamDoneAt: r.teamDoneAt || null, teamNote: r.teamNote || '' };
+    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', teamDoneAt: r.teamDoneAt || null, teamNote: r.teamNote || '', sevSet: r.sevSet || null, sevBy: r.sevBy || '' };
   if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
   if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; }
   return o;
@@ -384,6 +384,8 @@ async function updateCase(db, b) {
   }
   // รวมเคสซ้ำ: ชี้ไปเคสหลัก (ไม่นับเป็นเคสที่ช่วยแล้ว) · ส่ง '' เพื่อยกเลิก
   if (b.dupOf !== undefined) { sets.push('dupOf=?'); vals.push(clean(b.dupOf, 40)); }
+  // เจ้าหน้าที่กำหนดระดับความเร่งด่วนเอง (1–3) ทับที่ระบบคัดกรอง · '' = กลับไปใช้ของระบบ
+  if (b.sevSet !== undefined) { const v = b.sevSet === '' || b.sevSet === null ? null : clampInt(b.sevSet, 1, 3, null); sets.push('sevSet=?', 'sevBy=?'); vals.push(v, v ? clean(b.by, 60) : null); }
   // หมายเหตุจากศูนย์ (ทีมเห็นในหน้าทีม)
   if (b.hqNote !== undefined && b.hqNote !== null) { sets.push('hqNote=?'); vals.push(clean(b.hqNote, 500)); }
   if (!meta) {
@@ -1049,7 +1051,7 @@ async function auditLog(env, st, res) {
   const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
   const bits = [];
   if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + (b.helped === true ? 'ช่วยเหลือแล้ว' : b.helped === false ? 'ทีมกำลังไป' : { open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
-    if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); }
+    if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); if (b.sevSet !== undefined) bits.push(b.sevSet === '' || b.sevSet === null ? 'ระดับ → ใช้ของระบบ' : 'ระดับ → ' + ({ 1: 'ทั่วไป', 2: 'เร่งด่วน', 3: 'วิกฤต' }[b.sevSet] || b.sevSet)); }
   else if (a === 'team_case') bits.push(b.step === 'done' ? 'แจ้งช่วยเหลือแล้ว' : b.step === 'arrived' ? 'ถึงจุดแล้ว' : b.step || '');
   else if (a === 'team_status') bits.push('→ ' + b.status);
   else if (a === 'stock_move') bits.push(`${b.type === 'out' ? 'จ่าย' : b.type === 'in' ? 'รับ' : b.type || ''} ${b.qty || ''}`.trim());
@@ -2148,7 +2150,7 @@ async function helpmeCases(env, db) {
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', sevSet: c.sevSet || null, sevBy: c.sevBy || '', photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {

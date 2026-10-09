@@ -221,3 +221,6 @@ $('#export').addEventListener('click',()=>{const cell=v=>{let s=String(v==null?'
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+rows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download=`umplus-stock-${new Date().toISOString().slice(0,10)}.csv`;a.click()});
 
 adminBoot({action:'stock'},'items',r=>{S.items=r.items||[];S.log=r.log||[];S.loaded=Date.now();render();loadAll()});
+
+/* เปิดจากช่องค้นหา (?q=ชื่อของ): ใส่คำค้นให้เลย */
+{const q=new URLSearchParams(location.search).get('q');if(q){$('#q').value=q;setTimeout(()=>$('#q').dispatchEvent(new Event('input')),1500)}}

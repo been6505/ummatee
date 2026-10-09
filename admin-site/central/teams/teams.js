@@ -56,7 +56,7 @@ function render(){
   if(document.activeElement!==$('#hq-phone'))$('#hq-phone').value=tname(T.hqPhone);
   liveUI();
   /* teams */
-  const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):T.filter==='busy'?teamCases(t.name).some(c=>c.status==='going'):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
+  const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):T.filter==='busy'?teamCases(t.name).some(c=>c.status==='going'):T.filter==='one'?tname(t.name)===tname(T.one):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
@@ -165,6 +165,7 @@ adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[]
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
 
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copylive]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copylive);toast('คัดลอกลิงก์ติดตามแล้ว',true)}catch(err){b.previousElementSibling.select()}});
-/* เปิดจากการ์ด "ทีมกำลังไป" ในหน้าจัดการเคส (?f=busy): กรองไว้แล้ว เลื่อนไปที่รายชื่อทีม */
+/* เปิดจากการ์ด "ทีมกำลังไป" ในหน้าจัดการเคส (?f=busy) หรือจากช่องค้นหา (?team=ชื่อ): กรองไว้แล้ว เลื่อนไปที่รายชื่อทีม */
+{const one=new URLSearchParams(location.search).get('team');if(one){T.one=one;T.filter='one'}}
 if(T.filter!=='all'){T.sf=T.filter;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===T.filter)));
   const go=()=>{const p=$('#team-list')&&$('#team-list').closest('.panel');if(p&&$$('#team-list .team').length)p.scrollIntoView({block:'start'});else if(!go.n||go.n++<20)setTimeout(go,500)};go.n=1;setTimeout(go,800)}

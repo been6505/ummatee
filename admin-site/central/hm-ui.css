@@ -347,3 +347,29 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-stk-chip button{border:0;background:rgba(30,75,138,.12);color:inherit;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1}
 .d-stk-sent{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}.d-stk-sent li{display:flex;align-items:center;gap:6px}.d-stk-sent svg{width:15px;height:15px}.d-stk-sent small{color:var(--muted)}
 @media (max-width:760px){.d-stk-add select,.d-stk-add input{font-size:16px}}
+/* ค้นหาทุกอย่าง */
+.gs{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.45);display:flex;justify-content:center;align-items:flex-start;padding:calc(env(safe-area-inset-top,0px) + 70px) 14px 14px}
+.gs[hidden]{display:none}
+.gs-box{width:min(640px,100%);max-height:calc(100dvh - 100px);display:flex;flex-direction:column;background:var(--surface,#fff);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;color:var(--ink,#111)}
+.gs-in{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 16px;border-bottom:1px solid var(--line,#e8e8ec)}
+.gs-in svg{width:20px;height:20px;flex:none;color:var(--muted)}
+.gs-in input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:inherit;font-size:17px;color:inherit;padding:8px 0}
+.gs-x{border:0;background:var(--bg,#f4f5f8);color:inherit;font:inherit;font-size:14px;font-weight:600;border-radius:999px;padding:6px 14px;cursor:pointer}
+.gs-list{overflow:auto;padding:6px 8px 10px}
+.gs-tip{color:var(--muted);text-align:center;padding:22px 10px;margin:0;font-size:14px}
+.gs-g{margin:10px 8px 4px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase}.gs-g span{font-weight:600;opacity:.7}
+.gs-it{display:flex;gap:12px;align-items:center;padding:9px 10px;border-radius:12px;text-decoration:none;color:inherit}
+.gs-it:hover,.gs-it.on{background:var(--tint,#FDEDEE)}
+.gs-ic{width:34px;height:34px;flex:none;border-radius:10px;background:var(--bg,#f4f5f8);display:grid;place-items:center}.gs-ic svg{width:18px;height:18px}
+.gs-tx{display:grid;min-width:0}.gs-tx b{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-tx small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:760px){.gs{padding:calc(env(safe-area-inset-top,0px) + 12px) 10px 10px}.gs-box{max-height:calc(100dvh - 24px)}}
+/* เปลี่ยนระดับเอง */
+.vr-lv p{margin:0}
+.lv-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.lv-set>span{font-size:12.5px;color:var(--muted);font-weight:600;margin-right:2px}
+.lv-b{border:1px solid var(--line,#e2e4ea);background:var(--surface,#fff);color:inherit;font:inherit;font-size:13px;font-weight:600;border-radius:999px;padding:5px 12px;cursor:pointer}
+.lv-b.lv3[aria-pressed=true]{background:#DD2027;border-color:#DD2027;color:#fff}.lv-b.lv2[aria-pressed=true]{background:#E8890C;border-color:#E8890C;color:#fff}.lv-b.lv1[aria-pressed=true]{background:#4b5563;border-color:#4b5563;color:#fff}
+.lv-b.lv-auto{border-style:dashed;color:var(--muted)}
+/* ปุ่มบันทึกในกล่องมอบหมาย */
+.d-save{width:100%;display:inline-flex!important;align-items:center;justify-content:center;gap:6px;background:#1F7A43!important;color:#fff!important;border:0!important;min-height:44px}
+.d-save[hidden]{display:none!important}.d-save svg{width:18px;height:18px}

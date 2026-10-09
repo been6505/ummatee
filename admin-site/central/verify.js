@@ -84,7 +84,12 @@ const VERIFY=(()=>{
   function parseCctv(v){const [s,t]=String(v||'').split('|');return s==='flood'||s==='clear'?{s,t:t||''}:null}
   function sevPts(d,v,closed){if(v==='blocked'||closed||(d!=null&&d>=50))return 40;if(v==='risky'||(d!=null&&d>=30))return 30;if(v==='caution'||(d!=null&&d>=10))return 18;return 8}
   function recency(t){if(!t)return .5;const h=(Date.now()-t)/36e5;return h<=24?1:h<=72?.7:.4}
-  function assess(c){
+  /* เจ้าหน้าที่กำหนดระดับเอง (sevSet 1–3) ทับระดับที่ระบบตัดสิน · เก็บระดับของระบบไว้ใน sysLevel */
+  function assess(c){const o=assess0(c),s=Number(c.sevSet);
+    if(s>=1&&s<=3){o.sysLevel=o.level;o.sysWhy=o.levelWhy;o.level=s;o.manual=true;
+      o.levelWhy='เจ้าหน้าที่กำหนดเอง'+(c.sevBy?` (${c.sevBy})`:'')+` · ระบบเสนอ: ${['','ทั่วไป','เร่งด่วน','วิกฤต'][o.sysLevel]||'-'}`}
+    return o}
+  function assess0(c){
     const vul=(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean);
     // 1) ข้อมูลจากผู้แจ้ง (0–50)
     const LV_TH={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว/หลังคา'};
@@ -182,7 +187,7 @@ const VERIFY=(()=>{
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
   /* ระดับความเร่งด่วนที่ระบบตัดสิน (ใช้แทน urgency ที่ผู้แจ้งเลือก) · แคชตามข้อมูลที่ใช้คำนวณ */
   const LC=new Map();
-  function level(c){const k=[c.id,F.loaded,c.photoAi&&c.photoAi.at,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
+  function level(c){const k=[c.id,c.sevSet,F.loaded,c.photoAi&&c.photoAi.at,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
     const v=assess(c).level||1;LC.set(c.id,{k,v});return v}
   const VERIFY={F,load,assess,level,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

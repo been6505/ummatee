@@ -14,7 +14,7 @@
 <style>
 /* หน้ามือถือของทีมอาสา · เข้าด้วยลิงก์เฉพาะทีม (?id=) · สีและรูปทรงแบบ Help Me */
 :root{--primary:#2D45C8;--ink:#161B3D;--muted:#5B6386;--line:#E3E6EF;--bg:#F2F3F7;--tint:#E9ECFB;--ok:#2E9E57;--okt:#E3F4EA;--red:#E5383B;--redt:#FDE7E7;--amber:#C77A00;--ambert:#FFF3DC;
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;--safe-b:env(safe-area-inset-bottom,0px);--nav:62px}
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;--safe-b:var(--sab);--nav:62px}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
 body{font:16px/1.5 var(--font);background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit;color:inherit}a{color:var(--primary)}
@@ -79,17 +79,22 @@ form.send input{border-radius:999px;padding:11px 16px}
 .gm-first{border-top:0;padding-top:0}
 .obar{margin:0;padding:10px 16px;background:#FFF4DE;color:#8A5A00;font-size:14px;font-weight:600;text-align:center}
 /* เว้นขอบบน (รอยบาก/แถบสถานะ) ในแอป iPhone และเว็บเต็มจอ */
-.top{padding-top:calc(env(safe-area-inset-top,0px) + 10px)!important}body{padding-bottom:env(safe-area-inset-bottom,0px)}
-.lk-box{display:grid;gap:8px}.lk-box input{min-height:48px;border-radius:14px;border:1px solid var(--line,#e6e8ef);padding:10px 14px;font:inherit;font-size:16px}.lk-or{text-align:center;color:var(--muted);margin:4px 0}
+.top{padding-top:calc(var(--sat) + 10px)!important}body{padding-bottom:var(--sab)}
+.lk-box{display:flex;gap:8px}.lk-box input{flex:1;min-width:0;min-height:52px;border-radius:999px;border:1px solid var(--line,#e6e8ef);padding:10px 18px;font:inherit;font-size:16px;background:#f7f8fb}
+.lk-go{flex:none;min-height:52px;padding:0 22px;border-radius:999px;border:0;background:var(--primary,#3442C2);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.lk-or{display:flex;align-items:center;gap:12px;color:var(--muted);margin:2px 0!important;font-size:13px!important}.lk-or::before,.lk-or::after{content:"";flex:1;height:1px;background:var(--line,#e6e8ef)}
+.lk-code{border-top:1px solid var(--line,#e6e8ef);padding-top:10px}.lk-code summary{cursor:pointer;text-align:center;color:var(--muted);font-weight:600;font-size:14px;list-style:none;padding:6px}.lk-code summary::-webkit-details-marker{display:none}.lk-code summary::after{content:" ▾"}.lk-code[open] summary::after{content:" ▴"}
+/* แอป Android: เว็บวิวบางรุ่นไม่ส่งค่า safe-area มา ใช้ค่าสำรองจาก --sat/--sab (ตั้งด้วยสคริปต์ด้านล่าง) */
+:root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
 .qr-btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:999px;border:0;background:#1F7A43;color:#fff;font:inherit;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(31,122,67,.25);cursor:pointer}.qr-btn i,.qr-btn svg{width:24px;height:24px}
-body:has(> .card:not([hidden])){padding:calc(env(safe-area-inset-top,0px) + 14px) 0 calc(env(safe-area-inset-bottom,0px) + 14px)}
+body:has(> .card:not([hidden])){padding:calc(var(--sat) + 14px) 0 calc(var(--sab) + 14px)}
 .qrs{position:fixed;inset:0;z-index:999;background:#000;display:grid;place-items:center}.qrs[hidden]{display:none}
 .qrs video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .qrs-frame{position:relative;width:min(70vw,70vh,320px);aspect-ratio:1;border-radius:24px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55);outline:3px solid #fff;outline-offset:-3px}
 .qrs-frame::after{content:"";position:absolute;left:8%;right:8%;top:50%;height:2px;background:#4ade80;box-shadow:0 0 12px #4ade80;animation:qrl 1.8s ease-in-out infinite alternate}
 @keyframes qrl{from{top:10%}to{top:90%}}
-.qrs-tip{position:absolute;left:16px;right:16px;top:calc(env(safe-area-inset-top) + 28px);margin:0;text-align:center;color:#fff;font-size:17px;font-weight:600}
-.qrs-x{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 32px);min-height:52px;padding:0 32px;border-radius:999px;border:0;background:#fff;color:#111;font:inherit;font-size:16px;font-weight:700}
+.qrs-tip{position:absolute;left:16px;right:16px;top:calc(var(--sat) + 28px);margin:0;text-align:center;color:#fff;font-size:17px;font-weight:600}
+.qrs-x{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 32px);min-height:52px;padding:0 32px;border-radius:999px;border:0;background:#fff;color:#111;font:inherit;font-size:16px;font-weight:700}
 .at-hero{margin:4px 0 14px;border-radius:20px;padding:16px;background:linear-gradient(135deg,#EEF1FD,#F6F7FE);box-shadow:inset 0 0 0 1.5px #C9D2F6;display:grid;gap:12px}
 .at-ic{background:#2D45C8}.at-hero .gm-h small,.at-hero .gm-steps small{color:#46507a}
 .at-go{background:#fff;color:#2D45C8;box-shadow:inset 0 0 0 1.5px #2D45C8}.at-3{display:flex!important;gap:6px;font-size:14px;color:#46507a;line-height:1.5}
@@ -123,9 +128,13 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
 </style>
-<script src="../central/verify.js?v=12"></script>
+<script src="../central/verify.js?v=13"></script>
 <script src="../central/icons.js?v=7"></script>
 <script src="./native-track.js?v=2"></script>
+<script>/* แอป Android (Capacitor แบบเต็มจอ): ถ้าเว็บวิวไม่บอก safe-area ใช้ความสูงแถบสถานะ/แถบนำทางมาตรฐาน */
+(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
+  const probe=()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';document.documentElement.append(d);const h=d.getBoundingClientRect().height;d.remove();return h};
+  const set=()=>{if(probe()<1){r.style.setProperty('--sat','36px');r.style.setProperty('--sab','24px')}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',set):set()})();</script>
 </head>
 <body>
 <!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
@@ -133,18 +142,18 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 <section class="card" id="login" hidden>
   <img src="../assets/helpme-logo.png" alt="Helpme+" width="200" height="29">
   <h1>หน้าทีม · Helpme+</h1>
-  <p>เปิดจากลิงก์ที่ศูนย์ส่งให้ หรือใส่รหัสทีม</p>
+  <p>สแกน QR หรือวางลิงก์ทีมที่ศูนย์ส่งให้</p>
   <button type="button" class="qr-btn" id="qr-go"><i data-ic="qr"></i> สแกน QR โค้ดทีม</button>
-  <p class="lk-or">หรือ</p>
-  <div class="lk-box"><input id="lk-in" inputmode="url" placeholder="วางลิงก์ทีม เช่น https://central.helpme4u.com/team/?id=…" aria-label="ลิงก์ทีม"><button type="button" class="primary" id="lk-go">เข้าด้วยลิงก์ทีม</button></div>
-  <p class="lk-or">หรือ</p>
-  <form id="lf" style="display:grid;gap:12px">
+  <p class="lk-or"><span>หรือ</span></p>
+  <div class="lk-box"><input id="lk-in" inputmode="url" placeholder="วางลิงก์ทีม" aria-label="ลิงก์ทีม"><button type="button" class="lk-go" id="lk-go" aria-label="เข้าด้วยลิงก์ทีม">เข้า</button></div>
+  <details class="lk-code"><summary>เข้าด้วยรหัสทีม</summary>
+  <form id="lf" style="display:grid;gap:12px;margin-top:12px">
     <label>รหัสทีม<span class="pw-wrap"><input id="code" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
     <label>ชื่อทีม<input id="team" list="teams" required maxlength="60" placeholder="เช่น ทีมเรือ 1"><datalist id="teams"></datalist></label>
     <label>ชื่อคุณ (ไม่บังคับ)<input id="name" maxlength="60"></label>
     <button class="primary" type="submit" id="go">เข้าใช้งาน</button>
     <p class="err" id="err" role="alert"></p>
-  </form>
+  </form></details>
 </section>
 <!-- ลิงก์ใช้ไม่ได้ -->
 <section class="card" id="bad" hidden><div class="big"><i data-ic="link"></i></div><h1>ลิงก์ใช้ไม่ได้</h1><p>ลิงก์ถูกเปลี่ยนหรือทีมถูกปิด · ขอลิงก์ใหม่จากศูนย์</p></section>
@@ -284,10 +293,10 @@ function screen(id){['#login','#bad','#gate','#app'].forEach(s=>$(s).hidden=s!==
 
 /* ---------- เข้าใช้งาน ---------- */
 async function boot(){
-  if(!S.tk&&!(S.key&&S.team)){screen('#login');$('#team').value=S.team;$('#name').value=S.name;return}
+  if(!S.tk&&!(S.key&&S.team)){screen('#login');$('#team').value=S.team;$('#name').value=S.name;if(S.team)$('.lk-code').open=true;return}
   if(NATIVE)nativeTrack(); // เริ่มติดตามก่อนติดต่อศูนย์ ไม่มีเน็ตก็เก็บตำแหน่งไว้ในคิว
   try{const r=await api({action:'team_me'});
-    if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
+    if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('.lk-code').open=true;$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
     S.me=r;S.offline=false;saveMe(r);S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
     if(!S.name&&r.team.leader)S.name=r.team.leader;
     if(NATIVE){TR.skip=true;TR.want=false;start();return} // แอป: ใช้ตัวติดตามเบื้องหลังของแอปแทนตำแหน่งในเว็บ

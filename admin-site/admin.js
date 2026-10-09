@@ -108,7 +108,7 @@ $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classLis
 /* ---------- ตรวจสอบพื้นที่ (Floodboard + CCTV) ---------- */
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};
 let vrCache=new Map();
-function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
+function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+c.sevSet+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
 /* ---------- ตรวจกล้อง CCTV อัตโนมัติ (Workers AI ดูภาพกล้องใกล้จุด ≤ 2 กม.) ----------
    เรียกเมื่อเปิดดูเคส · จำผลต่อเคส 10 นาที · ใช้เป็นหลักฐานเฉพาะตอน "เห็นน้ำ" จากกล้องไม่เกิน 1 กม.
    (กล้องถนน "ไม่เห็นน้ำ" ไม่ได้แปลว่าบ้านในซอยไม่ท่วม จึงไม่หักคะแนน) */
@@ -224,7 +224,8 @@ function vrSection(c){
   const rd=v.road,reps=v.reports.slice(0,3);
   return `<section class="vr-box vr-b-${v.result.k}">
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
-    <p class="vr-why vr-lv lv${v.level}"><b>ระบบกำหนดระดับ: ${esc(URG[v.level]||'')}</b> — ${esc(v.levelWhy||'')}</p>
+    <div class="vr-why vr-lv lv${v.level}"><p><b>${v.manual?'เจ้าหน้าที่กำหนดระดับ':'ระบบกำหนดระดับ'}: ${esc(URG[v.level]||'')}</b> — ${esc(v.levelWhy||'')}</p>
+      <div class="lv-set" role="group" aria-label="เปลี่ยนระดับความเร่งด่วนเอง"><span>เปลี่ยนเอง:</span>${[1,2,3].map(n=>`<button type="button" class="lv-b lv${n}" data-sev="${n}" aria-pressed="${!!v.manual&&v.level===n}">${URG[n]}</button>`).join('')}${v.manual?'<button type="button" class="lv-b lv-auto" data-sev="">ใช้ระดับของระบบ</button>':''}</div></div>
     <p class="vr-why"><b>ข้อมูลจากผู้แจ้ง:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
@@ -305,6 +306,9 @@ function renderDrawer(){
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
   if(keep){const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
+  d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
+  // ปุ่มบันทึก: ขึ้นเมื่อแก้หมายเหตุ หรือเพิ่มของจากสต็อกไว้ในเคส
+  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0;sv.hidden=!dirty};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
@@ -324,11 +328,12 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
     <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="2" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
     ${stkBox(c,done)}
     <div class="d-st-btns">
-      ${done?`<button class="btn ghost" data-dact="note">บันทึกหมายเหตุ</button><button class="btn ghost" data-dact="open">เปิดเคสใหม่</button>`
+      ${done?`<button class="btn ghost" data-dact="open">เปิดเคสใหม่</button>`
       :`<button class="btn ${going?'ghost':'primary'}" data-dact="assign">${going?'เปลี่ยนทีม':'มอบหมาย'}</button>
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
-        ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':'<button class="btn ghost" data-dact="note">บันทึกหมายเหตุ</button>'}`}
-    </div></fieldset>`}
+        ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':''}`}
+    </div>
+    <button type="button" class="btn d-save" data-dact="save" hidden><i data-ic="check"></i> บันทึก</button></fieldset>`}
 /* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
 async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;
   try{const r=await api({action:'stock',key:A.key});if(r&&r.ok){A.stock=r;if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.stockLoading=false}}
@@ -340,17 +345,28 @@ function stkBox(c,done){const items=(A.stock&&A.stock.items||[]).filter(i=>!i.ki
     ${sent.length?`<ul class="d-stk-sent">${sent.map(l=>`<li><i data-ic="box"></i> ${esc(l.item)} <b>${Math.abs(l.delta)}</b> · ${esc(l.team||'')} <small>${esc(ago(l.time))}</small></li>`).join('')}</ul>`:''}
     ${done?'':`<div class="d-stk-add"><select id="d-stk-item" aria-label="เลือกของจากสต็อก"><option value="">${A.stock?'— เลือกของ —':'กำลังโหลดสต็อก…'}</option>${items.filter(i=>(+i.qty||0)>0).map(i=>`<option value="${esc(i.id)}">${esc(i.name)} · เหลือ ${esc(i.qty)} ${esc(unit(i))}</option>`).join('')}</select><input id="d-stk-qty" type="number" min="1" value="1" inputmode="numeric" aria-label="จำนวน"><button type="button" class="btn ghost sm" data-dact="stkadd">+ เพิ่ม</button></div>
     ${pend.length?`<div class="d-stk-pend">${pend.map((x,i)=>`<span class="d-stk-chip">${esc(x.name)} × ${x.qty}<button type="button" data-stkdel="${i}" aria-label="เอาออก">×</button></span>`).join('')}</div>
-      ${c.status==='going'?'<button type="button" class="btn primary sm" data-dact="stksave">ตัดสต็อกส่งให้ทีม</button>':'<small class="muted">จะตัดสต็อกเมื่อกด "มอบหมาย"</small>'}`:''}`}
+      <small class="muted">กด "บันทึก" เพื่อตัดสต็อกเข้าเคสนี้${c.status==='open'?' หรือกด "มอบหมาย" เพื่อส่งไปกับทีม':''}</small>`:''}`}
   </div>`}
 async function stkCut(c,team){const L=stkPend(c);if(!L.length)return 0;let ok=0;const fail=[];
   for(const x of [...L]){const r=await post({action:'stock_move',key:A.key,itemId:x.id,type:'out',amount:x.qty,caseId:String(apiId(c.id)),team,note:`ส่งไปกับทีม · เคส #${c.hmId||c.id}`}).catch(()=>null);
     if(r&&r.ok){ok++;L.splice(L.indexOf(x),1)}else fail.push(x.name+(r&&r.error==='not_enough'?` (เหลือ ${r.qty})`:''))}
   if(fail.length)toast('ตัดสต็อกไม่สำเร็จ: '+fail.join(', '));
   A.stock=null;loadStock();return ok}
+/* เจ้าหน้าที่เปลี่ยนระดับเอง (ทับระดับที่ระบบคัดกรอง) · ว่าง = กลับไปใช้ระดับของระบบ */
+async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=store.get('uh_staff')||'';
+  if(String(c.sevSet||'')===String(val))return;c.sevSet=val===''?null:+val;c.sevBy=by;vrCache.delete(c.id);render();renderDrawer();
+  try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',sevSet:val,metaOnly:true});if(!r||!r.ok)throw 0;
+    toast(val===''?'กลับไปใช้ระดับของระบบแล้ว':`ตั้งระดับเป็น "${URG[val]}" แล้ว`,true)}
+  catch(e){Object.assign(c,prev);vrCache.delete(c.id);render();renderDrawer();toast('บันทึกไม่สำเร็จ')}}
 async function assignAct(c,act,btn){
   if(act==='stkadd'){const id=$('#d-stk-item').value,q=Math.max(1,parseInt($('#d-stk-qty').value,10)||1);if(!id){toast('เลือกของก่อน');return}
     const it=A.stock.items.find(i=>String(i.id)===id);if(q>(+it.qty||0)){toast(`${it.name} เหลือ ${it.qty} ${it.unit||''}`);return}
     const L=stkPend(c),ex=L.find(x=>x.id===id);if(ex)ex.qty+=q;else L.push({id,name:it.name,qty:q});renderDrawer();return}
+  if(act==='save'){const note=(($('#d-note')||{}).value||'').trim();btn.disabled=true;let ok=true,msg=[];
+    if(note!==(c.hqNote||'').trim()){const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',hqNote:note,metaOnly:true}).catch(()=>null);
+      if(r&&r.ok){c.hqNote=note;msg.push('หมายเหตุ')}else ok=false}
+    if(stkPend(c).length){const n=await stkCut(c,String(c.volunteer||'').replace(/^'/,''));if(n)msg.push(`ตัดสต็อก ${n} รายการ`);if(stkPend(c).length)ok=false}
+    btn.disabled=false;toast(msg.length?'บันทึกแล้ว · '+msg.join(' · '):ok?'ไม่มีอะไรเปลี่ยน':'บันทึกไม่สำเร็จ',ok&&msg.length>0);renderDrawer();return}
   if(act==='stksave'){btn.disabled=true;const n=await stkCut(c,String(c.volunteer||'').replace(/^'/,''));btn.disabled=false;if(n)toast(`ตัดสต็อก ${n} รายการ · ส่งไปกับทีมแล้ว`,true);renderDrawer();return}
   const team=($('#d-team')||{}).value||'',note=(($('#d-note')||{}).value||'').trim(),cur=String(c.volunteer||'').replace(/^'/,'').trim();
   let status=c.status,vol=cur,msg='';

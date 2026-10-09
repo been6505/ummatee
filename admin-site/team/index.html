@@ -164,6 +164,7 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 @keyframes ldp{50%{box-shadow:0 0 0 9px rgba(46,158,87,.08)}}
 .top .st{margin-left:0!important}
 .locbar.ok-hide{display:none!important}
+.sos-hold{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}.sos-hold .sh-fill{position:absolute;inset:0;width:0;background:rgba(255,255,255,.3)}.sos-hold.holding .sh-fill{width:100%;transition:width 1s linear}.sos-hold .sh-t{position:relative}
 .iss{display:flex;flex-wrap:wrap;gap:8px}.iss button{border:1.5px solid #F2B8BF;background:#FFF5F6;color:#B3121F;border-radius:999px;padding:10px 14px;font:inherit;font-weight:700;font-size:15px}
 #call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
 #call-pane .cp-back{position:absolute;left:12px;top:calc(var(--sat) + 10px);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:700;padding:8px 14px}
@@ -672,9 +673,12 @@ $('#c-sms').onclick=()=>smsSheet();
 /* ---------- SOS ---------- */
 const SOSWHY=['บาดเจ็บ','เรือ/รถเสีย','ติดน้ำ ออกไม่ได้','ถูกคุกคาม','หลงทาง'];
 $('#sos').onclick=()=>{sheet(`<h2 style="color:var(--red)">ส่ง SOS ถึงศูนย์</h2><p class="hint">ส่งตำแหน่งปัจจุบัน + แจ้งเตือนทุกหน้าจอของศูนย์</p><div class="chips" id="sos-why">${SOSWHY.map(w=>`<button type="button" class="chip" aria-pressed="false">${w}</button>`).join('')}</div>
-  <button class="btn red" id="sos-go" type="button" style="min-height:60px;font-size:18px">ส่ง SOS ทันที</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+  <button class="btn red sos-hold" id="sos-go" type="button" style="min-height:60px;font-size:18px"><span class="sh-fill"></span><span class="sh-t">กดค้าง 1 วิ เพื่อส่ง SOS</span></button><button class="btn" type="button" data-x>ยกเลิก</button>`);
   $('#sos-why').onclick=e=>{const c=e.target.closest('.chip');if(c)c.setAttribute('aria-pressed',String(c.getAttribute('aria-pressed')!=='true'))};
-  $('#sos-go').onclick=async()=>{$('#sos-go').disabled=true;const why=$$('#sos-why [aria-pressed="true"]').map(c=>c.textContent).join(', ');
+  // กดค้าง 1 วินาทีถึงส่ง (กันเผลอกดในกระเป๋า/ตอนวุ่นวาย)
+  {const g=$('#sos-go');let tm=null;const down=e=>{e.preventDefault();if(g.disabled)return;g.classList.add('holding');buzz&&buzz([30]);tm=setTimeout(()=>{g.classList.remove('holding');g.onhold()},1000)},up=()=>{clearTimeout(tm);g.classList.remove('holding')};
+    g.addEventListener('pointerdown',down);['pointerup','pointerleave','pointercancel'].forEach(k=>g.addEventListener(k,up));g.addEventListener('contextmenu',e=>e.preventDefault())}
+  $('#sos-go').onhold=async()=>{$('#sos-go').disabled=true;$('#sos-go .sh-t').textContent='กำลังส่ง SOS…';const why=$$('#sos-why [aria-pressed="true"]').map(c=>c.textContent).join(', ');
     const fire=async p=>{const r=navigator.onLine===false?{}:await Promise.race([post({action:'team_sos',text:why,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):'',accuracy:p?Math.round(p.acc||0):'',battery:TR.batt}),new Promise(res=>setTimeout(()=>res({}),12000))]).catch(()=>({}));
       buzz(300);if(r.ok){closeSheet();toast('ส่ง SOS แล้ว');refresh();pollChat();return}
       smsSheet('SOS',why,'ส่ง SOS ผ่านเน็ตไม่ได้ · กดส่ง SMS ด้านล่างทันที (ใช้แค่สัญญาณโทรศัพท์)')};

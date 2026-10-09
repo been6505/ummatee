@@ -8,7 +8,7 @@ const CHAT=(()=>{
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const me=()=>{try{return localStorage.getItem('uh_staff')||localStorage.getItem('uh_team')||'ศูนย์'}catch(e){return 'ศูนย์'}};
-  const S={scope:null,open:false,team:null,threads:[],roster:[],msgs:[],last:0,rev:null,timer:null,unread:0,alerts:{sos:[],calls:[]},ring:null};
+  const S={scope:null,open:false,team:null,threads:[],roster:[],msgs:[],last:0,rev:null,timer:null,unread:0,alerts:{sos:[],calls:[],silent:[]},ring:null};
   /* ขอบเขต (War Room): เหลือเฉพาะทีมของห้อง · info(team) = สถานะลงพื้นที่/เคสที่รับอยู่ */
   const inScope=t=>!S.scope||!S.scope.teams||S.scope.teams.includes(t);
   const title=()=>S.scope&&S.scope.title||'แชทกับทีม';
@@ -34,6 +34,7 @@ const CHAT=(()=>{
       if(k==='chat'){openTeam(v);return}
       if(k==='answer'){e.preventDefault();const c=S.alerts.calls.find(x=>String(x.n)===v);setSeen(Math.max(seenCall(),+v));drawAlerts();if(c)callPane(c);return}
       if(k==='answer'||k==='decline'){const c=S.alerts.calls.find(x=>String(x.n)===v);setSeen(Math.max(seenCall(),+v));if(c&&k==='decline')post({action:'chat_send',team:c.team,from:'hq',name:me(),text:'ศูนย์ไม่ว่างรับสาย · จะโทรกลับ'});drawAlerts();return}
+      if(k==='silent'){a.disabled=true;post({action:'silent_ack',team:v}).then(()=>poll());S.alerts.silent=(S.alerts.silent||[]).filter(x=>x.name!==v);drawAlerts();return}
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
     root.querySelector('.chat-x').onclick=()=>toggle(false);
@@ -78,6 +79,8 @@ const CHAT=(()=>{
   function drawAlerts(){if(!S.al)return;const calls=[...new Map(S.alerts.calls.filter(c=>c.n>seenCall()&&inScope(c.team)).sort((a,b)=>a.n-b.n).map(c=>[c.team,c])).values()],sos=(S.alerts.sos||[]).filter(x=>inScope(x.name));
     S.al.innerHTML=sos.map(s=>`<div class="al al-sos" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(s.name)}</b><small>${esc(hhmm(s.sosAt))}${s.lat!=null?` · <a href="https://maps.google.com/?q=${+s.lat},${+s.lng}" target="_blank" rel="noopener">ตำแหน่ง</a>`:''}</small>
         <span>${String(s.phone||'').replace(/\D/g,'').length>=9?`<a class="al-b" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}"><i data-ic="phone"></i></a>`:''}<button class="al-b" data-al="chat" data-v="${esc(s.name)}" aria-label="แชท"><i data-ic="chat"></i></button><button class="al-b al-ok" data-al="ack" data-v="${esc(s.id)}">รับทราบ</button></span></div>`).join('')
+      +(S.alerts.silent||[]).filter(x=>inScope(x.name)).map(s=>`<div class="al al-silent" role="status"><b><i data-ic="clock"></i> ${esc(s.name)} เงียบไป${s.last?' '+esc(agoMin(s.last)):''}</b><small>ถือเคส ${esc(s.cases)} เคส · ไม่ส่งตำแหน่ง/ข้อความเกิน 30 นาที${s.lat!=null?` · <a href="https://maps.google.com/?q=${+s.lat},${+s.lng}" target="_blank" rel="noopener">จุดล่าสุด</a>`:''}</small>
+        <span>${String(s.phone||'').replace(/\D/g,'').length>=9?`<a class="al-b" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}" aria-label="โทร"><i data-ic="phone"></i></a>`:''}<button class="al-b" data-al="chat" data-v="${esc(s.name)}" aria-label="แชท"><i data-ic="chat"></i></button><button class="al-b al-ok" data-al="silent" data-v="${esc(s.name)}">รับทราบ</button></span></div>`).join('')
       +calls.map(c=>`<div class="al al-call" role="alert"><b><i data-ic="phone"></i> ${esc(c.team)} โทรมา</b><small>${esc(c.text)}${c.name?' · '+esc(c.name):''}</small>
         <span><button class="al-b al-no" data-al="decline" data-v="${esc(c.n)}">ไม่รับ</button><a class="al-b al-ok" data-al="answer" data-v="${esc(c.n)}" href="${esc(c.link)}" target="_blank" rel="noopener">รับสาย</a></span></div>`).join('');
     clearInterval(S.ring);if(calls.length||sos.length)S.ring=setInterval(()=>{if(!S.al.children.length){clearInterval(S.ring);return}calls.length?(ding(660),setTimeout(()=>ding(880),250)):ding(990)},calls.length?2000:6000)}
@@ -87,6 +90,7 @@ const CHAT=(()=>{
     d.innerHTML=`<div class="cp-bar"><b>${esc(c.team)}</b><small>${esc(c.text||'')}</small><button type="button" class="cp-x" aria-label="วางสายและปิด">วางสาย</button></div><iframe src="${esc(c.link)}" allow="microphone; camera; autoplay; display-capture" title="หน้าจอโทร"></iframe>`;
     document.body.append(d);d.querySelector('.cp-x').onclick=()=>{d.remove()};}
   addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.hmCall==='ended'){const d=document.getElementById('call-pane');if(d)setTimeout(()=>d.remove(),1500)}});
+  function agoMin(t){const m=Math.round((Date.now()-t)/60000);return m<60?m+' นาที':Math.floor(m/60)+' ชม. '+(m%60)+' นาที'}
   function ding(f=880){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.15)}catch(e){}}
   // แท็บเบื้องหลังยังเช็กทุก 20 วิ (ตัวเลข + เสียงแจ้ง) · กลับมาที่แท็บแล้วเช็กทันที
   function schedule(){clearInterval(S.timer);S.timer=setInterval(()=>{if(!document.hidden||Date.now()-(S.lastPoll||0)>7500)poll()},S.open?5000:8000)}

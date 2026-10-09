@@ -816,7 +816,15 @@ async function alertsList(db) {
   const now = Date.now();
   const { results: sos } = await db.prepare('SELECT r.id,r.name,r.phone,r.sosAt,r.sosAck,l.lat,l.lng FROM roster r LEFT JOIN teams_live l ON l.team=r.name WHERE r.active=1 AND r.sosAt>? AND (r.sosAck IS NULL OR r.sosAck<r.sosAt)').bind(now - 12 * 3600e3).all();
   const { results: calls } = await db.prepare("SELECT n,team,name,text,link,at FROM chat WHERE kind='call' AND sender='team' AND at>? ORDER BY n DESC LIMIT 5").bind(now - 120e3).all();
-  return { sos, calls };
+  // ทีมขาดการติดต่อ: ถือเคสที่กำลังไปอยู่ แต่ไม่ส่งตำแหน่งและไม่แชทเกิน 30 นาที (ศูนย์กดรับทราบ = เงียบไว้ 30 นาที)
+  const { results: q } = await db.prepare(`SELECT r.id, r.name, r.phone, COUNT(c.id) n, l.updatedAt loc, l.lat, l.lng,
+      (SELECT MAX(at) FROM chat WHERE team=r.name AND sender='team') msg
+    FROM roster r JOIN cases c ON c.status='going' AND (c.volunteer=r.name OR c.volunteer='''' || r.name) LEFT JOIN teams_live l ON l.team=r.name
+    WHERE r.active=1 GROUP BY r.id`).all();
+  let ack = {}; try { ack = JSON.parse(await getMeta(db, 'silent_ack') || '{}'); } catch (e) {}
+  const silent = q.map(t => ({ ...t, last: Math.max(t.loc || 0, t.msg || 0) })).filter(t => now - t.last > 30 * 60e3 && !(ack[t.name] > now - 30 * 60e3))
+    .map(t => ({ id: t.id, name: t.name, phone: t.phone || '', cases: t.n, last: t.last || null, lat: t.lat, lng: t.lng }));
+  return { sos, calls, silent };
 }
 /* โซน: วงกลม (จุดศูนย์กลาง + รัศมี) ใช้จัดกลุ่มเคสและมอบหมายทีมรับผิดชอบ (roster.zone = ชื่อโซน) */
 async function listZones(db) {
@@ -1062,7 +1070,7 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
   'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+const WR_POST_OK = new Set(['silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -1101,7 +1109,7 @@ async function wrGet(env, db, p) {
     case 'teams': return { ok: true, teams: (await readTeams(db)).filter(l => sc.teams.has(l.team)) };
     case 'chat': case 'team_track': return sc.teams.has(clean(p.team, MAX.volunteer)) ? null : { ok: false, error: 'not_in_room' };
     case 'chat_threads': { const r = await chatThreads(db); r.threads = r.threads.filter(t => sc.teams.has(t.team));
-      if (r.alerts) r.alerts = { sos: (r.alerts.sos || []).filter(x => sc.teams.has(x.name)), calls: (r.alerts.calls || []).filter(x => sc.teams.has(x.team)) }; return r; }
+      if (r.alerts) r.alerts = { sos: (r.alerts.sos || []).filter(x => sc.teams.has(x.name)), calls: (r.alerts.calls || []).filter(x => sc.teams.has(x.team)), silent: (r.alerts.silent || []).filter(x => sc.teams.has(x.name)) }; return r; }
     case 'stock': { const r = await listStock(db); r.items = r.items.filter(i => !i.warroom || sc.zones.has(i.warroom)); const ids = new Set(r.items.map(i => i.id)); r.log = (r.log || []).filter(l => ids.has(l.itemId)); return r; }
   }
   return null;
@@ -1112,7 +1120,7 @@ async function wrPostCheck(db, b) {
   const teamOk = async name => sc.teams.has(clean(name, MAX.volunteer));
   switch (b.action) {
     case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); return c && inScope(c, sc) ? '' : 'not_in_room'; }
-    case 'chat_send': case 'chat_read': case 'hq_call': return await teamOk(b.team) ? '' : 'not_in_room';
+    case 'chat_send': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
     case 'sos_ack': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'team_link': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=? OR name=?').bind(clean(b.id, 20), clean(b.team, MAX.volunteer)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'roster_save': { const id = clean((b.team || {}).id, 20); if (!id) return ''; const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(id).first(); return !t || sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
@@ -2568,7 +2576,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { silent_ack: async (db, b) => { const t = clean(b.team, MAX.volunteer); let a = {}; try { a = JSON.parse(await getMeta(db, 'silent_ack') || '{}'); } catch (e) {} const now = Date.now(); for (const k in a) if (a[k] < now - 864e5) delete a[k]; a[t] = now; await setMeta(db, 'silent_ack', JSON.stringify(a)); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)

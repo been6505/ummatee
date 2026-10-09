@@ -1,0 +1,98 @@
+/* ตัวติดตามตำแหน่งของแอป "Help Me ทีม" (native · Capacitor)
+   ใช้ไฟล์เดียวกันทั้งในหน้าทีมบนเว็บ (/team/native-track.js) และหน้าออฟไลน์ที่อยู่ในตัวแอป (สำเนาใน helpme-team-app/www)
+   - เก็บค่าตั้ง (รหัสทีม/ที่อยู่ศูนย์) และคิวตำแหน่งไว้ในที่เก็บของแอป (Preferences) → เปิดแอปตอนไม่มีเน็ตก็เริ่มติดตามได้
+   - ส่งสำเร็จจริงเมื่อเซิร์ฟเวอร์ตอบ OK เท่านั้น · ลิงก์ทีมใช้ไม่ได้ (403) = หยุดและแจ้ง ไม่ขึ้นสีเขียวหลอก
+   - ส่งไม่ได้ = เก็บในคิว ลองใหม่ทุก 15 วิ และเมื่อเน็ตกลับมา (ไม่พึ่ง event online อย่างเดียว)
+   - จำกัดถี่ ~8 วิ แต่เก็บจุดสุดท้ายไว้ส่งตามหลัง จุดที่ทีมหยุดจะไม่หาย
+   ใช้: NTRK.start({tk,host} หรือ {key,team,name,host}, onStatus) · NTRK.resume(onStatus) ใช้ค่าที่เคยเก็บไว้ */
+window.NTRK = (() => {
+  const C = window.Capacitor;
+  const native = !!(C && C.isNativePlatform && C.isNativePlatform());
+  const PL = n => C && C.Plugins && C.Plugins[n];
+  const GAP = 8000, RETRY = 15000, QMAX = 300;
+  const S = { cfg: null, q: [], lastQ: 0, trail: null, trailT: null, retryT: null, busy: false, wid: null, on: null,
+    st: { state: 'idle', at: 0, err: '' } };
+  const get = async k => { try { const r = await PL('Preferences').get({ key: k }); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } };
+  const put = (k, v) => { try { return PL('Preferences').set({ key: k, value: JSON.stringify(v) }); } catch (e) {} };
+  const emit = p => { Object.assign(S.st, p); try { S.on && S.on({ ...S.st, queued: S.q.length }); } catch (e) {} };
+  const saveQ = () => put('ntrk_q', S.q);
+
+  /* ส่ง 1 จุด: คืน 'ok' | 'drop' (จุดเสีย ทิ้งได้) | 'fatal' (ลิงก์/รหัสใช้ไม่ได้) · โยน error = ลองใหม่ภายหลัง */
+  async function send(p) {
+    const c = S.cfg;
+    if (c.tk) {
+      const r = await fetch(c.host + '/api/track/' + c.tk, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _type: 'location', lat: p.lat, lon: p.lng, acc: p.acc, vel: p.vel, cog: p.cog, tst: Math.floor(p.t / 1000) }) });
+      if (r.ok) return 'ok';
+      if (r.status === 403) return 'fatal';
+      if (r.status === 400) return 'drop';
+      throw new Error('HTTP ' + r.status);
+    }
+    const r = await fetch(c.host + '/api', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'team_ping', key: c.key, team: c.team, name: c.name || '', lat: p.lat, lng: p.lng, accuracy: p.acc, speed: p.vel, heading: p.cog }) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json().catch(() => ({}));
+    if (j.ok) return 'ok';
+    if (j.error === 'not_volunteer' || j.error === 'bad_link') return 'fatal';
+    return 'drop';
+  }
+  async function flush() {
+    if (S.busy || !S.cfg || !S.q.length) return;
+    S.busy = true;
+    try {
+      // เข้าด้วยรหัสทีม (team_ping ไม่มีเวลาของจุด) ส่งเฉพาะจุดล่าสุด
+      if (!S.cfg.tk && S.q.length > 1) S.q = S.q.slice(-1);
+      while (S.q.length) {
+        let res;
+        try { res = await send(S.q[0]); }
+        catch (e) { emit({ state: 'offline', err: 'offline' }); break; }
+        if (res === 'fatal') { S.q = []; saveQ(); emit({ state: 'fatal', err: S.cfg.tk ? 'bad_link' : 'bad_key' }); break; }
+        S.q.shift(); saveQ();
+        if (res === 'ok') emit({ state: 'ok', at: Date.now(), err: '' });
+      }
+    } finally { S.busy = false; }
+  }
+  function enqueue(p) {
+    if (S.st.state === 'fatal') return;
+    S.q.push(p); if (S.q.length > QMAX) S.q = S.q.slice(-QMAX);
+    S.lastQ = Date.now(); saveQ(); flush();
+  }
+  /* จำกัดถี่: ส่งทันทีถ้าห่างจากครั้งก่อน ≥ 8 วิ ไม่งั้นเก็บจุดล่าสุดไว้ แล้วส่งตามหลังเมื่อครบ 8 วิ */
+  function onLoc(l) {
+    const p = { lat: l.latitude, lng: l.longitude, acc: Math.round(l.accuracy || 0), vel: l.speed != null ? Math.round(l.speed * 3.6) : undefined,
+      cog: l.bearing != null ? Math.round(l.bearing) : undefined, t: l.time || Date.now() };
+    const wait = GAP - (Date.now() - S.lastQ);
+    if (wait <= 0) { S.trail = null; clearTimeout(S.trailT); S.trailT = null; enqueue(p); return; }
+    S.trail = p;
+    if (!S.trailT) S.trailT = setTimeout(() => { S.trailT = null; if (S.trail) { const t = S.trail; S.trail = null; enqueue(t); } }, wait);
+  }
+  async function watch() {
+    const BG = PL('BackgroundGeolocation'); if (!BG) return;
+    const old = await get('ntrk_wid'); // หน้าก่อน (เช่น หน้าออฟไลน์) เคยเปิดตัวติดตามไว้: ปิดก่อน ไม่ให้ซ้อน 2 ตัว
+    if (old) { try { await BG.removeWatcher({ id: old }); } catch (e) {} }
+    try {
+      S.wid = await BG.addWatcher({ backgroundTitle: 'Help Me ทีม กำลังส่งตำแหน่ง', backgroundMessage: 'ศูนย์เห็นตำแหน่งทีมแบบเรียลไทม์',
+        requestPermissions: true, stale: false, distanceFilter: 15 }, (l, err) => {
+        if (err) { emit({ state: 'error', err: err.code === 'NOT_AUTHORIZED' ? 'denied' : String(err.message || err) }); return; }
+        if (S.st.err === 'denied') emit({ err: '' });
+        onLoc(l);
+      });
+      put('ntrk_wid', S.wid);
+    } catch (e) { emit({ state: 'error', err: String(e.message || e) }); }
+  }
+  async function start(cfg, on) {
+    if (!native) return false;
+    S.on = on || S.on;
+    const same = S.cfg && JSON.stringify(S.cfg) === JSON.stringify(cfg);
+    S.cfg = cfg; put('ntrk_cfg', cfg);
+    if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
+    if (!S.wid) { S.q = (await get('ntrk_q')) || []; await watch(); }
+    clearInterval(S.retryT); S.retryT = setInterval(flush, RETRY);
+    addEventListener('online', flush);
+    emit({}); flush();
+    return true;
+  }
+  async function resume(on) { const c = await get('ntrk_cfg'); return c ? start(c, on) : false; }
+  return { native, start, resume, flush, status: () => ({ ...S.st, queued: S.q.length }),
+    openSettings: () => { const BG = PL('BackgroundGeolocation'); if (BG) BG.openSettings(); } };
+})();

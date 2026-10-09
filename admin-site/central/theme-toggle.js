@@ -52,3 +52,22 @@ const GS=(()=>{
   function open(){if(!el)build();el.hidden=false;document.body.classList.add('noscroll');const inp=el.querySelector('input');inp.value='';draw();setTimeout(()=>inp.focus(),30);load().then(()=>{if(!el.hidden)draw()})}
   function close(){if(el)el.hidden=true;document.body.classList.remove('noscroll')}
   return {open,close}})();
+/* ---------- ช่องที่มีรายการให้เลือก (input + datalist) → รายการแบบเลื่อนได้ใต้ช่อง ----------
+   มือถือ Android แสดง datalist เป็นแถบเล็กเหนือคีย์บอร์ดซึ่งเลือกยาก: แทนด้วยรายการใต้ช่อง กรองตามที่พิมพ์ · ไม่ล้นพ้นคีย์บอร์ด */
+(()=>{let box=null,cur=null,opts=[];
+  const close=()=>{if(box){box.remove();box=null}cur=null};
+  const place=()=>{if(!box||!cur)return;const r=cur.getBoundingClientRect(),vv=window.visualViewport,vh=vv?vv.height+vv.offsetTop:innerHeight,below=vh-r.bottom-10;
+    box.style.left=r.left+'px';box.style.width=r.width+'px';
+    if(below>=140||below>r.top){box.style.top=(r.bottom+4)+'px';box.style.bottom='';box.style.maxHeight=Math.max(120,Math.min(300,below))+'px'}
+    else{box.style.top='';box.style.bottom=(innerHeight-r.top+4)+'px';box.style.maxHeight=Math.min(300,r.top-10)+'px'}};
+  const draw=()=>{if(!box||!cur)return;const q=cur.value.trim().toLowerCase(),list=opts.filter(o=>!q||o.toLowerCase().includes(q)).slice(0,80);
+    box.innerHTML=list.length?list.map(o=>`<button type="button" data-o="${o.replace(/"/g,'&quot;')}">${o.replace(/[<&]/g,c=>c==='<'?'&lt;':'&amp;')}</button>`).join(''):'<p>ไม่พบ · พิมพ์ต่อได้เลย</p>';place()};
+  document.addEventListener('focusin',e=>{const i=e.target;if(!(i instanceof HTMLInputElement))return;const id=i.getAttribute('list')||i.dataset.combo;if(!id)return;
+    const dl=document.getElementById(id);if(!dl)return;if(i.getAttribute('list')){i.dataset.combo=id;i.removeAttribute('list')}
+    opts=[...dl.options].map(o=>o.value).filter(Boolean);close();cur=i;box=document.createElement('div');box.className='combo-pop';(i.closest('dialog')||document.body).append(box); // ในกล่อง dialog ต้องอยู่ชั้นเดียวกัน
+    box.addEventListener('mousedown',ev=>ev.preventDefault());box.addEventListener('click',ev=>{const b=ev.target.closest('[data-o]');if(!b||!cur)return;cur.value=b.dataset.o;cur.dispatchEvent(new Event('input',{bubbles:true}));cur.dispatchEvent(new Event('change',{bubbles:true}));const c=cur;close();c.blur()});
+    draw();setTimeout(()=>{if(cur===i){cur.scrollIntoView({block:'nearest'});place()}},350)});
+  document.addEventListener('input',e=>{if(e.target===cur)draw()});
+  document.addEventListener('focusout',e=>{if(e.target===cur)setTimeout(()=>{if(document.activeElement!==cur)close()},150)});
+  addEventListener('resize',place);if(window.visualViewport)visualViewport.addEventListener('resize',place);addEventListener('scroll',place,true);
+})();

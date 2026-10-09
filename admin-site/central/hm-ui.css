@@ -451,3 +451,8 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .brand span{display:inline-flex!important;align-items:center;gap:2px;white-space:nowrap}
 .brand span b{font-weight:800;letter-spacing:.02em}
 @media (max-width:760px){.brand img.brand-logo{height:17px!important}.brand span{font-size:12.5px!important}.brand-plus{font-size:16px!important}.brand{gap:6px!important}}
+/* รายการตัวเลือกใต้ช่อง (แทน datalist) */
+.combo-pop{position:fixed;z-index:5000;background:var(--surface,#fff);border:1px solid var(--line,#e6e8ef);border-radius:14px;box-shadow:0 14px 34px rgba(22,27,61,.22);overflow:auto;padding:4px;display:grid;align-content:start}
+.combo-pop button{border:0;background:none;text-align:left;font:inherit;font-size:16px;padding:11px 12px;border-radius:10px;color:inherit;cursor:pointer}
+.combo-pop button:hover,.combo-pop button:active{background:var(--bg,#f2f4f8)}
+.combo-pop p{margin:0;padding:12px;color:var(--muted);font-size:14px}

@@ -374,7 +374,10 @@ async function updateCase(db, b) {
   if (!STATUSES.includes(b.status)) return { ok: false, error: 'bad_status' };
   const r = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first();
   if (!r) return { ok: false, error: 'not_found' };
-  const meta = !!(b.bagsOnly || b.metaOnly) && r.status === b.status;
+  // ใช้กับงานกลุ่ม (เช่น มอบทั้งเส้นทาง): ถ้าสถานะเปลี่ยนไปแล้ว ไม่ทับ
+  if (b.expectStatus && r.status !== b.expectStatus) return { ok: false, error: 'status_changed', status: r.status };
+  // แก้เฉพาะข้อมูลประกอบ (หมายเหตุ/ถุง/ระดับ/จำนวนคน): ไม่แตะสถานะ/ทีม แม้ข้อมูลในเครื่องผู้ใช้จะเก่า (กันเปิดเคสที่ปิดแล้วกลับมา)
+  const meta = !!(b.bagsOnly || b.metaOnly);
   const sets = [], vals = [];
   let bags = null;
   if (b.bags !== undefined && b.bags !== null) { bags = b.bags === '' ? null : clampInt(b.bags, 0, 9999, 0); sets.push('bags=?'); vals.push(bags); }
@@ -398,8 +401,9 @@ async function updateCase(db, b) {
     if (b.status === 'done' && r.status !== 'done') { sets.push('doneAt=?'); vals.push(Date.now()); if (!r.pickedAt) { sets.push('pickedAt=?'); vals.push(Date.now()); } }
     // มอบใหม่ (เปลี่ยนทีม/คืนเป็นรอ) = ล้างที่ทีมเคยแจ้งว่าช่วยแล้ว
     const vol = clean(b.volunteer, MAX.volunteer), prevVol = String(r.volunteer || '').replace(/^'/, '').trim();
-    if (b.status === 'open' || (b.status === 'going' && vol && vol !== prevVol)) sets.push('teamDoneAt=NULL', "teamNote=''");
-    else if (b.status === 'going' && b.helped === true) { if (!r.teamDoneAt) { sets.push('teamDoneAt=?'); vals.push(Date.now()); } }
+    const reset = b.status === 'open' || (b.status === 'going' && vol && vol !== prevVol);
+    if (b.status === 'going' && b.helped === true) { sets.push('teamDoneAt=?'); vals.push(r.teamDoneAt && !reset ? r.teamDoneAt : Date.now()); if (reset) sets.push("teamNote=''"); }
+    else if (reset) sets.push('teamDoneAt=NULL', "teamNote=''");
     else if (b.status === 'going' && b.helped === false) sets.push('teamDoneAt=NULL');
     if (b.status === 'open') sets.push("volunteer=''");
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
@@ -603,8 +607,8 @@ async function teamMe(db, t) {
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt,appAt FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
   // ของจากสต็อกที่ศูนย์ส่งมากับเคส (แสดงในการ์ดเคสของทีม)
-  const ids = results.map(c => String(c.id)), stk = {};
-  if (ids.length) { const { results: sl } = await db.prepare(`SELECT caseId,item,delta FROM stock_log WHERE type='out' AND caseId IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
+  const stk = {};
+  if (results.length) { const { results: sl } = await db.prepare("SELECT caseId,item,delta FROM stock_log WHERE type='out' AND caseId<>'' AND caseId IN (SELECT id FROM cases WHERE volunteer IN (?,?) AND (status='going' OR (status='done' AND updatedAt>?)))").bind(t.name, "'" + t.name, now - 86400e3).all();
     sl.forEach(l => { (stk[l.caseId] = stk[l.caseId] || []).push({ item: l.item, qty: Math.abs(l.delta) }); }); }
   results.forEach(c => { c._stk = stk[String(c.id)] || []; });
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
@@ -1047,13 +1051,13 @@ async function auditLog(env, st, res) {
   if (a === 'sms_cfg' && !b.renew) return; // แค่เปิดดูลิงก์ ไม่ได้เปลี่ยน
   let actor = '', role = '';
   if (st.wrc) { role = 'warroom'; actor = `War Room ${st.wrc.name || st.wrc.id}` + (st.wrc.user ? ` · ${st.wrc.user.name || st.wrc.user.username}` : ' · ลิงก์หัวหน้า'); }
-  else if (b.tk || /^team_/.test(a)) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
+  else if (b.tk || (['team_status', 'team_case', 'team_sos', 'team_ping'].includes(a) && !(st.k0 && isVol(env, st.k0)))) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
   else if (st.k0 && isVol(env, st.k0)) { role = 'central'; actor = 'CENTRAL' + (b.by ? ` · ${b.by}` : ''); }
   else if (a === 'wr_login') { role = 'warroom'; actor = `War Room ${b.warroom || ''} · ${b.username || ''}`; }
   else { role = 'public'; actor = a === 'wr_login' || a === 'app_login' ? 'ผู้ใช้ ' + (b.username || '') : a === 'app_apply' ? 'ผู้สมัคร ' + (b.username || b.name || '') : 'ผู้ใช้ทั่วไป'; }
   const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
   const bits = [];
-  if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + (b.helped === true ? 'ช่วยเหลือแล้ว' : b.helped === false ? 'ทีมกำลังไป' : { open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
+  if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + (b.helped === true ? 'ช่วยเหลือแล้ว' : b.helped === false ? 'ทีมกำลังไป' : { open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going' && !b.metaOnly && !b.bagsOnly) bits.push('ทีม ' + b.volunteer);
     if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); if (b.people !== undefined) bits.push('จำนวนคน ' + b.people); if (b.households !== undefined) bits.push('ครัวเรือน ' + (b.households === '' ? 'ล้าง' : b.households)); if (b.sevSet !== undefined) bits.push(b.sevSet === '' || b.sevSet === null ? 'ระดับ → ใช้ของระบบ' : 'ระดับ → ' + ({ 1: 'ทั่วไป', 2: 'เร่งด่วน', 3: 'วิกฤต' }[b.sevSet] || b.sevSet)); }
   else if (a === 'team_case') bits.push(b.step === 'done' ? 'แจ้งช่วยเหลือแล้ว' : b.step === 'arrived' ? 'ถึงจุดแล้ว' : b.step || '');
   else if (a === 'team_status') bits.push('→ ' + b.status);
@@ -1063,8 +1067,8 @@ async function auditLog(env, st, res) {
   else if (b.note) bits.push(String(b.note).slice(0, 80));
   const summary = [AUDIT_TH[a] || a, tg ? (a === 'update' || a === 'team_case' ? '#' + tg : String(tg)) : '', bits.filter(Boolean).join(' · ')].filter(Boolean).join(' · ');
   let undo = null;
-  if (st.before) { const u = st.before, key = u.key || (UNDO_SPEC[a].kr ? UNDO_SPEC[a].kr(j) : '');
-    if (key) { const after = await db.prepare(`SELECT * FROM ${u.t} WHERE ${u.pk}=?`).bind(String(key)).first().catch(() => null);
+  if (st.before && st.after !== undefined) { const u = st.before, key = st.afterKey, after = st.after;
+    if (key) {
       const cols = [...new Set([...Object.keys(u.row || {}), ...Object.keys(after || {})])].filter(c => !UNDO_IGNORE.has(c) && JSON.stringify((u.row || {})[c] ?? null) !== JSON.stringify((after || {})[c] ?? null));
       if (cols.length) undo = { t: u.t, pk: u.pk, key: String(key), before: u.row, after, cols }; } }
   await db.prepare('INSERT INTO audit (at,action,cat,role,actor,target,summary,data,ip,undo) VALUES (?,?,?,?,?,?,?,?,?,?)')
@@ -1083,6 +1087,13 @@ const UNDO_SPEC = {
   hq_phone: { t: 'meta', pk: 'k', k: () => 'hq_phone' },
 };
 const UNDO_IGNORE = new Set(['updatedAt', 'localAt']);
+async function undoAfter(env, st, res) {
+  let j = null; try { j = await res.json(); } catch (e) {}
+  if (!j || !j.ok) return;
+  const u = st.before, sp = UNDO_SPEC[st.body.action], key = u.key || (sp.kr ? sp.kr(j) : '');
+  st.afterKey = key ? String(key) : '';
+  st.after = key ? await env.DB.prepare(`SELECT * FROM ${u.t} WHERE ${u.pk}=?`).bind(String(key)).first() : null;
+}
 async function undoSnap(db, b) {
   const sp = UNDO_SPEC[b.action], pk = sp.pk || 'id'; let key = clean(sp.k(b) == null ? '' : String(sp.k(b)), 60);
   if (sp.byName && key) { const r = await db.prepare(`SELECT id FROM ${sp.t} WHERE name=? AND active=1`).bind(key).first(); key = r ? r.id : ''; }
@@ -1095,7 +1106,8 @@ async function auditUndo(db, b) {
   if (a.undone) return { ok: false, error: 'already_undone' };
   const u = JSON.parse(a.undo), cur = await db.prepare(`SELECT * FROM ${u.t} WHERE ${u.pk}=?`).bind(u.key).first();
   const same = (x, y) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
-  const changed = u.cols.filter(c => !same((cur || {})[c], (u.after || {})[c]));
+  const isStock = u.t === 'stock' && u.before && u.after && u.cols.includes('qty');
+  const changed = u.cols.filter(c => !(isStock && (c === 'qty' || c === 'updatedAt')) && !same((cur || {})[c], (u.after || {})[c]));
   if (changed.length && !b.force) return { ok: false, error: 'changed_since', cols: changed };
   const now = Date.now(), cols0 = u.cols.filter(c => c !== u.pk);
   if (!u.before) {   // แถวที่คำสั่งนี้สร้างใหม่: ปิดใช้งาน (ถ้ามีคอลัมน์ active) ไม่งั้นลบ
@@ -1103,6 +1115,15 @@ async function auditUndo(db, b) {
     else await db.prepare(`DELETE FROM ${u.t} WHERE ${u.pk}=?`).bind(u.key).run();
   } else if (!cur) {   // แถวถูกลบไปแล้ว: ใส่แถวเดิมกลับ
     const ks = Object.keys(u.before); await db.prepare(`INSERT INTO ${u.t} (${ks.join(',')}) VALUES (${ks.map(() => '?').join(',')})`).bind(...ks.map(k => u.before[k])).run();
+  } else if (isStock) {   // สต็อก: คืนด้วยผลต่าง (ไม่ทับยอดที่คนอื่นรับ/จ่ายหลังจากนั้น) · ตรวจยอดตอนเขียน
+    const delta = (Number(u.before.qty) || 0) - (Number(u.after.qty) || 0), nq = (Number(cur.qty) || 0) + delta;
+    if (nq < 0) return { ok: false, error: 'not_enough', qty: cur.qty };
+    const rest = cols0.filter(c => c !== 'qty' && c !== 'updatedAt'), sets = ['qty=?', 'updatedAt=?', ...rest.map(c => `${c}=?`)], vals = [nq, now, ...rest.map(c => u.before[c] ?? null)];
+    const w = await db.prepare(`UPDATE stock SET ${sets.join(',')} WHERE id=? AND qty=?`).bind(...vals, u.key, cur.qty).run();
+    if (!w.meta.changes) return { ok: false, error: 'conflict_retry' };
+    // รายการรับ/จ่ายเดิม: ไม่นับเป็นของที่ส่งไปกับเคสอีก
+    await db.prepare("UPDATE stock_log SET caseId='', note=COALESCE(note,'') || ' (ย้อนกลับแล้ว)' WHERE n=(SELECT n FROM stock_log WHERE itemId=? AND after=? AND type IN ('in','out','set') ORDER BY n DESC LIMIT 1)").bind(u.key, u.after.qty).run();
+    u.before.qty = nq; // บันทึกรายการ "ย้อนกลับ" ด้านล่าง: จาก cur.qty → nq
   } else if (cols0.length) {
     const sets = cols0.map(c => `${c}=?`), vals = cols0.map(c => u.before[c] ?? null);
     if ('updatedAt' in cur) { sets.push('updatedAt=?'); vals.push(now); }
@@ -2407,7 +2428,9 @@ async function handle(request, env, ctx) {
       let res;
       try { res = await api(request, env); }
       catch (e) { res = json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
-      { const st = RQ.getStore(); if (request.method === 'POST' && st && st.body && !AUDIT_SKIP.has(st.body.action)) { const p = auditLog(env, st, res.clone()).catch(() => {}); if (ctx && ctx.waitUntil) ctx.waitUntil(p); } }
+      { const st = RQ.getStore(); if (request.method === 'POST' && st && st.body && !AUDIT_SKIP.has(st.body.action)) {
+        if (st.before) await undoAfter(env, st, res.clone()).catch(() => {}); // แถวหลังแก้: อ่านทันที ก่อนคนอื่นแก้ต่อ
+        const p = auditLog(env, st, res.clone()).catch(() => {}); if (ctx && ctx.waitUntil) ctx.waitUntil(p); } }
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }

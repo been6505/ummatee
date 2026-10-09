@@ -77,8 +77,8 @@ const ROUTE=(()=>{
       ${links.map((u,i)=>`<a class="btn ghost sm" href="${esc(u)}" target="_blank" rel="noopener">นำทาง Google Maps${links.length>1?' ช่วง '+(i+1):''}</a>`).join('')}<button type="button" class="btn ghost sm" data-rt="copy">คัดลอกส่งไลน์</button><button type="button" class="btn ghost sm" data-rt="clear">ล้าง</button></div>`}
   async function assign(){const r=R.route,team=R.team;if(!r||!team)return;const cs=r.stops.map(p=>p.c).filter(c=>c.status==='open');
     if(!cs.length){toast('ทุกเคสในเส้นทางมีทีมแล้ว');return}if(!confirm(`มอบหมาย ${cs.length} เคสในเส้นทางนี้ให้ "${team}"?`))return;
-    let ok=0;for(const c of cs){try{const x=await apiPost({action:'update',id:rawId(c.id),status:'going',volunteer:team});if(x&&x.ok){ok++;c.status='going';c.volunteer=team}}catch(e){}}
-    toast(`มอบหมายให้ ${team} แล้ว ${ok}/${cs.length} เคส · ขึ้นที่หน้าทีมแล้ว`,ok===cs.length);R.route=null;R.hmAt=0;await hmCases();if(typeof loadAll==='function')loadAll();render()}
+    let ok=0,taken=0;for(const c of cs){try{const x=await apiPost({action:'update',id:rawId(c.id),status:'going',volunteer:team,expectStatus:'open'});if(x&&x.ok){ok++;c.status='going';c.volunteer=team}else if(x&&x.error==='status_changed')taken++}catch(e){}}
+    toast(`มอบหมายให้ ${team} แล้ว ${ok}/${cs.length} เคส${taken?` · ข้าม ${taken} เคสที่มีคนรับไปก่อนแล้ว`:''} · ขึ้นที่หน้าทีมแล้ว`,ok===cs.length);R.route=null;R.hmAt=0;await hmCases();if(typeof loadAll==='function')loadAll();render()}
   function copy(){const r=R.route;if(!r)return;const links=gm(r);
     const txt=`เส้นทาง Helpme+${R.team?' · '+R.team:''} · ${r.stops.length} จุด · ${r.km.toFixed(1)} กม. · ~${Math.round(r.min)} นาที\n`+r.stops.map((p,i)=>{const c=p.c;return `${i+1}. [${URG[p.sv]}] #${rawId(c.id)} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน\n   ${[c.address,c.district].filter(Boolean).join(' · ')}${c.name?'\n   ติดต่อ: '+c.name:''}${c.phone?' '+String(c.phone).replace(/^'/,''):''}\n   https://www.google.com/maps?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`}).join('\n')+`\n\nนำทางทั้งเส้น:\n${links.join('\n')}`;
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ได้เลย (มีเบอร์ผู้แจ้ง ส่งเฉพาะกลุ่มทีม)',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))}
@@ -89,7 +89,7 @@ const ROUTE=(()=>{
     if(k==='gps'){if(!navigator.geolocation){toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}b.textContent='กำลังหาตำแหน่ง…';navigator.geolocation.getCurrentPosition(p=>{R.start={lat:p.coords.latitude,lng:p.coords.longitude,label:'ตำแหน่งของฉัน'};render()},()=>{toast('หาตำแหน่งไม่ได้ ลองแตะเลือกบนแผนที่');render()},{enableHighAccuracy:true,timeout:10000});return}
     if(k==='pick'){R.picking=!R.picking;render();if(R.picking)toast('แตะบนแผนที่ด้านล่างเพื่อเลือกจุดเริ่มต้น',true);return}
     if(k==='go'){b.disabled=true;b.textContent='กำลังคำนวณ…';try{await compute()}finally{const x=document.querySelector('[data-rt="go"]');if(x){x.disabled=false}}return}
-    if(k==='assign'){b.disabled=true;await assign();return}
+    if(k==='assign'){b.disabled=true;try{await assign()}finally{if(b.isConnected)b.disabled=false}return}
     if(k==='copy'){copy();return}if(k==='clear'){R.route=null;render();return}});
   async function init(){await hmCases();render()}
   return {init,render,refresh:()=>{if(!R.route&&!document.activeElement?.closest?.('#rt-panel'))render()}}})();

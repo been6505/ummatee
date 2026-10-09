@@ -159,7 +159,7 @@ function render(){
   // การ์ดตัวเลขกดได้: ตั้งตัวกรองรายการเคสตามการ์ดนั้น (กดซ้ำ = กลับเป็นค่าเริ่มต้น)
   const cur=statKey();
   $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
-    .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
+    .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f&&f!=='active'}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);
   $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`+(A.hm?` · Help Me ${A.hm.length}${ownOnly?` + ขององค์กร ${ownOnly}`:''}`:' · กำลังโหลดเคส Help Me…');
@@ -275,8 +275,8 @@ function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer')
 /* ช่องแก้ตัวเลขในรายละเอียดเคส (จำนวนคน · ถุงยังชีพ · ครัวเรือน) · บันทึกด้วยปุ่ม "บันทึก" */
 const edNum=(id,v,unit,ph,min)=>`<span class="d-ed"><input type="number" inputmode="numeric" id="${id}" min="${min}" max="9999" value="${esc(v)}" placeholder="${esc(ph)}" data-orig="${esc(v)}"><span>${unit}</span></span>`;
 function pinNote(c){const p=c.pinCheck;if(!p)return '';if(p.status==='geocoded')return `<br><small class="muted">📍 หมุดหาจากที่อยู่อัตโนมัติ (${esc(p.label||'ประมาณ')}) · ตรวจตำแหน่งก่อนส่งทีม</small>`;const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
-  if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
-  return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
+  if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+esc(p.level)+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${esc(p.from.district)} ห่าง ${km} กม.`;
+  return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${esc(p.from.district)} แต่ที่อยู่ระบุเขต${esc(p.addrDistrict)} · โทรยืนยันตำแหน่ง`}
 const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed'&&c.pinCheck.status!=='geocoded';
 // รูปจากผู้แจ้ง (เคส Help Me): รหัสไฟล์ Google Drive ที่ Help Me แชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
 // โหลดรูปจาก lh3 ตรง ๆ (ไม่ต้องผ่าน redirect ของ drive.google.com) ถ้าไม่ขึ้นค่อยลองลิงก์ thumbnail ของ Drive
@@ -312,7 +312,7 @@ function renderDrawer(){
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
   // ปุ่มบันทึก: ขึ้นเมื่อแก้หมายเหตุ หรือเพิ่มของจากสต็อกไว้ในเคส
-  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig);sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
+  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const busy=!!(A.stkBusy&&A.stkBusy[c.id]),dirty=!busy&&(nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig));sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
@@ -351,10 +351,10 @@ function stkBox(c,done){const items=(A.stock&&A.stock.items||[]).filter(i=>!i.ki
     ${pend.length?`<div class="d-stk-pend">${pend.map((x,i)=>`<span class="d-stk-chip">${esc(x.name)} × ${x.qty}<button type="button" data-stkdel="${i}" aria-label="เอาออก">×</button></span>`).join('')}</div>
       <small class="muted">กด "บันทึก" เพื่อตัดสต็อกเข้าเคสนี้${c.status==='open'?' หรือกด "มอบหมาย" เพื่อส่งไปกับทีม':''}</small>`:''}`}
   </div>`}
-async function stkCut(c,team){const L=stkPend(c);if(!L.length)return 0;let ok=0;const fail=[];
+async function stkCut(c,team){const L=stkPend(c);if(!L.length)return 0;A.stkBusy=A.stkBusy||{};if(A.stkBusy[c.id])return 0;A.stkBusy[c.id]=true;let ok=0;const fail=[];try{
   for(const x of [...L]){const r=await post({action:'stock_move',key:A.key,itemId:x.id,type:'out',amount:x.qty,caseId:String(apiId(c.id)),team,note:`ส่งไปกับทีม · เคส #${c.hmId||c.id}`}).catch(()=>null);
     if(r&&r.ok){ok++;L.splice(L.indexOf(x),1)}else fail.push(x.name+(r&&r.error==='not_enough'?` (เหลือ ${r.qty})`:''))}
-  if(fail.length)toast('ตัดสต็อกไม่สำเร็จ: '+fail.join(', '));
+  if(fail.length)toast('ตัดสต็อกไม่สำเร็จ: '+fail.join(', '))}finally{A.stkBusy[c.id]=false}
   A.stock=null;loadStock();return ok}
 /* เจ้าหน้าที่เปลี่ยนระดับเอง (ทับระดับที่ระบบคัดกรอง) · ว่าง = กลับไปใช้ระดับของระบบ */
 async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=store.get('uh_staff')||'';

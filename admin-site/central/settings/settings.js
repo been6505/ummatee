@@ -102,12 +102,12 @@ function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
       return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':r.fb?'data-stfb':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
 function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
   if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
-  m.dataset.view=p;$('#st-title').textContent=row.t;window.scrollTo(0,0);
+  const changed=m.dataset.view!==p;m.dataset.view=p;$('#st-title').textContent=row.t;if(changed)window.scrollTo(0,0);
   const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
 $('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click();if(e.target.closest('[data-stfb]')){const f=document.getElementById('fb-btn');if(f)f.click()}});
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);
 addEventListener('hashchange',()=>stGo(location.hash.slice(1)));
 // การ์ดบางอันขึ้นเมื่อโหลดข้อมูลเสร็จ (Discord / SMS / ประวัติ): วาดรายการใหม่เมื่อเปลี่ยน
-new MutationObserver(()=>{if($('#main').dataset.view==='menu')stMenu();else stGo(location.hash.slice(1))}).observe($('#main'),{attributes:true,subtree:true,attributeFilter:['hidden','class']});
+new MutationObserver(()=>{if($('#main').dataset.view==='menu')stMenu()}).observe($('#main'),{attributes:true,subtree:true,attributeFilter:['hidden','class']});
 stGo(location.hash.slice(1));

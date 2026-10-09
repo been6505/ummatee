@@ -62,7 +62,7 @@ main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(-
 .m p{margin:0;white-space:pre-wrap}.m small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .m.hq{align-self:flex-start;border-bottom-left-radius:6px}.m.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:6px}.m.me small{color:rgba(255,255,255,.75)}
 .m.me a{color:#fff}.m .who{font-weight:700;color:var(--primary);font-size:12px}.m.alert{background:var(--red);color:#fff}.m.alert small{color:#fff}
-.m .join{display:inline-flex;margin-top:6px;border-radius:999px;padding:6px 12px;background:var(--ok);color:#fff;font-weight:700;text-decoration:none;font-size:14px}
+.m .ended{margin:6px 0 0;font-size:13px;opacity:.75}.m .join{display:inline-flex;margin-top:6px;border-radius:999px;padding:6px 12px;background:var(--ok);color:#fff;font-weight:700;text-decoration:none;font-size:14px}
 .day{align-self:center;font-size:12px;color:var(--muted);background:rgba(255,255,255,.7);border-radius:999px;padding:2px 10px;margin:6px 0}
 .quick{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;scrollbar-width:none}.quick::-webkit-scrollbar{display:none}.quick button{flex:none}
 form.send{display:flex;gap:8px;padding:8px 12px 10px;background:rgba(255,255,255,.95);box-shadow:0 -1px 0 var(--line)}
@@ -164,6 +164,7 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 @keyframes ldp{50%{box-shadow:0 0 0 9px rgba(46,158,87,.08)}}
 .top .st{margin-left:0!important}
 .locbar.ok-hide{display:none!important}
+.iss{display:flex;flex-wrap:wrap;gap:8px}.iss button{border:1.5px solid #F2B8BF;background:#FFF5F6;color:#B3121F;border-radius:999px;padding:10px 14px;font:inherit;font-weight:700;font-size:15px}
 #call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
 #call-pane .cp-back{position:absolute;left:12px;top:calc(var(--sat) + 10px);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:700;padding:8px 14px}
 /* หน้าโทร: ปุ่มอยู่กลางจอ (ระหว่างหัวกับเมนูล่าง) */
@@ -531,7 +532,7 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
     ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
-      <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}</article>`}
+      <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}<button class="btn" type="button" data-done="${esc(c.id)}"><i data-ic="alert"></i> แจ้งปัญหา</button></div>${c.teamIssue?`<p class="note" style="background:#FFF1E6;color:#9A3B00">แจ้งศูนย์แล้ว: ${esc(c.teamIssue)}</p>`:''}`}</article>`}
 $('#status').onchange=async e=>{const v=e.target.value;try{const r=await opost({action:'team_status',status:v},'สถานะทีม');if(!r.ok)throw 0;S.me.team.status=v;saveMe(S.me);render();toast(r.queued?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-arrive]');if(a){a.disabled=true;const p=TR.pos;const r=await opost({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''},'ถึงแล้ว').catch(()=>({}));toast(r.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;pollChat();return}
@@ -541,7 +542,9 @@ document.addEventListener('click',async e=>{
   const cl=e.target.closest('[data-call]');if(cl){callHq(cl.dataset.call);return}
   const q=e.target.closest('#quick .chip');if(q){send(q.textContent);return}
 });
-function doneSheet(id){sheet(`<h2>ช่วยเหลือเคส #${esc(id)} แล้ว</h2><p class="meta">ศูนย์จะได้รับแจ้งและกดปิดเคส</p><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> แจ้งศูนย์ว่าช่วยแล้ว</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+function doneSheet(id){sheet(`<h2>ผลหน้างาน · เคส #${esc(id)}</h2><div class="iss" role="group" aria-label="แจ้งปัญหา"><button type="button" data-iss="blocked">เข้าไม่ถึง</button><button type="button" data-iss="notfound">ไม่เจอบ้าน</button><button type="button" data-iss="evacuated">อพยพไปแล้ว</button><button type="button" data-iss="noanswer">ติดต่อไม่ได้</button><button type="button" data-iss="need">ต้องการกำลังเสริม</button></div><p class="meta">หรือช่วยเหลือแล้ว: ศูนย์จะได้รับแจ้งและกดปิดเคส</p><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> แจ้งศูนย์ว่าช่วยแล้ว</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+  $$('[data-iss]').forEach(b=>b.onclick=async()=>{$$('[data-iss]').forEach(x=>x.disabled=true);const p=TR.pos,r=await opost({action:'team_case',step:'issue',id,issue:b.dataset.iss,note:$('#d-note').value.trim(),lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''},'แจ้งปัญหา').catch(()=>({}));closeSheet();
+    toast(r.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':r.ok?'แจ้งศูนย์แล้ว · ศูนย์จะตัดสินใจต่อ':'ส่งไม่ได้ ลองใหม่');pollChat()});
   $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await opost({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()},'ช่วยเหลือแล้ว').catch(()=>({}));closeSheet();
     if(r.queued){const c=(S.me.cases||[]).find(x=>String(x.id)===String(id));if(c)c.teamDoneAt=Date.now();saveMe(S.me);render();toast('บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต');return}
     toast(r.ok?'แจ้งศูนย์แล้ว · รอศูนย์ปิดเคส':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
@@ -608,7 +611,7 @@ function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-
 function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
-    const call=m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
+    const call=m.kind==='call'&&m.link&&Date.now()-m.at>3*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
 async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;

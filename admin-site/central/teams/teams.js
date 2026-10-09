@@ -49,14 +49,14 @@ function render(){
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
   const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,''],['พร้อมออกงาน',cnt('ready'),'done'],['กำลังออกงาน',cnt('out'),'go'],['แชร์ตำแหน่ง',sharing,'go'],['อาสาทั้งหมด',people||'–',''],['เคสรอจัดทีม',queue.length,'red'],['SOS',sos.length,sos.length?'red':'']]
-    .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกงาน',cnt('ready'),'done','ready'],['กำลังออกงาน',cnt('out'),'go','out'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
+    .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${T.sf===f}"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
   if(document.activeElement!==$('#hq-phone'))$('#hq-phone').value=tname(T.hqPhone);
   liveUI();
   /* teams */
-  const list=R.filter(t=>T.filter==='all'||t.status===T.filter).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
+  const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
@@ -88,7 +88,14 @@ async function updateCase(c,status,team){const prev={status:c.status,volunteer:c
   catch(e){Object.assign(c,prev);render();if(e&&e.message==='auth')return;toast('บันทึกไม่สำเร็จ ลองใหม่')}}
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tst]');if(!s)return;const t=T.roster.find(x=>String(x.id)===s.dataset.tst);if(t)saveTeam({...t,status:s.value},`${t.name} → ${TST[s.value]}`)});
 document.addEventListener('click',e=>{
-  const f=e.target.closest('#team-filter [data-f]');if(f){T.filter=f.dataset.f;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b===f)));render();return}
+  /* การ์ดสรุปด้านบน: กดแล้วกรอง/เลื่อนไปส่วนที่เกี่ยวข้อง · กดซ้ำ = ยกเลิก */
+  const sc=e.target.closest('#stats [data-sf]');if(sc){let k=sc.dataset.sf;if(T.sf===k&&k!=='all')k='all';T.sf=k==='all'?'':k;
+    const tf=k==='people'?'all':k==='queue'?T.filter:k;
+    if(k!=='queue'){T.filter=tf;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===tf)))}
+    render();const to=k==='queue'?$('#queue').closest('.panel'):$('#team-list').closest('.panel');
+    if(to)to.scrollIntoView({behavior:'smooth',block:'start'});
+    if(k==='sos'&&!$$('#team-list .team').length)toast('ไม่มีทีมที่ส่ง SOS');if(k==='live'&&!$$('#team-list .team').length)toast('ยังไม่มีทีมที่แชร์ตำแหน่ง');return}
+  const f=e.target.closest('#team-filter [data-f]');if(f)T.sf='';if(f){T.filter=f.dataset.f;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b===f)));render();return}
   const a=e.target.closest('[data-assign]');if(a){const c=T.cases.find(x=>String(x.id)===a.dataset.assign),sel=document.querySelector(`[data-pick="${CSS.escape(a.dataset.assign)}"]`);if(c&&sel&&sel.value){updateCase(c,'going',sel.value);const t=T.roster.find(x=>x.name===sel.value);if(t&&t.status==='ready')saveTeam({...t,status:'out'},`${t.name} → ออกงาน`)}return}
   const cp=e.target.closest('[data-callpick]');if(cp&&typeof TEAMCALL!=='undefined'){const c=T.cases.find(x=>String(x.id)===cp.dataset.callpick),sel=document.querySelector(`[data-pick="${CSS.escape(cp.dataset.callpick)}"]`),t=sel&&T.roster.find(x=>x.name===sel.value);
     if(t)callSheet(t,c);return}

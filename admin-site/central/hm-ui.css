@@ -283,3 +283,4 @@ button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%
 :root:not([data-x]) button.stat:hover{box-shadow:0 0 0 2px var(--tint-2,#F9D5D7),var(--shadow-soft)!important}button.stat:active{transform:scale(.98)}
 :root:not([data-x]) button.stat[aria-pressed=true]{box-shadow:0 0 0 2.5px var(--primary,#DD2027),var(--shadow-soft)!important}
 button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.cols>.panel{scroll-margin-top:84px}

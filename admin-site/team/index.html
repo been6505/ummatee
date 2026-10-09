@@ -559,9 +559,8 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
       ${dest?`<a class="hs-big" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทางไปเคสนี้</a>`:''}
       <div class="hs-row">${p.length>=9?`<a class="hs-pill" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:`<button class="hs-pill" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`}
         ${rep?'<button class="hs-pill gray" type="button" disabled>รอศูนย์ปิดเคส</button>':`<button class="hs-pill gray" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}
-    else top=`<button class="hs-big idle" type="button" data-go="work"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>
-      <div class="hs-row"><button class="hs-pill" type="button" data-go="call"><i data-ic="phone"></i> โทรศูนย์</button><button class="hs-pill gray" type="button" data-go="chat"><i data-ic="chat"></i> แชทศูนย์</button></div>`;
-    el.innerHTML=top+`<p class="hs-h">ชั้นข้อมูลบนแผนที่</p><div class="hs-layers">${LAY.map(([k,t,ico,col])=>`<button type="button" data-hl="${k}" aria-pressed="${!!H.on[k]}"><i style="background:${col}">${typeof ic==='function'?ic(ico):''}</i>${t}</button>`).join('')}</div>`;
+    else top=`<button class="hs-big idle" type="button" data-go="work"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>`;
+    el.innerHTML=top; // แผ่นล่างแสดงเฉพาะเคส (ชั้นข้อมูลแผนที่เอาออกตามที่ทีมใช้จริง)
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});
     document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
   document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}

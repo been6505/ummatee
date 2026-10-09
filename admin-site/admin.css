@@ -251,3 +251,15 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .leads-view{margin:0 calc(-1 * clamp(0px,1vw,8px))}
 .leads-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:16px;background:transparent}
 @media(max-width:900px){.leads-frame{height:calc(100vh - 130px)}}
+/* มอบหมายทีม · ปิดเคส · หมายเหตุ */
+.d-status .d-now{margin:0;font-size:14px}
+.d-lbl{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted,#64748b)}
+.d-lbl select,.d-lbl textarea{font:inherit;font-size:15px;font-weight:400;color:inherit;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box}
+.d-lbl textarea{resize:vertical;min-height:64px}
+.d-teamdone{display:grid;gap:2px;padding:10px 12px;border-radius:10px;background:#e8f7ee;color:#0f6b3a;font-size:14px;border:1px solid #b9e6cb}
+.d-teamdone span{color:inherit;opacity:.85}
+.d-st-btns .btn:disabled{opacity:.45;cursor:not-allowed}
+.td-tag{display:block;margin-top:4px;font-size:11.5px;font-weight:600;color:#0f6b3a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .d-teamdone{background:#0f2e1d;color:#8fe0b0;border-color:#1e5236}:root:not([data-theme="light"]) .td-tag{color:#8fe0b0}}
+:root[data-theme="dark"] .d-teamdone{background:#0f2e1d;color:#8fe0b0;border-color:#1e5236}:root[data-theme="dark"] .td-tag{color:#8fe0b0}
+@media (max-width:760px){.d-lbl select,.d-lbl textarea{font-size:16px}}

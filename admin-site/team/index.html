@@ -47,7 +47,7 @@ main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(-
 .sec{margin:6px 2px 8px;font-size:13px;font-weight:700;color:var(--muted)}
 .case{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(22,27,61,.06);border-left:5px solid var(--primary)}
 .case.u3{border-left-color:var(--red)}.case.u2{border-left-color:var(--amber)}.case.done{opacity:.6;border-left-color:var(--ok)}
-.case h3{margin:0 0 4px;font-size:16px}.case .meta{font-size:14px;color:var(--muted)}.case .note{font-size:14px;background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap}
+.case h3{margin:0 0 4px;font-size:16px}.case .meta{font-size:14px;color:var(--muted)}.case .note{font-size:14px;background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap}.case .note.hq{background:#fff4e5;color:#7a4300}
 .tag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-right:4px;background:var(--tint);color:var(--primary)}.tag.u3{background:var(--redt);color:var(--red)}.tag.u2{background:var(--ambert);color:var(--amber)}.tag.ok{background:var(--okt);color:var(--ok)}
 .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:14px;padding:12px 10px;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;background:var(--tint);color:var(--primary);min-height:48px}
@@ -245,7 +245,7 @@ const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,...auth(),t:Da
 const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})})).json();
 /* ---------- ใช้งานได้แม้ไม่มีเน็ต ----------
    - เก็บข้อมูลงานล่าสุด (team_me) ไว้ในเครื่อง เปิดหน้าตอนไม่มีเน็ตยังเห็นเคส/เบอร์/ที่อยู่
-   - กล่องขาออก: สิ่งที่กดตอนไม่มีเน็ต (สถานะ · ถึงแล้ว · ช่วยเสร็จ · แชท · ขอของ) เก็บไว้แล้วส่งเองเมื่อมีเน็ต (ลองทุก 15 วิ) */
+   - กล่องขาออก: สิ่งที่กดตอนไม่มีเน็ต (สถานะ · ถึงแล้ว · ช่วยเหลือแล้ว · แชท · ขอของ) เก็บไว้แล้วส่งเองเมื่อมีเน็ต (ลองทุก 15 วิ) */
 const OB={k:'uh_tm_outbox',get(){try{return JSON.parse(localStorage.getItem(this.k)||'[]')}catch(e){return []}},set(a){try{localStorage.setItem(this.k,JSON.stringify(a.slice(-200)))}catch(e){}},busy:false};
 const isNet=e=>!e||e.name==='TypeError'||/fetch|network|load failed/i.test(String(e.message||e));
 /* ส่งคำขอ ถ้าไม่มีเน็ตเก็บเข้ากล่องขาออก คืน {ok:true,queued:true} */
@@ -404,14 +404,15 @@ function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
   const p=tel(r.hqPhone);$('#c-tel').hidden=p.length<3;$('#c-tel').href='tel:'+p;$('#c-none').hidden=p.length>=3;
 }
 function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' ');
-  const done=c.status==='done';
-  return `<article class="case u${s}${done?' done':''}"><div><span class="tag u${s}">${URG[s]}</span>${done?'<span class="tag ok">เสร็จแล้ว</span>':''}<small class="meta">#${esc(c.id)}</small></div>
+  const done=c.status==='done',rep=!done&&c.teamDoneAt;
+  return `<article class="case u${s}${done?' done':''}"><div><span class="tag u${s}">${URG[s]}</span>${done?'<span class="tag ok">ปิดเคสแล้ว</span>':rep?'<span class="tag ok">แจ้งศูนย์แล้ว · รอปิดเคส</span>':''}<small class="meta">#${esc(c.id)}</small></div>
     <h3>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h3>
     <div class="meta">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''}${(c.vulnerable||[]).length?' · กลุ่มเปราะบาง':''}${c.name?' · '+esc(c.name):''}</div>
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
+    ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
-      <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button><button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเสร็จ</button></div>`}</article>`}
+      <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}</article>`}
 $('#status').onchange=async e=>{const v=e.target.value;try{const r=await opost({action:'team_status',status:v},'สถานะทีม');if(!r.ok)throw 0;S.me.team.status=v;saveMe(S.me);render();toast(r.queued?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-arrive]');if(a){a.disabled=true;const p=TR.pos;const r=await opost({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''},'ถึงแล้ว').catch(()=>({}));toast(r.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;pollChat();return}
@@ -421,10 +422,10 @@ document.addEventListener('click',async e=>{
   const cl=e.target.closest('[data-call]');if(cl){callHq(cl.dataset.call);return}
   const q=e.target.closest('#quick .chip');if(q){send(q.textContent);return}
 });
-function doneSheet(id){sheet(`<h2>ช่วยเคส #${esc(id)} เสร็จ</h2><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> ยืนยันเสร็จ</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
-  $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await opost({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()},'ช่วยเสร็จ').catch(()=>({}));closeSheet();
-    if(r.queued){const c=(S.me.cases||[]).find(x=>String(x.id)===String(id));if(c){c.status='done';c.updatedAt=Date.now()}saveMe(S.me);render();toast('บันทึกไว้ · จะปิดเคสที่ศูนย์เมื่อมีเน็ต');return}
-    toast(r.ok?'ปิดเคสแล้ว':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
+function doneSheet(id){sheet(`<h2>ช่วยเหลือเคส #${esc(id)} แล้ว</h2><p class="meta">ศูนย์จะได้รับแจ้งและกดปิดเคส</p><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> แจ้งศูนย์ว่าช่วยแล้ว</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
+  $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await opost({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()},'ช่วยเหลือแล้ว').catch(()=>({}));closeSheet();
+    if(r.queued){const c=(S.me.cases||[]).find(x=>String(x.id)===String(id));if(c)c.teamDoneAt=Date.now();saveMe(S.me);render();toast('บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต');return}
+    toast(r.ok?'แจ้งศูนย์แล้ว · รอศูนย์ปิดเคส':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
 $('#sup-send').onclick=async()=>{const items=[...S.sup],note=$('#sup-note').value.trim();if(!items.length&&!note){toast('เลือกของก่อน');return}
   await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast(OB.get().length?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'ส่งคำขอแล้ว')};
 

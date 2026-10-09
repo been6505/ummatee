@@ -158,8 +158,15 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 .hs-layers button[aria-pressed=false] i{background:#E6E8EE!important;color:#9AA1B9}
 .hs-layers button[aria-pressed=false]{color:var(--muted)}
 /* เมนูล่างลอยแบบ helpme4u */
-nav.tabs{display:grid!important;grid-template-columns:repeat(4,1fr)!important;height:auto!important}
-nav.tabs button{min-height:56px}
+nav.tabs{display:grid!important;grid-template-columns:1fr 1fr 76px 1fr 1fr!important;align-items:center;height:auto!important;overflow:visible!important}
+nav.tabs button{min-height:56px;font-size:12.5px!important;padding:4px 2px!important;min-width:0}
+/* SOS อยู่กลางเมนูล่าง (ปุ่มลอยเดิมซ่อน) */
+#sos{display:none!important}
+nav.tabs .nav-sos{border:0;background:none!important;padding:0!important;display:grid;place-items:center;cursor:pointer;min-height:56px}
+nav.tabs .nav-sos span{width:66px;height:66px;margin-top:-26px;border-radius:50%;background:linear-gradient(180deg,#E5383B,#B3121F);color:#fff;font:800 19px/1 inherit;font-family:inherit;letter-spacing:.02em;display:grid;place-items:center;border:4px solid #fff;box-shadow:0 8px 20px rgba(200,16,46,.4)}
+nav.tabs .nav-sos:active span{transform:scale(.95)}
+body.sos-on nav.tabs .nav-sos span{animation:navsos 1.2s ease-in-out infinite}
+@keyframes navsos{50%{box-shadow:0 0 0 10px rgba(229,56,59,.25),0 8px 20px rgba(200,16,46,.4)}}
 nav.tabs{left:10px!important;right:10px!important;bottom:calc(var(--sab) + 10px)!important;border-radius:999px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 10px 30px rgba(22,27,61,.18)!important;border:0!important;padding:6px!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
 nav.tabs button{border-radius:999px!important;color:var(--muted)!important}
 nav.tabs button[aria-selected=true]{background:#FCE8EB!important;color:var(--hm-red)!important}
@@ -299,7 +306,7 @@ body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left
     <p class="hint" id="c-none" hidden>ศูนย์ยังไม่ได้ตั้งเบอร์โทร · ใช้โทรผ่านเน็ตแทน</p>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -488,7 +495,7 @@ if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{
 function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();if(S.view==='home'||!S.view)HOME.draw();
   $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
-  const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
+  const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;document.body.classList.toggle('sos-on',!!sos);$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
   const going=r.cases.filter(c=>c.status==='going'),done=r.cases.filter(c=>c.status==='done');
   const nb=$('#b-work');nb.hidden=!going.length;nb.textContent=going.length;
   $('#cases').innerHTML=(going.length?`<p class="sec">งานที่ได้รับ ${going.length} เคส</p>`+going.map(card).join(''):'<p class="empty">ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</p>')
@@ -563,6 +570,7 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   setInterval(()=>{if(S.view!=='home'||!H.map)return;if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f){H.np={lat:f.lat,lng:f.lng};draw()}}).catch(()=>{});else if(TR.pos)draw()},10000);
   return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f)H.np={lat:f.lat,lng:f.lng};draw()}).catch(()=>draw());else draw()})},draw}})();
 $('#bell')&&($('#bell').onclick=()=>go('chat'));
+$('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');if(v==='home')HOME.show();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 

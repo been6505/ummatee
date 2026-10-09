@@ -164,6 +164,12 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 @keyframes ldp{50%{box-shadow:0 0 0 9px rgba(46,158,87,.08)}}
 .top .st{margin-left:0!important}
 .locbar.ok-hide{display:none!important}
+/* เมนูเลือกสถานะทีม: เปิดเป็นรายการใต้ปุ่ม (แทนกล่องเลือกกลางจอของระบบ) */
+.st-pop{position:fixed;z-index:950;background:#fff;border-radius:18px;box-shadow:0 14px 34px rgba(22,27,61,.22);padding:6px;display:grid;gap:4px;min-width:170px}
+.st-pop button{display:flex;align-items:center;gap:10px;border:0;background:none;font:inherit;font-weight:700;font-size:16px;padding:12px 14px;border-radius:12px;text-align:left;cursor:pointer;color:var(--ink)}
+.st-pop button i{width:12px;height:12px;border-radius:50%}
+.st-pop button[aria-checked=true]{background:#F2F4F8}.st-pop button[aria-checked=true]::after{content:"✓";margin-left:auto;color:var(--ok)}
+.st-pop .ready i{background:#2E9E57}.st-pop .out i{background:#E08A00}.st-pop .rest i{background:#9AA1B9}
 /* เมนูล่างลอยแบบ helpme4u */
 nav.tabs{display:grid!important;grid-template-columns:1fr 1fr 76px 1fr 1fr!important;align-items:center;height:auto!important;overflow:visible!important}
 nav.tabs button{min-height:56px;font-size:12.5px!important;padding:4px 2px!important;min-width:0}
@@ -577,6 +583,14 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f)H.np={lat:f.lat,lng:f.lng};draw()}).catch(()=>draw());else draw()})},draw}})();
 $('#bell')&&($('#bell').onclick=()=>go('chat'));
 $('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
+// สถานะทีม: แตะปุ่ม → รายการใต้ปุ่ม (ไม่ใช้กล่องเลือกกลางจอ)
+{const sel=$('#status');if(sel){const close=()=>{const p=document.querySelector('.st-pop');if(p)p.remove()};
+  const open=e=>{e.preventDefault();if(document.querySelector('.st-pop')){close();return}const r=sel.getBoundingClientRect(),p=document.createElement('div');p.className='st-pop';p.setAttribute('role','menu');
+    p.innerHTML=[...sel.options].map(o=>`<button type="button" role="menuitemradio" class="${o.value}" data-st="${o.value}" aria-checked="${o.value===sel.value}"><i></i>${o.textContent}</button>`).join('');
+    document.body.append(p);p.style.top=(r.bottom+8)+'px';p.style.left=Math.max(10,Math.min(innerWidth-p.offsetWidth-10,r.right-p.offsetWidth))+'px';
+    p.onclick=ev=>{const b=ev.target.closest('[data-st]');if(!b)return;close();if(b.dataset.st!==sel.value){sel.value=b.dataset.st;sel.dispatchEvent(new Event('change'))}}};
+  sel.addEventListener('mousedown',open);sel.addEventListener('touchstart',open,{passive:false});sel.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')open(e)});
+  document.addEventListener('click',e=>{if(!e.target.closest('.st-pop')&&e.target!==sel)close()})}}
 // ซิงก์จุดบนหัวกับแถบสถานะตำแหน่ง: ปกติ = จุดเขียว (ซ่อนแถบ) · มีปัญหา = จุดส้ม/แดง + แสดงแถบพร้อมปุ่มแก้
 {const lb=$('#locbar'),ld=$('#locdot');if(lb&&ld){let busy=false;const sync=()=>{if(busy)return;busy=true;const off=lb.classList.contains('off'),wait=lb.classList.contains('wait'),ok=!off&&!wait;
   ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok);busy=false};

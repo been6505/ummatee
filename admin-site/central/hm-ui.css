@@ -278,3 +278,8 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
 }
 @media(min-width:1024px){main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell>*{margin:0!important}}
+/* การ์ดตัวเลขหน้าจัดการเคส = ปุ่มกรอง */
+button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%;appearance:none;-webkit-appearance:none;transition:box-shadow .15s,transform .1s}
+:root:not([data-x]) button.stat:hover{box-shadow:0 0 0 2px var(--tint-2,#F9D5D7),var(--shadow-soft)!important}button.stat:active{transform:scale(.98)}
+:root:not([data-x]) button.stat[aria-pressed=true]{box-shadow:0 0 0 2.5px var(--primary,#DD2027),var(--shadow-soft)!important}
+button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}

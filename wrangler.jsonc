@@ -5,7 +5,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ummatee-help",
   "main": "src/worker.js",
-  "compatibility_date": "2025-09-01",
+  "compatibility_date": "2025-09-01", "compatibility_flags": ["nodejs_als"],
   "assets": {
     "directory": "./public-site",
     "binding": "ASSETS",

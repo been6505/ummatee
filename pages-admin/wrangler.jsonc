@@ -3,7 +3,7 @@
 {
   "name": "admin-helpme",
   "pages_build_output_dir": "./dist",
-  "compatibility_date": "2025-09-01",
+  "compatibility_date": "2025-09-01", "compatibility_flags": ["nodejs_als"],
   "ai": { "binding": "AI" },
   "d1_databases": [
     { "binding": "DB", "database_name": "ummatee-db", "database_id": "2d211589-1846-409f-a0f8-cc352337063a" }

@@ -223,17 +223,19 @@ function vrSection(c){
     <p class="vr-why"><b>ข้อมูลจากผู้แจ้ง:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
+    ${hasPin(c)?`<figure class="vr-fig"><div class="vr-fig-map" id="vr-map" role="img" aria-label="ภาพประกอบรอบจุดเคส"></div><div class="vr-fig-sw" role="group" aria-label="ภาพพื้นหลัง"><button type="button" data-vrbase="sat" aria-pressed="true">ดาวเทียม</button><button type="button" data-vrbase="map" aria-pressed="false">แผนที่</button></div>
+      <figcaption><span><i class="lg lg-case"></i>จุดเคส</span>${v.road?'<span><i class="lg lg-road"></i>ถนนที่รายงาน</span>':''}<span><i class="lg lg-sat"></i>น้ำท่วมจากดาวเทียม (7 วัน)</span>${v.sensor?'<span><i class="lg lg-sen"></i>เซ็นเซอร์น้ำ</span>':''}${v.reports.length?'<span><i class="lg lg-rep"></i>รายงานน้ำท่วม</span>':''}<span><i class="lg lg-cam"></i>กล้อง</span><span class="muted">วงประ = 1 กม.</span></figcaption></figure>`:''}
     ${aiBlock(c)}
-    <details class="vr-more"><summary>รายละเอียด / ตรวจเอง</summary>
-    <div class="vr-bars"><div><span>ข้อมูลที่ผู้แจ้งกรอก</span><i style="width:${v.R*2.5}%"></i><em>${v.R}/40</em></div><div><span>ข้อมูลภายนอก (ฝน ดาวเทียม น้ำท่วม กล้อง)</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*100/60}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/60</em></div></div>
-    <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-    ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
-    ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
     ${hasPin(c)&&VERIFY.F.cams.length?(()=>{ /* ตรวจจากกล้องได้เลยในหน้านี้: กล้องภาพสดใกล้สุด (8 กม.) + กล้องที่ยังส่งภาพอยู่ 2 ตัวใกล้สุด (ข้ามกล้องที่ไม่อัปเดตเกิน 3 ชม.) */
       const fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600,near=VERIFY.nearCams(+c.lat,+c.lng,40,8000).filter(fresh);
       const live=near.find(k=>k.hls),still=near.filter(k=>!k.hls).slice(0,live?2:3),cams=[...(live?[live]:[]),...still].sort((a,b)=>a.d-b.d);
       const dist=k=>k.d<1000?Math.round(k.d)+' ม.':(k.d/1000).toFixed(1)+' กม.';
       return cams.length?`<div class="vr-cams"><span>ดูกล้องใกล้จุดได้เลย · ${cams.length} ตัว</span><div class="vr-cam-grid live">${cams.map(k=>`<figure>${typeof CAMLIVE!=='undefined'?CAMLIVE.html(k):''}<figcaption>ห่าง ${dist(k)}</figcaption></figure>`).join('')}</div></div>`:`<p class="vr-src">ไม่มีกล้องที่ยังส่งภาพในรัศมี 8 กม.</p>`})():''}
+    <details class="vr-more"><summary>รายละเอียด / ตรวจเอง</summary>
+    <div class="vr-bars"><div><span>ข้อมูลที่ผู้แจ้งกรอก</span><i style="width:${v.R*2.5}%"></i><em>${v.R}/40</em></div><div><span>ข้อมูลภายนอก (ฝน ดาวเทียม น้ำท่วม กล้อง)</span><i class="${v.E<0?'neg':''}" style="width:${Math.abs(v.E)*100/60}%"></i><em>${v.E>0?'+':''}${Math.round(v.E)}/60</em></div></div>
+    <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+    ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
+    ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
     <div class="vr-cctv"><span>ตรวจจากกล้อง CCTV:</span> <b>${cc?(cc.s==='flood'?'เห็นน้ำท่วม':'ไม่เห็นน้ำท่วม')+(cc.t?' · '+esc(cc.t):''):'ยังไม่ได้ตรวจ'}</b>
       <div class="vr-cctv-btns"><button class="btn ${cc&&cc.s==='flood'?'primary':'ghost'} sm" data-cctv="flood">กล้องเห็นน้ำท่วม</button><button class="btn ${cc&&cc.s==='clear'?'primary':'ghost'} sm" data-cctv="clear">กล้องไม่เห็นน้ำ</button>${cc?'<button class="btn ghost sm" data-cctv="">ล้างผล</button>':''}</div>
       <div class="vr-links"><a href="https://world.tehx.dyndns.info/flood#tab=roads" target="_blank" rel="noopener">เปิดกล้อง CCTV ถนน (JK World) ↗</a><a href="https://world.tehx.dyndns.info/flood#tab=area" target="_blank" rel="noopener">แถวนี้ท่วมมั้ย ↗</a><a href="https://www.floodboard.org/#map" target="_blank" rel="noopener">แผนที่น้ำท่วม Floodboard ↗</a>${ll?`<button type="button" class="linkish" data-copyll="${ll}">คัดลอกพิกัด ${ll}</button>`:''}</div>
@@ -378,5 +380,25 @@ if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}els
 
 /* ลิ้นชักเคสวาดใหม่ทุกครั้งที่ข้อมูลอัปเดต: หยุดสตรีมเดิมแล้วเริ่มกล้องในลิ้นชักใหม่ */
 {const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}
+/* ภาพประกอบผลตรวจพื้นที่: แผนที่ย่อรอบจุดเคส (ภาพดาวเทียม/แผนที่ + พื้นที่น้ำท่วม GISTDA 7 วัน + ถนนที่รายงาน + เซ็นเซอร์ + รายงาน + กล้อง) */
+const VRF={map:null,base:'sat',id:''};
+function vrFig(){const el=document.getElementById('vr-map');
+  if(VRF.map&&(!el||VRF.map.getContainer()!==el)){try{VRF.map.remove()}catch(e){}VRF.map=null}
+  if(!el||VRF.map||typeof L==='undefined')return;
+  const c=A.cases.find(x=>String(x.id)===A.openId);if(!c||!hasPin(c))return;const v=vr(c),lat=+c.lat,lng=+c.lng;
+  const m=L.map(el,{zoomControl:false,attributionControl:false,zoomAnimation:false,fadeAnimation:false,markerZoomAnimation:false,scrollWheelZoom:false,dragging:!L.Browser.mobile,tap:false,doubleClickZoom:true});VRF.map=m;
+  const bases={sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}),map:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19})};
+  bases[VRF.base].addTo(m);
+  L.tileLayer(API_URL.replace(/\/?$/,'')+'/gistda/7days/{z}/{x}/{y}.png',{opacity:.6,maxZoom:19,maxNativeZoom:17,errorTileUrl:'data:image/gif;base64,R0lGODlhAQABAAAAACw='}).addTo(m);
+  m.setView([lat,lng],15);const ring=L.circle([lat,lng],{radius:1000,color:'#fff',weight:1.5,dashArray:'4 6',fill:false,interactive:false}).addTo(m);
+  if(v.road&&v.road.lines){const bad=!(v.road.verdict==='ok'&&!(v.road.depth>=10));v.road.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:bad?'#ef4444':'#22c55e',weight:6,opacity:.95}).addTo(m).bindTooltip(`ถนน ${esc(v.road.name)} · ${v.road.depth!=null?v.road.depth+' ซม.':esc(VERIFY.VERDICT_TH[v.road.verdict]||'มีน้ำ')}`))}
+  if(v.sensor)L.circleMarker([v.sensor.lat,v.sensor.lng],{radius:7,color:'#fff',weight:2,fillColor:'#2563eb',fillOpacity:1}).addTo(m).bindTooltip(`เซ็นเซอร์ ${esc(v.sensor.name)} · ${v.sensor.now} ซม.`);
+  (v.reports||[]).forEach(r=>{if(r.lat!=null)L.circleMarker([r.lat,r.lng],{radius:6,color:'#fff',weight:2,fillColor:'#f59e0b',fillOpacity:1}).addTo(m).bindTooltip(`รายงาน ${Math.round(r.d)} ม.${r.depth!=null?' · ลึก '+r.depth+' ซม.':''}`)});
+  VERIFY.nearCams(lat,lng,30,2500).forEach(k=>{const mk=L.circleMarker([k.lat,k.lng],{radius:6,color:'#fff',weight:2,fillColor:'#111827',fillOpacity:1}).addTo(m);if(typeof CAMLIVE!=='undefined'){mk.bindPopup(CAMLIVE.html(k),{maxWidth:300});CAMLIVE.bind(mk)}});
+  L.circleMarker([lat,lng],{radius:9,color:'#fff',weight:3,fillColor:'#dc2626',fillOpacity:1}).addTo(m).bindTooltip('จุดเคส');
+  m.fitBounds(ring.getBounds(),{padding:[4,4],animate:false});
+  el.parentNode.querySelectorAll('[data-vrbase]').forEach(b=>b.onclick=()=>{const k=b.dataset.vrbase;if(k===VRF.base)return;m.removeLayer(bases[VRF.base]);VRF.base=k;bases[k].addTo(m).bringToBack();el.parentNode.querySelectorAll('[data-vrbase]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.vrbase===k)))});
+  el.parentNode.querySelectorAll('[data-vrbase]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.vrbase===VRF.base)))}
+{const _rd2=renderDrawer;renderDrawer=function(){_rd2();vrFig()}}
 
 window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});

@@ -303,3 +303,17 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 /* หน้าจัดการเคสมี 9 การ์ด: จอใหญ่แถวเดียว · มือถือ/แท็บเล็ต 3×3 */
 .stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(9,minmax(0,1fr))!important}
 @media (max-width:1100px){.stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+/* ภาพประกอบผลตรวจพื้นที่ (แผนที่ย่อ) */
+.vr-fig{position:relative;margin:12px 0 4px;border-radius:16px;overflow:hidden;background:#dfe5ea;border:1px solid var(--line,#e6e8ef)}
+.vr-fig-map{height:220px;width:100%;z-index:0}
+@media (min-width:761px){.vr-fig-map{height:260px}}
+.vr-fig-sw{position:absolute;top:10px;right:10px;z-index:500;display:flex;background:rgba(255,255,255,.92);border-radius:999px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.vr-fig-sw button{border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;color:#374151;cursor:pointer}
+.vr-fig-sw button[aria-pressed=true]{background:#111827;color:#fff}
+.vr-fig figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;padding:8px 12px;font-size:12px;background:var(--card,#fff);color:var(--ink,#111)}
+.vr-fig figcaption span{display:inline-flex;align-items:center;gap:5px}
+.vr-fig .lg{width:10px;height:10px;border-radius:50%;display:inline-block;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.lg-case{background:#dc2626}.lg-sen{background:#2563eb}.lg-rep{background:#f59e0b}.lg-cam{background:#111827}
+.vr-fig .lg-road{width:16px;height:4px;border-radius:2px;border:0;background:linear-gradient(90deg,#22c55e 50%,#ef4444 50%)}
+.vr-fig .lg-sat{border-radius:3px;background:rgba(37,99,235,.55)}
+.vr-cams{margin-top:10px}

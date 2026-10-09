@@ -32,6 +32,7 @@ const CHAT=(()=>{
     const al=document.createElement('div');al.className='alert-stack';al.setAttribute('aria-live','assertive');document.body.append(al);S.al=al;
     al.onclick=e=>{const a=e.target.closest('[data-al]');if(!a)return;const k=a.dataset.al,v=a.dataset.v;
       if(k==='chat'){openTeam(v);return}
+      if(k==='answer'){e.preventDefault();const c=S.alerts.calls.find(x=>String(x.n)===v);setSeen(Math.max(seenCall(),+v));drawAlerts();if(c)callPane(c);return}
       if(k==='answer'||k==='decline'){const c=S.alerts.calls.find(x=>String(x.n)===v);setSeen(Math.max(seenCall(),+v));if(c&&k==='decline')post({action:'chat_send',team:c.team,from:'hq',name:me(),text:'ศูนย์ไม่ว่างรับสาย · จะโทรกลับ'});drawAlerts();return}
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
@@ -74,12 +75,18 @@ const CHAT=(()=>{
         if(S.open&&!S.team)drawList()}
       if(S.open&&!S.roster.length){const r=await api({action:'roster'});if(r.ok){S.roster=r.roster||[];if(!S.team)drawList();else share()}}}catch(e){}}
   /* แถบแจ้งเตือน: SOS (จนกว่าจะรับทราบ) + สายเข้าจากทีม (ดังจนกด รับ/ไม่รับ หรือครบ 2 นาที) */
-  function drawAlerts(){if(!S.al)return;const calls=S.alerts.calls.filter(c=>c.n>seenCall()&&inScope(c.team)),sos=(S.alerts.sos||[]).filter(x=>inScope(x.name));
+  function drawAlerts(){if(!S.al)return;const calls=[...new Map(S.alerts.calls.filter(c=>c.n>seenCall()&&inScope(c.team)).sort((a,b)=>a.n-b.n).map(c=>[c.team,c])).values()],sos=(S.alerts.sos||[]).filter(x=>inScope(x.name));
     S.al.innerHTML=sos.map(s=>`<div class="al al-sos" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(s.name)}</b><small>${esc(hhmm(s.sosAt))}${s.lat!=null?` · <a href="https://maps.google.com/?q=${+s.lat},${+s.lng}" target="_blank" rel="noopener">ตำแหน่ง</a>`:''}</small>
         <span>${String(s.phone||'').replace(/\D/g,'').length>=9?`<a class="al-b" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}"><i data-ic="phone"></i></a>`:''}<button class="al-b" data-al="chat" data-v="${esc(s.name)}" aria-label="แชท"><i data-ic="chat"></i></button><button class="al-b al-ok" data-al="ack" data-v="${esc(s.id)}">รับทราบ</button></span></div>`).join('')
       +calls.map(c=>`<div class="al al-call" role="alert"><b><i data-ic="phone"></i> ${esc(c.team)} โทรมา</b><small>${esc(c.text)}${c.name?' · '+esc(c.name):''}</small>
         <span><button class="al-b al-no" data-al="decline" data-v="${esc(c.n)}">ไม่รับ</button><a class="al-b al-ok" data-al="answer" data-v="${esc(c.n)}" href="${esc(c.link)}" target="_blank" rel="noopener">รับสาย</a></span></div>`).join('');
     clearInterval(S.ring);if(calls.length||sos.length)S.ring=setInterval(()=>{if(!S.al.children.length){clearInterval(S.ring);return}calls.length?(ding(660),setTimeout(()=>ding(880),250)):ding(990)},calls.length?2000:6000)}
+  /* รับสายในหน้าเดิม: เปิดหน้าจอโทรเป็นกรอบเต็มจอบนหน้านี้ (ไม่เปิดแท็บใหม่) · ปิดกรอบ = วางสาย */
+  function callPane(c){const old=document.getElementById('call-pane');if(old)old.remove();
+    const d=document.createElement('div');d.id='call-pane';d.className='call-pane';d.setAttribute('role','dialog');d.setAttribute('aria-label','สายจาก '+c.team);
+    d.innerHTML=`<div class="cp-bar"><b>${esc(c.team)}</b><small>${esc(c.text||'')}</small><button type="button" class="cp-x" aria-label="วางสายและปิด">วางสาย</button></div><iframe src="${esc(c.link)}" allow="microphone; camera; autoplay; display-capture" title="หน้าจอโทร"></iframe>`;
+    document.body.append(d);d.querySelector('.cp-x').onclick=()=>{d.remove()};}
+  addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.hmCall==='ended'){const d=document.getElementById('call-pane');if(d)setTimeout(()=>d.remove(),1500)}});
   function ding(f=880){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.15)}catch(e){}}
   // แท็บเบื้องหลังยังเช็กทุก 20 วิ (ตัวเลข + เสียงแจ้ง) · กลับมาที่แท็บแล้วเช็กทันที
   function schedule(){clearInterval(S.timer);S.timer=setInterval(()=>{if(!document.hidden||Date.now()-(S.lastPoll||0)>7500)poll()},S.open?5000:8000)}

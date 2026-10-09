@@ -147,7 +147,8 @@ function ensurePc(){if(C.pc)return C.pc;
 async function offer(restart){const pc=restart&&C.pc?C.pc:(reset(),ensurePc());
   try{C.makingOffer=true;await pc.setLocalDescription(await pc.createOffer({iceRestart:!!restart}));send('offer',{sdp:pc.localDescription,o:++C.oid},C.other);status('กำลังเชื่อมต่อ…')}catch(e){console.warn(e)}finally{C.makingOffer=false}}
 function tick(){clearInterval(C.timer);C.timer=setInterval(()=>{if(C.pc&&C.pc.connectionState==='connected')status('เชื่อมต่อแล้ว · '+mmss(Math.round((Date.now()-C.t0)/1000)))},1000);status('เชื่อมต่อแล้ว · 00:00')}
-function end(msg,notify=true){if(C.ended)return;C.ended=true;if(notify)send('bye','end');clearTimeout(C.poll);clearInterval(C.timer);
+function end(msg,notify=true){if(C.ended)return;C.ended=true;try{if(parent!==window)parent.postMessage({hmCall:'ended'},location.origin)}catch(e){} // เปิดในกรอบของหน้า CENTRAL: บอกให้ปิดกรอบ
+  if(notify)send('bye','end');clearTimeout(C.poll);clearInterval(C.timer);
   reset();C.local&&C.local.getTracks().forEach(t=>t.stop());try{C.wake&&C.wake.release()}catch(e){}
   stage.classList.remove('has-lv','waiting');stage.classList.add('ended');
   status((msg||'วางสายแล้ว')+(C.t0?' · คุย '+mmss(Math.round((Date.now()-C.t0)/1000)):''));note('ปิดหน้านี้ได้เลย');}

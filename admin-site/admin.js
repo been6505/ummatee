@@ -329,13 +329,13 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
     <label class="d-lbl">ทีม<select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select></label>
     <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="2" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
     ${stkBox(c,done)}
+    <button type="button" class="btn d-save" data-dact="save" disabled><i data-ic="check"></i> บันทึก</button>
     <div class="d-st-btns">
       ${done?`<button class="btn ghost" data-dact="open">เปิดเคสใหม่</button>`
       :`<button class="btn ${going?'ghost':'primary'}" data-dact="assign">${going?'เปลี่ยนทีม':'มอบหมาย'}</button>
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
         ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':''}`}
-    </div>
-    <button type="button" class="btn d-save" data-dact="save" disabled><i data-ic="check"></i> บันทึก</button></fieldset>`}
+    </div></fieldset>`}
 /* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
 async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;
   try{const r=await api({action:'stock',key:A.key});if(r&&r.ok){A.stock=r;if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.stockLoading=false}}

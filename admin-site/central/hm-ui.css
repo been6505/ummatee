@@ -409,3 +409,6 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-ed>span{color:var(--muted);font-weight:500}
 .d-rows dd small.muted{display:block;margin-top:4px;font-weight:400;line-height:1.45}
 @media (max-width:760px){.d-ed input{font-size:16px}}
+/* ปุ่มสถานะใต้ปุ่มบันทึก: แบ่งเท่า ๆ กันตามจำนวนปุ่ม */
+.d-status .d-st-btns{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important;grid-auto-flow:column}
+.d-status .d-save{margin-top:2px}

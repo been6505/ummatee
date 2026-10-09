@@ -77,6 +77,11 @@ form.send input{border-radius:999px;padding:11px 16px}
 .trk-f{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:6px;background:var(--bg,#f2f3f7);border-radius:12px;padding:8px 10px}
 .bg-trk summary small{font-weight:500;color:var(--muted)}
 .gm-first{border-top:0;padding-top:0}
+.at-hero{margin:4px 0 14px;border-radius:20px;padding:16px;background:linear-gradient(135deg,#EEF1FD,#F6F7FE);box-shadow:inset 0 0 0 1.5px #C9D2F6;display:grid;gap:12px}
+.at-ic{background:#2D45C8}.at-hero .gm-h small,.at-hero .gm-steps small{color:#46507a}
+.at-go{background:#fff;color:#2D45C8;box-shadow:inset 0 0 0 1.5px #2D45C8}.at-3{display:flex!important;gap:6px;font-size:14px;color:#46507a;line-height:1.5}
+.at-st{margin:0;font-size:14px;font-weight:700;color:#46507a;text-align:center}.at-st.ok{color:#1F7A43}
+.at-mini{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:#1F7A43;background:#E9F7EF;border-radius:12px;padding:8px 12px;margin:4px 0 12px}
 .g-gm{margin:4px 0 14px;border-radius:16px;padding:12px 14px;background:#E9F7EF;box-shadow:inset 0 0 0 1.5px #BFE6CD;text-align:left;display:grid;gap:4px}.g-gm b{display:flex;align-items:center;gap:6px;color:#1F7A43}.g-gm b svg{width:20px;height:20px}.g-gm small{color:#3c6b50;font-size:13px;line-height:1.5}
 .gm-hero{margin:4px 0 14px;border-radius:20px;padding:16px;background:linear-gradient(135deg,#E9F7EF,#F3FBF6);box-shadow:inset 0 0 0 1.5px #BFE6CD;display:grid;gap:12px}
 .gm-h{display:flex;gap:12px;align-items:flex-start}.gm-h b{display:block;font-size:17px;line-height:1.35}.gm-h small{display:block;color:#3c6b50;font-size:13.5px;margin-top:2px}
@@ -129,9 +134,9 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
   <div class="big"><i data-ic="gps"></i></div>
   <h1 id="g-team">เปิดตำแหน่ง</h1>
   <p>ศูนย์ต้องเห็นตำแหน่งทีมเพื่อส่งงานและช่วยเหลือเมื่อเกิดเหตุ</p>
-  <div class="g-gm"><b><i data-ic="live"></i> แนะนำ: แชร์ตำแหน่งสดผ่าน Google Maps</b><small>ศูนย์เห็นทีมตลอด แม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องลงแอปเพิ่ม · ขั้นตอนอยู่หน้าถัดไป</small></div>
-  <button class="primary" id="g-on" type="button">เปิดตำแหน่ง แล้วตั้งค่า Google Maps</button>
-  <button class="linkbtn" id="g-gm" type="button">ใช้ Google Maps อย่างเดียว (ไม่เปิดตำแหน่งในเว็บ)</button>
+  <div class="g-gm"><b><i data-ic="gps"></i> แนะนำ: ติดตามอัตโนมัติด้วยแอปฟรี</b><small>ตั้งค่าปุ่มเดียวในหน้าถัดไป ศูนย์เห็นทีมตลอดแม้ล็อกจอ · ไม่ต้องแชร์ลิงก์ Google Maps</small></div>
+  <button class="primary" id="g-on" type="button">เปิดตำแหน่ง แล้วไปต่อ</button>
+  <button class="linkbtn" id="g-gm" type="button">ข้าม · ใช้แอปติดตามอย่างเดียว</button>
   <p class="err" id="g-err" role="alert"></p>
   <button class="linkbtn" id="g-skip" type="button" hidden>เข้าใช้ต่อโดยไม่แชร์ตำแหน่ง</button>
 </section>
@@ -143,6 +148,16 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
   <main id="v-work">
+    <section class="at-hero" id="at-hero" hidden aria-label="ติดตามตำแหน่งอัตโนมัติ">
+      <div class="gm-h"><span class="gm-ic at-ic" aria-hidden="true"><i data-ic="gps"></i></span><div><b>ให้ศูนย์เห็นตำแหน่งตลอด แบบอัตโนมัติ</b><small>ติดตั้งแอปฟรีครั้งเดียว กดตั้งค่าปุ่มเดียว แล้วไม่ต้องทำอะไรอีก · ส่งตำแหน่งเองแม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องแชร์ลิงก์ Google Maps</small></div></div>
+      <ol class="gm-steps">
+        <li><a class="btn blue" id="at-store" target="_blank" rel="noopener"><i data-ic="download"></i> 1. ติดตั้งแอป OwnTracks (ฟรี)</a><small id="at-store2"></small></li>
+        <li><a class="btn at-go" id="at-go"><i data-ic="settings"></i> 2. ตั้งค่าอัตโนมัติ</a><small>เปิดแอปพร้อมตั้งค่าให้ครบ (ที่อยู่ศูนย์ + รหัสทีม) · ถ้าแอปถามให้กด <b>Import / ตกลง</b> · กดไม่ได้? <a href="#" id="at-file">ดาวน์โหลดไฟล์ตั้งค่า</a> แล้วเปิดด้วย OwnTracks</small></li>
+        <li class="at-3"><b>3.</b> <span>ในแอป อนุญาตตำแหน่ง <b>"ตลอดเวลา" (Always)</b><span id="at-android"> · Android: ตั้งแบตเตอรี่ของแอปเป็น <b>ไม่จำกัด</b></span></span></li>
+      </ol>
+      <p class="at-st" id="at-st">รอแอปส่งตำแหน่งแรก…</p>
+      <button type="button" class="gm-later" id="at-later">ไว้ทีหลัง</button>
+    </section>
     <section class="gm-hero" id="gm-hero" hidden aria-label="แชร์ตำแหน่งสดผ่าน Google Maps">
       <div class="gm-h"><span class="gm-ic" aria-hidden="true"><i data-ic="live"></i></span><div><b>แชร์ตำแหน่งสดให้ศูนย์ผ่าน Google Maps</b><small>ทำครั้งเดียว ศูนย์เห็นทีมตลอด แม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องลงแอปเพิ่ม</small></div></div>
       <ol class="gm-steps">
@@ -158,7 +173,8 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
     <div class="box"><div class="chips" id="supplies"></div><input id="sup-note" maxlength="200" placeholder="จำนวน / หมายเหตุ เช่น ถุงยังชีพ 20 ถุง"><button class="btn blue" id="sup-send" type="button"><i data-ic="send"></i> ส่งคำขอ</button></div>
     <p class="sec">ตั้งค่า</p>
     <div class="box">
-      <details class="bg-trk gm-first" id="gm-trk" open><summary><i data-ic="live"></i> แชร์ตำแหน่งสดผ่าน Google Maps <small>(วิธีหลัก · ไม่ต้องลงแอปเพิ่ม · ใช้ได้แม้ล็อกจอ)</small></summary>
+      <p class="at-mini" id="at-mini" hidden></p>
+      <details class="bg-trk gm-first" id="gm-trk"><summary><i data-ic="live"></i> แชร์ลิงก์ Google Maps ให้ศูนย์ <small>(ไม่บังคับ · ศูนย์เปิดดูผ่านลิงก์)</small></summary>
         <p class="hint">ใช้ Google Maps ที่มีในมือถืออยู่แล้ว ศูนย์กดลิงก์ดูตำแหน่งสดของทีมได้ตลอด แม้ปิดหน้านี้หรือจอดับ</p>
         <ol class="trk-steps">
           <li>แตะ <a href="https://www.google.com/maps" target="_blank" rel="noopener"><b>เปิด Google Maps</b></a> → แตะรูปโปรไฟล์ → <b>การแชร์ตำแหน่ง</b> → <b>แชร์ตำแหน่ง</b> (หรือ <b>แชร์ใหม่</b>)</li>
@@ -249,7 +265,30 @@ function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location
   $('#gm-st').innerHTML=g?`ศูนย์เห็นลิงก์แล้ว · <a href="${esc(g)}" target="_blank" rel="noopener">เปิดดู ↗</a> · เลิกแชร์: ลบลิงก์แล้วกดบันทึก และหยุดแชร์ใน Google Maps`:'ยังไม่ได้แชร์ลิงก์';
   if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}
   let later=false;try{later=Date.now()-(+localStorage.getItem('uh_gm_later')||0)<6*3600e3}catch(e){}
-  $('#gm-hero').hidden=!!g||later||!(S.me&&S.me.team&&S.me.team.inRoster!==false);$('#gm-trk').open=!g}
+  $('#gm-hero').hidden=true;autoTrackUI()}
+/* ---------- ติดตามอัตโนมัติด้วยแอป OwnTracks (ฟรี · iOS/Android) ----------
+   ปุ่ม "ตั้งค่าอัตโนมัติ" = ลิงก์ owntracks:///config?inline=<base64> ใส่ที่อยู่ศูนย์ + รหัสทีมให้เอง (โหมด HTTP · Move mode ส่งทุก ~10 วิ เมื่อขยับ)
+   เซิร์ฟเวอร์รับที่ /api/track/<รหัสทีม> และบันทึกเวลาที่แอปส่งล่าสุด (live.appAt) */
+const IOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),AND=/Android/i.test(navigator.userAgent);
+function otConfig(){const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
+  return {_type:'configuration',mode:3,url:host+'/api/track/'+S.tk,deviceId:S.tk.slice(0,12),tid:(S.team||'TM').replace(/[^A-Za-z0-9ก-๙]/g,'').slice(0,2)||'TM',username:'team',auth:false,
+    monitoring:2,locatorInterval:10,locatorDisplacement:10,pubExtendedData:true,ignoreInaccurateLocations:200,cmd:false,remoteConfiguration:false}}
+function b64(str){return btoa(String.fromCharCode(...new TextEncoder().encode(str)))}
+function autoTrackUI(){const h=$('#at-hero');if(!h)return;
+  if(!S.tk){h.hidden=true;return}
+  $('#at-store').href=IOS?'https://apps.apple.com/app/owntracks/id692424691':'https://play.google.com/store/apps/details?id=org.owntracks.android';
+  $('#at-store2').innerHTML=IOS?'iPhone/iPad · <a href="https://play.google.com/store/apps/details?id=org.owntracks.android" target="_blank" rel="noopener">Android</a>':AND?'Android · <a href="https://apps.apple.com/app/owntracks/id692424691" target="_blank" rel="noopener">iPhone</a>':'<a href="https://apps.apple.com/app/owntracks/id692424691" target="_blank" rel="noopener">iPhone</a> · <a href="https://play.google.com/store/apps/details?id=org.owntracks.android" target="_blank" rel="noopener">Android</a>';
+  $('#at-android').hidden=IOS;
+  $('#at-go').href='owntracks:///config?inline='+encodeURIComponent(b64(JSON.stringify(otConfig())));
+  const l=S.me&&S.me.live,app=l&&l.appAt,m=app?Math.round((Date.now()-app)/60000):null,ok=app&&m<30;
+  let later=false;try{later=Date.now()-(+localStorage.getItem('uh_at_later')||0)<6*3600e3}catch(e){}
+  h.hidden=ok||later||!(S.me&&S.me.team&&S.me.team.inRoster!==false);
+  $('#at-st').textContent=app?(ok?`✓ แอปส่งตำแหน่งแล้ว · ล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:`แอปส่งล่าสุด ${m} นาทีก่อน · เปิดแอป OwnTracks ให้ทำงาน`):'รอแอปส่งตำแหน่งแรก…';$('#at-st').className='at-st'+(ok?' ok':'');
+  const mini=$('#at-mini');mini.hidden=!app;if(app)mini.innerHTML=ok?`📡 ติดตามอัตโนมัติทำงานอยู่ · แอปส่งล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:`⚠️ แอปติดตามไม่ได้ส่งมา ${m} นาที · <a href="#" id="at-show">ตั้งค่าใหม่</a>`;
+  if(typeof iconize==='function')iconize(mini)}
+$('#at-later').onclick=()=>{try{localStorage.setItem('uh_at_later',String(Date.now()))}catch(e){}$('#at-hero').hidden=true};
+$('#at-file').onclick=e=>{e.preventDefault();const bl=new Blob([JSON.stringify(otConfig(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='helpme-team.otrc';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)};
+document.addEventListener('click',e=>{if(e.target.id==='at-show'){e.preventDefault();try{localStorage.removeItem('uh_at_later')}catch(err){}const h=$('#at-hero');h.hidden=false;h.scrollIntoView({block:'start'})}});
 /* ปุ่ม "วางลิงก์": อ่านคลิปบอร์ด → ดึงลิงก์ Google Maps → บันทึกให้ศูนย์ทันที */
 $('#gm-paste').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
   if(!/https:\/\/\S*(maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|maps\.google)/.test(t)){toast('ยังไม่มีลิงก์ Google Maps ในคลิปบอร์ด · คัดลอกจาก Google Maps ก่อน หรือวางในช่องที่ "ตั้งค่า"');$('#gm-trk').open=true;$('#gm-in').focus();return}
@@ -265,7 +304,8 @@ addEventListener('online',()=>{if(TR.watch!=null&&TR.pos)ping()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>5000)ping()});
 function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
   if(!S.tk){d.querySelector('.trk-steps').hidden=true;$('#trk-last').textContent='ต้องเข้าหน้านี้จากลิงก์ทีม (ขอลิงก์ทีมจากศูนย์) จึงจะตั้งค่าแอปได้';return}
-  $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track'; // โดเมนหลักปัจจุบัน (โดเมนเก่ายังรับได้)$('#trk-id').textContent=S.tk;
+  $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track'; // โดเมนหลักปัจจุบัน (โดเมนเก่ายังรับได้)
+  $('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
 async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;render()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){}}
@@ -298,7 +338,7 @@ $('#loc-btn').onclick=()=>track(true);
 $('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เครื่องนี้หาตำแหน่งไม่ได้';$('#g-skip').hidden=false;return}$('#g-err').textContent='กำลังขออนุญาต…';
   navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};
 $('#g-skip').onclick=()=>{TR.skip=true;TR.want=false;start()};
-$('#g-gm').onclick=()=>{TR.skip=true;TR.want=false;try{localStorage.removeItem('uh_gm_later')}catch(e){}start();setTimeout(()=>{const h=$('#gm-hero');if(h){h.hidden=false;h.scrollIntoView({block:'start'})}},400)};
+$('#g-gm').onclick=()=>{TR.skip=true;TR.want=false;try{localStorage.removeItem('uh_at_later')}catch(e){}start();setTimeout(()=>{const h=$('#at-hero');if(h){h.hidden=false;h.scrollIntoView({block:'start'})}},400)};
 /* จอไม่ดับ */
 async function wake(on){try{if(on&&'wakeLock' in navigator){TR.wl=await navigator.wakeLock.request('screen')}else if(TR.wl){await TR.wl.release();TR.wl=null}}catch(e){}}
 $('#wake').checked=st.get('uh_tm_wake')==='1';$('#wake').onchange=e=>{st.set('uh_tm_wake',e.target.checked?'1':'');wake(e.target.checked)};

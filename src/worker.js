@@ -1683,6 +1683,45 @@ async function pullLeads(db) {
    ไม่มีรหัส: ได้รายการสาธารณะ (ไม่มีชื่อ/เบอร์ พิกัดโดยประมาณ) · ตั้ง secret HELPME_KEY = รหัสทีมของ Help Me เพื่อได้ข้อมูลเต็ม
    เคสที่ Help Me ปิดแล้ว (done) จะถูกเอาออกจากคิวรอคัดเอง */
 const HELPME_API = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
+/* ระบบ Help Me ตัวปัจจุบัน (helpme4u.com ใช้ตัวนี้ตั้งแต่ ต.ค. 2569) — มีเคสใหม่กว่าชีตเดิม · ตั้ง HELPME_API2 เพื่อเปลี่ยนได้ */
+const HELPME_API2 = 'https://script.google.com/macros/s/AKfycbwxY1eDJnkqCInUCv9bye2WLd2HXuGUyVH9mElVCl5I04UFVI3VfoUr2yxMMFHEIvhW9A/exec';
+/* รายการเคสจากระบบ Help Me ตัวปัจจุบัน → รูปแบบเดียวกับ sheetCases · มี HELPME_KEY = ได้ชื่อ/เบอร์/ที่อยู่/พิกัดจริง · ไม่มี = ข้อมูลสาธารณะ (พิกัดโดยประมาณ) */
+async function apiCases(env) {
+  const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) }); if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch((env.HELPME_API2 || HELPME_API2) + '?' + q, { headers: UA, redirect: 'follow', signal: ctl.signal });
+    if (!r.ok) throw new Error('hm_api_' + r.status);
+    const j = await r.json(); if (!j || !Array.isArray(j.cases)) throw new Error('hm_api_bad');
+    const ST = { open: 'open', going: 'going', done: 'done', skip: 'skip' };
+    return j.cases.filter(c => c && c.id).map(c => { const address = String(c.address || '').trim(), photos = Array.isArray(c.photos) ? c.photos : String(c.photos || '').match(/[-\w]{25,}/g) || [];
+      return { id: String(c.id), createdAt: Number(c.createdAt) || 0, updatedAt: Number(c.updatedAt) || Number(c.createdAt) || 0, status: ST[c.status] || HM_STATUS[c.status] || 'open',
+        urgency: Math.min(3, Math.max(1, Number(c.urgency) || 1)), name: String(c.name || ''), phone: String(c.phone || '').replace(/^'/, ''), notes: String(c.notes || c.details || ''),
+        people: Number(c.people) || 1, address, district: /^หมู่/.test(String(c.district || '')) ? '' : String(c.district || ''), addrDistrict: bkkDistrictOf(address),
+        lat: num(c.lat, -90, 90), lng: num(c.lng, -180, 180), approx: !!c.approx, level: HELPME_LEVEL[c.level] || String(c.level || ''),
+        needs: Array.isArray(c.needs) ? c.needs : String(c.needs || '').split(/\s*,\s*/).filter(Boolean), volunteer: String(c.volunteer || ''), org: String(c.org || ''), pinSrc: '',
+        pickedAt: Number(c.pickedAt) || 0, doneAt: Number(c.doneAt) || 0, photos }; });
+  } finally { clearTimeout(tm); }
+}
+/* รวมสองแหล่ง: ระบบปัจจุบัน (สถานะ/เคสใหม่ล่าสุด) + ชีตเดิม (ชื่อ เบอร์ ที่อยู่ รูป พิกัดจริง ของเคสเก่า) · ไม่เข้าเกณฑ์ (skip) ไม่นำเข้า */
+async function helpmeAllCases(env) {
+  const [sh, api] = await Promise.all([sheetCases(env).catch(() => []), apiCases(env).catch(() => [])]);
+  if (!api.length) return sh.filter(c => c.status !== 'skip');
+  const byId = new Map(sh.map(c => [String(c.id), c])), out = [], skip = [];
+  for (const a of api) {
+    const o = byId.get(a.id); byId.delete(a.id);
+    if (a.status === 'skip') { skip.push(a.id); continue; }
+    if (!o) { out.push(a); continue; }
+    const newer = (a.updatedAt || 0) >= (o.updatedAt || 0), m = { ...o };
+    if (newer) Object.assign(m, { status: a.status, urgency: a.urgency, updatedAt: a.updatedAt, volunteer: a.volunteer || o.volunteer, org: a.org || o.org, pickedAt: a.pickedAt || o.pickedAt, doneAt: a.doneAt || o.doneAt, people: a.people || o.people, needs: a.needs.length ? a.needs : o.needs, level: a.level || o.level });
+    for (const k of ['name', 'phone', 'notes', 'address']) if (!m[k] && a[k]) m[k] = a[k];
+    if (!(m.photos || []).length && a.photos.length) m.photos = a.photos;
+    if ((m.lat == null || m.lng == null) && a.lat != null && !a.approx) { m.lat = a.lat; m.lng = a.lng; }
+    out.push(m);
+  }
+  for (const o of byId.values()) if (o.status !== 'skip') out.push(o); else skip.push(String(o.id)); // เคสที่มีเฉพาะในชีตเดิม
+  out.skipIds = skip; return out;
+}
 /* Google Sheet ของ Help Me = แหล่งข้อมูลหลัก (เร็วและนิ่งกว่า Apps Script)
    แท็บ: เคส · ลงพื้นที่ · ทีม · ศูนย์พักพิง · เครือข่าย — อ่านทาง export CSV ฝั่งเซิร์ฟเวอร์ แคช 1 นาที
    ชีตนี้มีชื่อและเบอร์ผู้แจ้ง: ส่งต่อให้หน้าเว็บเฉพาะคนที่มีรหัสทีม · ตัวเลขสถิติไม่มีข้อมูลส่วนตัว */
@@ -1705,7 +1744,7 @@ function sheetTime(v) {
 }
 /* 50 เขตของกรุงเทพฯ — ใช้หาเขตจากที่อยู่ที่ไม่ได้เขียนคำว่า "เขต" (ชื่อยาวก่อน กัน "บางกะปิ" ไปจับ "บาง") */
 const BKK_DISTRICTS = ['พระนคร','ดุสิต','หนองจอก','บางรัก','บางเขน','บางกะปิ','ปทุมวัน','ป้อมปราบศัตรูพ่าย','พระโขนง','มีนบุรี','ลาดกระบัง','ยานนาวา','สัมพันธวงศ์','พญาไท','ธนบุรี','บางกอกใหญ่','ห้วยขวาง','คลองสาน','ตลิ่งชัน','บางกอกน้อย','บางขุนเทียน','ภาษีเจริญ','หนองแขม','ราษฎร์บูรณะ','บางพลัด','ดินแดง','บึงกุ่ม','สาทร','บางซื่อ','จตุจักร','บางคอแหลม','ประเวศ','คลองเตย','สวนหลวง','จอมทอง','ดอนเมือง','ราชเทวี','ลาดพร้าว','วัฒนา','บางแค','หลักสี่','สายไหม','คันนายาว','สะพานสูง','วังทองหลาง','คลองสามวา','บางนา','ทวีวัฒนา','ทุ่งครุ','บางบอน'].sort((a, b) => b.length - a.length);
-const HM_STATUS = { 'รอช่วย': 'open', 'รอความช่วยเหลือ': 'open', 'ทีมกำลังไป': 'going', 'กำลังไป': 'going', 'กำลังช่วย': 'going', 'ช่วยแล้ว': 'done', 'เสร็จแล้ว': 'done' };
+const HM_STATUS = { 'ไม่เข้าเกณฑ์': 'skip', 'รอช่วย': 'open', 'รอความช่วยเหลือ': 'open', 'ทีมกำลังไป': 'going', 'กำลังไป': 'going', 'กำลังช่วย': 'going', 'ช่วยแล้ว': 'done', 'เสร็จแล้ว': 'done' };
 const HM_URG = { 'ด่วนมาก': 3, 'วิกฤต': 3, 'เร่งด่วน': 2, 'ทั่วไป': 1 };
 async function sheetCases(env) {
   const t = await sheetTab(env, 'cases'), h = t.header, col = n => h.indexOf(n), all = n => h.map((x, i) => x === n ? i : -1).filter(i => i >= 0);
@@ -1737,7 +1776,7 @@ async function sheetPoints(env, db, tab) {
 const HELPME_LEVEL = { ankle: 'ข้อเท้า', knee: 'เข่า', waist: 'เอว', chest: 'อก', roof: 'มิดหัว/หลังคา' };
 async function pullHelpme(db, env) {
   let j = null;
-  try { j = { ok: true, volunteer: true, cases: (await sheetCases(env)).map(c => ({ ...c, approx: false })), source: 'sheet' }; } catch (e) {}
+  try { j = { ok: true, volunteer: true, cases: (await helpmeAllCases(env)).map(c => ({ ...c, approx: !!c.approx })), source: 'sheet+api' }; } catch (e) {}
   if (!j) {
     const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 15000)) });
     if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
@@ -2087,7 +2126,11 @@ async function syncHelpme(env, db, force) {
   if (!force && Date.now() - last < 45e3) return { ok: true, skipped: true, at: last };
   hmSyncP = (async () => {
     await setMeta(db, 'hm_sync_at', String(Date.now()));
-    const cases = (await sheetCases(env)).filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
+    const src = await helpmeAllCases(env);
+    // Help Me ตัดสินว่า "ไม่เข้าเกณฑ์": ซ่อนจากรายการของเรา (ไม่ลบ · ทำเครื่องหมาย hmStatus='skip')
+    const skipIds = src.skipIds || [];
+    for (let i = 0; i < skipIds.length; i += 90) { const part = skipIds.slice(i, i + 90); await db.prepare(`UPDATE cases SET hmStatus='skip' WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' AND id IN (${part.map(() => '?').join(',')})`).bind(...part).run(); }
+    const cases = src.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
     await fillDistricts(db, cases); await checkPins(db, cases); await fillProvinces(db, cases);
     const known = new Map(), ids = cases.map(c => String(c.id));
     for (let i = 0; i < ids.length; i += 90) {
@@ -2166,7 +2209,7 @@ async function photoAiPass(env, db, max = 4) {
 async function helpmeCases(env, db) {
   // ตอบจากฐานข้อมูลของเราทันที (ซิงก์ใช้เวลา ~20 วินาที จึงไม่ให้คนรอ) · cron ซิงก์ทุก 1 นาทีอยู่แล้ว
   // ยังไม่เคยซิงก์ → ซิงก์ก่อนตอบ · ซิงก์ล่าสุดเกิน 3 นาที (cron มีปัญหา) → ซิงก์เบื้องหลังแล้วตอบเลย
-  let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all();
+  let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
   if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all()); }
   else if (Date.now() - last > 180e3 && CTX && CTX.waitUntil) CTX.waitUntil(syncHelpme(env, db).catch(() => {}));
@@ -2179,7 +2222,7 @@ async function helpmeCases(env, db) {
 }
 async function helpmeStatsLive(env, db) {
   return cached('helpme-stats-v4', 60, async () => {
-    const cases = await sheetCases(env); await fillDistricts(db, cases);
+    const cases = await helpmeAllCases(env); await fillDistricts(db, cases);
     const j = { ok: true, volunteer: true, cases }; // จาก Google Sheet ของ Help Me (ข้อมูลเต็ม)
     const TEST = HM_TEST, now = Date.now(), H = 3600e3;
     const all = (j.cases || []).filter(c => !TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));

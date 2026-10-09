@@ -96,6 +96,7 @@ function filtered(){
     const fv=$('#f-vr').value;if(fv==='verified'){if(!VR_OK.has(vr(c).result.k))return false}else if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
     const fz=$('#f-zone').value;if(fz&&typeof MX!=='undefined'&&!MX.inZone(c,fz))return false;
     return true}).sort((a,b)=>{const ca=Number(a.createdAt)||0,cb=Number(b.createdAt)||0;
+      if(so==='team'){const ta=String(a.volunteer||'').replace(/^'/,''),tb=String(b.volunteer||'').replace(/^'/,'');if(ta!==tb)return !ta?1:!tb?-1:ta.localeCompare(tb,'th');return sev(b)-sev(a)||ca-cb}
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
       if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
       // วิกฤตก่อน: ในระดับความรุนแรงเดียวกัน เคสที่ตรวจพื้นที่แล้วยืนยันได้ขึ้นก่อน เคสที่ยืนยันไม่ได้ลงท้าย
@@ -142,12 +143,13 @@ function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทีย
   return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
 /* ---------- แสดงผล ---------- */
-const SF={all:{st:'all',u:''},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
-function statKey(){const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u)||''}
+const SF={all:{st:'all',u:''},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},done:{st:'done',u:''},active:{st:'active',u:''}};
+function statKey(){const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
 $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
-  if(b.dataset.sf==='teams'){location.href=(location.pathname.includes('/central/')?'../teams/':'./central/teams/')+'?f=busy';return} // ทีมที่ถือเคสอยู่ → หน้าจัดทีม
  const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
   $('#f-status').value=f.st;$('#f-urg').value=f.u;$('#f-need').value='';$('#f-vr').value='';
+  // ทีมกำลังไป = เคสที่ทีมกำลังไป เรียงตามทีม (เห็นว่าแต่ละทีมถือเคสอะไร)
+  if(f.sort)$('#f-sort').value=f.sort;else if($('#f-sort').value==='team')$('#f-sort').value='urg';
   const sw=document.querySelector('.view-sw [data-view="cases"]');if(sw&&sw.getAttribute('aria-selected')!=='true')sw.click();
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
 function render(){

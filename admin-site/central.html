@@ -58,7 +58,7 @@
         <select id="f-need" aria-label="ความต้องการ"><option value="">ทุกความต้องการ</option><option>อพยพ</option><option value="ผู้ป่วย">ผู้ป่วย / ผู้สูงอายุ</option><option value="อาหาร">อาหาร / น้ำดื่ม</option><option>ยา</option><option>ของใช้เด็ก</option><option value="เรือ">เรือ / รถสูง</option><option value="อื่น">อื่น ๆ</option></select>
         <select id="f-vr" aria-label="ผลตรวจพื้นที่"><option value="">ผลตรวจ: ทั้งหมด</option><option value="verified">ลำบาก + ยืนยันแล้ว</option><option value="confirmed">วิกฤตจริง</option><option value="likely">น่าจะวิกฤต</option><option value="conflict">ข้อมูลขัดแย้ง</option><option value="unverified">รอตรวจเพิ่ม</option><option value="notcrit">ไม่น่าวิกฤต</option><option value="covered">องค์กรอื่นเคยส่งมอบใกล้เคียง</option><option value="notcovered">ยังไม่มีองค์กรอื่นส่งมอบใกล้เคียง</option><option value="nopin">ยืนยันไม่ได้ (ไม่มีพิกัด/ที่อยู่)</option></select>
         <select id="f-zone" aria-label="โซน"><option value="">ทุกโซน</option></select>
-        <select id="f-sort" aria-label="เรียงตาม"><option value="urg">เรียง: วิกฤตก่อน</option><option value="new">เรียง: ใหม่สุด</option><option value="old">เรียง: รอนานสุด</option><option value="ppl">เรียง: คนมากสุด</option><option value="score">เรียง: คะแนนวิกฤต (ตรวจพื้นที่)</option></select>
+        <select id="f-sort" aria-label="เรียงตาม"><option value="urg">เรียง: วิกฤตก่อน</option><option value="new">เรียง: ใหม่สุด</option><option value="old">เรียง: รอนานสุด</option><option value="ppl">เรียง: คนมากสุด</option><option value="team">เรียง: ตามทีม</option><option value="score">เรียง: คะแนนวิกฤต (ตรวจพื้นที่)</option></select>
         </div>
         <div class="seg" role="tablist" aria-label="มุมมอง"><button role="tab" data-mode="both" aria-selected="true">แผนที่ + รายการ</button><button role="tab" data-mode="list" aria-selected="false">รายการ</button><button role="tab" data-mode="map" aria-selected="false">แผนที่เต็ม</button></div>
         <button class="btn ghost sm" id="export">⬇ CSV</button>
@@ -88,7 +88,7 @@
 
 <script src="./central/verify.js?v=13"></script>
 <script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=47"></script>
+<script src="./admin.js?v=48"></script>
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=13"></script>

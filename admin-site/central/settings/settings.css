@@ -39,3 +39,5 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #lg-cat button[aria-pressed=true]{background:#e5e7eb;color:#111}}
 :root[data-theme="dark"] #lg-cat button[aria-pressed=true]{background:#e5e7eb;color:#111}
 .lg-d dt,.lg-d dd{text-align:left!important;justify-self:start}.lg-d code{font-size:12px}
+.lg-ua{grid-column:1/-1;margin-top:6px!important}.lg-ua .btn{display:inline-flex;align-items:center;gap:6px}
+.lg-undone{color:#b45309;font-weight:700}

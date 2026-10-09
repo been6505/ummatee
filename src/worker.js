@@ -58,7 +58,7 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
-  `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT)`,
+  `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT, undo TEXT, undone INTEGER)`,
   `CREATE INDEX IF NOT EXISTS audit_at ON audit(at)`,
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
@@ -83,7 +83,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -1009,7 +1009,7 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
 /* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
-const AUDIT_SKIP = new Set(['ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -1032,6 +1032,7 @@ async function auditLog(env, st, res) {
   let j = null; try { j = await res.json(); } catch (e) {}
   if (!j || !j.ok || j.skipped) return;
   const b = st.body, a = String(b.action || ''), db = env.DB;
+  if (a === 'sms_cfg' && !b.renew) return; // แค่เปิดดูลิงก์ ไม่ได้เปลี่ยน
   let actor = '', role = '';
   if (st.wrc) { role = 'warroom'; actor = `War Room ${st.wrc.name || st.wrc.id}` + (st.wrc.user ? ` · ${st.wrc.user.name || st.wrc.user.username}` : ' · ลิงก์หัวหน้า'); }
   else if (b.tk || /^team_/.test(a)) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
@@ -1049,9 +1050,60 @@ async function auditLog(env, st, res) {
   else if (a === 'app_decide') bits.push(b.approve ? 'อนุมัติ' : 'ปฏิเสธ');
   else if (b.note) bits.push(String(b.note).slice(0, 80));
   const summary = [AUDIT_TH[a] || a, tg ? (a === 'update' || a === 'team_case' ? '#' + tg : String(tg)) : '', bits.filter(Boolean).join(' · ')].filter(Boolean).join(' · ');
-  await db.prepare('INSERT INTO audit (at,action,cat,role,actor,target,summary,data,ip) VALUES (?,?,?,?,?,?,?,?,?)')
-    .bind(Date.now(), a, AUDIT_CAT(a), role, clean(actor, 120), clean(String(tg), 120), clean(summary, 400), JSON.stringify(auditClean(b)).slice(0, 3000), clean(st.ip, 60)).run();
+  let undo = null;
+  if (st.before) { const u = st.before, key = u.key || (UNDO_SPEC[a].kr ? UNDO_SPEC[a].kr(j) : '');
+    if (key) { const after = await db.prepare(`SELECT * FROM ${u.t} WHERE ${u.pk}=?`).bind(String(key)).first().catch(() => null);
+      const cols = [...new Set([...Object.keys(u.row || {}), ...Object.keys(after || {})])].filter(c => !UNDO_IGNORE.has(c) && JSON.stringify((u.row || {})[c] ?? null) !== JSON.stringify((after || {})[c] ?? null));
+      if (cols.length) undo = { t: u.t, pk: u.pk, key: String(key), before: u.row, after, cols }; } }
+  await db.prepare('INSERT INTO audit (at,action,cat,role,actor,target,summary,data,ip,undo) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .bind(Date.now(), a, AUDIT_CAT(a), role, clean(actor, 120), clean(String(tg), 120), clean(summary, 400), JSON.stringify(auditClean(b)).slice(0, 3000), clean(st.ip, 60), undo ? JSON.stringify(undo) : null).run();
   if (Math.random() < 0.01) await db.prepare('DELETE FROM audit WHERE at<?').bind(Date.now() - 180 * 864e5).run();
+}
+/* ---------- ย้อนกลับการแก้ไข ----------
+   ก่อนทำคำสั่งที่ย้อนได้: เก็บแถวเดิม (before) · หลังทำ: เก็บแถวใหม่ (after) + คอลัมน์ที่เปลี่ยน
+   ย้อนกลับ = คืนเฉพาะคอลัมน์ที่คำสั่งนั้นเปลี่ยน · ถ้ามีคนแก้คอลัมน์เดียวกันต่อแล้ว ต้องยืนยัน (force) · แถวที่สร้างใหม่ = ปิดใช้งาน/ลบ */
+const UNDO_SPEC = {
+  update: { t: 'cases', k: b => b.id }, team_case: { t: 'cases', k: b => b.id },
+  roster_save: { t: 'roster', k: b => (b.team || {}).id, kr: j => j.id }, sos_ack: { t: 'roster', k: b => b.id },
+  team_warroom: { t: 'roster', byName: true, k: b => b.team },
+  stock_item: { t: 'stock', k: b => (b.item || {}).id, kr: j => j.id }, stock_move: { t: 'stock', k: b => b.itemId },
+  warroom_save: { t: 'warrooms', k: b => (b.warroom || {}).id, kr: j => j.id }, warroom_staff: { t: 'warroom_staff', k: b => (b.staff || {}).id, kr: j => j.id },
+  hq_phone: { t: 'meta', pk: 'k', k: () => 'hq_phone' },
+};
+const UNDO_IGNORE = new Set(['updatedAt', 'localAt']);
+async function undoSnap(db, b) {
+  const sp = UNDO_SPEC[b.action], pk = sp.pk || 'id'; let key = clean(sp.k(b) == null ? '' : String(sp.k(b)), 60);
+  if (sp.byName && key) { const r = await db.prepare(`SELECT id FROM ${sp.t} WHERE name=? AND active=1`).bind(key).first(); key = r ? r.id : ''; }
+  const row = key ? await db.prepare(`SELECT * FROM ${sp.t} WHERE ${pk}=?`).bind(key).first() : null;
+  return { t: sp.t, pk, key: row ? key : (sp.kr ? '' : key), row: row || null };
+}
+async function auditUndo(db, b) {
+  const a = await db.prepare('SELECT * FROM audit WHERE id=?').bind(clampInt(b.id, 0, 1e12, 0)).first();
+  if (!a || !a.undo) return { ok: false, error: 'cannot_undo' };
+  if (a.undone) return { ok: false, error: 'already_undone' };
+  const u = JSON.parse(a.undo), cur = await db.prepare(`SELECT * FROM ${u.t} WHERE ${u.pk}=?`).bind(u.key).first();
+  const same = (x, y) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
+  const changed = u.cols.filter(c => !same((cur || {})[c], (u.after || {})[c]));
+  if (changed.length && !b.force) return { ok: false, error: 'changed_since', cols: changed };
+  const now = Date.now(), cols0 = u.cols.filter(c => c !== u.pk);
+  if (!u.before) {   // แถวที่คำสั่งนี้สร้างใหม่: ปิดใช้งาน (ถ้ามีคอลัมน์ active) ไม่งั้นลบ
+    if (cur && 'active' in cur) await db.prepare(`UPDATE ${u.t} SET active=0 WHERE ${u.pk}=?`).bind(u.key).run();
+    else await db.prepare(`DELETE FROM ${u.t} WHERE ${u.pk}=?`).bind(u.key).run();
+  } else if (!cur) {   // แถวถูกลบไปแล้ว: ใส่แถวเดิมกลับ
+    const ks = Object.keys(u.before); await db.prepare(`INSERT INTO ${u.t} (${ks.join(',')}) VALUES (${ks.map(() => '?').join(',')})`).bind(...ks.map(k => u.before[k])).run();
+  } else if (cols0.length) {
+    const sets = cols0.map(c => `${c}=?`), vals = cols0.map(c => u.before[c] ?? null);
+    if ('updatedAt' in cur) { sets.push('updatedAt=?'); vals.push(now); }
+    if (u.t === 'cases') { sets.push('localAt=?'); vals.push(now); }
+    await db.prepare(`UPDATE ${u.t} SET ${sets.join(',')} WHERE ${u.pk}=?`).bind(...vals, u.key).run();
+  }
+  if (u.t === 'stock' && u.before && cur && u.before.qty !== cur.qty)
+    await db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(now, u.key, cur.name, 'undo', (u.before.qty || 0) - (cur.qty || 0), u.before.qty, 'ย้อนกลับการแก้ไข', '', clean(b.by, 60), '').run();
+  await db.prepare('UPDATE audit SET undone=? WHERE id=?').bind(now, a.id).run();
+  await db.prepare('INSERT INTO audit (at,action,cat,role,actor,target,summary,data,ip) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(now, 'audit_undo', a.cat, 'central', clean('CENTRAL' + (b.by ? ' · ' + b.by : ''), 120), a.target, clean('ย้อนกลับ: ' + a.summary, 400), JSON.stringify({ id: a.id, force: !!b.force }), '').run();
+  await bumpRev(db);
+  return { ok: true };
 }
 async function auditList(db, p) {
   const w = [], v = [], lim = clampInt(p.limit, 1, 200, 50);
@@ -1059,7 +1111,7 @@ async function auditList(db, p) {
   if (p.role && /^(central|warroom|team|public)$/.test(p.role)) { w.push('role=?'); v.push(p.role); }
   if (p.before) { w.push('id<?'); v.push(clampInt(p.before, 0, 1e12, 0)); }
   if (p.q) { const q = '%' + clean(p.q, 60).replace(/[%_]/g, '') + '%'; w.push('(summary LIKE ? OR actor LIKE ? OR target LIKE ?)'); v.push(q, q, q); }
-  const { results } = await db.prepare(`SELECT id,at,action,cat,role,actor,target,summary,data FROM audit${w.length ? ' WHERE ' + w.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`).bind(...v, lim).all();
+  const { results } = await db.prepare(`SELECT id,at,action,cat,role,actor,target,summary,data,(undo IS NOT NULL) AS canUndo,undone FROM audit${w.length ? ' WHERE ' + w.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`).bind(...v, lim).all();
   return { ok: true, items: results, more: results.length === lim };
 }
 async function wrAuth(db, key) {
@@ -2303,6 +2355,7 @@ async function api(request, env) {
       const why = await wrPostCheck(db, b); if (why) return json({ ok: false, error: why });
       b.key = env.VOLUNTEER_KEY;
     }
+    if (UNDO_SPEC[b.action]) { const st = RQ.getStore(); if (st) st.before = await undoSnap(db, b).catch(() => null); }
     if (b.action === 'ai_chat' && b.stream) {   // ตอบแบบทยอยส่งทีละคำ (SSE) ให้ผู้ใช้เห็นคำตอบทันที
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });
       const r = await aiStream(b);
@@ -2311,7 +2364,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)

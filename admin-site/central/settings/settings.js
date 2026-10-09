@@ -56,8 +56,8 @@ function lgDay(t){const d=new Date(t),n=new Date();const y=new Date(n);y.setDate
 function lgDraw(){const el=$('#lg-list');if(!LG.items.length){el.innerHTML=`<p class="lg-empty">${LG.busy?'กำลังโหลด…':'ยังไม่มีประวัติในเงื่อนไขนี้'}</p>`;$('#lg-more').hidden=true;return}
   let day='',h='';LG.items.forEach(x=>{const d=lgDay(x.at);if(d!==day){day=d;h+=`<p class="lg-day">${lgEsc(d)}</p>`}
     const [rl,rk]=LG_ROLE[x.role]||['?','p'],op=LG.open.has(x.id);let data={};try{data=JSON.parse(x.data||'{}')}catch(e){}
-    h+=`<button type="button" class="lg-it" data-lg="${x.id}" aria-expanded="${op}"><span class="lg-t">${new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span><span class="lg-r lg-${rk}">${lgEsc(rl)}</span><span class="lg-m"><b>${lgEsc(x.summary)}</b><small>${lgEsc(x.actor)}</small></span></button>`
-      +(op?`<dl class="lg-d">${Object.entries(data).filter(([k,v])=>v!==''&&v!=null&&v!=='•••'&&k!=='key'&&k!=='tk').map(([k,v])=>`<dt>${lgEsc(LG_KEY[k]||k)}</dt><dd>${lgEsc(lgVal(v))}</dd>`).join('')||'<dd>ไม่มีรายละเอียดเพิ่ม</dd>'}<dt>เวลา</dt><dd>${lgEsc(new Date(x.at).toLocaleString('th-TH'))}</dd><dt>คำสั่ง</dt><dd><code>${lgEsc(x.action)}</code></dd></dl>`:'')});
+    h+=`<button type="button" class="lg-it" data-lg="${x.id}" aria-expanded="${op}"><span class="lg-t">${new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span><span class="lg-r lg-${rk}">${lgEsc(rl)}</span><span class="lg-m"><b>${lgEsc(x.summary)}</b><small>${lgEsc(x.actor)}${x.undone?' · <span class="lg-undone">ย้อนกลับแล้ว</span>':''}</small></span></button>`
+      +(op?`<dl class="lg-d">${Object.entries(data).filter(([k,v])=>v!==''&&v!=null&&v!=='•••'&&k!=='key'&&k!=='tk').map(([k,v])=>`<dt>${lgEsc(LG_KEY[k]||k)}</dt><dd>${lgEsc(lgVal(v))}</dd>`).join('')||'<dd>ไม่มีรายละเอียดเพิ่ม</dd>'}<dt>เวลา</dt><dd>${lgEsc(new Date(x.at).toLocaleString('th-TH'))}</dd><dt>คำสั่ง</dt><dd><code>${lgEsc(x.action)}</code></dd>${x.canUndo&&!x.undone?`<dd class="lg-ua"><button type="button" class="btn ghost sm" data-undo="${x.id}"><i data-ic="undo"></i> ย้อนกลับการแก้ไขนี้</button></dd>`:''}</dl>`:'')});
   el.innerHTML=h;$('#lg-more').hidden=!LG.more}
 async function lgLoad(more){if(LG.busy)return;LG.busy=true;if(!more&&!LG.items.length)lgDraw();
   const p={action:'audit_list',limit:50};if(LG.cat)p.cat=LG.cat;if(LG.role)p.role=LG.role;if(LG.q)p.q=LG.q;if(more&&LG.items.length)p.before=LG.items[LG.items.length-1].id;
@@ -69,6 +69,13 @@ $('#lg-cat').onclick=e=>{const b=e.target.closest('[data-cat]');if(!b)return;LG.
 $('#lg-role').onchange=e=>{LG.role=e.target.value;LG.items=[];lgLoad()};
 {let t;$('#lg-q').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{LG.q=e.target.value.trim();LG.items=[];lgLoad()},350)}}
 $('#lg-more').onclick=()=>lgLoad(true);
-$('#lg-list').onclick=e=>{const b=e.target.closest('[data-lg]');if(!b)return;const id=+b.dataset.lg;LG.open.has(id)?LG.open.delete(id):LG.open.add(id);lgDraw()};
+async function lgUndo(id,btn){const x=LG.items.find(i=>i.id===id);if(!x)return;
+  if(!confirm(`ย้อนกลับ?\n${x.summary}\n(${x.actor})`))return;btn.disabled=true;
+  let r=await apiPost({action:'audit_undo',id}).catch(()=>null);
+  if(r&&r.error==='changed_since'&&confirm('หลังจากรายการนี้ มีการแก้ข้อมูลเดียวกันต่อแล้ว\nย้อนกลับจะทับการแก้ไขที่ใหม่กว่า · ยืนยันย้อนกลับ?'))r=await apiPost({action:'audit_undo',id,force:true}).catch(()=>null);
+  btn.disabled=false;
+  if(r&&r.ok){x.undone=Date.now();toast('ย้อนกลับแล้ว',true);LG.items=[];lgLoad()}
+  else if(r&&r.error!=='changed_since')toast(r.error==='already_undone'?'รายการนี้ย้อนกลับไปแล้ว':'ย้อนกลับไม่ได้')}
+$('#lg-list').onclick=e=>{const u=e.target.closest('[data-undo]');if(u){lgUndo(+u.dataset.undo,u);return}const b=e.target.closest('[data-lg]');if(!b)return;const id=+b.dataset.lg;LG.open.has(id)?LG.open.delete(id):LG.open.add(id);lgDraw()};
 setInterval(lgPoll,20000);
 adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});

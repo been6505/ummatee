@@ -77,6 +77,7 @@ form.send input{border-radius:999px;padding:11px 16px}
 .trk-f{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;margin-top:6px;background:var(--bg,#f2f3f7);border-radius:12px;padding:8px 10px}
 .bg-trk summary small{font-weight:500;color:var(--muted)}
 .gm-first{border-top:0;padding-top:0}
+.obar{margin:0;padding:10px 16px;background:#FFF4DE;color:#8A5A00;font-size:14px;font-weight:600;text-align:center}
 /* เว้นขอบบน (รอยบาก/แถบสถานะ) ในแอป iPhone และเว็บเต็มจอ */
 .top{padding-top:calc(env(safe-area-inset-top,0px) + 10px)!important}body{padding-bottom:env(safe-area-inset-bottom,0px)}
 .lk-box{display:grid;gap:8px}.lk-box input{min-height:48px;border-radius:14px;border:1px solid var(--line,#e6e8ef);padding:10px 14px;font:inherit;font-size:16px}.lk-or{text-align:center;color:var(--muted);margin:4px 0}
@@ -153,6 +154,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
+  <p class="obar" id="obar" hidden role="status"></p>
   <main id="v-work">
     <section class="at-hero" id="at-hero" hidden aria-label="ติดตามตำแหน่งอัตโนมัติ">
       <div class="gm-h"><span class="gm-ic at-ic" aria-hidden="true"><i data-ic="gps"></i></span><div><b>ให้ศูนย์เห็นตำแหน่งตลอด แบบอัตโนมัติ</b><small>ติดตั้งแอปฟรีครั้งเดียว กดตั้งค่าปุ่มเดียว แล้วไม่ต้องทำอะไรอีก · ส่งตำแหน่งเองแม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องแชร์ลิงก์ Google Maps</small></div></div>
@@ -241,6 +243,24 @@ S.name=st.get('uh_chat_name');
 const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
 const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'})).json();
 const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})})).json();
+/* ---------- ใช้งานได้แม้ไม่มีเน็ต ----------
+   - เก็บข้อมูลงานล่าสุด (team_me) ไว้ในเครื่อง เปิดหน้าตอนไม่มีเน็ตยังเห็นเคส/เบอร์/ที่อยู่
+   - กล่องขาออก: สิ่งที่กดตอนไม่มีเน็ต (สถานะ · ถึงแล้ว · ช่วยเสร็จ · แชท · ขอของ) เก็บไว้แล้วส่งเองเมื่อมีเน็ต (ลองทุก 15 วิ) */
+const OB={k:'uh_tm_outbox',get(){try{return JSON.parse(localStorage.getItem(this.k)||'[]')}catch(e){return []}},set(a){try{localStorage.setItem(this.k,JSON.stringify(a.slice(-200)))}catch(e){}},busy:false};
+const isNet=e=>!e||e.name==='TypeError'||/fetch|network|load failed/i.test(String(e.message||e));
+/* ส่งคำขอ ถ้าไม่มีเน็ตเก็บเข้ากล่องขาออก คืน {ok:true,queued:true} */
+async function opost(b,label){try{const r=await post(b);return r}catch(e){if(!isNet(e))throw e;const a=OB.get();a.push({b,label:label||b.action,at:Date.now()});OB.set(a);obUI();return {ok:true,queued:true}}}
+async function obFlush(){if(OB.busy)return;let a=OB.get();if(!a.length){obUI();return}OB.busy=true;
+  try{while(a.length){const it=a[0],b={...it.b};if(b.action==='chat_send'&&Date.now()-it.at>120000)b.text=(b.text||'')+` (ส่งตอนไม่มีเน็ต ${hhmm(it.at)})`;
+      let r;try{r=await post(b)}catch(e){break}
+      a.shift();OB.set(a);if(!r.ok&&r.error==='bad_link'){screen('#bad');break}}}
+  finally{OB.busy=false;obUI()}
+  if(!OB.get().length&&a.length===0){refresh();pollChat()}}
+function obUI(){const n=OB.get().length,el=$('#obar');if(!el)return;el.hidden=!n&&navigator.onLine!==false&&!S.offline;
+  el.textContent=n?`📴 ไม่มีเน็ต · รอส่ง ${n} รายการ จะส่งเองเมื่อมีสัญญาณ`:(S.offline?`📴 ไม่มีเน็ต · แสดงข้อมูลล่าสุดเมื่อ ${S.me&&S.me.now?hhmm(S.me.now):'-'}`:'')}
+setInterval(()=>{obFlush()},15000);addEventListener('online',()=>{obFlush();refresh()});addEventListener('offline',obUI);
+function saveMe(r){try{localStorage.setItem('uh_tm_me',JSON.stringify(r))}catch(e){}if(window.NTRK&&NTRK.native)try{Capacitor.Plugins.Preferences.set({key:'ntrk_me',value:JSON.stringify(r)})}catch(e){}}
+function cachedMe(){try{return JSON.parse(localStorage.getItem('uh_tm_me')||'null')}catch(e){return null}}
 const hhmm=t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}),day=t=>new Date(t).toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
 const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'},LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
@@ -256,11 +276,12 @@ async function boot(){
   if(NATIVE)nativeTrack(); // เริ่มติดตามก่อนติดต่อศูนย์ ไม่มีเน็ตก็เก็บตำแหน่งไว้ในคิว
   try{const r=await api({action:'team_me'});
     if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
-    S.me=r;S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
+    S.me=r;S.offline=false;saveMe(r);S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
     if(!S.name&&r.team.leader)S.name=r.team.leader;
     if(NATIVE){TR.skip=true;TR.want=false;start();return} // แอป: ใช้ตัวติดตามเบื้องหลังของแอปแทนตำแหน่งในเว็บ
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
-  }catch(e){if(NATIVE&&S.me){setTimeout(boot,8000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
+  }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return} // ไม่มีเน็ต: ใช้ข้อมูลล่าสุดที่เก็บไว้
+    if(S.me){S.offline=true;obUI();setTimeout(boot,15000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
 function start(){screen('#app');if(TR.want)track(true);render();pollChat(true);refresh();
   clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
@@ -329,7 +350,7 @@ function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
   $('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
-async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;render()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){}}
+async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
 
 /* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
 const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
@@ -391,9 +412,9 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
       <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button><button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเสร็จ</button></div>`}</article>`}
-$('#status').onchange=async e=>{const v=e.target.value;try{const r=await post({action:'team_status',status:v});if(!r.ok)throw 0;S.me.team.status=v;render();toast('อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
+$('#status').onchange=async e=>{const v=e.target.value;try{const r=await opost({action:'team_status',status:v},'สถานะทีม');if(!r.ok)throw 0;S.me.team.status=v;saveMe(S.me);render();toast(r.queued?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
 document.addEventListener('click',async e=>{
-  const a=e.target.closest('[data-arrive]');if(a){a.disabled=true;const p=TR.pos;const r=await post({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''}).catch(()=>({}));toast(r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;pollChat();return}
+  const a=e.target.closest('[data-arrive]');if(a){a.disabled=true;const p=TR.pos;const r=await opost({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''},'ถึงแล้ว').catch(()=>({}));toast(r.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;pollChat();return}
   const d=e.target.closest('[data-done]');if(d){doneSheet(d.dataset.done);return}
   const ch=e.target.closest('#supplies .chip');if(ch){const n=ch.textContent;S.sup.has(n)?S.sup.delete(n):S.sup.add(n);ch.setAttribute('aria-pressed',String(S.sup.has(n)));return}
   const tb=e.target.closest('nav.tabs [data-v]');if(tb){go(tb.dataset.v);return}
@@ -401,9 +422,11 @@ document.addEventListener('click',async e=>{
   const q=e.target.closest('#quick .chip');if(q){send(q.textContent);return}
 });
 function doneSheet(id){sheet(`<h2>ช่วยเคส #${esc(id)} เสร็จ</h2><label>แจกถุงยังชีพ (ถุง)<input id="d-bags" type="number" min="0" inputmode="numeric" placeholder="ไม่ระบุก็ได้"></label><label>หมายเหตุ<input id="d-note" maxlength="300" placeholder="เช่น ส่งต่อโรงพยาบาล"></label><button class="btn green" id="d-ok" type="button"><i data-ic="check"></i> ยืนยันเสร็จ</button><button class="btn" type="button" data-x>ยกเลิก</button>`);
-  $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await post({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()}).catch(()=>({}));closeSheet();toast(r.ok?'ปิดเคสแล้ว':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
+  $('#d-ok').onclick=async()=>{$('#d-ok').disabled=true;const r=await opost({action:'team_case',step:'done',id,bags:$('#d-bags').value,note:$('#d-note').value.trim()},'ช่วยเสร็จ').catch(()=>({}));closeSheet();
+    if(r.queued){const c=(S.me.cases||[]).find(x=>String(x.id)===String(id));if(c){c.status='done';c.updatedAt=Date.now()}saveMe(S.me);render();toast('บันทึกไว้ · จะปิดเคสที่ศูนย์เมื่อมีเน็ต');return}
+    toast(r.ok?'ปิดเคสแล้ว':'บันทึกไม่ได้ ลองใหม่');refresh();pollChat()}}
 $('#sup-send').onclick=async()=>{const items=[...S.sup],note=$('#sup-note').value.trim();if(!items.length&&!note){toast('เลือกของก่อน');return}
-  await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast('ส่งคำขอแล้ว')};
+  await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast(OB.get().length?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'ส่งคำขอแล้ว')};
 
 /* ---------- แท็บ ---------- */
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);
@@ -426,7 +449,7 @@ async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)r
     if(S.view==='chat'){if(changed||first)drawChat(first);if(unread&&!document.hidden)markRead()}}catch(e){}}
 function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam))post({action:'chat_read'}).catch(()=>{})}
 async function send(text,extra={}){if(!text&&extra.lat==null)return;S.msgs.push({n:0,sender:'team',name:S.name,text,at:Date.now(),...extra});if(S.view==='chat')drawChat(true);
-  try{const r=await post({action:'chat_send',text,...extra});if(!r.ok)throw 0}catch(e){if(extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ส่งตำแหน่งผ่านเน็ตไม่ได้ · ส่งทาง SMS แทน');else toast('ส่งไม่ได้ ลองใหม่')}pollChat()}
+  try{const r=await opost({action:'chat_send',text,...extra},'ข้อความ');if(!r.ok)throw 0;if(r.queued&&extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ไม่มีเน็ต · ส่งตำแหน่งทาง SMS ได้ทันที (ข้อความในแชทจะส่งตามเมื่อมีเน็ต)')}catch(e){if(extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ส่งตำแหน่งผ่านเน็ตไม่ได้ · ส่งทาง SMS แทน');else toast('ส่งไม่ได้ ลองใหม่')}pollChat()}
 $('#send').addEventListener('submit',e=>{e.preventDefault();const i=$('#in'),t=i.value.trim();if(!t)return;i.value='';send(t)});
 $('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',{lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)});return}
   navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>send('',{lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6)}),()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
@@ -487,6 +510,7 @@ $('#install').onclick=()=>{if(S.inst){S.inst.prompt();S.inst=null;$('#install').
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pw-toggle]');if(!b)return;const i=b.parentElement.querySelector('input');i.type=i.type==='password'?'text':'password'});
 if($('#wake').checked)wake(true);
 boot();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}); // เก็บหน้าทีมไว้ในเครื่อง เปิดได้แม้ไม่มีเน็ต
 </script>
 <script src="../bc.js?v=2" data-mode="team" defer></script>
 </body>

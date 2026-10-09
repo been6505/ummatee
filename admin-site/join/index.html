@@ -43,6 +43,8 @@ textarea{min-height:80px;resize:vertical}
 .pw{position:relative}.pw button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:18px;cursor:pointer}
 @media(max-width:520px){.row2,.row3{grid-template-columns:1fr}.kind button{flex-direction:column;align-items:flex-start;gap:8px;padding:14px 12px}.ki{width:44px;height:44px}.kt b{font-size:16px}.kt small{font-size:12.5px}.tag{display:none}}
 .pw button{display:grid;place-items:center;color:var(--muted)}
+.acc{display:grid;gap:10px;padding:14px;border-radius:18px;background:var(--bg)}.unhint{margin:-4px 0 0;font-size:13px;color:#C62828;font-weight:600}.unhint:empty{display:none}.unhint.ok{color:var(--ok)}
+.unsug{display:flex;flex-wrap:wrap;gap:6px}.unsug:empty{display:none}.unsug button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:13.5px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -63,7 +65,7 @@ textarea{min-height:80px;resize:vertical}
   <form class="card" id="f-login" autocomplete="on">
     <h2 id="lg-h">เข้าสู่ระบบหน่วยงาน</h2>
     <label id="lg-room-w">หน่วยงานของคุณ<select id="lg-room"><option value="">กำลังโหลดรายชื่อ…</option></select></label>
-    <label>ชื่อผู้ใช้<input id="lg-user" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>ชื่อผู้ใช้<small>ที่ตั้งไว้ตอนสมัคร (ภาษาอังกฤษ ไม่ใช่ชื่อจริง)</small><input id="lg-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required placeholder="เช่น somchai01" data-un></label><p class="unhint" data-unhint></p>
     <label>รหัสผ่าน<span class="pw"><input id="lg-pass" type="password" autocomplete="current-password" required><button type="button" data-eye="lg-pass" aria-label="แสดงรหัส"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></span></label>
     <button class="btn red" id="lg-go">เข้าสู่ระบบ</button>
     <p class="err" id="lg-err" role="alert"></p>
@@ -77,7 +79,7 @@ textarea{min-height:80px;resize:vertical}
       <div class="q"><b>ประเภทหน่วยงาน</b><div class="chips" data-name="orgType" data-one="1">มูลนิธิ/องค์กร|ทีมกู้ภัย/อาสา|เพจ/สื่อออนไลน์|ศาสนสถาน|หน่วยงานรัฐ/ท้องถิ่น|บริษัท/ร้านค้า|กลุ่มชุมชน|อื่น ๆ</div></div>
       <label>ชื่อหน่วยงาน *<input name="orgName" required maxlength="80" placeholder="เช่น มูลนิธิ… / ทีม… / เพจ… / มัสยิด…"></label>
       <div class="row2"><label>ชื่อที่จะแสดงในระบบ<input name="roomName" maxlength="60" placeholder="เช่น ทีมช่วยเหลือมีนบุรี"></label><label>เพจ / เว็บไซต์<input name="page" maxlength="200" inputmode="url" placeholder="facebook.com/…"></label></div>
-      <div class="row2"><label>ผู้ประสานงานหลัก *<input name="contact" required maxlength="60"></label><label>เบอร์โทร *<input name="phone" required inputmode="tel" maxlength="20"></label></div>
+      <div class="row2"><label>ชื่อจริงผู้ประสานงานหลัก *<input name="contact" required maxlength="60" autocomplete="name"></label><label>เบอร์โทร *<input name="phone" required inputmode="tel" maxlength="20"></label></div>
       <div class="row2"><label>LINE ID<input name="lineId" maxlength="40"></label><label>จังหวัด *<select name="province" required class="prov"></select></label></div>
       <label>เขต/อำเภอที่ดูแล<small>คั่นด้วย ,</small><input name="districts" maxlength="300" placeholder="เช่น มีนบุรี, หนองจอก, ลาดกระบัง"></label>
       <label>ที่ตั้ง / ศูนย์ปฏิบัติการ<input name="address" maxlength="200"></label>
@@ -95,7 +97,9 @@ textarea{min-height:80px;resize:vertical}
       <label>ข้อจำกัด / สิ่งที่ต้องการให้ CENTRAL ช่วย<textarea name="needs" maxlength="500" placeholder="เช่น ขาดเรือ ขาดน้ำดื่ม ต้องการจิตอาสาขับเรือ"></textarea></label>
     </div>
     <div class="card"><h2>บัญชีเข้าสู่ระบบ<small>ใช้เข้าระบบของหน่วยงานหลังได้รับอนุมัติ (คุณเป็นผู้ดูแลหน่วยงาน · สร้างบัญชีให้สมาชิกได้)</small></h2>
-      <div class="row2"><label>ชื่อผู้ใช้ (a-z 0-9) *<input name="_u" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false" autocomplete="username"></label><label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
+      <div class="acc"><label>ชื่อผู้ใช้ สำหรับเข้าระบบ *<small>ภาษาอังกฤษตัวเล็ก/ตัวเลข ไม่เว้นวรรค 3–32 ตัว · ไม่ใช่ชื่อจริง</small><input name="_u" required pattern="[a-zA-Z0-9._\-]{3,32}" maxlength="32" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="เช่น somchai01" data-un></label>
+        <p class="unhint" data-unhint></p><div class="unsug" data-unsug></div>
+        <label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
       <label class="chk"><input type="checkbox" required> <span>ยินยอมให้ Help Me เก็บและใช้ข้อมูลนี้เพื่อประสานงานช่วยเหลือผู้ประสบภัยเท่านั้น</span></label>
       <button class="btn red" type="submit">ส่งใบสมัครหน่วยงาน</button><p class="err" data-err></p>
     </div>
@@ -104,7 +108,7 @@ textarea{min-height:80px;resize:vertical}
   <!-- ===== สมัครจิตอาสา ===== -->
   <form class="card-stack" id="f-vol" hidden>
     <div class="card"><h2>ข้อมูลจิตอาสา</h2>
-      <div class="row2"><label>ชื่อ-นามสกุล *<input name="fullName" required maxlength="80"></label><label>ชื่อเล่น<input name="nickname" maxlength="30"></label></div>
+      <div class="row2"><label>ชื่อจริง-นามสกุล *<small>ภาษาไทยได้ · ใช้แสดงให้ศูนย์เห็น</small><input name="fullName" required maxlength="80" autocomplete="name"></label><label>ชื่อเล่น<input name="nickname" maxlength="30"></label></div>
       <div class="row2"><label>เบอร์โทร *<input name="phone" required inputmode="tel" maxlength="20"></label><label>LINE ID<input name="lineId" maxlength="40"></label></div>
       <div class="row2"><label>ช่วงอายุ<select name="age"><option value="">ไม่ระบุ</option><option>ต่ำกว่า 18</option><option>18–25</option><option>26–40</option><option>41–60</option><option>60+</option></select></label><label>จังหวัดที่อยู่ *<select name="province" required class="prov"></select></label></div>
       <label>พื้นที่ที่สะดวกไปช่วย<input name="area" maxlength="120" placeholder="เช่น มีนบุรี, ลาดกระบัง, ทั้ง กทม."></label>
@@ -121,7 +125,9 @@ textarea{min-height:80px;resize:vertical}
       <div class="row2"><label>ผู้ติดต่อฉุกเฉิน<input name="emergencyName" maxlength="60"></label><label>เบอร์ผู้ติดต่อฉุกเฉิน<input name="emergencyPhone" inputmode="tel" maxlength="20"></label></div>
     </div>
     <div class="card"><h2>บัญชีเข้าสู่ระบบ<small>ใช้ดูสถานะ และเข้าหน้าทีมเมื่อได้รับอนุมัติ</small></h2>
-      <div class="row2"><label>ชื่อผู้ใช้ (a-z 0-9) *<input name="_u" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false" autocomplete="username"></label><label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
+      <div class="acc"><label>ชื่อผู้ใช้ สำหรับเข้าระบบ *<small>ภาษาอังกฤษตัวเล็ก/ตัวเลข ไม่เว้นวรรค 3–32 ตัว · ไม่ใช่ชื่อจริง</small><input name="_u" required pattern="[a-zA-Z0-9._\-]{3,32}" maxlength="32" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" placeholder="เช่น somchai01" data-un></label>
+        <p class="unhint" data-unhint></p><div class="unsug" data-unsug></div>
+        <label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
       <label class="chk"><input type="checkbox" required> <span>ยินยอมให้ Help Me เก็บและใช้ข้อมูลนี้เพื่อประสานงานช่วยเหลือผู้ประสบภัยเท่านั้น</span></label>
       <button class="btn red" type="submit">ส่งใบสมัครจิตอาสา</button><p class="err" data-err></p>
     </div>
@@ -149,7 +155,7 @@ fetch('/api?action=warrooms_public').then(r=>r.json()).then(r=>{S.rooms=r.ok?r.w
 /* ตำแหน่งศูนย์ */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-loc]');if(!b)return;const out=$('#loc-'+b.dataset.loc);out.textContent='กำลังหาตำแหน่ง…';
   navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{b.form.dataset.lat=p.coords.latitude.toFixed(6);b.form.dataset.lng=p.coords.longitude.toFixed(6);out.textContent=`✓ ${b.form.dataset.lat}, ${b.form.dataset.lng}`},()=>{out.textContent='หาตำแหน่งไม่ได้ · ข้ามได้'},{enableHighAccuracy:true,timeout:15000}):out.textContent='อุปกรณ์นี้หาตำแหน่งไม่ได้'});
-const ERR={missing:'กรอกชื่อและเบอร์โทรให้ครบ',bad_username:'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ - อย่างน้อย 3 ตัว',short_password:'รหัสผ่านอย่างน้อย 6 ตัว',username_taken:'ชื่อผู้ใช้นี้มีคนใช้แล้ว',too_many:'ส่งใบสมัครบ่อยเกินไป ลองใหม่ภายหลัง',bad_login:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',locked:'ใส่รหัสผิดหลายครั้ง · ลองใหม่ใน 10 นาที'};
+const ERR={missing:'กรอกชื่อและเบอร์โทรให้ครบ',bad_username:'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข ไม่เว้นวรรค (ไม่ใช่ชื่อจริง) เช่น somchai01',short_password:'รหัสผ่านอย่างน้อย 6 ตัว',username_taken:'ชื่อผู้ใช้นี้มีคนใช้แล้ว',too_many:'ส่งใบสมัครบ่อยเกินไป ลองใหม่ภายหลัง',bad_login:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',locked:'ใส่รหัสผิดหลายครั้ง · ลองใหม่ใน 10 นาที'};
 function formData(f){const d={};for(const el of f.elements){if(!el.name||el.name.startsWith('_'))continue;if(el.type==='checkbox'&&el.closest('.chips')){(d[el.name]=d[el.name]||[]);if(el.checked)d[el.name].push(el.value)}else if(el.type==='number'){if(el.value!=='')d[el.name]=Number(el.value)}else if(el.type!=='checkbox')d[el.name]=el.value.trim()}
   if(f.dataset.lat){d.lat=+f.dataset.lat;d.lng=+f.dataset.lng}return d}
 function capSummary(d){return [d.orgType&&d.orgType.length?d.orgType.join(', '):'',d.page?'เพจ '+d.page:'',d.services&&d.services.length?'บริการ: '+d.services.join(', '):'',d.boats?'เรือ '+d.boats:'',d.highTrucks?'รถสูง '+d.highTrucks:'',d.staffCount?'เจ้าหน้าที่ '+d.staffCount:'',d.mealsPerDay?'อาหาร '+d.mealsPerDay+'/วัน':'',d.shelterCap?'พักพิง '+d.shelterCap+' คน':'',d.medical?'การแพทย์: '+d.medical:''].filter(Boolean).join(' · ')}
@@ -173,6 +179,17 @@ $('#f-login').onsubmit=async e=>{e.preventDefault();const u=$('#lg-user').value,
       if(a.ok){$('#lg-err').textContent='';statusCard(a);return}$('#lg-err').textContent=room?ERR[a.error]||ERR.bad_login:'เลือกหน่วยงานก่อน (ถ้าสมัครแล้วรออนุมัติ ไม่ต้องเลือกก็ตรวจสถานะได้)'}
     else{const a=await post({action:'app_login',kind:'volunteer',username:u,password:p});if(a.ok){$('#lg-err').textContent='';statusCard(a);if(a.team)localStorage.setItem('uh_join_team',a.team.link);return}$('#lg-err').textContent=ERR[a.error]||'เข้าสู่ระบบไม่ได้'}}
   catch(x){$('#lg-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{$('#lg-go').disabled=false}};
+/* ชื่อผู้ใช้แยกจากชื่อจริง: เตือนทันทีถ้ามีภาษาไทย/เว้นวรรค · เสนอชื่อผู้ใช้จากเบอร์/LINE */
+const UNRE=/^[a-z0-9._-]{3,32}$/;
+document.addEventListener('input',e=>{const i=e.target.closest('[data-un]');if(!i)return;const v=i.value,h=i.closest('label').parentElement.querySelector('[data-unhint]')||i.closest('form').querySelector('[data-unhint]');
+  const low=v.toLowerCase();if(v!==low&&UNRE.test(low)){const p=i.selectionStart;i.value=low;i.setSelectionRange(p,p)}
+  if(!h)return;h.className='unhint';h.textContent=!v?'':/[ก-๙]/.test(v)?'ชื่อผู้ใช้เป็นภาษาไทยไม่ได้ · ชื่อจริงกรอกในช่อง "ชื่อจริง" แล้วตั้งชื่อผู้ใช้เป็นภาษาอังกฤษ':/\s/.test(v)?'ชื่อผู้ใช้เว้นวรรคไม่ได้ เช่น somchai01':!UNRE.test(i.value)?(i.value.length<3?'อย่างน้อย 3 ตัว':'ใช้ได้เฉพาะ a-z 0-9 . _ -'):(i.id==='lg-user'?'':(h.classList.add('ok'),'✓ ใช้ชื่อผู้ใช้นี้ได้'));
+  i.setCustomValidity(h.textContent&&!h.classList.contains('ok')?h.textContent:'')});
+function suggest(f){const box=f.querySelector('[data-unsug]');if(!box)return;const ph=(f.elements.phone&&f.elements.phone.value||'').replace(/\D/g,''),line=(f.elements.lineId&&f.elements.lineId.value||'').toLowerCase().replace(/[^a-z0-9._-]/g,'');
+  const opts=[line.length>=3?line:'',ph.length>=9?(f.id==='f-wr'?'org':'v')+ph.slice(-6):''].filter((x,i,a)=>x&&a.indexOf(x)===i);
+  box.innerHTML=opts.length?'<span class="muted small">แนะนำ:</span>'+opts.map(o=>`<button type="button" data-pick="${esc(o)}">${esc(o)}</button>`).join(''):''}
+['f-wr','f-vol'].forEach(id=>{const f=document.getElementById(id);f.addEventListener('input',e=>{if(e.target.name==='phone'||e.target.name==='lineId')suggest(f)})});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(!b)return;const i=b.closest('form').querySelector('[data-un]');i.value=b.dataset.pick;i.dispatchEvent(new Event('input',{bubbles:true}));i.focus()});
 view();
 </script>
 </body>

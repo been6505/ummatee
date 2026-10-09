@@ -940,6 +940,7 @@ const appClean = d => { const o = {}; for (const [k, v] of Object.entries(d || {
   o[kk] = Array.isArray(v) ? v.slice(0, 30).map(x => clean(x, 60)) : typeof v === 'number' ? v : typeof v === 'boolean' ? v : clean(v, 500); } return o; };
 async function appApply(db, b, ip) {
   const kind = APP_KIND.includes(b.kind) ? b.kind : '', d = appClean(b.data), un = WR_USER(b.username), pw = String(b.password || '');
+  if (!UN_OK(b.username)) return { ok: false, error: 'bad_username' };
   if (!kind) return { ok: false, error: 'bad_kind' };
   const name = clean(kind === 'warroom' ? d.orgName : d.fullName, 80), phone = clean(d.phone, 20).replace(/[^\d+\-\s]/g, '');
   if (!name || phone.replace(/\D/g, '').length < 9) return { ok: false, error: 'missing' };
@@ -1014,6 +1015,8 @@ async function pwHash(pw, salt) {
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 const WR_USER = u => String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 32);
+// ตอนสร้างบัญชี: ชื่อผู้ใช้ต้องถูกรูปแบบตั้งแต่แรก (ไม่ตัด/แก้ให้เอง จะได้ไม่สับสนกับชื่อจริง)
+const UN_OK = u => /^[a-z0-9._-]{3,32}$/.test(String(u || '').trim().toLowerCase());
 async function wrLogin(db, b) {
   const wr = clean(b.warroom, 20), un = WR_USER(b.username), pw = String(b.password || '');
   if (!wr || !un || !pw) return { ok: false, error: 'missing' };
@@ -1055,7 +1058,7 @@ async function wrUserSave(db, b) {
     if (pw || b.active === false) await db.prepare('DELETE FROM wr_sessions WHERE userId=?').bind(u.id).run(); // เปลี่ยนรหัส/ปิดบัญชี = ออกจากระบบทุกเครื่อง
     return { ok: true };
   }
-  if (!un || un.length < 3) return { ok: false, error: 'bad_username' };
+  if (!UN_OK(b.username)) return { ok: false, error: 'bad_username' };
   if (pw.length < 6) return { ok: false, error: 'short_password' };
   const dup = await db.prepare('SELECT id FROM wr_users WHERE warroom=? AND username=?').bind(WRC.id, un).first();
   if (dup) return { ok: false, error: 'username_taken' };

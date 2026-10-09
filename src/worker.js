@@ -397,6 +397,40 @@ async function readTeams(db) {
    รองรับทั้งแบบเก่า (OsmAnd: ?id=&lat=&lon=&timestamp=&speed=นอต&batt=) และแบบใหม่ (JSON {device_id, location:{coords,battery,timestamp}})
    OwnTracks (โหมด HTTP): URL = https://<โดเมน>/api/track/<รหัสลิงก์ทีม> · JSON {_type:'location',lat,lon,acc,vel(กม./ชม.),batt,tst}
    จุดที่แอปเก็บไว้ตอนไม่มีเน็ตแล้วส่งย้อนหลัง: เก็บเข้าเส้นทางตามเวลาจริง และอัปเดตตำแหน่งล่าสุดเฉพาะจุดที่ใหม่กว่า */
+/* ---------- รับตำแหน่งทีมทาง SMS (ไม่ต้องใช้เน็ตฝั่งทีม) ----------
+   ทีมกดส่ง SMS ถึงเบอร์ศูนย์ ในข้อความมีรหัส  #HM:<รหัสลิงก์ทีม>:<lat>,<lng>[:<เวลา unix>][:SOS]
+   มือถือ Android เบอร์ศูนย์ติดแอปส่งต่อ SMS → POST/GET /api/sms-in?k=<รหัสลับ> พร้อมข้อความ (รองรับหลายชื่อฟิลด์)
+   ตำแหน่งขึ้นแผนที่ทันที (teams_live + เส้นทาง) · แจ้งในแชทของทีม · มี SOS = ตั้ง SOS */
+async function smsIn(db, request, url) {
+  const q = Object.fromEntries(url.searchParams); let b = {};
+  if (request.method === 'POST') { const txt = await request.text(); try { b = JSON.parse(txt || '{}'); } catch (e) { for (const [k, v] of new URLSearchParams(txt)) b[k] = v; } }
+  const secret = await getMeta(db, 'sms_secret'), key = String(q.k || b.k || b.key || '');
+  if (!secret || key !== secret) return json({ ok: false, error: 'bad_key' }, 403);
+  const text = String(b.text || b.message || b.msg || b.body || b.content || b.sms || q.text || q.message || '');
+  const now = Date.now(); let n = 0;
+  for (const m of text.matchAll(/#HM:([a-z0-9]{10,40}):(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)(?::(\d{9,10}))?(:SOS)?/gi)) {
+    const row = await db.prepare('SELECT id,name FROM roster WHERE token=? AND active=1').bind(m[1].toLowerCase()).first();
+    const lat = num(m[2], -90, 90), lng = num(m[3], -180, 180);
+    if (!row || lat == null || lng == null) continue;
+    const t0 = Number(m[4]) * 1000, t = t0 && t0 > now - 3 * 864e5 && t0 <= now + 60e3 ? t0 : now;
+    await db.batch([
+      db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt) VALUES (?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,updatedAt=excluded.updatedAt WHERE excluded.updatedAt>=teams_live.updatedAt').bind(row.name, lat, lng, null, '', t),
+      db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(row.name, lat, lng, null, null, null, t),
+    ]);
+    const sos = !!m[5] || /\bSOS\b/.test(text);
+    if (sos) await db.prepare('UPDATE roster SET sosAt=?, sosAck=NULL WHERE id=?').bind(now, row.id).run();
+    await chatSend(db, { team: row.name, from: 'team', name: 'SMS', kind: sos ? 'sos' : '', text: (sos ? 'SOS ทาง SMS · ' : '📩 ส่งตำแหน่งทาง SMS (ไม่มีเน็ต)') + (t < now - 120e3 ? ' · ตำแหน่งเมื่อ ' + new Date(t).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }) : ''), lat, lng });
+    n++;
+  }
+  if (n) await bumpRev(db);
+  return json({ ok: true, updated: n });
+}
+async function smsCfg(db, b) {
+  if (WRC) return { ok: false, error: 'central_only' };
+  let s = await getMeta(db, 'sms_secret');
+  if (!s || b.renew) { s = rand(24); await setMeta(db, 'sms_secret', s); }
+  return { ok: true, secret: s };
+}
 async function trackApp(db, request, url, pathTk) {
   const q = Object.fromEntries(url.searchParams);
   let body = {};
@@ -1892,6 +1926,7 @@ async function api(request, env) {
   await init(db);
   const url = new URL(request.url);
   if (trk && ['GET', 'POST'].includes(request.method)) return trackApp(db, request, url, trk[1]);
+  if (url.pathname.replace(/\/$/, '') === '/api/sms-in' && ['GET', 'POST'].includes(request.method)) return smsIn(db, request, url);
   if (request.method === 'GET') {
     const p = Object.fromEntries(url.searchParams);
     WRC = await wrAuth(db, p.key); if (WRC) p.key = env.VOLUNTEER_KEY;   // ลิงก์ประจำ War Room
@@ -1967,7 +2002,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

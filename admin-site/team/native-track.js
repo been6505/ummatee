@@ -10,11 +10,11 @@ window.NTRK = (() => {
   const native = !!(C && C.isNativePlatform && C.isNativePlatform());
   const PL = n => C && C.Plugins && C.Plugins[n];
   const GAP = 8000, RETRY = 15000, QMAX = 300;
-  const S = { cfg: null, q: [], lastQ: 0, trail: null, trailT: null, retryT: null, busy: false, wid: null, on: null,
+  const S = { fix: null, offSince: 0, cfg: null, q: [], lastQ: 0, trail: null, trailT: null, retryT: null, busy: false, wid: null, on: null,
     st: { state: 'idle', at: 0, err: '' } };
   const get = async k => { try { const r = await PL('Preferences').get({ key: k }); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } };
   const put = (k, v) => { try { return PL('Preferences').set({ key: k, value: JSON.stringify(v) }); } catch (e) {} };
-  const emit = p => { Object.assign(S.st, p); try { S.on && S.on({ ...S.st, queued: S.q.length }); } catch (e) {} };
+  const emit = p => { if (p.err === 'offline' && !S.offSince) S.offSince = Date.now(); if (p.state === 'ok') S.offSince = 0; Object.assign(S.st, p); try { S.on && S.on({ ...S.st, queued: S.q.length }); } catch (e) {} };
   const saveQ = () => put('ntrk_q', S.q);
 
   /* ส่ง 1 จุด: คืน 'ok' | 'drop' (จุดเสีย ทิ้งได้) | 'fatal' (ลิงก์/รหัสใช้ไม่ได้) · โยน error = ลองใหม่ภายหลัง */
@@ -61,6 +61,7 @@ window.NTRK = (() => {
   function onLoc(l) {
     const p = { lat: l.latitude, lng: l.longitude, acc: Math.round(l.accuracy || 0), vel: l.speed != null ? Math.round(l.speed * 3.6) : undefined,
       cog: l.bearing != null ? Math.round(l.bearing) : undefined, t: l.time || Date.now() };
+    S.fix = p; put('ntrk_fix', p);
     const wait = GAP - (Date.now() - S.lastQ);
     if (wait <= 0) { S.trail = null; clearTimeout(S.trailT); S.trailT = null; enqueue(p); return; }
     S.trail = p;
@@ -86,13 +87,22 @@ window.NTRK = (() => {
     const same = S.cfg && JSON.stringify(S.cfg) === JSON.stringify(cfg);
     S.cfg = cfg; put('ntrk_cfg', cfg);
     if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
-    if (!S.wid) { S.q = (await get('ntrk_q')) || []; await watch(); }
+    if (!S.wid && !S.watching) { S.watching = true; S.q = (await get('ntrk_q')) || []; await watch(); } // กันเปิดตัวติดตามซ้อนเมื่อเรียก start ติดกัน
     clearInterval(S.retryT); S.retryT = setInterval(flush, RETRY);
     addEventListener('online', flush);
     emit({}); flush();
     return true;
   }
+  /* ไม่มีเน็ต: ข้อความ SMS ถึงเบอร์ศูนย์ พร้อมรหัสให้ระบบอ่านอัตโนมัติ #HM:<รหัสทีม>:<lat>,<lng>:<เวลา>[:SOS] */
+  function smsText(p, kind, why, team) {
+    const c = S.cfg || {}, hm = p ? new Date(p.t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+    const where = p ? `${p.lat.toFixed(5)},${p.lng.toFixed(5)} (±${p.acc || '?'} ม.) เวลา ${hm} https://maps.google.com/?q=${p.lat.toFixed(5)},${p.lng.toFixed(5)}` : 'หาพิกัดไม่ได้';
+    const code = p && c.tk ? ` #HM:${c.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor(p.t / 1000)}${kind === 'SOS' ? ':SOS' : ''}` : '';
+    return `Helpme+ ${kind || 'แจ้งตำแหน่ง'} ทีม ${team || c.team || ''}${why ? ' · ' + why : ''} · ${where}${code}`;
+  }
+  function smsHref(body) { const hq = String((S.cfg && S.cfg.hq) || '').replace(/[^\d+]/g, ''); return `sms:${hq}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(body)}`; }
+  async function lastFix() { return S.fix || (await get('ntrk_fix')) || (S.q.length ? S.q[S.q.length - 1] : null); }
   async function resume(on) { const c = await get('ntrk_cfg'); return c ? start(c, on) : false; }
-  return { native, start, resume, flush, status: () => ({ ...S.st, queued: S.q.length }),
+  return { native, start, resume, flush, smsText, smsHref, lastFix, offlineFor: () => S.offSince ? Date.now() - S.offSince : 0, status: () => ({ ...S.st, queued: S.q.length }),
     openSettings: () => { const BG = PL('BackgroundGeolocation'); if (BG) BG.openSettings(); } };
 })();

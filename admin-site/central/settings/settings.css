@@ -18,3 +18,4 @@
 @media(max-width:600px){.st-row{grid-template-columns:1fr;gap:4px}.st-try{flex-direction:column}}
 .st-checks{display:grid;gap:8px}.st-card select{font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line,#e8e8ec);border-radius:14px;padding:6px 10px;background:var(--surface,#fff);color:inherit}
 .st-dc h2 svg{color:#5865F2}
+.st-p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}

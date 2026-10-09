@@ -41,4 +41,9 @@ $('#dc-save').onclick=async()=>{const d={summaryH:+$('#dc-sum').value};DC.forEac
   if(r&&r.ok){dcShow(r);dmsg(u?'เชื่อมแล้ว · กด "ส่งข้อความทดสอบ" เพื่อลอง':'บันทึกแล้ว',true)}else dmsg(r&&r.error==='bad_webhook'?'URL ไม่ใช่ Webhook ของ Discord':'บันทึกไม่สำเร็จ',false)};
 $('#dc-test').onclick=async()=>{dmsg('กำลังส่ง…');const r=await apiPost({action:'discord_test'}).catch(()=>null);dmsg(r&&r.ok?'ส่งแล้ว · ดูในห้อง Discord':r&&r.error==='not_connected'?'ยังไม่ได้ใส่ Webhook URL':'ส่งไม่สำเร็จ · ตรวจ URL',!!(r&&r.ok))};
 $('#dc-now').onclick=async()=>{dmsg('AI HELP กำลังเขียนสรุป…');const r=await apiPost({action:'discord_test',kind:'summary'}).catch(()=>null);dmsg(r&&r.ok?'ส่งสรุปแล้ว':'ส่งไม่สำเร็จ',!!(r&&r.ok))};
-adminBoot({action:'chat_rev'},'rev',()=>{dcLoad()});
+/* ---------- รับตำแหน่งทาง SMS (CENTRAL เท่านั้น) ---------- */
+async function smsLoad(renew){const r=await apiPost({action:'sms_cfg',renew:!!renew}).catch(()=>null);if(!r||!r.ok)return;$('#sms-card').hidden=false;
+  $('#sms-url').value=location.origin+'/api/sms-in?k='+r.secret;if(renew)$('#sms-msg').textContent='สร้างลิงก์ใหม่แล้ว · ลิงก์เก่าใช้ไม่ได้ · อัปเดตในแอปส่งต่อ SMS ด้วย'}
+$('#sms-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#sms-url').value);$('#sms-msg').textContent='คัดลอกแล้ว'}catch(e){$('#sms-url').select()}};
+$('#sms-renew').onclick=()=>{if(confirm('สร้างลิงก์ใหม่? ลิงก์เดิมในมือถือเบอร์ศูนย์จะใช้ไม่ได้'))smsLoad(true)};
+adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad()});

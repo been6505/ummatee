@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=23">
-<link rel="stylesheet" href="./settings.css?v=2">
+<link rel="stylesheet" href="./settings.css?v=3">
 <script src="../icons.js?v=6"></script>
 </head>
 <body>
@@ -53,6 +53,17 @@
       <div class="st-act"><button type="button" class="btn primary" id="dc-save">บันทึก</button><button type="button" class="btn ghost" id="dc-test">ส่งข้อความทดสอบ</button><button type="button" class="btn ghost" id="dc-now">ส่งสรุปเดี๋ยวนี้</button><span class="st-msg" id="dc-msg" role="status"></span></div>
       <details class="st-help"><summary>เอา Webhook URL จากไหน?</summary><ul><li>ในห้อง Discord กด ⚙ แก้ไขช่อง → การเชื่อมต่อ (Integrations) → Webhooks → สร้าง Webhook → คัดลอก URL มาวาง</li><li>ข้อความใน Discord ไม่มีชื่อและเบอร์ผู้แจ้ง มีลิงก์เข้า CENTRAL (ต้องใช้รหัส)</li><li>ลบ URL แล้วบันทึก = ยกเลิกการเชื่อม</li></ul></details>
     </section>
+    <section class="st-card" id="sms-card" hidden aria-labelledby="st-sms"><h2 id="st-sms"><i data-ic="chat"></i> รับตำแหน่งทีมทาง SMS <span class="st-tag">ไม่ต้องใช้เน็ตฝั่งทีม</span></h2>
+      <p class="st-p">ทีมที่ไม่มีเน็ตกดส่ง SMS ถึงเบอร์ศูนย์ได้ (ปุ่ม "ส่งทาง SMS" ในแอป/หน้าทีม) · ให้มือถือ Android เบอร์ศูนย์ส่งต่อ SMS เข้าระบบ ตำแหน่งจะขึ้นแผนที่ CENTRAL เอง</p>
+      <label class="st-row"><span>ลิงก์รับ SMS</span><span class="st-in2"><input id="sms-url" readonly spellcheck="false"><button type="button" class="btn ghost sm" id="sms-copy">คัดลอก</button></span></label>
+      <div class="st-act"><button type="button" class="btn ghost" id="sms-renew">สร้างลิงก์ใหม่</button><span class="st-msg" id="sms-msg" role="status"></span></div>
+      <details class="st-help"><summary>ตั้งค่ามือถือเบอร์ศูนย์ (Android · ครั้งเดียว)</summary><ul>
+        <li>ตั้งเบอร์ศูนย์ที่หน้า "จัดทีม" ให้ตรงกับมือถือเครื่องนี้ (ทีมจะส่ง SMS มาที่เบอร์นี้)</li>
+        <li>ติดตั้งแอปฟรี <b>SMS to URL Forwarder</b> (หรือแอปส่งต่อ SMS ที่ส่ง HTTP ได้) บนมือถือเบอร์ศูนย์</li>
+        <li>เพิ่มกฎ: ผู้ส่ง = ทุกเบอร์ (หรือใส่คำ <code>#HM:</code>) · URL = ลิงก์รับ SMS ด้านบน · วิธี = POST</li>
+        <li>เปิดให้แอปทำงานเบื้องหลังและไม่ถูกจำกัดแบตเตอรี่ · ทดสอบโดยให้ทีมกด "ส่งทาง SMS" แล้วดูหมุดบนแผนที่</li>
+        <li>ลิงก์นี้เป็นความลับ ใครมีลิงก์ส่งตำแหน่งปลอมได้ · หลุดเมื่อไรกด "สร้างลิงก์ใหม่"</li></ul></details>
+    </section>
     <section class="st-card st-ai" aria-labelledby="st-ai"><h2 id="st-ai"><i data-ic="chat"></i> AI HELP <span class="st-tag">Local AI / คลาวด์</span><span class="st-dot" id="ai-dot" title="สถานะการเชื่อมต่อ"></span></h2>
       <label class="st-sw"><input type="checkbox" id="ai-on"><span>เปิดใช้ AI HELP บนเครื่องนี้</span></label>
       <div class="st-row"><span>ตัวรัน AI</span><div class="seg" id="ai-preset" role="group" aria-label="ตัวรัน AI"></div></div>
@@ -75,7 +86,7 @@
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="../common.js?v=2"></script>
 <script src="../localai.js?v=4"></script>
-<script src="./settings.js?v=4"></script>
+<script src="./settings.js?v=5"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=8"></script>
 <script src="../feedback.js?v=1"></script>

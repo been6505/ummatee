@@ -115,7 +115,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 </style>
 <script src="../central/verify.js?v=11"></script>
 <script src="../central/icons.js?v=6"></script>
-<script src="./native-track.js?v=1"></script>
+<script src="./native-track.js?v=2"></script>
 </head>
 <body>
 <!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
@@ -256,7 +256,7 @@ async function boot(){
   if(NATIVE)nativeTrack(); // เริ่มติดตามก่อนติดต่อศูนย์ ไม่มีเน็ตก็เก็บตำแหน่งไว้ในคิว
   try{const r=await api({action:'team_me'});
     if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
-    S.me=r;S.team=r.team.name;document.title=S.team+' · Helpme+';
+    S.me=r;S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
     if(!S.name&&r.team.leader)S.name=r.team.leader;
     if(NATIVE){TR.skip=true;TR.want=false;start();return} // แอป: ใช้ตัวติดตามเบื้องหลังของแอปแทนตำแหน่งในเว็บ
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
@@ -277,10 +277,11 @@ function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location
 /* ---------- แอป "Help Me ทีม" (native · Capacitor): ติดตามตำแหน่งเบื้องหลังในแอปเอง ----------
    ปลั๊กอิน BackgroundGeolocation ส่งตำแหน่งต่อแม้ล็อกจอ → /api/track/<รหัสทีม> (รูปแบบเดียวกับ OwnTracks) · เข้าด้วยรหัสทีม = team_ping */
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
-const NT={started:false,at:0,err:'',q:0};
+const NT={started:false,at:0,err:'',q:0};setInterval(()=>{if(NATIVE&&NT.err==='offline')locUI()},30000);
 /* ใช้ตัวติดตามกลาง native-track.js (คิวในเครื่อง · ตรวจคำตอบเซิร์ฟเวอร์ · ลองใหม่ทุก 15 วิ · เก็บจุดสุดท้าย) */
-async function nativeTrack(){if(!NATIVE||!window.NTRK)return;const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
-  const cfg=S.tk?{tk:S.tk,host}:(S.key&&S.team?{key:S.key,team:S.team,name:S.name,host}:null);if(!cfg)return;
+async function nativeTrack(){if(!NATIVE||!window.NTRK)return; // เรียกซ้ำได้: อัปเดตค่าตั้ง (เบอร์ศูนย์/ชื่อทีม) โดยไม่เปิดตัวติดตามซ้ำ
+const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
+  const hq=String(S.me&&S.me.hqPhone||''),cfg=S.tk?{tk:S.tk,host,hq,team:S.team}:(S.key&&S.team?{key:S.key,team:S.team,name:S.name,host,hq}:null);if(!cfg)return;
   await NTRK.start(cfg,st=>{NT.at=st.at||NT.at;NT.err=st.err||'';NT.q=st.queued||0;autoTrackUI();locUI()});NT.started=true}
 $('#lk-go').onclick=()=>{const m=String($('#lk-in').value).match(/[?&]id=([a-z0-9]{10,})/i)||String($('#lk-in').value).trim().match(/^([a-z0-9]{10,})$/i);
   if(!m){toast('ลิงก์ไม่ถูกต้อง · ใช้ลิงก์ทีมที่ศูนย์ส่งให้');return}S.tk=m[1].toLowerCase();st.set('uh_tm_tk',S.tk);boot()};
@@ -348,7 +349,7 @@ async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPo
     TR.fail=r.ok?0:TR.fail+1}catch(e){TR.fail++}locUI()}
 setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>55000)ping();locUI()},15000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
-  if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null;btn.hidden=NT.err!=='denied';btn.textContent='อนุญาต';
+  if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null,smsNow=NT.err==='offline'&&window.NTRK&&NTRK.offlineFor()>120000;btn.hidden=NT.err!=='denied'&&!smsNow;btn.textContent=smsNow?'ส่งทาง SMS':'อนุญาต';
     if(NT.err){b.className=NT.err==='offline'?'locbar wait':'locbar off';t.textContent=NT.err==='denied'?'ยังไม่ได้อนุญาตตำแหน่ง · ศูนย์มองไม่เห็นทีม':NT.err==='bad_link'||NT.err==='bad_key'?'ลิงก์ทีมใช้ไม่ได้ · ศูนย์ไม่ได้รับตำแหน่ง':NT.err==='offline'?`ไม่มีสัญญาณ · เก็บตำแหน่งไว้ ${NT.q} จุด จะส่งเมื่อมีสัญญาณ`:'ส่งตำแหน่งไม่ได้';return}
     b.className=NT.at?'locbar':'locbar wait';t.textContent=NT.at?`ศูนย์เห็นตำแหน่ง · ส่ง${m<1?'ล่าสุดไม่ถึง 1':' '+m} นาทีก่อน · ทำงานแม้ล็อกจอ`:'กำลังเริ่มส่งตำแหน่ง…';return}
   if(TR.watch==null){b.className='locbar off';t.textContent=TR.err||'ตำแหน่งปิดอยู่ · ศูนย์มองไม่เห็นทีม';btn.textContent='เปิด';btn.hidden=false;return}
@@ -357,7 +358,7 @@ function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)retu
   if(TR.fail>1){b.className='locbar wait';t.textContent='ส่งตำแหน่งไม่ได้ · ไม่มีเน็ต · จะลองใหม่';return}
   const s=Math.round((Date.now()-TR.sentAt)/1000);b.className='locbar';
   t.textContent=`ศูนย์เห็นตำแหน่ง · ส่ง ${s<60?s+' วิ':Math.round(s/60)+' นาที'}ก่อน · ±${Math.round(TR.pos.acc||0)} ม.${TR.batt!=null?' · แบต '+TR.batt+'%':''}`}
-$('#loc-btn').onclick=()=>{if(typeof NATIVE!=='undefined'&&NATIVE){NTRK.openSettings();return}track(true)};
+$('#loc-btn').onclick=()=>{if(typeof NATIVE!=='undefined'&&NATIVE){if(NT.err==='offline'){smsSheet('แจ้งตำแหน่ง','','ไม่มีเน็ต · ส่งตำแหน่งให้ศูนย์ทาง SMS (ใช้แค่สัญญาณโทรศัพท์)');return}NTRK.openSettings();return}track(true)};
 $('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เครื่องนี้หาตำแหน่งไม่ได้';$('#g-skip').hidden=false;return}$('#g-err').textContent='กำลังขออนุญาต…';
   navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};
 $('#g-skip').onclick=()=>{TR.skip=true;TR.want=false;start()};
@@ -443,12 +444,14 @@ function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),v
 
 /* ---------- เน็ตใช้ไม่ได้: ส่งพิกัด GPS ทาง SMS ถึงเบอร์ศูนย์ ----------
    GPS ทำงานได้โดยไม่ต้องใช้เน็ต · SMS ใช้แค่สัญญาณโทรศัพท์ · ต้องให้ผู้ใช้กดส่งเอง (เบราว์เซอร์ไม่ให้ส่ง SMS อัตโนมัติ) */
-function gpsNow(cb){const fresh=TR.pos&&Date.now()-TR.pos.at<60000;if(fresh){cb(TR.pos,false);return}
+function gpsNow(cb){if(NATIVE&&window.NTRK){NTRK.lastFix().then(f=>{if(f){const p={lat:f.lat,lng:f.lng,acc:f.acc,at:f.t};cb(p,Date.now()-f.t>120000)}else cb(TR.pos,!!TR.pos)});return}
+  const fresh=TR.pos&&Date.now()-TR.pos.at<60000;if(fresh){cb(TR.pos,false);return}
   if(!navigator.geolocation){cb(TR.pos,!!TR.pos);return}
   navigator.geolocation.getCurrentPosition(q=>cb({lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,at:Date.now()},false),()=>cb(TR.pos,!!TR.pos),{enableHighAccuracy:true,timeout:20000,maximumAge:30000})}
 function smsBody(kind,why,p){const t=new Date(),hm=t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const where=p?`พิกัด ${p.lat.toFixed(5)},${p.lng.toFixed(5)}${p.acc?` (±${Math.round(p.acc)} ม.)`:''} https://maps.google.com/?q=${p.lat.toFixed(5)},${p.lng.toFixed(5)}`:'หาพิกัดไม่ได้';
-  return `Helpme+ ${kind} ทีม ${S.team||''}${why?' · '+why:''} · ${where} · เวลา ${hm}${TR.batt!=null?` · แบต ${TR.batt}%`:''}${p&&p.at&&Date.now()-p.at>120000?` (ตำแหน่งเมื่อ ${new Date(p.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})})`:''}`}
+  const code=p&&S.tk?` #HM:${S.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor((p.at||Date.now())/1000)}${kind==='SOS'?':SOS':''}`:''; // ระบบศูนย์อ่านรหัสนี้แล้วปักตำแหน่งให้อัตโนมัติ
+  return `Helpme+ ${kind} ทีม ${S.team||''}${why?' · '+why:''} · ${where} · เวลา ${hm}${TR.batt!=null?` · แบต ${TR.batt}%`:''}${p&&p.at&&Date.now()-p.at>120000?` (ตำแหน่งเมื่อ ${new Date(p.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})})`:''}${code}`}
 function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
   sheet(`<h2>${kind==='SOS'?'<span style="color:var(--red)">SOS</span> ทาง SMS':'ส่งพิกัดทาง SMS'}</h2><p class="hint">${esc(reason||'ไม่ต้องใช้เน็ต · ใช้แค่สัญญาณโทรศัพท์')}</p><p class="hint" id="sms-st">กำลังหาตำแหน่ง GPS…</p>`);
   gpsNow((p,old)=>{const l=$('#layer .sheet');if(!l)return;const hq=tel(S.me&&S.me.hqPhone),body=smsBody(kind,why,p);

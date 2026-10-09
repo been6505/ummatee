@@ -53,7 +53,7 @@ const LG_KEY={id:'รหัส',status:'สถานะ',volunteer:'ทีม',h
 const lgEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function lgVal(v){if(v==null||v==='')return '–';if(typeof v==='boolean')return v?'ใช่':'ไม่';if(typeof v==='object')return Object.entries(v).filter(([,x])=>x!==''&&x!=null).map(([k,x])=>`${LG_KEY[k]||k}: ${typeof x==='object'?JSON.stringify(x):x}`).join(' · ');return String(v)}
 function lgDay(t){const d=new Date(t),n=new Date();const y=new Date(n);y.setDate(n.getDate()-1);return d.toDateString()===n.toDateString()?'วันนี้':d.toDateString()===y.toDateString()?'เมื่อวาน':d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short',year:'2-digit'})}
-function lgDraw(){const el=$('#lg-list');if(!LG.items.length){el.innerHTML=`<p class="lg-empty">${LG.busy?'กำลังโหลด…':'ยังไม่มีประวัติในเงื่อนไขนี้'}</p>`;$('#lg-more').hidden=true;return}
+function lgDraw(){const el=$('#lg-list');if(!LG.items.length){el.innerHTML=`<p class="lg-empty">${LG.busy?'กำลังโหลด…':LG.err?'โหลดประวัติไม่ได้ ('+lgEsc(LG.err)+') · ลองโหลดหน้าใหม่':'ยังไม่มีประวัติในเงื่อนไขนี้'}</p>`;$('#lg-more').hidden=true;return}
   let day='',h='';LG.items.forEach(x=>{const d=lgDay(x.at);if(d!==day){day=d;h+=`<p class="lg-day">${lgEsc(d)}</p>`}
     const [rl,rk]=LG_ROLE[x.role]||['?','p'],op=LG.open.has(x.id);let data={};try{data=JSON.parse(x.data||'{}')}catch(e){}
     h+=`<button type="button" class="lg-it" data-lg="${x.id}" aria-expanded="${op}"><span class="lg-t">${new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span><span class="lg-r lg-${rk}">${lgEsc(rl)}</span><span class="lg-m"><b>${lgEsc(x.summary)}</b><small>${lgEsc(x.actor)}${x.undone?' · <span class="lg-undone">ย้อนกลับแล้ว</span>':''}</small></span></button>`
@@ -61,7 +61,7 @@ function lgDraw(){const el=$('#lg-list');if(!LG.items.length){el.innerHTML=`<p c
   el.innerHTML=h;$('#lg-more').hidden=!LG.more}
 async function lgLoad(more){if(LG.busy)return;LG.busy=true;if(!more&&!LG.items.length)lgDraw();
   const p={action:'audit_list',limit:50};if(LG.cat)p.cat=LG.cat;if(LG.role)p.role=LG.role;if(LG.q)p.q=LG.q;if(more&&LG.items.length)p.before=LG.items[LG.items.length-1].id;
-  try{const r=await apiGet(p);if(!r||!r.ok)return;$('#log-card').hidden=false;
+  try{const r=await apiGet(p);if(!r||!r.ok){LG.err=(r&&r.error)||'โหลดไม่สำเร็จ';return}LG.err='';$('#log-card').hidden=false;
     if(more)LG.items=LG.items.concat(r.items);else{LG.items=r.items;}LG.more=r.more}catch(e){}finally{LG.busy=false;lgDraw()}}
 async function lgPoll(){if(document.hidden||$('#log-card').hidden||!LG.items.length)return;const p={action:'audit_list',limit:50};if(LG.cat)p.cat=LG.cat;if(LG.role)p.role=LG.role;if(LG.q)p.q=LG.q;
   try{const r=await apiGet(p);if(!r||!r.ok)return;const top=LG.items[0].id,nu=r.items.filter(x=>x.id>top);if(nu.length){LG.items=nu.concat(LG.items);lgDraw()}}catch(e){}}
@@ -92,14 +92,17 @@ const STM=[
     {href:'../broadcast/',ic:'megaphone',t:'ประกาศ · ข่าวและเตือนภัย',s:'ประกาศรายพื้นที่ · ข่าว',k:'ประกาศ ข่าว'},
     {logout:true,ic:'logout',t:'ออกจากระบบ',s:'',k:'logout ออก'}]}];
 const stIc=n=>typeof ic==='function'?ic(n):'';
-function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`);return c&&!c.hidden}
+// War Room ย่อยเห็นเฉพาะผู้ใช้งาน + AI · CENTRAL เห็นทุกหัวข้อเสมอ (การ์ดที่ยังโหลดไม่เสร็จจะโหลดตอนเปิด)
+const stWR=()=>/^wru?_/.test(String(ADM.key||''));
+function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`);return !!c&&(['user','ai'].includes(p)||!stWR())}
 function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
   $('#st-menu').innerHTML=STM.map(sec=>{const rows=sec.rows.filter(r=>(!r.p||stAvail(r.p))&&(!q||(r.t+' '+r.s+' '+(r.k||'')).toLowerCase().includes(q)));if(!rows.length)return '';
     return `<section class="stm-sec"><h2>${esc(sec.h)}</h2>${rows.map(r=>{const st=r.st?r.st():'';const inner=`<span class="stm-ic">${stIc(r.ic)}</span><span class="stm-tx"><b>${esc(r.t)}</b>${r.s?`<small>${esc(r.s)}</small>`:''}</span>${st?`<em>${esc(st)}</em>`:''}<span class="stm-chev">${r.logout?'':stIc('chev')}</span>`;
       return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
 function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
   if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
-  m.dataset.view=p;$('#st-title').textContent=row.t;window.scrollTo(0,0)}
+  m.dataset.view=p;$('#st-title').textContent=row.t;window.scrollTo(0,0);
+  const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
 $('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click()});
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);

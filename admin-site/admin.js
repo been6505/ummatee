@@ -142,7 +142,9 @@ function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทีย
 /* ---------- แสดงผล ---------- */
 const SF={all:{st:'all',u:''},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
 function statKey(){const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u)||''}
-$('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
+$('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
+  if(b.dataset.sf==='teams'){location.href=(location.pathname.includes('/central/')?'../teams/':'./central/teams/')+'?f=busy';return} // ทีมที่ถือเคสอยู่ → หน้าจัดทีม
+ const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
   $('#f-status').value=f.st;$('#f-urg').value=f.u;$('#f-need').value='';$('#f-vr').value='';
   const sw=document.querySelector('.view-sw [data-view="cases"]');if(sw&&sw.getAttribute('aria-selected')!=='true')sw.click();
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
@@ -152,7 +154,7 @@ function render(){
   const ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   // การ์ดตัวเลขกดได้: ตั้งตัวกรองรายการเคสตามการ์ดนั้น (กดซ้ำ = กลับเป็นค่าเริ่มต้น)
   const cur=statKey();
-  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['ทีมกำลังไป',n('going'),'go','going'],['ช่วยเหลือแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ช่วยเหลือแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);

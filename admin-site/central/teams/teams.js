@@ -1,5 +1,5 @@
 /* จัดทีม: รายชื่อทีม สถานะ พาหนะ เคสที่ถือ + มอบหมายเคสที่รออยู่ให้ทีม */
-const T={roster:[],live:[],cases:[],filter:'all',loaded:0,hqPhone:''};
+const T={roster:[],live:[],cases:[],filter:/^(busy|ready|out|rest|live|sos)$/.test(new URLSearchParams(location.search).get('f')||'')?new URLSearchParams(location.search).get('f'):'all',loaded:0,hqPhone:''};
 const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
@@ -49,14 +49,14 @@ function render(){
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
   const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกงาน',cnt('ready'),'done','ready'],['กำลังออกงาน',cnt('out'),'go','out'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกงาน',cnt('ready'),'done','ready'],['กำลังออกงาน',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${T.sf===f}"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
   if(document.activeElement!==$('#hq-phone'))$('#hq-phone').value=tname(T.hqPhone);
   liveUI();
   /* teams */
-  const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
+  const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):T.filter==='busy'?teamCases(t.name).some(c=>c.status==='going'):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
@@ -165,3 +165,6 @@ adminBoot({action:'roster'},'roster',r=>{T.roster=r.roster||[];T.live=r.live||[]
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
 
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copylive]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copylive);toast('คัดลอกลิงก์ติดตามแล้ว',true)}catch(err){b.previousElementSibling.select()}});
+/* เปิดจากการ์ด "ทีมกำลังไป" ในหน้าจัดการเคส (?f=busy): กรองไว้แล้ว เลื่อนไปที่รายชื่อทีม */
+if(T.filter!=='all'){T.sf=T.filter;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===T.filter)));
+  const go=()=>{const p=$('#team-list')&&$('#team-list').closest('.panel');if(p&&$$('#team-list .team').length)p.scrollIntoView({block:'start'});else if(!go.n||go.n++<20)setTimeout(go,500)};go.n=1;setTimeout(go,800)}

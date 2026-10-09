@@ -300,3 +300,6 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .hz-row .hz-sum span{font-size:15px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hz-row .hz-sum{background:#2a2140!important;border-color:#43356a!important;color:#d6c4ff!important}}
 :root[data-theme="dark"] .hz-row .hz-sum{background:#2a2140!important;border-color:#43356a!important;color:#d6c4ff!important}
+/* หน้าจัดการเคสมี 9 การ์ด: จอใหญ่แถวเดียว · มือถือ/แท็บเล็ต 3×3 */
+.stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(9,minmax(0,1fr))!important}
+@media (max-width:1100px){.stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(3,minmax(0,1fr))!important}}

@@ -110,8 +110,7 @@ const MX=(()=>{
   /* ---------- แผงด้านข้าง ---------- */
   const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:'จัดเส้นทาง'}</span></button>${h}`};
   // หน้า "โซน / เพิ่มโซน" ถูกเอาออก: แผงด้านข้างแสดงจัดเส้นทางอย่างเดียว (โซนเดิมที่มีอยู่ยังใช้เป็น "เคสจาก" ในจัดเส้นทางได้)
-  function renderSide(){if(!$('#map-side'))return;
-    side(routePanel())}
+  function renderSide(){const el=$('#map-side');if(!el)return;el.hidden=true} // จัดเส้นทางย้ายไปหน้าจัดทีม (จัดเคสให้ทีม · จัดเส้นทาง)
   function zoneForm(){const f=S.form;
     return `<div class="ms-h"><b>${f.id?'แก้ไขโซน':'เพิ่มโซนใหม่'}</b></div>
     <p class="ms-tip ${f.lat==null?'wait':''}">${f.lat==null?'<i data-ic="hand"></i> แตะบนแผนที่เพื่อวางจุดกลางโซน':'<i data-ic="check"></i> วางจุดกลางแล้ว แตะที่อื่นเพื่อย้าย'}</p>

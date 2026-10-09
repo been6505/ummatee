@@ -308,7 +308,7 @@ function renderDrawer(){
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
   // ปุ่มบันทึก: ขึ้นเมื่อแก้หมายเหตุ หรือเพิ่มของจากสต็อกไว้ในเคส
-  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0;sv.hidden=!dirty};nt.addEventListener('input',upd);upd()}}
+  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0;sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
@@ -333,7 +333,7 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
         ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':''}`}
     </div>
-    <button type="button" class="btn d-save" data-dact="save" hidden><i data-ic="check"></i> บันทึก</button></fieldset>`}
+    <button type="button" class="btn d-save" data-dact="save" disabled><i data-ic="check"></i> บันทึก</button></fieldset>`}
 /* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
 async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;
   try{const r=await api({action:'stock',key:A.key});if(r&&r.ok){A.stock=r;if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.stockLoading=false}}

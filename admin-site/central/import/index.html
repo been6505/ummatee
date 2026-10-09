@@ -58,7 +58,7 @@ $('#imp').addEventListener('submit',async e=>{e.preventDefault();const f=e.targe
   catch(err){out('ผิดพลาด: '+err.message)}finally{btn.disabled=false}});
 adminBoot({action:'stock'},'items',()=>{});
 </script>
-<script src="../theme-toggle.js?v=3"></script>
+<script src="../theme-toggle.js?v=4"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

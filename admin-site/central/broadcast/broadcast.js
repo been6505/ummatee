@@ -54,3 +54,9 @@ $('#list').addEventListener('click',async e=>{const b=e.target.closest('[data-ca
 async function load(){const r=await apiGet({action:'broadcasts_all'}).catch(()=>null);if(r&&r.ok){B.list=r.broadcasts||[];render()}}
 $('#refresh').onclick=load;
 adminBoot({action:'broadcasts_all'},'broadcasts',r=>{B.list=r.broadcasts||[];render();preview();setInterval(()=>{if(!document.hidden)load()},30000)});
+/* แท็บ: ประกาศ · ข่าวและเตือนภัย (รวมหน้าข่าวไว้ที่นี่ · ลิงก์เก่า /central/news/ → #news) */
+function pg(k){$$('.bc-tabs [data-pg]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.pg===k)));$('#pg-bc').hidden=k!=='bc';$('#pg-nw').hidden=k!=='nw';
+  if(k==='nw'){const st=()=>window.NEWS_START?NEWS_START():setTimeout(st,150);st()}if(k==='bc'&&B.map)setTimeout(()=>B.map.invalidateSize(),50);
+  try{history.replaceState(null,'',location.pathname+location.search+(k==='nw'?'#news':''))}catch(e){}}
+$('.bc-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-pg]');if(b)pg(b.dataset.pg)});
+if(location.hash==='#news')(function w(){if($('#app').hidden){setTimeout(w,300);return}pg('nw')})();

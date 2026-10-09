@@ -1,3 +1,4 @@
+(()=>{
 /* ข่าวและเตือนภัย: ประกาศกรมอุตุฯ + แผ่นดินไหวใกล้ไทย + หัวข้อข่าวล่าสุด (API action=news ดึงและแคชที่ Worker) */
 const N={data:null,tag:'',q:'',timer:null};
 const TAGS=[['','ทั้งหมด'],['flood','น้ำท่วม'],['storm','พายุ / ฝน'],['alert','ประกาศ / เตือนภัย'],['quake','แผ่นดินไหว']];
@@ -18,20 +19,21 @@ function render(){
   const q=N.q.trim().toLowerCase(),list=d.news.filter(n=>(!N.tag||n.tags.includes(N.tag))&&(!q||(n.title+' '+n.source).toLowerCase().includes(q)));
   $('#news').innerHTML=list.length?list.map(n=>`<li><a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a><small class="muted">${esc(n.source)}${n.time?' · '+esc(ago(n.time)):''}</small></li>`).join(''):'<li class="muted">ไม่พบข่าวที่ตรงกับตัวกรอง</li>';
   const err=d.errors&&d.errors.length?' · บางแหล่งโหลดไม่ได้ ลองใหม่ภายหลัง':'';
-  $('#status').textContent=`อัปเดต ${ago(d.time)} · ประกาศ ${d.warnings.length} ฉบับ · ข่าว ${d.news.length} ข่าว${err}`;
+  $('#nw-status').textContent=`อัปเดต ${ago(d.time)} · ประกาศ ${d.warnings.length} ฉบับ · ข่าว ${d.news.length} ข่าว${err}`;
 }
 
 async function load(){
-  $('#refresh').disabled=true;
+  
   try{const r=await apiGet({action:'news'});if(!r||!r.ok)throw new Error(r&&r.error);N.data=r;render()}
-  catch(e){$('#status').textContent='โหลดข่าวไม่สำเร็จ ลองกด "โหลดใหม่" อีกครั้ง'}
-  finally{$('#refresh').disabled=false}
+  catch(e){$('#nw-status').textContent='โหลดข่าวไม่สำเร็จ ลองกด "โหลดใหม่" อีกครั้ง'}
+  finally{}
 }
 
 $('#tags').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;N.tag=b.dataset.t;render()});
-$('#q').addEventListener('input',e=>{N.q=e.target.value;render()});
-$('#refresh').addEventListener('click',load);
-adminBoot({action:'chat_rev'},'rev',()=>{load();clearInterval(N.timer);N.timer=setInterval(()=>{if(!document.hidden)load()},10*60000)});
+$('#nw-q').addEventListener('input',e=>{N.q=e.target.value;render()});
+$('#refresh').addEventListener('click',()=>{if(N.started)load()});
+/* อยู่ในหน้าประกาศ (แท็บ "ข่าวและเตือนภัย"): เริ่มโหลดเมื่อเปิดแท็บครั้งแรก */
+window.NEWS_START=()=>{if(N.started)return;N.started=true;load();clearInterval(N.timer);N.timer=setInterval(()=>{if(!document.hidden)load()},10*60000);hzInit()};
 
 /* ---------- ภัยพิบัติตอนนี้ + รายงานภัยจากศูนย์ ---------- */
 let hzMap=null,hzPick=null;
@@ -56,4 +58,6 @@ $('#hz-form').onsubmit=async e=>{e.preventDefault();const f=e.target,m=String(f.
   const by=staffName();if(!by)return;
   const r=await apiPost({action:'hazard_save',by,hazard:{type:f.type.value,level:f.level.value,lat:+m[1],lng:+m[2],radiusM:f.radiusM.value,hours:f.hours.value,note:f.note.value}}).catch(()=>({}));
   if(r.ok){toast('บันทึกรายงานภัยแล้ว',true);f.reset();f.hidden=true;if(hzPick){hzPick.remove();hzPick=null}HZ.load()}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))};
-(function w(){if($("#app").hidden){setTimeout(w,400);return}hzInit()})(); // เริ่มแผนที่เมื่อเข้าระบบแล้ว (กล่องแผนที่ต้องมองเห็นก่อน)
+
+
+})();

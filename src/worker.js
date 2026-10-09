@@ -769,9 +769,10 @@ async function envCheck(env, b) {
   // ดาวเทียม GISTDA
   if (env.GISTDA_KEY) {
     const S = 0.04, gc = new Map(); pts.forEach(p => { const c = Math.floor(p.lng / S) + ',' + Math.floor(p.lat / S); if (!gc.has(c)) gc.set(c, []); gc.get(c).push(p); });
-    let n = 0;
-    for (const [c, list] of gc) {
-      if (n++ >= 10) break;
+    // ทีละไม่เกิน 40 ช่อง (ถามพร้อมกันครั้งละ 8) · ช่องที่เกินบอกว่า "รอตรวจ" ให้เบราว์เซอร์ถามซ้ำ
+    const cellsAll = [...gc], doCells = cellsAll.slice(0, 40);
+    cellsAll.slice(40).forEach(([, list]) => list.forEach(p => { out[p.k].sat = { pending: true }; }));
+    for (let i = 0; i < doCells.length; i += 8) await Promise.all(doCells.slice(i, i + 8).map(async ([c, list]) => {
       const [cx, cy] = c.split(',').map(Number);
       try {
         const feats = await gistdaCell(env, cx, cy);
@@ -780,7 +781,7 @@ async function envCheck(env, b) {
             const d = inside === f ? 0 : geomDist(p.lat, p.lng, f.g); if (d < best) best = d; if (d <= 500) near++; }
           out[p.k].sat = { inside: !!inside, dM: isFinite(best) ? Math.round(best) : null, near, area: inside ? inside.a : 0, date: inside ? inside.d : date, period: '7days', n: feats.length }; });
       } catch (e) { list.forEach(p => { out[p.k].sat = { error: true }; }); }
-    }
+    }));
   }
   return { ok: true, time: Date.now(), gistda: !!env.GISTDA_KEY, points: out };
 }
@@ -1915,15 +1916,16 @@ async function cctvAiCheck(env, p) {
   if (lat == null || lng == null) return { ok: false, error: 'missing' };
   const now = Date.now() / 1000, all = (await allCams()).cams;
   const near = all.filter(c => c.img && (c.hls || (c.at > 0 && now - c.at < 3 * 3600))) // ภาพสด iTIC หรือภาพนิ่งที่รู้เวลาและไม่เกิน 3 ชม.
-    .map(c => ({ ...c, d: Math.round(camDistM(lat, lng, c.lat, c.lng)) })).filter(c => c.d <= 2000)
-    .sort((a, b) => a.d - b.d).slice(0, 2);
+    .map(c => ({ ...c, d: Math.round(camDistM(lat, lng, c.lat, c.lng)) })).sort((a, b) => a.d - b.d);
+  const nearest = near[0] ? { d: near[0].d, title: near[0].title } : null;
+  near.splice(0, near.length, ...near.filter(c => c.d <= 5000).slice(0, 3)); // กล้องที่ยังส่งภาพ ใกล้สุด 3 ตัวใน 5 กม.
   const checks = await Promise.all(near.map(async c => {
     try { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, ...(await cctvAiOne(env, c)) }; }
     catch (e) { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, flood: 'unclear', note: 'ตรวจไม่สำเร็จ' }; }
   }));
   // สรุป: เห็นน้ำจากกล้องไหนก็ได้ = flood · มีกล้องที่เห็นชัดว่าไม่มีน้ำ (และไม่มีตัวไหนเห็นน้ำ) = clear · อื่น ๆ = unclear · ไม่มีกล้อง = none
   const verdict = !checks.length ? 'none' : checks.some(c => c.flood === 'yes') ? 'flood' : checks.some(c => c.flood === 'no') ? 'clear' : 'unclear';
-  return { ok: true, time: Date.now(), model: CCTV_AI_MODEL, verdict, checks };
+  return { ok: true, time: Date.now(), model: CCTV_AI_MODEL, verdict, checks, nearest };
 }
 async function allCams() {
   const [p, l] = await Promise.allSettled([popnixCams(), cctvData()]);

@@ -72,12 +72,12 @@ const VERIFY=(()=>{
   /* ---------- ฝน + ดาวเทียมรายจุด (ขอจาก Worker ทีละชุด) ---------- */
   const envKey=(lat,lng)=>(+lat).toFixed(3)+','+(+lng).toFixed(3);
   function envOf(lat,lng){const k=envKey(lat,lng),v=F.env.get(k),asked=F.envAsk.get(k)||0;
-    if((!v||Date.now()-v._t>30*60e3)&&Date.now()-asked>(v?30*60e3:2*60e3)){F.envPending.add(k);clearTimeout(F.envTimer);F.envTimer=setTimeout(flushEnv,400)}
+    if((!v||Date.now()-v._t>30*60e3||(v._retry&&Date.now()-asked>20e3))&&Date.now()-asked>(v&&!v._retry?30*60e3:v&&v._retry?20e3:2*60e3)){F.envPending.add(k);clearTimeout(F.envTimer);F.envTimer=setTimeout(flushEnv,400)}
     return v||null}
   async function flushEnv(){const ks=[...F.envPending].slice(0,300);F.envPending.clear();if(!ks.length)return;const now=Date.now();ks.forEach(k=>F.envAsk.set(k,now));
     let key='';try{key=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}const ab=typeof VERIFY.authBody==='function'?VERIFY.authBody():VERIFY.authBody,auth=ab||(key?{key}:null);if(!auth)return;
     try{const r=await fetch((typeof API_URL!=='undefined'?API_URL:'/api'),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'env_check',...auth,points:ks.map(k=>{const [a,o]=k.split(',');return {lat:+a,lng:+o}})})}).then(x=>x.json());
-      if(r&&r.ok){Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat)F.env.set(k,{...v,_t:Date.now()})});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
+      if(r&&r.ok){F.gistda=!!r.gistda;Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat){const retry=r.gistda&&(!v.sat||v.sat.pending||v.sat.error);F.env.set(k,{...v,sat:v.sat&&!v.sat.pending?v.sat:undefined,_t:Date.now(),_retry:retry})}});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
   function nearestGauge(lat,lng){let g=null;F.gauges.forEach(x=>{const d=dist(lat,lng,x.lat,x.lng);if(d<=10000&&(!g||d<g.d))g={...x,d}});return g}
 
   /* ---------- ประเมิน ---------- */
@@ -151,7 +151,7 @@ const VERIFY=(()=>{
       else if(sat.dM!=null&&sat.dM<=300){out.E+=fresh?15:10;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)}${dd?' (ภาพ '+dd+')':''}`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'bad')}
       else if(sat.dM!=null&&sat.dM<=1000){out.E+=6;out.ev.push(`ดาวเทียม GISTDA: พบน้ำท่วมห่าง ${m(sat.dM)} · ${sat.near} จุดใน 500 ม.`);chip('ดาวเทียม: ท่วมห่าง '+m(sat.dM),'warn')}
       else{out.ev.push('ดาวเทียม GISTDA (7 วัน): ไม่พบน้ำท่วมใน 1 กม. · ในเมือง/ใต้หลังคาดาวเทียมอาจมองไม่เห็น');chip('ดาวเทียม: ไม่พบ','na')}}
-    else if(ev2&&!sat)out.ev.push('ดาวเทียม GISTDA: ยังไม่ได้เปิดใช้');
+    else if(ev2&&!sat)out.ev.push(F.gistda?'ดาวเทียม GISTDA: กำลังตรวจจุดนี้…':'ดาวเทียม GISTDA: ยังไม่ได้เปิดใช้');
     photoEv();
     // 5) ฝน: ปริมาณฝนรายจุด (Open-Meteo) + สถานีวัดฝนใกล้สุด (ThaiWater ≤ 10 กม.)
     const rain=ev2&&ev2.rain,g=nearestGauge(lat,lng),r24=Math.max(rain?rain.h24:0,g?g.h24:0);

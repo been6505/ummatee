@@ -127,7 +127,7 @@ function aiBlock(c){if(!hasPin(c)||c.status==='done')return '';const a=AI.get(St
   let line;
   if(!a||a.loading)line='<span class="vr-ai-wait">กำลังตรวจกล้องใกล้จุด…</span>';
   else if(a.err)line='ตรวจกล้องไม่สำเร็จ';
-  else if(a.data.verdict==='none')line='ไม่มีกล้องที่มีภาพในรัศมี 2 กม.';
+  else if(a.data.verdict==='none')line=a.data.nearest?`ไม่มีกล้องที่ยังส่งภาพในรัศมี 5 กม. · ใกล้สุด ${camDist(a.data.nearest.d)} (${esc(a.data.nearest.title)})`:'ไม่มีกล้องที่ยังส่งภาพใกล้จุดนี้';
   else{const near=a.data.checks[0];line=a.data.verdict==='flood'?'<b class="t-bad">เห็นน้ำท่วม</b>':a.data.verdict==='clear'?'<b class="t-ok">ไม่เห็นน้ำบนถนน</b> · ในซอยอาจยังท่วม':'<b>ภาพไม่ชัด</b> ตัดสินไม่ได้';
     line+=` · ใกล้สุด ${camDist(near.d)}`}
   const shots=a&&a.data&&a.data.checks.length?`<div class="vr-ai-shots">${a.data.checks.map(x=>{const [t,k]=RES[x.flood]||RES.unclear;
@@ -245,7 +245,7 @@ function vrSection(c){
     <ul class="vr-ev">${v.ev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
     ${rd?`<p class="vr-src">ถนนใกล้สุด: <b>${esc(rd.name)}</b> · อัปเดต ${esc(agoT(rd.updated))}${rd.sources&&rd.sources.length?' · แหล่ง: '+esc(rd.sources.join(', ')):''}</p>`:''}
     ${reps.length?`<ul class="vr-reps">${reps.map(r=>`<li><b>${Math.round(r.d)} ม.</b> · ${esc(agoT(r.t))}${r.depth!=null?` · ลึก ${r.depth} ซม.`:''} · ${esc(r.source)}${r.text?` — ${esc(r.text.slice(0,90))}${r.text.length>90?'…':''}`:''}${/^https?:\/\//.test(r.url)?` <a href="${esc(r.url)}" target="_blank" rel="noopener">ที่มา</a>`:''}</li>`).join('')}</ul>`:''}
-    <div class="vr-cctv"><span>ตรวจจากกล้อง CCTV:</span> <b>${cc?(cc.s==='flood'?'เห็นน้ำท่วม':'ไม่เห็นน้ำท่วม')+(cc.t?' · '+esc(cc.t):''):'ยังไม่ได้ตรวจ'}</b>
+    <div class="vr-cctv"><span>ตรวจจากกล้อง CCTV (เจ้าหน้าที่ดูเอง):</span> <b>${cc?(cc.s==='flood'?'เห็นน้ำท่วม':'ไม่เห็นน้ำท่วม')+(cc.t?' · '+esc(cc.t):''):(()=>{const a=AI.get(String(c.id)),d=a&&a.data;return d&&d.verdict==='flood'?'ยังไม่ได้ยืนยัน · AI เห็นน้ำท่วม':d&&d.verdict==='clear'?'ยังไม่ได้ยืนยัน · AI ไม่เห็นน้ำ':'ยังไม่ได้ตรวจ'})()}</b>
       <div class="vr-cctv-btns"><button class="btn ${cc&&cc.s==='flood'?'primary':'ghost'} sm" data-cctv="flood">กล้องเห็นน้ำท่วม</button><button class="btn ${cc&&cc.s==='clear'?'primary':'ghost'} sm" data-cctv="clear">กล้องไม่เห็นน้ำ</button>${cc?'<button class="btn ghost sm" data-cctv="">ล้างผล</button>':''}</div>
       <div class="vr-links"><a href="https://world.tehx.dyndns.info/flood#tab=roads" target="_blank" rel="noopener">เปิดกล้อง CCTV ถนน (JK World) ↗</a><a href="https://world.tehx.dyndns.info/flood#tab=area" target="_blank" rel="noopener">แถวนี้ท่วมมั้ย ↗</a><a href="https://www.floodboard.org/#map" target="_blank" rel="noopener">แผนที่น้ำท่วม Floodboard ↗</a>${ll?`<button type="button" class="linkish" data-copyll="${ll}">คัดลอกพิกัด ${ll}</button>`:''}</div>
     </div>

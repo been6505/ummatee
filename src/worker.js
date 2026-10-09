@@ -50,6 +50,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
   // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
+  `CREATE TABLE IF NOT EXISTS wr_users (id TEXT PRIMARY KEY, warroom TEXT, username TEXT, name TEXT, role TEXT, salt TEXT, hash TEXT, active INTEGER, fails INTEGER DEFAULT 0, lockUntil INTEGER, lastLogin INTEGER, createdAt INTEGER, by_ TEXT)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS wr_users_u ON wr_users(warroom, username)`,
+  `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
@@ -914,12 +917,78 @@ async function saveWarroomStaff(db, b) {
    ลิงก์ = /central/warroom/?wr=<id>&k=<token> · หน้าเว็บส่งรหัสเป็น key="wr_<token>" · ใช้ API ได้แบบอาสา แต่ห้ามงานระดับศูนย์กลาง
    (สร้าง/แก้ War Room อื่น · ดูลิงก์ · สำรองข้อมูล · ตั้งเบอร์ศูนย์ · นำเข้าเคส · ตั้งค่าเคสจากโซเชียล) · สร้างลิงก์ใหม่ = ลิงก์เดิมใช้ไม่ได้ทันที */
 let WRC = null;
-const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings'];
+const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
 async function wrAuth(db, key) {
   const k = String(key || '');
-  if (!/^wr_[a-z0-9]{16,40}$/.test(k)) return null;
-  return db.prepare('SELECT id,name FROM warrooms WHERE active=1 AND token=?').bind(k.slice(3)).first();
+  if (/^wr_[a-z0-9]{16,40}$/.test(k)) { const r = await db.prepare('SELECT id,name FROM warrooms WHERE active=1 AND token=?').bind(k.slice(3)).first(); return r ? { ...r, role: 'lead', via: 'link' } : null; }
+  // บัญชีผู้ใช้ของ War Room ย่อย (ชื่อผู้ใช้ + รหัสผ่าน) → session
+  if (/^wru_[a-f0-9]{48}$/.test(k)) {
+    const s = await db.prepare('SELECT s.userId,s.warroom,s.expires,u.username,u.name AS uname,u.role,u.active,w.name FROM wr_sessions s JOIN wr_users u ON u.id=s.userId JOIN warrooms w ON w.id=s.warroom WHERE s.token=? AND w.active=1').bind(k.slice(4)).first();
+    if (!s || !s.active || s.expires < Date.now()) return null;
+    return { id: s.warroom, name: s.name, role: s.role || 'staff', via: 'user', user: { id: s.userId, username: s.username, name: s.uname || '' } };
+  }
+  return null;
 }
+/* ---------- บัญชีผู้ใช้ War Room ย่อย ----------
+   หัวหน้าห้อง (ผู้ถือลิงก์ห้อง หรือบัญชี role=lead) สร้างบัญชีให้ตัวเองและทีมงานได้ · เข้าระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (เฉพาะห้องนั้น)
+   รหัสผ่านเก็บแบบ PBKDF2-SHA256 + salt · ผิด 5 ครั้งล็อก 10 นาที · session 30 วัน · บัญชี War Room เข้าหน้า CENTRAL ไม่ได้ */
+async function pwHash(pw, salt) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pw)), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 100000 }, k, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const WR_USER = u => String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 32);
+async function wrLogin(db, b) {
+  const wr = clean(b.warroom, 20), un = WR_USER(b.username), pw = String(b.password || '');
+  if (!wr || !un || !pw) return { ok: false, error: 'missing' };
+  const room = await db.prepare('SELECT id,name FROM warrooms WHERE id=? AND active=1').bind(wr).first();
+  const u = room && await db.prepare('SELECT * FROM wr_users WHERE warroom=? AND username=? AND active=1').bind(wr, un).first();
+  const now = Date.now();
+  if (!u) return { ok: false, error: 'bad_login' };
+  if (u.lockUntil && u.lockUntil > now) return { ok: false, error: 'locked', until: u.lockUntil };
+  if (await pwHash(pw, u.salt) !== u.hash) {
+    const f = (u.fails || 0) + 1;
+    await db.prepare('UPDATE wr_users SET fails=?, lockUntil=? WHERE id=?').bind(f >= 5 ? 0 : f, f >= 5 ? now + 10 * 60e3 : null, u.id).run();
+    return { ok: false, error: f >= 5 ? 'locked' : 'bad_login' };
+  }
+  const tok = rand(24);
+  await db.batch([db.prepare('INSERT INTO wr_sessions (token,userId,warroom,expires,at) VALUES (?,?,?,?,?)').bind(tok, u.id, wr, now + 30 * 864e5, now),
+    db.prepare('UPDATE wr_users SET fails=0, lockUntil=NULL, lastLogin=? WHERE id=?').bind(now, u.id)]);
+  if (Math.random() < 0.05) await db.prepare('DELETE FROM wr_sessions WHERE expires<?').bind(now).run();
+  return { ok: true, key: 'wru_' + tok, warroom: { id: room.id, name: room.name }, user: { username: u.username, name: u.name || '', role: u.role } };
+}
+const wrLead = () => WRC && WRC.role === 'lead';
+async function wrUsers(db) {
+  if (!WRC) return { ok: false, error: 'warroom_only' };
+  const { results } = await db.prepare('SELECT id,username,name,role,active,lastLogin,createdAt,by_ FROM wr_users WHERE warroom=? ORDER BY active DESC, role, username').bind(WRC.id).all();
+  return { ok: true, me: { role: WRC.role, via: WRC.via, user: WRC.user || null }, warroom: { id: WRC.id, name: WRC.name }, users: wrLead() ? results : results.filter(u => WRC.user && u.id === WRC.user.id) };
+}
+async function wrUserSave(db, b) {
+  if (!WRC) return { ok: false, error: 'warroom_only' };
+  const un = WR_USER(b.username), pw = String(b.password || ''), self = WRC.user && (b.id === WRC.user.id);
+  if (!wrLead() && !self) return { ok: false, error: 'lead_only' };
+  if (b.id) {
+    const u = await db.prepare('SELECT * FROM wr_users WHERE id=? AND warroom=?').bind(clean(b.id, 20), WRC.id).first();
+    if (!u) return { ok: false, error: 'not_found' };
+    const sets = [], vals = [];
+    if (b.name !== undefined) { sets.push('name=?'); vals.push(clean(b.name, 60)); }
+    if (wrLead() && ['lead', 'staff'].includes(b.role) && !self) { sets.push('role=?'); vals.push(b.role); }
+    if (wrLead() && b.active !== undefined && !self) { sets.push('active=?'); vals.push(b.active ? 1 : 0); }
+    if (pw) { if (pw.length < 6) return { ok: false, error: 'short_password' }; const salt = rand(8); sets.push('salt=?', 'hash=?', 'fails=0', 'lockUntil=NULL'); vals.push(salt, await pwHash(pw, salt)); }
+    if (sets.length) await db.prepare(`UPDATE wr_users SET ${sets.join(',')} WHERE id=?`).bind(...vals, u.id).run();
+    if (pw || b.active === false) await db.prepare('DELETE FROM wr_sessions WHERE userId=?').bind(u.id).run(); // เปลี่ยนรหัส/ปิดบัญชี = ออกจากระบบทุกเครื่อง
+    return { ok: true };
+  }
+  if (!un || un.length < 3) return { ok: false, error: 'bad_username' };
+  if (pw.length < 6) return { ok: false, error: 'short_password' };
+  const dup = await db.prepare('SELECT id FROM wr_users WHERE warroom=? AND username=?').bind(WRC.id, un).first();
+  if (dup) return { ok: false, error: 'username_taken' };
+  const id = 'U' + rand(5), salt = rand(8);
+  await db.prepare('INSERT INTO wr_users (id,warroom,username,name,role,salt,hash,active,createdAt,by_) VALUES (?,?,?,?,?,?,?,1,?,?)')
+    .bind(id, WRC.id, un, clean(b.name, 60), b.role === 'lead' ? 'lead' : 'staff', salt, await pwHash(pw, salt), Date.now(), clean(WRC.user ? WRC.user.username : 'ลิงก์ห้อง', 60)).run();
+  return { ok: true, id, username: un };
+}
+async function wrLogout(db, b) { const k = String(b.key || ''); if (/^wru_[a-f0-9]{48}$/.test(k)) await db.prepare('DELETE FROM wr_sessions WHERE token=?').bind(k.slice(4)).run(); return { ok: true }; }
 async function warroomLink(db, b) {
   const id = clean(b.id, 20), r = await db.prepare('SELECT id,token FROM warrooms WHERE id=? AND active=1').bind(id).first();
   if (!r) return { ok: false, error: 'no_warroom' };
@@ -1966,6 +2035,8 @@ async function api(request, env) {
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
       case 'discord_cfg': return json(vol && !WRC ? dcPublic(await dcCfg(db)) : { ok: false, error: 'central_only' });
+      case 'warroom_public': { const r = await db.prepare('SELECT name FROM warrooms WHERE id=? AND active=1').bind(clean(p.id, 20)).first(); return json(r ? { ok: true, name: r.name } : { ok: false }); }
+      case 'wr_users': return json(vol ? await wrUsers(db) : { ok: false, error: 'not_volunteer' });
       case 'feedback_list': {
         if (!vol || WRC) return json({ ok: false, error: 'central_only' });
         const { results } = await db.prepare('SELECT * FROM feedback ORDER BY done, at DESC LIMIT 200').all();
@@ -1987,6 +2058,8 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
+    if (b.action === 'wr_login') return json(await wrLogin(db, b));
+    if (b.action === 'wr_logout') return json(await wrLogout(db, b));
     WRC = await wrAuth(db, b.key);
     if (WRC) {
       if (WR_DENY.includes(b.action) || (b.action === 'warroom_save' && clean((b.warroom || {}).id, 20) !== WRC.id)) return json({ ok: false, error: 'central_only' });
@@ -2002,7 +2075,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
@@ -2035,6 +2108,9 @@ export default {
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }
+    // ลิงก์ประจำ War Room ย่อย: /wr/<id>?k=<รหัส> → หน้า War Room ของห้องนั้น (เว็บย่อยของ CENTRAL)
+    const wr = url.pathname.match(/^\/wr\/([A-Za-z0-9]{3,20})\/?$/);
+    if (wr) { const to = new URL('/central/warroom/', url); to.searchParams.set('wr', wr[1]); const k = url.searchParams.get('k'); if (k) to.searchParams.set('k', k); return Response.redirect(to.toString(), 302); }
     // ลิงก์เก่า (/admin… และ /center…) → ชื่อใหม่ /central
     const old = url.pathname.match(/^\/(?:admin|center)(\.html|\/.*)?$/);
     if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/central' + old[1] : '/central'; return Response.redirect(url.toString(), 301); }

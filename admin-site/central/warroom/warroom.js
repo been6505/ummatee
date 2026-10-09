@@ -11,10 +11,22 @@ const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],
 /* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
   // คนที่เข้า CENTRAL ด้วยรหัสหลักอยู่แล้ว: เปิดห้องนั้นแบบปกติ ไม่ทับรหัส CENTRAL และไม่ล็อกหน้า
-  const cur=store.get('uh_vol_key');if(k&&wr&&cur&&!cur.startsWith('wr_')){try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}return}
+  // CENTRAL กดเปิดเว็บย่อยของห้อง: ดูแบบที่ทีม War Room เห็น เฉพาะแท็บนี้ (ไม่ทับรหัส CENTRAL)
+  const cur=store.get('uh_vol_key');if(k&&wr&&cur&&!/^wru?_/.test(cur)){try{sessionStorage.setItem('uh_wr_preview',wr);history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}return}
   if(k&&wr){store.set('uh_vol_key','wr_'+k,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',wr,true);ADM.key='wr_'+k;
     try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}}})();
-const LOCK=()=>String(ADM.key||'').startsWith('wr_')?store.get('uh_wr_lock'):'';
+/* เข้าเว็บย่อยของห้องด้วยบัญชี (ชื่อผู้ใช้ + รหัสผ่าน): แสดงฟอร์มนี้แทนรหัส CENTRAL เมื่อเปิดจากลิงก์ห้อง (?wr=…) */
+(()=>{const wr=new URLSearchParams(location.search).get('wr')||store.get('uh_wr_lock');if(!wr||ADM.key)return;
+  const f=$('#wrl-form'),c=$('#login-form');f.hidden=false;c.hidden=true;
+  fetch('/api?action=warroom_public&id='+encodeURIComponent(wr)).then(r=>r.json()).then(r=>{if(r&&r.ok)$('#wrl-title').textContent=r.name}).catch(()=>{});
+  $('#wrl-central').onclick=()=>{f.hidden=true;c.hidden=false};
+  f.onsubmit=async e=>{e.preventDefault();$('#wrl-go').disabled=true;$('#wrl-err').textContent='กำลังตรวจ…';
+    try{const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'wr_login',warroom:wr,username:$('#wrl-user').value,password:$('#wrl-pass').value})}).then(x=>x.json());
+      if(r.ok){store.set('uh_vol_key',r.key,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',r.warroom.id,true);location.replace('?wr='+encodeURIComponent(r.warroom.id));return}
+      $('#wrl-err').textContent=r.error==='locked'?'ใส่รหัสผิดหลายครั้ง · ลองใหม่ใน 10 นาที':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}
+    catch(err){$('#wrl-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{$('#wrl-go').disabled=false}}})();
+const PREVIEW=()=>{try{return /^wru?_/.test(String(ADM.key||''))?'':sessionStorage.getItem('uh_wr_preview')||''}catch(e){return ''}};
+const LOCK=()=>/^wru?_/.test(String(ADM.key||''))?store.get('uh_wr_lock'):PREVIEW();
 const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
 const ST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
@@ -86,23 +98,56 @@ async function loadStock(){const r=await apiGet({action:'stock'}).catch(()=>null
 async function loadWarn(){try{const n=await apiGet({action:'news'});if(n&&n.ok)W.warn=n.warnings||[]}catch(e){}}
 
 /* ---------- เลือกห้อง / แท็บ ---------- */
+/* เว็บย่อยของ War Room (เปิดจากลิงก์ /wr/<id>): หัวเว็บเป็นชื่อห้อง · ใช้เมนูของห้อง · ไม่มีเมนู CENTRAL */
+function siteBrand(r){document.body.classList.add('wr-site');if(!r)return;const b=document.querySelector('.top .brand');
+  if(b){b.href='?wr='+encodeURIComponent(r.id);const sp=b.querySelector('span');if(sp)sp.innerHTML=`<i class="rdot" style="background:${esc(r.color)}"></i> <b>${esc(r.name)}</b>`}
+  document.title=r.name+' · Helpme+ War Room';
+  const pv=$('#wr-preview');if(pv){pv.hidden=!PREVIEW();}}
+/* CENTRAL: ปุ่มเปิดเว็บย่อยของห้องที่เลือก + คัดลอก/แชร์ลิงก์ให้ทีม War Room */
+/* บัญชีผู้ใช้ของ War Room ย่อย (แท็บโปรไฟล์ · เฉพาะคนที่เข้าจากลิงก์ห้อง/บัญชีห้อง) */
+const UR={lead:'หัวหน้า War Room · สร้าง/จัดการบัญชีได้',staff:'ทีมงาน'};
+async function usersCard(){const el=$('#pf-users');if(!el)return;if(!/^wru?_/.test(String(ADM.key||''))){el.hidden=true;return}
+  const r=await apiGet({action:'wr_users'}).catch(()=>null);if(!r||!r.ok){el.hidden=true;return}el.hidden=false;const lead=r.me.role==='lead',me=r.me.user;
+  const when=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'ยังไม่เคยเข้า';
+  el.innerHTML=`<div class="wr-tools"><h2 style="margin:0">บัญชีผู้ใช้ War Room</h2></div>
+    <p class="muted small">${me?`เข้าระบบเป็น <b>${esc(me.name||me.username)}</b> (${esc(me.username)})`:'เข้าจากลิงก์ห้อง (สิทธิ์หัวหน้า)'} · บัญชีใช้ได้เฉพาะ ${esc(r.warroom.name)} ไม่สามารถเข้าหน้า CENTRAL</p>
+    ${r.users.length?`<ul class="wu-list">${r.users.map(u=>`<li class="${u.active?'':'off'}"><div><b>${esc(u.name||u.username)}</b> <small>@${esc(u.username)} · ${esc(UR[u.role]||u.role)}${u.active?'':' · ปิดแล้ว'}</small><small>เข้าล่าสุด ${esc(when(u.lastLogin))}</small></div>
+      <span>${lead&&(!me||me.id!==u.id)?`<button type="button" class="btn ghost sm" data-wu-off="${esc(u.id)}" data-v="${u.active?0:1}">${u.active?'ปิดบัญชี':'เปิดบัญชี'}</button>`:''}<button type="button" class="btn ghost sm" data-wu-pw="${esc(u.id)}">ตั้งรหัสใหม่</button></span></li>`).join('')}</ul>`:'<p class="muted small">ยังไม่มีบัญชี · สร้างบัญชีของคุณเองก่อน แล้วสร้างให้ทีมงาน</p>'}
+    ${lead?`<form class="wu-form" id="wu-form"><b>${r.users.length?'สร้างบัญชีให้ทีมงาน':'สร้างบัญชีของฉัน'}</b>
+      <label>ชื่อผู้ใช้ (a-z 0-9)<input name="u" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false" placeholder="เช่น somchai"></label>
+      <label>ชื่อที่แสดง<input name="n" maxlength="60" placeholder="เช่น สมชาย (ฝ่ายสต็อก)"></label>
+      <label>รหัสผ่าน (อย่างน้อย 6 ตัว)<input name="p" type="text" required minlength="6" autocomplete="new-password"></label>
+      <label>สิทธิ์<select name="r"><option value="${r.users.length?'staff':'lead'}">${r.users.length?'ทีมงาน':'หัวหน้า War Room'}</option><option value="${r.users.length?'lead':'staff'}">${r.users.length?'หัวหน้า War Room':'ทีมงาน'}</option></select></label>
+      <button class="btn primary" type="submit">สร้างบัญชี</button><p class="muted small">ส่งชื่อผู้ใช้ + รหัสผ่าน + ลิงก์เข้าระบบให้ทีมงาน: <code>${esc(location.origin+'/wr/'+r.warroom.id)}</code></p></form>`:''}`;
+  const f=$('#wu-form');if(f)f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));const x=await apiPost({action:'wr_user_save',username:d.u,name:d.n,password:d.p,role:d.r}).catch(()=>null);
+    if(x&&x.ok){toast(`สร้างบัญชี @${x.username} แล้ว`,true);usersCard()}else toast({username_taken:'ชื่อผู้ใช้นี้มีแล้ว',short_password:'รหัสผ่านสั้นเกินไป',bad_username:'ชื่อผู้ใช้ต้องเป็น a-z 0-9 อย่างน้อย 3 ตัว',lead_only:'เฉพาะหัวหน้า War Room'}[x&&x.error]||'สร้างไม่สำเร็จ')}}
+$('#p-prof').addEventListener('click',async e=>{const o=e.target.closest('[data-wu-off]');if(o){const r=await apiPost({action:'wr_user_save',id:o.dataset.wuOff,active:o.dataset.v==='1'}).catch(()=>null);toast(r&&r.ok?'บันทึกแล้ว':'ทำไม่สำเร็จ',!!(r&&r.ok));usersCard();return}
+  const p=e.target.closest('[data-wu-pw]');if(p){const pw=prompt('รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)');if(!pw)return;const r=await apiPost({action:'wr_user_save',id:p.dataset.wuPw,password:pw}).catch(()=>null);
+    toast(r&&r.ok?'ตั้งรหัสใหม่แล้ว · บัญชีนี้ต้องเข้าระบบใหม่':r&&r.error==='short_password'?'รหัสผ่านสั้นเกินไป':'ทำไม่สำเร็จ',!!(r&&r.ok));usersCard()}});
+function linkBar(r){const el=$('#wr-linkbar');if(!el)return;if(!r||!r.linkKey){el.hidden=true;return}el.hidden=false;const url=wrUrl(r);
+  el.innerHTML=`<a class="btn primary sm" href="${esc(url)}" target="_blank" rel="noopener">${ic('ext')} เปิดเว็บ ${esc(r.name)}</a>
+    <button type="button" class="btn ghost sm" data-wlcopy="${esc(url)}">${ic('copy')} คัดลอกลิงก์ทีม</button>
+    ${navigator.share?`<button type="button" class="btn ghost sm" id="wr-share">${ic('share')} แชร์</button>`:''}<span class="wl-url">${esc(url.replace(/\?k=.*/,'?k=…'))}</span>`;
+  const sh=$('#wr-share');if(sh)sh.onclick=()=>navigator.share({title:'War Room '+r.name,text:`HELP ME CENTRAL · ${r.name}\nลิงก์เข้าระบบ War Room (ส่งเฉพาะทีมงาน)`,url}).catch(()=>{})}
 function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   const chip=(r,label)=>{const act=r?all.filter(c=>inRoom(c,r)):all,crit=act.filter(c=>sev(c)===3&&c.status!=='going').length,id=r?r.id:'';
     return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i><span class="lbl-long">HELP ME CENTRAL · </span>'}${esc(label||(isProv(r)&&/^ศูนย์ประสานงานจังหวัด/.test(r.name)?'ศูนย์ประสานงาน':r.name)||'(ไม่มีชื่อ)')} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
   // จัดกลุ่มตามจังหวัด: ศูนย์ประสานงานจังหวัด แล้วตามด้วย War Room โซนในจังหวัดนั้น
   const provs=[...new Set(W.rooms.map(r=>r.province||''))].sort((a,b)=>!a-!b||(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:a.localeCompare(b,'th')));
   const lk=LOCK();document.body.classList.toggle('wr-locked',!!lk);$('#wr-new').hidden=!!lk;
-  if(lk){if(W.room!==lk)W.room=lk;const r0=W.rooms.find(r=>r.id===lk);$('#rooms').innerHTML=r0?chip(r0):'<span class="muted">ไม่พบ War Room ของลิงก์นี้ (อาจถูกปิดหรือสร้างลิงก์ใหม่แล้ว)</span>'}
+  if(lk){if(W.room!==lk)W.room=lk;const r0=W.rooms.find(r=>r.id===lk);siteBrand(r0);$('#rooms').innerHTML=r0?chip(r0):'<span class="muted">ไม่พบ War Room ของลิงก์นี้ (อาจถูกปิดหรือสร้างลิงก์ใหม่แล้ว)</span>'}
   else $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
+  linkBar(lk?null:room());
   const r=room();$('#subtabs').hidden=!r;
-  const tabs=!r?['struct']:['over','cases','teams','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้วif(!tabs.includes(W.tab))W.tab=tabs[0];
+  const tabs=!r?['struct']:['over','cases','teams','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้ว
+  if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
   document.body.classList.toggle('wr-overview',W.tab==='over')}
 $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';W.tab=W.room?'over':'struct';if(!W.room)await loadStock();
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
-$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
+$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='prof')W.uAt='';if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
 /* ---------- ภาพรวม ---------- */
 function kpis(V){const rm=room(),fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
@@ -355,7 +400,7 @@ function itemForm(it){const r=room();if(!r)return;it=it||{};
     toast('บันทึกแล้ว',true);await loadStock();render()})}
 
 /* ---------- แท็บ โปรไฟล์ ---------- */
-function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
+function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);if(W.uAt!==r.id){W.uAt=r.id;usersCard()}
   const crit=V.cases.filter(c=>c.status!=='done'&&sev(c)===3).length,act=V.cases.filter(c=>c.status!=='done').length;
   $('#pf-info').innerHTML=`<div class="wr-tools"><h2 style="margin:0"><i class="rdot" style="background:${esc(r.color)}"></i> ${esc(r.name)}</h2><button type="button" class="btn ghost sm" id="pf-edit">แก้ไขข้อมูล War Room</button></div>
     <dl class="wr-dl"><dt>ประเภท</dt><dd>${isProv(r)?'ศูนย์ประสานงานจังหวัด (Provincial Coordination)':'War Room โซน'}${r.province?' · จังหวัด'+esc(r.province):''}</dd>${isProv(r)?`<dt>War Room โซน</dt><dd>${zonesOf(r.province).map(z=>`<button type="button" class="lnk" data-gozone2="${esc(z.id)}">${esc(z.name)}</button>`).join(' · ')||'ยังไม่มี'}</dd>`:''}<dt>หัวหน้า</dt><dd>${esc(r.lead||'—')}</dd><dt>เบอร์ติดต่อ</dt><dd>${r.phone?`<a href="tel:${esc(telOf(r.phone))}">${esc(r.phone)}</a>`:'—'}</dd>
@@ -371,7 +416,7 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);
     <p class="muted small">ส่งให้ทีมงานของห้องนี้ เปิดแล้วเข้าระบบได้เลย (ไม่ต้องใช้รหัสกลาง) · จัดการเคส จัดทีม สต็อก และโปรไฟล์ของห้องนี้ได้ · ส่งต่อเฉพาะคนในทีม</p>
     <div class="wr-link-row"><input readonly value="${esc(url)}" onclick="this.select()" aria-label="ลิงก์ War Room"><button type="button" class="btn primary sm" data-wlcopy="${esc(url)}">คัดลอก</button><a class="btn ghost sm" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><button type="button" class="btn ghost sm" id="wl-renew">สร้างลิงก์ใหม่</button></div></div>`);
     $('#wl-renew').onclick=()=>wrLink(r,true)}}
-const wrUrl=r=>location.origin+'/central/warroom/?wr='+encodeURIComponent(r.id)+'&k='+r.linkKey;
+const wrUrl=r=>location.origin+'/wr/'+encodeURIComponent(r.id)+'?k='+r.linkKey; // ลิงก์สั้นของ War Room ย่อย (เซิร์ฟเวอร์พาไปหน้าห้อง)
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-wlcopy]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.wlcopy);toast('คัดลอกลิงก์ War Room แล้ว',true)}catch(err){}});
 async function wrLink(r,renew){if(!confirm('สร้างลิงก์ใหม่? ลิงก์เดิมจะใช้ไม่ได้ทันที (คนที่เข้าด้วยลิงก์เดิมจะถูกออกจากระบบ)'))return;
   const res=await apiPost({action:'warroom_link',id:r.id,renew:true}).catch(()=>({}));if(!res.ok){toast('สร้างลิงก์ไม่สำเร็จ');return}r.linkKey=res.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งลิงก์ใหม่ให้ทีม',true);render()}
@@ -380,7 +425,8 @@ $('#p-prof').addEventListener('click',async e=>{const gz=e.target.closest('[data
   const del=e.target.closest('[data-pdel]');if(del&&confirm('ลบรายชื่อนี้?')){const r=await apiPost({action:'warroom_staff',staff:{id:del.dataset.pdel,active:false}}).catch(()=>({}));if(r.ok){await loadRooms();render()}else toast('ลบไม่สำเร็จ')}
   const f=e.target.closest('[data-fly2]');if(f){W.tab='over';render();const [a,o]=f.dataset.fly2.split(',').map(Number);setTimeout(()=>W.map&&W.map.flyTo([a,o],14),300)}});
 $('#pf-add').onclick=()=>staffForm(null);
-$('#logout').addEventListener('click',()=>store.set('uh_wr_lock',''));
+$('#logout').addEventListener('click',()=>{const k=String(ADM.key||'');if(k.startsWith('wru_'))fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'wr_logout',key:k})}).catch(()=>{});store.set('uh_wr_lock','');try{sessionStorage.removeItem('uh_wr_preview')}catch(e){}});
+$('#wr-preview-exit')&&($('#wr-preview-exit').onclick=()=>{try{sessionStorage.removeItem('uh_wr_preview')}catch(e){}location.href='?wr='+encodeURIComponent(W.room)});
 function staffForm(s){const r=room();if(!r)return;s=s||{};
   dlg(`<h2>${s.id?'แก้ไขรายชื่อ':'เพิ่มทีมงาน '+esc(r.name)}</h2><label>ชื่อ<input name="name" required maxlength="60" value="${esc(s.name||'')}"></label>
     <div class="row"><label>หน้าที่<select name="role">${Object.entries(ROLES).map(([k,v])=>`<option value="${k}"${k===(s.role||'staff')?' selected':''}>${v}</option>`).join('')}</select></label><label>เบอร์โทร<input name="phone" inputmode="tel" maxlength="20" value="${esc(s.phone||'')}"></label></div>

@@ -58,6 +58,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
+  `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
+  `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
   `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT, undo TEXT, undone INTEGER)`,
   `CREATE INDEX IF NOT EXISTS audit_at ON audit(at)`,
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
@@ -261,6 +263,7 @@ async function aiChat(db, b) {
   if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
   const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
   if (!msgs.length) return { ok: false, error: 'empty' };
+  await withIntel(db, msgs);
   let total = msgs.reduce((a, m) => a + m.content.length, 0);
   while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
   let err = '';
@@ -279,10 +282,11 @@ function aiMsgs(b) {
   while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
   return msgs;
 }
-async function aiStream(b) {
+async function aiStream(b, db) {
   if (!ENV || !ENV.AI) return null;
   const msgs = aiMsgs(b);
   if (!msgs.length) return null;
+  if (db) await withIntel(db, msgs);
   for (const model of HERMES_MODELS) {
     try {
       const st = await ENV.AI.run(model, { messages: msgs, stream: true, max_tokens: Math.min(Number(b.max_tokens) || 700, 1500), temperature: Math.min(Math.max(Number(b.temperature) || 0.3, 0), 1) });
@@ -290,6 +294,85 @@ async function aiStream(b) {
     } catch (e) {}
   }
   return null;
+}
+/* ---------- คลังข้อมูลสถานการณ์ (intel) · เก็บในฐานข้อมูลของเรา ให้ AI HELP ใช้คิด ----------
+   ทุก 15 นาที (ตอน cron เรียก hm_sync): ประกาศเตือนภัยกรมอุตุฯ · แผ่นดินไหว · ข่าวภัยพิบัติ · น้ำบนถนน กทม. (เซ็นเซอร์ สนน.) ·
+   ระดับน้ำคลอง/แม่น้ำ (ThaiWater) · ดาวเทียม GISTDA (น้ำท่วม 7 วัน) รายเคสที่ยังไม่เสร็จ + สรุปรายจังหวัด · เก็บย้อนหลัง 14 วัน
+   AI HELP ได้สรุปสั้น (intelBrief) ต่อท้ายคำสั่งระบบทุกครั้งที่ถาม */
+async function intelUpsert(db, rows) {
+  const now = Date.now(), st = rows.map(r => db.prepare(`INSERT INTO intel (kind,k,at,seen,title,body,level,src,province,lat,lng,val,data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(kind,k) DO UPDATE SET seen=excluded.seen, at=excluded.at, title=excluded.title, body=excluded.body, level=excluded.level, val=excluded.val, data=excluded.data`)
+    .bind(r.kind, String(r.k).slice(0, 200), r.at || now, now, clean(r.title, 300), clean(r.body, 1500), r.level || '', r.src || '', r.province || '', r.lat ?? null, r.lng ?? null, r.val ?? null, r.data ? JSON.stringify(r.data).slice(0, 2000) : null));
+  for (let i = 0; i < st.length; i += 80) await db.batch(st.slice(i, i + 80));
+  return rows.length;
+}
+async function intelTick(env, db, force) {
+  const last = Number(await getMeta(db, 'intel_at')) || 0;
+  if (!force && Date.now() - last < 15 * 60e3) return { skipped: true };
+  await setMeta(db, 'intel_at', String(Date.now()));
+  const res = {}, now = Date.now();
+  // 1) ข่าว + ประกาศกรมอุตุฯ + แผ่นดินไหว
+  try { const n = await newsData();
+    res.news = await intelUpsert(db, [
+      ...n.warnings.map(w => ({ kind: 'warning', k: (w.title + '|' + (w.announced || '')).slice(0, 200), at: w.announced || now, title: w.title, body: w.text, level: (!w.end || w.end > now) && (!w.start || w.start <= now) ? 'live' : '', src: 'กรมอุตุนิยมวิทยา', data: { start: w.start, end: w.end, url: w.url } })),
+      ...n.quakes.map(q => ({ kind: 'quake', k: q.time + '|' + q.place, at: q.time, title: `แผ่นดินไหว ${q.mag} · ${q.place}`, val: q.mag, lat: q.lat, lng: q.lng, src: 'กรมอุตุนิยมวิทยา' })),
+      ...n.news.map(x => ({ kind: 'news', k: x.link, at: x.time || now, title: x.title, src: x.source, level: (x.tags || []).join(','), data: { link: x.link } }))]); } catch (e) { res.newsErr = String(e.message || e).slice(0, 80); }
+  // 2) น้ำ: เซ็นเซอร์บนถนน กทม. (เฉพาะที่มีน้ำ) + ระดับน้ำคลองที่สูง (สถานการณ์ ≥ 3)
+  try { const w = await waterData();
+    res.water = await intelUpsert(db, [
+      ...w.sensors.filter(x => x.now != null && x.now >= 5 && x.status !== 'malfunction').map(x => ({ kind: 'road_water', k: x.code || x.name, at: x.t || now, title: `${x.name}${x.road ? ' · ' + x.road : ''}`, val: x.now, province: 'กรุงเทพมหานคร', lat: x.lat, lng: x.lng, src: 'สำนักการระบายน้ำ กทม.', data: { district: x.district, max: x.max } })),
+      ...w.stations.filter(x => x.situation >= 3).map(x => ({ kind: 'river', k: String(x.id), at: x.t || now, title: x.name, val: x.diff, level: String(x.situation), lat: x.lat, lng: x.lng, src: 'ThaiWater ' + (x.agency || ''), data: { level: x.level, bank: x.bank } })),
+      { kind: 'water_sum', k: 'bkk', at: now, title: 'สรุปน้ำ กทม.', val: w.sensors.filter(x => x.now >= 5).length, data: { sensors: w.sensors.length, wet: w.sensors.filter(x => x.now >= 5).length, deep: w.sensors.filter(x => x.now >= 20).length, stationsHigh: w.stations.filter(x => x.situation >= 4).length } }]); } catch (e) { res.waterErr = String(e.message || e).slice(0, 80); }
+  // 3) ดาวเทียม GISTDA: เคส Help Me + เคสในระบบที่ยังไม่เสร็จ (ไม่เกิน 40 ช่อง)
+  if (env.GISTDA_KEY) try {
+    const { results: cs } = await db.prepare("SELECT id,province,district,COALESCE(lat,glat) lat,COALESCE(lng,glng) lng FROM cases WHERE status<>'done' AND COALESCE(hmStatus,'')<>'skip' AND COALESCE(dupOf,'')='' AND COALESCE(lat,glat) IS NOT NULL").all();
+    const S = 0.04, gc = new Map(); cs.forEach(c => { if (!c.lat || !c.lng) return; const k = Math.floor(c.lng / S) + ',' + Math.floor(c.lat / S); if (!gc.has(k)) gc.set(k, []); gc.get(k).push(c); });
+    const rows = [], cells = [...gc].slice(0, 40);
+    for (let i = 0; i < cells.length; i += 8) await Promise.all(cells.slice(i, i + 8).map(async ([k, list]) => { const [cx, cy] = k.split(',').map(Number);
+      try { const feats = await gistdaCell(env, cx, cy);
+        list.forEach(c => { let inside = false, best = Infinity, date = ''; for (const f of feats) { if (f.d > date) date = f.d; if (!inside && inGeom(c.lat, c.lng, f.g)) inside = true; const d = inside ? 0 : geomDist(c.lat, c.lng, f.g); if (d < best) best = d; }
+          rows.push({ kind: 'sat_case', k: c.id, at: now, title: inside ? 'อยู่ในพื้นที่น้ำท่วม' : isFinite(best) ? `น้ำท่วมห่าง ${Math.round(best)} ม.` : 'ไม่พบน้ำท่วมใน 4 กม.', val: inside ? 0 : isFinite(best) ? Math.round(best) : null, level: inside ? 'inside' : best <= 1000 ? 'near' : 'none', province: c.province || '', lat: c.lat, lng: c.lng, src: 'GISTDA', data: { date, district: c.district || '' } }); }); } catch (e) {} }));
+    res.sat = await intelUpsert(db, rows);
+  } catch (e) { res.satErr = String(e.message || e).slice(0, 80); }
+  await db.prepare('DELETE FROM intel WHERE seen<?').bind(now - 14 * 864e5).run();
+  return res;
+}
+/* สรุปสั้นสำหรับ AI (และหน้าเว็บ) · แคช 2 นาที */
+async function intelBrief(db) {
+  return cached('intel-brief-v1', 120, async () => {
+    const now = Date.now(), q = (sql, ...v) => db.prepare(sql).bind(...v).all().then(r => r.results);
+    const [warn, quake, news, road, river, wsum, sat, bc, hz, at] = await Promise.all([
+      q("SELECT title,body,data FROM intel WHERE kind='warning' AND level='live' AND seen>? ORDER BY at DESC LIMIT 3", now - 2 * 3600e3),
+      q("SELECT title,at FROM intel WHERE kind='quake' AND at>? ORDER BY val DESC LIMIT 3", now - 2 * 864e5),
+      q("SELECT title,src,at FROM intel WHERE kind='news' AND at>? ORDER BY at DESC LIMIT 10", now - 2 * 864e5),
+      q("SELECT title,val,data FROM intel WHERE kind='road_water' AND seen>? ORDER BY val DESC LIMIT 6", now - 2 * 3600e3),
+      q("SELECT title,level,val FROM intel WHERE kind='river' AND seen>? ORDER BY CAST(level AS INTEGER) DESC LIMIT 6", now - 6 * 3600e3),
+      q("SELECT data,at FROM intel WHERE kind='water_sum' AND k='bkk'"),
+      q("SELECT k,title,level,province,data FROM intel WHERE kind='sat_case' AND seen>? AND level IN ('inside','near')", now - 3 * 3600e3),
+      q('SELECT level,title,scope,provinces,districts FROM broadcasts WHERE cancelledAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
+      q('SELECT type,note,level FROM hazard_reports WHERE closedAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
+      getMeta(db, 'intel_at')]);
+    const t = x => new Date(x).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const L = [];
+    if (warn.length) L.push('ประกาศเตือนภัยกรมอุตุฯ ที่มีผลตอนนี้: ' + warn.map(w => w.title).join(' | '));
+    if (bc.length) L.push('ประกาศของศูนย์ที่ยังมีผล: ' + bc.map(b => `[${b.level}] ${b.title} (${b.scope === 'all' ? 'ทุกพื้นที่' : b.provinces || b.districts || 'รัศมี'})`).join(' | '));
+    if (wsum[0]) { const d = JSON.parse(wsum[0].data || '{}'); L.push(`น้ำบนถนน กทม. (เซ็นเซอร์ ${d.sensors || 0} จุด): มีน้ำ ${d.wet || 0} จุด · ลึก ≥20 ซม. ${d.deep || 0} จุด · สถานีน้ำ กทม. วิกฤต ${d.stationsHigh || 0} สถานี`); }
+    if (road.length) L.push('ถนนน้ำลึกสุด: ' + road.map(r => `${r.title} ${r.val} ซม.`).join(', '));
+    if (river.length) L.push('ระดับน้ำคลอง/แม่น้ำสูง (ThaiWater ระดับ 3–5): ' + river.map(r => `${r.title} (ระดับ ${r.level})`).join(', '));
+    if (sat.length) { const ins = sat.filter(s => s.level === 'inside'), byP = {}; sat.forEach(s => { const p = s.province || 'ไม่ทราบจังหวัด'; byP[p] = (byP[p] || 0) + 1; });
+      L.push(`ดาวเทียม GISTDA (น้ำท่วม 7 วัน): เคสที่ยังไม่เสร็จอยู่ในพื้นที่น้ำท่วม ${ins.length} เคส · ห่างน้ำท่วม ≤1 กม. ${sat.length - ins.length} เคส · รายจังหวัด ${Object.entries(byP).map(([p, n]) => p + ' ' + n).join(', ')}` + (ins.length ? ' · เคสในน้ำท่วม: ' + ins.slice(0, 12).map(s => '#' + s.k).join(' ') : '')); }
+    const HZT = { sinkhole: 'หลุมยุบ/ถนนทรุด', landslide: 'ดินโคลนถล่ม', flashflood: 'น้ำป่าไหลหลาก', current: 'น้ำไหลแรง', electric: 'ไฟฟ้ารั่ว', fire: 'ไฟไหม้', other: 'ภัยอื่น ๆ' };
+    if (hz.length) L.push('รายงานภัยจากศูนย์: ' + hz.map(h => `${HZT[h.type] || h.type}${h.note ? ' ' + h.note : ''}`).join(' | '));
+    if (quake.length) L.push('แผ่นดินไหวใกล้ไทย 2 วัน: ' + quake.map(x => x.title).join(' | '));
+    if (news.length) L.push('ข่าวภัยพิบัติล่าสุด: ' + news.map(n => `${n.title} (${n.src} ${t(n.at)})`).join(' | '));
+    return { at: Number(at) || 0, text: L.length ? `ข้อมูลสถานการณ์จากฐานข้อมูล Helpme+ (รวบรวมล่าสุด ${at ? t(Number(at)) : '-'}):\n- ` + L.join('\n- ') : '' };
+  });
+}
+async function withIntel(db, msgs) {
+  try { const b = await intelBrief(db); if (!b.text) return;
+    const note = { role: 'system', content: b.text.slice(0, 6000) + '\nใช้ข้อมูลนี้ประกอบการวิเคราะห์ (อ้างแหล่งที่มาเมื่อใช้ เช่น GISTDA, ThaiWater, กรมอุตุฯ) · ถ้าข้อมูลขัดกับรายงานผู้แจ้ง ให้บอกและแนะนำให้โทรยืนยัน' };
+    const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
+  } catch (e) {}
 }
 /* ---------- Discord: AI HELP ส่งแจ้งเตือนเข้าห้อง (Webhook · ทางเดียว) ----------
    ตั้งค่าที่หน้า ตั้งค่า (CENTRAL เท่านั้น) · cron ทุกนาที (hm_sync) เรียก discordTick
@@ -1026,7 +1109,7 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
 /* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
-const AUDIT_SKIP = new Set(['audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2374,6 +2457,7 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'intel_brief': return json(vol ? { ok: true, ...(await intelBrief(db)) } : { ok: false, error: 'not_volunteer' });
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
       // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)
@@ -2382,7 +2466,7 @@ async function api(request, env) {
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
       case 'hm_sync': if (!vol && Date.now() - (Number(await getMeta(db, 'hm_tick_at')) || 0) < 45e3) return json({ ok: true, skipped: true }); // จำกัดความถี่ (คนนอกเรียกถี่ ๆ ไม่ได้)
         await setMeta(db, 'hm_tick_at', String(Date.now()));
-        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} let geo = null; try { geo = await geocodePass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
+        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null, intel = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} let geo = null; try { geo = await geocodePass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
@@ -2436,13 +2520,13 @@ async function api(request, env) {
     if (UNDO_SPEC[b.action]) { const st = RQ.getStore(); if (st) st.before = await undoSnap(db, b).catch(() => null); }
     if (b.action === 'ai_chat' && b.stream) {   // ตอบแบบทยอยส่งทีละคำ (SSE) ให้ผู้ใช้เห็นคำตอบทันที
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });
-      const r = await aiStream(b);
+      const r = await aiStream(b, db);
       return r || json({ ok: false, error: 'ai_failed' });
     }
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)

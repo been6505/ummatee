@@ -471,13 +471,13 @@ setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>55000)ping();lo
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
   if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null,smsNow=NT.err==='offline'&&window.NTRK&&NTRK.offlineFor()>120000;btn.hidden=NT.err!=='denied'&&!smsNow;btn.textContent=smsNow?'ส่งทาง SMS':'อนุญาต';
     if(NT.err){b.className=NT.err==='offline'?'locbar wait':'locbar off';t.textContent=NT.err==='denied'?'ยังไม่ได้อนุญาตตำแหน่ง · ศูนย์มองไม่เห็นทีม':NT.err==='bad_link'||NT.err==='bad_key'?'ลิงก์ทีมใช้ไม่ได้ · ศูนย์ไม่ได้รับตำแหน่ง':NT.err==='offline'?`ไม่มีสัญญาณ · เก็บตำแหน่งไว้ ${NT.q} จุด จะส่งเมื่อมีสัญญาณ`:'ส่งตำแหน่งไม่ได้';return}
-    b.className=NT.at?'locbar':'locbar wait';t.textContent=NT.at?`ศูนย์เห็นตำแหน่ง · ส่ง${m<1?'ล่าสุดไม่ถึง 1':' '+m} นาทีก่อน · ทำงานแม้ล็อกจอ`:'กำลังเริ่มส่งตำแหน่ง…';return}
+    b.className=NT.at?'locbar':'locbar wait';t.textContent=NT.at?(m<5?'ศูนย์เห็นตำแหน่ง':`ศูนย์เห็นตำแหน่ง · ส่งล่าสุด ${m} นาทีก่อน`):'กำลังเริ่มส่งตำแหน่ง…';return}
   if(TR.watch==null){b.className='locbar off';t.textContent=TR.err||'ตำแหน่งปิดอยู่ · ศูนย์มองไม่เห็นทีม';btn.textContent='เปิด';btn.hidden=false;return}
   btn.hidden=true;
   if(TR.err||!TR.pos){b.className='locbar wait';t.textContent=TR.err||'กำลังหาตำแหน่ง…';return}
   if(TR.fail>1){b.className='locbar wait';t.textContent='ส่งตำแหน่งไม่ได้ · ไม่มีเน็ต · จะลองใหม่';return}
   const s=Math.round((Date.now()-TR.sentAt)/1000);b.className='locbar';
-  t.textContent=`ศูนย์เห็นตำแหน่ง · ส่ง ${s<60?s+' วิ':Math.round(s/60)+' นาที'}ก่อน · ±${Math.round(TR.pos.acc||0)} ม.${TR.batt!=null?' · แบต '+TR.batt+'%':''}`}
+  t.textContent=s<300?'ศูนย์เห็นตำแหน่ง':`ศูนย์เห็นตำแหน่ง · ส่งล่าสุด ${Math.round(s/60)} นาทีก่อน`}
 $('#loc-btn').onclick=()=>{if(typeof NATIVE!=='undefined'&&NATIVE){if(NT.err==='offline'){smsSheet('แจ้งตำแหน่ง','','ไม่มีเน็ต · ส่งตำแหน่งให้ศูนย์ทาง SMS (ใช้แค่สัญญาณโทรศัพท์)');return}NTRK.openSettings();return}track(true)};
 $('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เครื่องนี้หาตำแหน่งไม่ได้';$('#g-skip').hidden=false;return}$('#g-err').textContent='กำลังขออนุญาต…';
   navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};

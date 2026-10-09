@@ -597,9 +597,14 @@ async function teamMe(db, t) {
     .bind(t.name, "'" + t.name, now - 86400e3).all();
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt,appAt FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
+  // ของจากสต็อกที่ศูนย์ส่งมากับเคส (แสดงในการ์ดเคสของทีม)
+  const ids = results.map(c => String(c.id)), stk = {};
+  if (ids.length) { const { results: sl } = await db.prepare(`SELECT caseId,item,delta FROM stock_log WHERE type='out' AND caseId IN (${ids.map(() => '?').join(',')})`).bind(...ids).all();
+    sl.forEach(l => { (stk[l.caseId] = stk[l.caseId] || []).push({ item: l.item, qty: Math.abs(l.delta) }); }); }
+  results.forEach(c => { c._stk = stk[String(c.id)] || []; });
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
       status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', view: r.token ? await viewId(r.token) : '', inRoster: !!r.id },
-    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => outCase(c, true)), live: live || null, supplies: stock.map(s => s.name), now };
+    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now };
 }
 async function callStart(db, team, from, b) {
   if (!team) return { ok: false, error: 'missing_team' };

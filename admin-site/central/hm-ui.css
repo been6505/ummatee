@@ -338,3 +338,12 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 /* สถานะ "ช่วยเหลือแล้ว (รอปิดเคส)" · "ปิดเคส" */
 .st-sel.st-helped,.st.st-helped{background:#e6f6f1!important;color:#0f6b52!important}
 .st-sel.st-done,.st.st-done{background:#eef0f3!important;color:#374151!important}
+/* ของจากสต็อกที่ส่งไปกับทีม */
+.d-stk{display:grid;gap:8px}.d-lbl-t{font-size:13px;font-weight:600;color:var(--muted,#64748b)}
+.d-stk-add{display:grid;grid-template-columns:minmax(0,1fr) 72px auto;gap:6px}
+.d-stk-add select,.d-stk-add input{font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--card,#fff);color:inherit;min-width:0}
+.d-stk-pend{display:flex;flex-wrap:wrap;gap:6px}
+.d-stk-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;border-radius:999px;background:#eaf3ff;color:#1e4b8a;font-size:13.5px;font-weight:600}
+.d-stk-chip button{border:0;background:rgba(30,75,138,.12);color:inherit;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1}
+.d-stk-sent{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}.d-stk-sent li{display:flex;align-items:center;gap:6px}.d-stk-sent svg{width:15px;height:15px}.d-stk-sent small{color:var(--muted)}
+@media (max-width:760px){.d-stk-add select,.d-stk-add input{font-size:16px}}

@@ -305,7 +305,8 @@ function renderDrawer(){
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
   if(keep){const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
-  if(!A.roster)loadRoster();
+  d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
+  if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
 /* ---------- มอบหมายทีม · ปิดเคส · หมายเหตุ ----------
    ศูนย์เลือกทีม → มอบหมาย (เคสขึ้นที่หน้าทีมทันที) → ทีมกด "ช่วยเหลือแล้ว" → ศูนย์กด "ปิดเคส" */
@@ -321,13 +322,36 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
     ${rep?`<div class="d-teamdone"><b>ทีมแจ้งว่าช่วยเหลือแล้ว · ${esc(ago(c.teamDoneAt))}</b>${c.teamNote?`<span>${esc(c.teamNote)}</span>`:''}</div>`:''}
     <label class="d-lbl">ทีม<select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select></label>
     <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="2" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
+    ${stkBox(c,done)}
     <div class="d-st-btns">
       ${done?`<button class="btn ghost" data-dact="note">บันทึกหมายเหตุ</button><button class="btn ghost" data-dact="open">เปิดเคสใหม่</button>`
       :`<button class="btn ${going?'ghost':'primary'}" data-dact="assign">${going?'เปลี่ยนทีม':'มอบหมาย'}</button>
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
         ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':'<button class="btn ghost" data-dact="note">บันทึกหมายเหตุ</button>'}`}
     </div></fieldset>`}
+/* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
+async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;
+  try{const r=await api({action:'stock',key:A.key});if(r&&r.ok){A.stock=r;if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.stockLoading=false}}
+const stkPend=c=>(A.stkPend||(A.stkPend={}))[c.id]||(A.stkPend[c.id]=[]);
+function stkBox(c,done){const items=(A.stock&&A.stock.items||[]).filter(i=>!i.kit||!i.kit.length||true),cid=String(apiId(c.id));
+  const sent=(A.stock&&A.stock.log||[]).filter(l=>String(l.caseId)===cid&&l.type==='out'),pend=stkPend(c);
+  const unit=i=>i.unit||'';
+  return `<div class="d-stk"><span class="d-lbl-t">ของจากสต็อกที่ส่งไปกับทีม</span>
+    ${sent.length?`<ul class="d-stk-sent">${sent.map(l=>`<li><i data-ic="box"></i> ${esc(l.item)} <b>${Math.abs(l.delta)}</b> · ${esc(l.team||'')} <small>${esc(ago(l.time))}</small></li>`).join('')}</ul>`:''}
+    ${done?'':`<div class="d-stk-add"><select id="d-stk-item" aria-label="เลือกของจากสต็อก"><option value="">${A.stock?'— เลือกของ —':'กำลังโหลดสต็อก…'}</option>${items.filter(i=>(+i.qty||0)>0).map(i=>`<option value="${esc(i.id)}">${esc(i.name)} · เหลือ ${esc(i.qty)} ${esc(unit(i))}</option>`).join('')}</select><input id="d-stk-qty" type="number" min="1" value="1" inputmode="numeric" aria-label="จำนวน"><button type="button" class="btn ghost sm" data-dact="stkadd">+ เพิ่ม</button></div>
+    ${pend.length?`<div class="d-stk-pend">${pend.map((x,i)=>`<span class="d-stk-chip">${esc(x.name)} × ${x.qty}<button type="button" data-stkdel="${i}" aria-label="เอาออก">×</button></span>`).join('')}</div>
+      ${c.status==='going'?'<button type="button" class="btn primary sm" data-dact="stksave">ตัดสต็อกส่งให้ทีม</button>':'<small class="muted">จะตัดสต็อกเมื่อกด "มอบหมาย"</small>'}`:''}`}
+  </div>`}
+async function stkCut(c,team){const L=stkPend(c);if(!L.length)return 0;let ok=0;const fail=[];
+  for(const x of [...L]){const r=await post({action:'stock_move',key:A.key,itemId:x.id,type:'out',amount:x.qty,caseId:String(apiId(c.id)),team,note:`ส่งไปกับทีม · เคส #${c.hmId||c.id}`}).catch(()=>null);
+    if(r&&r.ok){ok++;L.splice(L.indexOf(x),1)}else fail.push(x.name+(r&&r.error==='not_enough'?` (เหลือ ${r.qty})`:''))}
+  if(fail.length)toast('ตัดสต็อกไม่สำเร็จ: '+fail.join(', '));
+  A.stock=null;loadStock();return ok}
 async function assignAct(c,act,btn){
+  if(act==='stkadd'){const id=$('#d-stk-item').value,q=Math.max(1,parseInt($('#d-stk-qty').value,10)||1);if(!id){toast('เลือกของก่อน');return}
+    const it=A.stock.items.find(i=>String(i.id)===id);if(q>(+it.qty||0)){toast(`${it.name} เหลือ ${it.qty} ${it.unit||''}`);return}
+    const L=stkPend(c),ex=L.find(x=>x.id===id);if(ex)ex.qty+=q;else L.push({id,name:it.name,qty:q});renderDrawer();return}
+  if(act==='stksave'){btn.disabled=true;const n=await stkCut(c,String(c.volunteer||'').replace(/^'/,''));btn.disabled=false;if(n)toast(`ตัดสต็อก ${n} รายการ · ส่งไปกับทีมแล้ว`,true);renderDrawer();return}
   const team=($('#d-team')||{}).value||'',note=(($('#d-note')||{}).value||'').trim(),cur=String(c.volunteer||'').replace(/^'/,'').trim();
   let status=c.status,vol=cur,msg='';
   if(act==='assign'){if(!team){toast('เลือกทีมก่อน');$('#d-team').focus();return}if(c.status==='going'&&team===cur&&note===(c.hqNote||'')){toast('ทีมนี้รับเคสอยู่แล้ว');return}status='going';vol=team;msg=`มอบเคส #${c.hmId||c.id} ให้ ${team} แล้ว · ขึ้นที่หน้าทีมแล้ว`}
@@ -341,6 +365,7 @@ async function assignAct(c,act,btn){
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
     if(status==='open'||(status==='going'&&vol!==cur)){c.teamDoneAt=null;c.teamNote=''}
     Object.assign(c,{status,volunteer:vol,hqNote:note});if(status==='going'&&vol)store.set('uh_team',vol,true);
+    if(act==='assign'&&stkPend(c).length){const n=await stkCut(c,vol);if(n)msg+=` · ตัดสต็อก ${n} รายการ`}
     toast(msg,true);render();renderDrawer()}
   catch(e){Object.assign(c,prev);toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
   finally{btn.disabled=false}}

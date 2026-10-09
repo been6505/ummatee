@@ -47,7 +47,7 @@ main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(-
 .sec{margin:6px 2px 8px;font-size:13px;font-weight:700;color:var(--muted)}
 .case{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(22,27,61,.06);border-left:5px solid var(--primary)}
 .case.u3{border-left-color:var(--red)}.case.u2{border-left-color:var(--amber)}.case.done{opacity:.6;border-left-color:var(--ok)}
-.case h3{margin:0 0 4px;font-size:16px}.case .meta{font-size:14px;color:var(--muted)}.case .note{font-size:14px;background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap}.case .note.hq{background:#fff4e5;color:#7a4300}
+.case h3{margin:0 0 4px;font-size:16px}.case .meta{font-size:14px;color:var(--muted)}.case .note{font-size:14px;background:var(--bg);border-radius:10px;padding:8px 10px;margin:8px 0 0;white-space:pre-wrap}.case .note.hq{background:#fff4e5;color:#7a4300}.case .note.stk{background:#eaf3ff;color:#1e4b8a}
 .tag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-right:4px;background:var(--tint);color:var(--primary)}.tag.u3{background:var(--redt);color:var(--red)}.tag.u2{background:var(--ambert);color:var(--amber)}.tag.ok{background:var(--okt);color:var(--ok)}
 .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:14px;padding:12px 10px;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;background:var(--tint);color:var(--primary);min-height:48px}
@@ -445,6 +445,7 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
     ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
+    ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
       <button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}</article>`}
 $('#status').onchange=async e=>{const v=e.target.value;try{const r=await opost({action:'team_status',status:v},'สถานะทีม');if(!r.ok)throw 0;S.me.team.status=v;saveMe(S.me);render();toast(r.queued?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};

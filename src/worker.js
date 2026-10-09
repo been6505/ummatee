@@ -323,6 +323,9 @@ async function intelTick(env, db, force) {
       ...w.sensors.filter(x => x.now != null && x.now >= 5 && x.status !== 'malfunction').map(x => ({ kind: 'road_water', k: x.code || x.name, at: x.t || now, title: `${x.name}${x.road ? ' · ' + x.road : ''}`, val: x.now, province: 'กรุงเทพมหานคร', lat: x.lat, lng: x.lng, src: 'สำนักการระบายน้ำ กทม.', data: { district: x.district, max: x.max } })),
       ...w.stations.filter(x => x.situation >= 3).map(x => ({ kind: 'river', k: String(x.id), at: x.t || now, title: x.name, val: x.diff, level: String(x.situation), lat: x.lat, lng: x.lng, src: 'ThaiWater ' + (x.agency || ''), data: { level: x.level, bank: x.bank } })),
       { kind: 'water_sum', k: 'bkk', at: now, title: 'สรุปน้ำ กทม.', val: w.sensors.filter(x => x.now >= 5).length, data: { sensors: w.sensors.length, wet: w.sensors.filter(x => x.now >= 5).length, deep: w.sensors.filter(x => x.now >= 20).length, stationsHigh: w.stations.filter(x => x.situation >= 4).length } }]); } catch (e) { res.waterErr = String(e.message || e).slice(0, 80); }
+  // 2.5) เขื่อน: เขื่อนใหญ่ทุกแห่ง + อ่างขนาดกลางที่เกิน 100%
+  try { const dm = await damData(), lv = p => p >= 100 ? 'over' : p >= 80 ? 'high' : '';
+    res.dam = await intelUpsert(db, [...dm.large, ...dm.medium.filter(x => x.pct >= 100)].map(x => ({ kind: 'dam', k: x.size + ':' + x.id, at: x.t, title: (x.size === 'large' ? 'เขื่อน' : '') + x.name, val: x.pct, level: lv(x.pct || 0) + (x.size === 'large' ? ',large' : ''), lat: x.lat, lng: x.lng, src: 'ThaiWater/' + (x.agency || 'ชป.'), data: { inflow: x.inflow, released: x.released, spilled: x.spilled, storage: x.storage, date: x.date } }))); } catch (e) { res.damErr = String(e.message || e).slice(0, 80); }
   // 3) ดาวเทียม GISTDA: เคส Help Me + เคสในระบบที่ยังไม่เสร็จ (ไม่เกิน 40 ช่อง)
   if (env.GISTDA_KEY) try {
     const { results: cs } = await db.prepare("SELECT id,province,district,COALESCE(lat,glat) lat,COALESCE(lng,glng) lng FROM cases WHERE status<>'done' AND COALESCE(hmStatus,'')<>'skip' AND COALESCE(dupOf,'')='' AND COALESCE(lat,glat) IS NOT NULL").all();
@@ -339,9 +342,9 @@ async function intelTick(env, db, force) {
 }
 /* สรุปสั้นสำหรับ AI (และหน้าเว็บ) · แคช 2 นาที */
 async function intelBrief(db) {
-  return cached('intel-brief-v1', 120, async () => {
+  return cached('intel-brief-v2', 120, async () => {
     const now = Date.now(), q = (sql, ...v) => db.prepare(sql).bind(...v).all().then(r => r.results);
-    const [warn, quake, news, road, river, wsum, sat, bc, hz, at] = await Promise.all([
+    const [warn, quake, news, road, river, wsum, sat, bc, hz, at, dams] = await Promise.all([
       q("SELECT title,body,data FROM intel WHERE kind='warning' AND level='live' AND seen>? ORDER BY at DESC LIMIT 3", now - 2 * 3600e3),
       q("SELECT title,at FROM intel WHERE kind='quake' AND at>? ORDER BY val DESC LIMIT 3", now - 2 * 864e5),
       q("SELECT title,src,at FROM intel WHERE kind='news' AND at>? ORDER BY at DESC LIMIT 10", now - 2 * 864e5),
@@ -351,7 +354,8 @@ async function intelBrief(db) {
       q("SELECT k,title,level,province,data FROM intel WHERE kind='sat_case' AND seen>? AND level IN ('inside','near')", now - 3 * 3600e3),
       q('SELECT level,title,scope,provinces,districts FROM broadcasts WHERE cancelledAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
       q('SELECT type,note,level FROM hazard_reports WHERE closedAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
-      getMeta(db, 'intel_at')]);
+      getMeta(db, 'intel_at'),
+      q("SELECT title,val,level,data FROM intel WHERE kind='dam' AND seen>? AND (level LIKE 'over%' OR level LIKE 'high%') ORDER BY val DESC LIMIT 400", now - 2 * 864e5)]);
     const t = x => new Date(x).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const L = [];
     if (warn.length) L.push('ประกาศเตือนภัยกรมอุตุฯ ที่มีผลตอนนี้: ' + warn.map(w => w.title).join(' | '));
@@ -359,6 +363,9 @@ async function intelBrief(db) {
     if (wsum[0]) { const d = JSON.parse(wsum[0].data || '{}'); L.push(`น้ำบนถนน กทม. (เซ็นเซอร์ ${d.sensors || 0} จุด): มีน้ำ ${d.wet || 0} จุด · ลึก ≥20 ซม. ${d.deep || 0} จุด · สถานีน้ำ กทม. วิกฤต ${d.stationsHigh || 0} สถานี`); }
     if (road.length) L.push('ถนนน้ำลึกสุด: ' + road.map(r => `${r.title} ${r.val} ซม.`).join(', '));
     if (river.length) L.push('ระดับน้ำคลอง/แม่น้ำสูง (ThaiWater ระดับ 3–5): ' + river.map(r => `${r.title} (ระดับ ${r.level})`).join(', '));
+    if (dams.length) { const big = dams.filter(d => /large/.test(d.level)), med = dams.filter(d => !/large/.test(d.level)), f = d => { const x = JSON.parse(d.data || '{}'); return `${d.title} ${Math.round(d.val)}%${x.inflow != null ? ` (ไหลเข้า ${x.inflow} · ระบาย ${x.released ?? '-'} ล้าน ลบ.ม./วัน)` : ''}`; };
+      if (big.length) L.push('เขื่อนใหญ่น้ำมาก (≥80% ความจุ · ThaiWater/กรมชลประทาน): ' + big.map(f).join(', '));
+      if (med.length) L.push(`อ่างเก็บน้ำขนาดกลางเกิน 100% (${med.length} แห่ง): ` + med.slice(0, 10).map(d => `${d.title} ${Math.round(d.val)}%`).join(', ')); }
     if (sat.length) { const ins = sat.filter(s => s.level === 'inside'), byP = {}; sat.forEach(s => { const p = s.province || 'ไม่ทราบจังหวัด'; byP[p] = (byP[p] || 0) + 1; });
       L.push(`ดาวเทียม GISTDA (น้ำท่วม 7 วัน): เคสที่ยังไม่เสร็จอยู่ในพื้นที่น้ำท่วม ${ins.length} เคส · ห่างน้ำท่วม ≤1 กม. ${sat.length - ins.length} เคส · รายจังหวัด ${Object.entries(byP).map(([p, n]) => p + ' ' + n).join(', ')}` + (ins.length ? ' · เคสในน้ำท่วม: ' + ins.slice(0, 12).map(s => '#' + s.k).join(' ') : '')); }
     const HZT = { sinkhole: 'หลุมยุบ/ถนนทรุด', landslide: 'ดินโคลนถล่ม', flashflood: 'น้ำป่าไหลหลาก', current: 'น้ำไหลแรง', electric: 'ไฟฟ้ารั่ว', fire: 'ไฟไหม้', other: 'ภัยอื่น ๆ' };
@@ -1040,7 +1047,7 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -1576,6 +1583,21 @@ async function newsData() {
     });
     out.news.sort((a, b) => (b.time || 0) - (a.time || 0)); out.news = out.news.slice(0, 80);
     return out;
+  });
+}
+/* เขื่อน/อ่างเก็บน้ำ: ThaiWater (สสน.) รวมข้อมูลกรมชลประทาน · เขื่อนใหญ่ (รายวัน) + อ่างขนาดกลาง · แคช 1 ชม.
+   % ความจุ = น้ำในอ่างเทียบความจุที่ระดับเก็บกักปกติ (เกิน 100% = เกินระดับปกติ เสี่ยงต้องระบายเพิ่ม) */
+async function damData() {
+  return cached('dams-v1', 3600, async () => {
+    const j = await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/analyst/dam', { headers: UA, signal: AbortSignal.timeout(25000) }).then(r => r.json());
+    const d = (j && j.data) || {}, today = Date.now() - 3 * 864e5;
+    const map = (r, size) => { const m = r.dam || {}, t = Date.parse(String(r.dam_date || '').slice(0, 10) + 'T00:00:00+07:00') || 0;
+      return { id: m.id, name: (m.dam_name || {}).th || (m.dam_name || {}).en || '', size, lat: Number(m.dam_lat), lng: Number(m.dam_long), date: String(r.dam_date || '').slice(0, 10), t,
+        pct: r.dam_storage_percent == null ? null : Number(r.dam_storage_percent), storage: r.dam_storage == null ? null : Number(r.dam_storage), inflow: r.dam_inflow == null ? null : Number(r.dam_inflow),
+        released: r.dam_released == null ? null : Number(r.dam_released), spilled: r.dam_spilled == null ? null : Number(r.dam_spilled), agency: (((r.agency || {}).agency_shortname || {}).th || '').trim() }; };
+    const large = (d.dam_daily || []).map(r => map(r, 'large')).filter(x => x.name && x.t >= today);
+    const medium = (d.dam_medium || []).map(r => map(r, 'medium')).filter(x => x.name && x.t >= today && x.pct != null);
+    return { ok: true, time: Date.now(), large, medium };
   });
 }
 // ระดับน้ำบนถนน: เซ็นเซอร์สำนักการระบายน้ำ กทม. + ระดับน้ำคลอง: ThaiWater (สสน.)
@@ -2458,6 +2480,7 @@ async function api(request, env) {
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
       case 'intel_brief': return json(vol ? { ok: true, ...(await intelBrief(db)) } : { ok: false, error: 'not_volunteer' });
+      case 'dams': try { return json(await damData()); } catch (e) { return json({ ok: false, error: 'dams_unavailable' }); }
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
       // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)

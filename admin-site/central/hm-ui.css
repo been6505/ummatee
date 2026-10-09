@@ -415,3 +415,14 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 /* ปุ่มออกจากระบบย้ายไปอยู่ในหน้าตั้งค่า (แถว "ออกจากระบบ") */
 .top #logout,.top-r #logout{display:none!important}
 .top #fb-btn,.top-r #fb-btn{display:none!important} /* ข้อเสนอแนะย้ายไปหน้าตั้งค่า */
+/* แถบเมนูล่างว่างเปล่าบางช่วง (iOS Safari): เนื้อหาในกล่อง backdrop-filter + เลื่อนข้าง หายตอนเลื่อนหน้า
+   → ให้แต่ละปุ่มมีเลเยอร์ของตัวเอง · จัดกลางแบบปลอดภัย (ล้นเมื่อไรเริ่มจากซ้าย ไม่ตกขอบจนว่าง) */
+.tabs{justify-content:flex-start!important;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;transform:translate3d(-50%,0,0)!important;will-change:transform;isolation:isolate}
+.tabs::-webkit-scrollbar{display:none}
+.tabs>a:first-child{margin-left:auto!important}.tabs>a:last-child{margin-right:auto!important}
+.tabs>a{transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;flex:none}
+/* มุมขวาบนเหลือปุ่มค้นหาปุ่มเดียว: ไม่ต้องมีกล่องขาวรอบปุ่ม · ปุ่มเป็นวงกลมลอยของตัวเอง */
+.top .top-r,.top-r{background:transparent!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0!important}
+.top-r #gs-btn{width:48px;height:48px;border-radius:50%!important;background:var(--surface,#fff)!important;border:1px solid var(--line,#e8e8ec)!important;box-shadow:0 6px 18px rgba(22,27,61,.12)!important;display:grid!important;place-items:center;padding:0!important}
+.top-r #gs-btn svg{width:22px;height:22px}
+[data-theme="dark"] .top-r #gs-btn{background:#1B1F33!important;border-color:rgba(255,255,255,.08)!important}

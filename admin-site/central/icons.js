@@ -93,7 +93,8 @@ function umPin(k,o={}){
 }
 
 /* แถบเมนูล่างบนมือถือเลื่อนข้างได้: เลื่อนให้เห็นเมนูของหน้าปัจจุบัน */
-addEventListener('load',()=>{const t=document.querySelector('.tabs'),a=t&&t.querySelector('[aria-current=page]');if(a&&t.scrollWidth>t.clientWidth)t.scrollLeft=a.offsetLeft-(t.clientWidth-a.offsetWidth)/2});
+{const fit=()=>{const t=document.querySelector('.tabs'),a=t&&t.querySelector('[aria-current=page]');if(!t)return;const max=Math.max(0,t.scrollWidth-t.clientWidth);t.scrollLeft=a&&max?Math.min(max,Math.max(0,a.offsetLeft-(t.clientWidth-a.offsetWidth)/2)):0};
+  addEventListener('load',fit);addEventListener('resize',fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(fit,1500)}
 
 /* หมุดทีมขยับลื่นแบบเรียลไทม์: เลื่อนจากตำแหน่งเดิมไปตำแหน่งใหม่ตลอดช่วงเวลารอข้อมูลรอบถัดไป (ไม่กระโดด)
    ระยะไกลเกิน 3 กม. หรือแท็บซ่อนอยู่ = ย้ายทันที */

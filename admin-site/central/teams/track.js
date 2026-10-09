@@ -15,16 +15,16 @@ const TRACK=(()=>{
     t.caseId?`ถือเคส #${esc(t.caseId)}`:'',isSos(r)?'<b style="color:#E5383B">SOS</b>':'',
     `<a href="https://www.google.com/maps/dir/?api=1&destination=${+t.lat},${+t.lng}" target="_blank" rel="noopener">นำทางไปหาทีม ↗</a>`].filter(Boolean).join('<br>')}
   async function init(el){if(map)return true;try{await loadLeaflet()}catch(e){el.innerHTML='<p class="empty">โหลดแผนที่ไม่ได้</p>';return false}
-    map=L.map(el,{scrollWheelZoom:false}).setView([13.76,100.65],11);
+    map=L.map(el,{scrollWheelZoom:false,zoomControl:false}).setView([13.76,100.65],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
-    if(typeof MAPFS!=='undefined')MAPFS.add(map);trail=L.layerGroup().addTo(map);pins=L.layerGroup().addTo(map);return true}
+    if(typeof MAPFS!=='undefined')MAPFS.add(map);L.control.zoom({position:'topright'}).addTo(map);trail=L.layerGroup().addTo(map);pins=L.layerGroup().addTo(map);return true}
   function update(live,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();
     (live||[]).forEach(t=>{const r=byName.get(tn(t.team)),k=tn(t.team);seen.add(k);
       const mv=t.speed!=null&&t.speed>=3,cls=`trk-pin ${isSos(r)?'sos':fresh(t)}${sel===k?' sel':''}${mv?' mv':''}`,
         html=`<span class="${cls}"><i>${headArrow(t)}</i>${esc(k)}${mv?` <small>${Math.round(t.speed)} กม./ชม.</small>`:''}${t.battery!=null&&t.battery<=20?' · แบต '+t.battery+'%':''}</span>`;
       let m=mk.get(k);
-      if(!m){m=L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',html,iconSize:null,iconAnchor:[9,9]}),keyboard:false}).addTo(pins);m._html=html;m.on('click',()=>focus(k));mk.set(k,m)}
-      else{glideTo(m,[+t.lat,+t.lng]);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[9,9]}))}}
+      if(!m){m=L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}),keyboard:false}).addTo(pins);m._html=html;m.on('click',()=>focus(k));mk.set(k,m)}
+      else{glideTo(m,[+t.lat,+t.lng]);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}
       // ทีมที่เลือกอยู่: ต่อเส้นทางสดตามตำแหน่งใหม่
       if(sel===k&&live){const p=live.getLatLngs(),last=p[p.length-1];if(!last||L.latLng(last).distanceTo([+t.lat,+t.lng])>3)live.addLatLng([+t.lat,+t.lng])}
       m.setZIndexOffset(isSos(r)?3000:sel===k?2000:0);m.bindPopup(info(t,r))});

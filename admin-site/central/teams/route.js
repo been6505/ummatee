@@ -27,9 +27,9 @@ const ROUTE=(()=>{
     <div id="rt-out">${r?result(r):'<p class="muted small">เรียงเคสวิกฤตก่อน แล้วเร่งด่วน แล้วทั่วไป ในแต่ละระดับไปจุดที่ใกล้ที่สุดก่อน</p>'}</div>`}
   function render(){const p=el();if(!p)return;const keep=R.map;if(keep){try{keep.remove()}catch(e){}R.map=null}p.innerHTML=view();if(typeof ic==='function')p.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});initMap()}
   async function initMap(){const m=$('#rt-map');if(!m||!window.L)return setTimeout(initMap,300);
-    R.map=L.map(m,{scrollWheelZoom:false,zoomAnimation:false}).setView([13.76,100.6],10);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(R.map);
+    R.map=L.map(m,{scrollWheelZoom:false,zoomAnimation:false,zoomControl:false}).setView([13.76,100.6],10);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(R.map);
     R.g=L.layerGroup().addTo(R.map);R.map.on('click',e=>{if(!R.picking)return;R.start={lat:e.latlng.lat,lng:e.latlng.lng,label:'จุดที่เลือกบนแผนที่'};R.picking=false;render()});
-    if(typeof MAPFS!=='undefined')MAPFS.add(R.map);draw()}
+    if(typeof MAPFS!=='undefined')MAPFS.add(R.map);L.control.zoom({position:'topright'}).addTo(R.map);draw()}
   function draw(){if(!R.map||!R.g)return;R.g.clearLayers();const r=R.route;
     if(!r){const cs=cands();cs.forEach(c=>L.circleMarker([+c.lat,+c.lng],{radius:6,color:'#fff',weight:2,fillColor:{3:'#DD2027',2:'#E8890C',1:'#3442C2'}[sev(c)],fillOpacity:1}).addTo(R.g));
       if(R.start)L.marker([R.start.lat,R.start.lng]).addTo(R.g);const pts=[...cs.map(c=>[+c.lat,+c.lng]),...(R.start?[[R.start.lat,R.start.lng]]:[])];if(pts.length)R.map.fitBounds(pts,{padding:[24,24],maxZoom:14,animate:false});return}

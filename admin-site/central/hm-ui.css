@@ -433,3 +433,17 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-stk-add select{grid-column:auto!important}
 .d-stk-add input{text-align:center;padding:6px 4px!important}
 .d-stk-add .btn{padding:0 12px!important;white-space:nowrap}
+/* หมุดทีม = รูปรถ (หน้าจัดทีม + War Room) */
+.trk-pin i,.wr-team i{width:28px!important;height:28px!important;border-radius:50%!important;border:2px solid #fff!important;display:grid!important;place-items:center;position:relative;flex:none;box-sizing:border-box}
+.trk-pin{padding:3px 10px 3px 3px!important}
+.leaflet-div-icon.wr-team{width:28px!important;height:28px!important;margin-left:-14px!important;margin-top:-14px!important}
+.wr-team span{left:32px!important;top:4px!important}
+s.car{position:absolute;inset:0;display:grid;place-items:center;transform:rotate(var(--r,0deg));transition:transform .6s ease;text-decoration:none}
+s.car svg{width:20px;height:20px;overflow:visible}
+s.car .bd{fill:#fff}s.car .gl{fill:#1f2a44;opacity:.55}s.car .rf{fill:#1f2a44;opacity:.12}s.car .wh{fill:#111827}
+/* วิ่งอยู่: เส้นความเร็วด้านหลังรถ + วงกระพริบ */
+s.car.run::after{content:"";position:absolute;left:50%;top:100%;width:10px;height:10px;transform:translate(-50%,-2px);background:repeating-linear-gradient(90deg,rgba(255,255,255,.95) 0 2px,transparent 2px 4px);-webkit-mask:linear-gradient(#000,transparent);mask:linear-gradient(#000,transparent);animation:carrun .5s linear infinite}
+@keyframes carrun{from{transform:translate(-50%,-4px)}to{transform:translate(-50%,2px)}}
+.trk-pin.mv i,.wr-team.mv i{animation:carpulse 1.6s ease-out infinite}
+@keyframes carpulse{0%{box-shadow:0 0 0 0 rgba(46,158,87,.55)}100%{box-shadow:0 0 0 10px rgba(46,158,87,0)}}
+.trk-pin .hd,.wr-team .hd{display:none!important}

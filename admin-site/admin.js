@@ -336,7 +336,7 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
       ${done?`<button class="btn ghost" data-dact="open">เปิดเคสใหม่</button>`
       :`<button class="btn ${going?'ghost':'primary'}" data-dact="assign">${going?'เปลี่ยนทีม':'มอบหมาย'}</button>
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
-        ${going?'<button class="btn ghost" data-dact="open">คืนเป็นรอ</button>':''}`}
+`}
     </div></fieldset>`}
 /* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
 async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;

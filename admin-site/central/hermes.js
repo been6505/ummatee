@@ -155,7 +155,7 @@ const HERMES=(()=>{
     const fab=document.createElement('button');fab.type='button';fab.className='hz-fab';fab.innerHTML=SPARK;fab.title='AI HELP';fab.setAttribute('aria-label','AI HELP');fab.onclick=()=>toggle();document.body.append(fab);
     const w=document.createElement('section');w.className='hz-win';w.hidden=true;w.setAttribute('aria-label','AI HELP');
     w.innerHTML=`<header class="hz-h"><i class="hz-dot"></i><b>AI HELP</b><small class="hz-sc"></small><a href="${location.pathname.includes('/central/')?'../settings/':'./central/settings/'}" title="ตั้งค่า Local AI">${I('settings')}</a><button type="button" class="hz-x" aria-label="ปิด">${I('close')}</button></header>
-      <div class="hz-chips"><button data-q="sum">สรุปสถานการณ์</button><button data-q="plan">จัดเคสให้ทีม</button><button data-m="near">กลุ่มเคสใกล้กัน</button><button data-m="dup">หาเคสซ้ำ</button><button data-m="stock">เคส ↔ สต็อก</button><button data-q="first">เคสไหนก่อน</button><button data-q="msg">ร่างข้อความถึงทีม</button></div>
+      <div class="hz-chips"><button data-q="sum">สรุปสถานการณ์</button><button data-q="intel">น้ำ · ดาวเทียม · ข่าว</button><button data-q="plan">จัดเคสให้ทีม</button><button data-m="near">กลุ่มเคสใกล้กัน</button><button data-m="dup">หาเคสซ้ำ</button><button data-m="stock">เคส ↔ สต็อก</button><button data-q="first">เคสไหนก่อน</button><button data-q="msg">ร่างข้อความถึงทีม</button></div>
       <div class="hz-log" aria-live="polite"></div><form class="hz-f"><input placeholder="ถาม AI HELP…" maxlength="800" aria-label="คำถาม"><button>ถาม</button></form>`;
     document.body.append(w);S.el=w;S.fab=fab;
     w.querySelector('.hz-x').onclick=()=>toggle(false);
@@ -208,6 +208,7 @@ const HERMES=(()=>{
     catch(e){clearInterval(tick);wait1.remove();note('ถาม AI HELP ไม่สำเร็จ: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจการตั้งค่า Local AI'))}
     finally{clearInterval(tick);S.busy=false}}
   async function quick(k){
+    if(k==='intel')return ask('วิเคราะห์สถานการณ์จากข้อมูลภายนอกในฐานข้อมูล (ประกาศกรมอุตุฯ ข่าว ระดับน้ำ ThaiWater เซ็นเซอร์น้ำ กทม. ดาวเทียม GISTDA): พื้นที่ไหนน่าห่วง เคสไหนที่ดาวเทียมยืนยันว่าอยู่ในน้ำท่วมควรส่งทีมก่อน และควรเตรียมอะไรใน 24 ชม.ข้างหน้า · อ้างแหล่งข้อมูล',{label:'น้ำ · ดาวเทียม · ข่าว'});
     if(k==='sum')return ask('สรุปสถานการณ์ตอนนี้: จุดที่น่าห่วงที่สุด 3 ข้อ ทีมพร้อมแค่ไหน และควรทำอะไรต่อทันที',{label:'สรุปสถานการณ์'});
     if(k==='first')return ask('เคสไหนควรส่งทีมก่อน 5 อันดับ พร้อมเหตุผลสั้น ๆ และเสนอทีมที่เหมาะ (ใส่ actions)',{label:'เคสไหนก่อน'});
     if(k==='msg')return ask('ร่างข้อความถึงทีมที่กำลังลงพื้นที่ ทีมละ 1 ข้อความ สั้น ชัด บอกสิ่งที่ต้องทำต่อ (ใส่ actions แบบ message)',{label:'ร่างข้อความถึงทีม'});

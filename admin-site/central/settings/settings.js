@@ -46,4 +46,29 @@ async function smsLoad(renew){const r=await apiPost({action:'sms_cfg',renew:!!re
   $('#sms-url').value=location.origin+'/api/sms-in?k='+r.secret;if(renew)$('#sms-msg').textContent='สร้างลิงก์ใหม่แล้ว · ลิงก์เก่าใช้ไม่ได้ · อัปเดตในแอปส่งต่อ SMS ด้วย'}
 $('#sms-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#sms-url').value);$('#sms-msg').textContent='คัดลอกแล้ว'}catch(e){$('#sms-url').select()}};
 $('#sms-renew').onclick=()=>{if(confirm('สร้างลิงก์ใหม่? ลิงก์เดิมในมือถือเบอร์ศูนย์จะใช้ไม่ได้'))smsLoad(true)};
-adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad()});
+/* ---------- ประวัติการเปลี่ยนแปลง (audit log) · CENTRAL เท่านั้น · รายการใหม่ขึ้นเองทุก 20 วิ ---------- */
+const LG={items:[],cat:'',role:'',q:'',more:false,busy:false,open:new Set()};
+const LG_ROLE={central:['CENTRAL','c'],warroom:['War Room','w'],team:['ทีม','t'],public:['ทั่วไป','p']};
+const LG_KEY={id:'รหัส',status:'สถานะ',volunteer:'ทีม',hqNote:'หมายเหตุ',bags:'ถุงยังชีพ',note:'หมายเหตุ',team:'ทีม',name:'ชื่อ',by:'โดย',text:'ข้อความ',qty:'จำนวน',type:'ประเภท',step:'ขั้นตอน',approve:'อนุมัติ',username:'ชื่อผู้ใช้',warroom:'War Room',item:'รายการ',user:'ผู้ใช้',staff:'ทีมงาน',cctv:'CCTV',dupOf:'ซ้ำกับ',lat:'ละติจูด',lng:'ลองจิจูด'};
+const lgEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function lgVal(v){if(v==null||v==='')return '–';if(typeof v==='boolean')return v?'ใช่':'ไม่';if(typeof v==='object')return Object.entries(v).filter(([,x])=>x!==''&&x!=null).map(([k,x])=>`${LG_KEY[k]||k}: ${typeof x==='object'?JSON.stringify(x):x}`).join(' · ');return String(v)}
+function lgDay(t){const d=new Date(t),n=new Date();const y=new Date(n);y.setDate(n.getDate()-1);return d.toDateString()===n.toDateString()?'วันนี้':d.toDateString()===y.toDateString()?'เมื่อวาน':d.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short',year:'2-digit'})}
+function lgDraw(){const el=$('#lg-list');if(!LG.items.length){el.innerHTML=`<p class="lg-empty">${LG.busy?'กำลังโหลด…':'ยังไม่มีประวัติในเงื่อนไขนี้'}</p>`;$('#lg-more').hidden=true;return}
+  let day='',h='';LG.items.forEach(x=>{const d=lgDay(x.at);if(d!==day){day=d;h+=`<p class="lg-day">${lgEsc(d)}</p>`}
+    const [rl,rk]=LG_ROLE[x.role]||['?','p'],op=LG.open.has(x.id);let data={};try{data=JSON.parse(x.data||'{}')}catch(e){}
+    h+=`<button type="button" class="lg-it" data-lg="${x.id}" aria-expanded="${op}"><span class="lg-t">${new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</span><span class="lg-r lg-${rk}">${lgEsc(rl)}</span><span class="lg-m"><b>${lgEsc(x.summary)}</b><small>${lgEsc(x.actor)}</small></span></button>`
+      +(op?`<dl class="lg-d">${Object.entries(data).filter(([k,v])=>v!==''&&v!=null&&v!=='•••'&&k!=='key'&&k!=='tk').map(([k,v])=>`<dt>${lgEsc(LG_KEY[k]||k)}</dt><dd>${lgEsc(lgVal(v))}</dd>`).join('')||'<dd>ไม่มีรายละเอียดเพิ่ม</dd>'}<dt>เวลา</dt><dd>${lgEsc(new Date(x.at).toLocaleString('th-TH'))}</dd><dt>คำสั่ง</dt><dd><code>${lgEsc(x.action)}</code></dd></dl>`:'')});
+  el.innerHTML=h;$('#lg-more').hidden=!LG.more}
+async function lgLoad(more){if(LG.busy)return;LG.busy=true;if(!more&&!LG.items.length)lgDraw();
+  const p={action:'audit_list',limit:50};if(LG.cat)p.cat=LG.cat;if(LG.role)p.role=LG.role;if(LG.q)p.q=LG.q;if(more&&LG.items.length)p.before=LG.items[LG.items.length-1].id;
+  try{const r=await apiGet(p);if(!r||!r.ok)return;$('#log-card').hidden=false;
+    if(more)LG.items=LG.items.concat(r.items);else{LG.items=r.items;}LG.more=r.more}catch(e){}finally{LG.busy=false;lgDraw()}}
+async function lgPoll(){if(document.hidden||$('#log-card').hidden||!LG.items.length)return;const p={action:'audit_list',limit:50};if(LG.cat)p.cat=LG.cat;if(LG.role)p.role=LG.role;if(LG.q)p.q=LG.q;
+  try{const r=await apiGet(p);if(!r||!r.ok)return;const top=LG.items[0].id,nu=r.items.filter(x=>x.id>top);if(nu.length){LG.items=nu.concat(LG.items);lgDraw()}}catch(e){}}
+$('#lg-cat').onclick=e=>{const b=e.target.closest('[data-cat]');if(!b)return;LG.cat=b.dataset.cat;$$('#lg-cat [data-cat]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));LG.items=[];lgLoad()};
+$('#lg-role').onchange=e=>{LG.role=e.target.value;LG.items=[];lgLoad()};
+{let t;$('#lg-q').oninput=e=>{clearTimeout(t);t=setTimeout(()=>{LG.q=e.target.value.trim();LG.items=[];lgLoad()},350)}}
+$('#lg-more').onclick=()=>lgLoad(true);
+$('#lg-list').onclick=e=>{const b=e.target.closest('[data-lg]');if(!b)return;const id=+b.dataset.lg;LG.open.has(id)?LG.open.delete(id):LG.open.add(id);lgDraw()};
+setInterval(lgPoll,20000);
+adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});

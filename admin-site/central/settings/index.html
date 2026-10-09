@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="../hm-ui.css?v=32">
-<link rel="stylesheet" href="./settings.css?v=3">
+<link rel="stylesheet" href="./settings.css?v=5">
 <script src="../icons.js?v=6"></script>
 </head>
 <body>
@@ -81,12 +81,19 @@
         <li><b>LM Studio:</b> เปิด Local Server และติ๊ก Enable CORS</li>
         <li>ใช้จากเครื่องอื่นในวง LAN: ใส่ IP ของเครื่องที่รัน AI แทน localhost (ต้องเป็น https หรือเบราว์เซอร์อาจบล็อก)</li></ul></details>
     </section>
+    <section class="st-card st-log" id="log-card" hidden aria-labelledby="st-log"><h2 id="st-log"><i data-ic="clock"></i> ประวัติการเปลี่ยนแปลง <span class="st-tag">180 วัน</span></h2>
+      <p class="st-p">ทุกการแก้ไขในระบบ: ใคร ทำอะไร กับอะไร เมื่อไร · ไม่เก็บรหัสผ่าน · กดรายการเพื่อดูรายละเอียด</p>
+      <div class="lg-f"><div class="seg" id="lg-cat" role="group" aria-label="หมวด"><button type="button" data-cat="" aria-pressed="true">ทั้งหมด</button><button type="button" data-cat="case" aria-pressed="false">เคส</button><button type="button" data-cat="team" aria-pressed="false">ทีม</button><button type="button" data-cat="stock" aria-pressed="false">สต็อก</button><button type="button" data-cat="warroom" aria-pressed="false">War Room / บัญชี</button><button type="button" data-cat="chat" aria-pressed="false">แชท / ประกาศ</button><button type="button" data-cat="settings" aria-pressed="false">ตั้งค่า</button></div>
+        <div class="lg-f2"><select id="lg-role" aria-label="ผู้ทำรายการ"><option value="">ทุกคน</option><option value="central">CENTRAL</option><option value="warroom">War Room</option><option value="team">ทีม</option><option value="public">ประชาชน / ผู้สมัคร</option></select><input id="lg-q" type="search" placeholder="ค้นหา: รหัสเคส ชื่อทีม ชื่อคน" aria-label="ค้นหาประวัติ"></div></div>
+      <div id="lg-list" class="lg-list" aria-live="polite"></div>
+      <button type="button" class="btn ghost" id="lg-more" hidden>โหลดเพิ่ม</button>
+    </section>
   </main>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
-<script src="../common.js?v=2"></script>
+<script src="../common.js?v=3"></script>
 <script src="../localai.js?v=4"></script>
-<script src="./settings.js?v=5"></script>
+<script src="./settings.js?v=7"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=8"></script>
 <script src="../feedback.js?v=1"></script>

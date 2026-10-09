@@ -26,7 +26,7 @@ function toast(msg,ok){const t=document.createElement('div');t.className='toast'
 /* ---------- API ---------- */
 async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(API_URL+'?'+new URLSearchParams({...params,t:Date.now()}),{signal:ctl.signal,cache:'no-store'});return await r.json()}finally{clearTimeout(tm)}}
-async function post(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});return r.json()}
+async function post(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({by:store.get('uh_staff')||undefined,...body})});return r.json()}
 
 /* ---------- เข้าสู่ระบบ ---------- */
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}

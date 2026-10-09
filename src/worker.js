@@ -58,6 +58,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
+  `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT)`,
+  `CREATE INDEX IF NOT EXISTS audit_at ON audit(at)`,
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
   // รายงานภัยที่ศูนย์ปักหมุดเอง (หลุมยุบ ดินถล่ม น้ำป่า ฯลฯ ที่ไม่มีแหล่งข้อมูลอัตโนมัติ)
@@ -1004,6 +1006,62 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
+/* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
+   ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
+   ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
+const AUDIT_SKIP = new Set(['ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_TH = { update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+  lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
+  roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
+  team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
+  stock_item: 'แก้รายการสต็อก', stock_move: 'รับ/จ่ายสต็อก', chat_send: 'ส่งแชท', broadcast_save: 'ส่งประกาศ', broadcast_cancel: 'ยกเลิกประกาศ',
+  warroom_save: 'บันทึก War Room', warroom_link: 'สร้างลิงก์ War Room ใหม่', warroom_staff: 'แก้ทีมงาน War Room', wr_user_save: 'แก้บัญชีผู้ใช้ War Room',
+  wr_login: 'เข้าสู่ระบบ War Room', wr_logout: 'ออกจากระบบ War Room', app_apply: 'สมัครใช้งาน', app_login: 'ผู้สมัครเข้าสู่ระบบ', app_decide: 'อนุมัติ/ปฏิเสธใบสมัคร',
+  zone_save: 'บันทึกโซน', hazard_save: 'บันทึกจุดอันตราย', hazard_close: 'ปิดจุดอันตราย', hq_phone: 'ตั้งเบอร์ศูนย์', sms_cfg: 'ตั้งค่า SMS',
+  discord_save: 'ตั้งค่า Discord', discord_test: 'ทดสอบ Discord', feedback_save: 'ส่งความคิดเห็น', feedback_done: 'ปิดความคิดเห็น', backup_now: 'สำรองข้อมูล' };
+const AUDIT_CAT = a => /^(update|create|place|import_cases|covered_add|lead_)/.test(a) ? 'case' : /^(roster_save|team_|sos_ack|hq_call)/.test(a) ? 'team' : /^(stock_|bag_pack)/.test(a) ? 'stock'
+  : /^(warroom_|wr_|app_)/.test(a) ? 'warroom' : /^(chat_send|broadcast_)/.test(a) ? 'chat' : 'settings';
+const AUDIT_SECRET = /^(key|k|tk|password|pass|pw|newPassword|oldPassword|hash|salt|token|secret|webhook|url)$/i;
+function auditClean(v, d = 0) {
+  if (v == null || d > 3) return v == null ? v : '…';
+  if (Array.isArray(v)) return v.slice(0, 20).map(x => auditClean(x, d + 1));
+  if (typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v)) { if (k === 'action') continue; o[k] = AUDIT_SECRET.test(k) ? (x ? '•••' : x) : auditClean(x, d + 1); } return o; }
+  return typeof v === 'string' && v.length > 300 ? v.slice(0, 300) + '…' : v;
+}
+async function auditLog(env, st, res) {
+  let j = null; try { j = await res.json(); } catch (e) {}
+  if (!j || !j.ok || j.skipped) return;
+  const b = st.body, a = String(b.action || ''), db = env.DB;
+  let actor = '', role = '';
+  if (st.wrc) { role = 'warroom'; actor = `War Room ${st.wrc.name || st.wrc.id}` + (st.wrc.user ? ` · ${st.wrc.user.name || st.wrc.user.username}` : ' · ลิงก์หัวหน้า'); }
+  else if (b.tk || /^team_/.test(a)) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
+  else if (st.k0 && isVol(env, st.k0)) { role = 'central'; actor = 'CENTRAL' + (b.by ? ` · ${b.by}` : ''); }
+  else if (a === 'wr_login') { role = 'warroom'; actor = `War Room ${b.warroom || ''} · ${b.username || ''}`; }
+  else { role = 'public'; actor = a === 'wr_login' || a === 'app_login' ? 'ผู้ใช้ ' + (b.username || '') : a === 'app_apply' ? 'ผู้สมัคร ' + (b.username || b.name || '') : 'ผู้ใช้ทั่วไป'; }
+  const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
+  const bits = [];
+  if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + ({ open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
+    if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); }
+  else if (a === 'team_case') bits.push(b.step === 'done' ? 'แจ้งช่วยเหลือแล้ว' : b.step === 'arrived' ? 'ถึงจุดแล้ว' : b.step || '');
+  else if (a === 'team_status') bits.push('→ ' + b.status);
+  else if (a === 'stock_move') bits.push(`${b.type === 'out' ? 'จ่าย' : b.type === 'in' ? 'รับ' : b.type || ''} ${b.qty || ''}`.trim());
+  else if (a === 'chat_send') bits.push(String(b.text || '').slice(0, 80));
+  else if (a === 'app_decide') bits.push(b.approve ? 'อนุมัติ' : 'ปฏิเสธ');
+  else if (b.note) bits.push(String(b.note).slice(0, 80));
+  const summary = [AUDIT_TH[a] || a, tg ? (a === 'update' || a === 'team_case' ? '#' + tg : String(tg)) : '', bits.filter(Boolean).join(' · ')].filter(Boolean).join(' · ');
+  await db.prepare('INSERT INTO audit (at,action,cat,role,actor,target,summary,data,ip) VALUES (?,?,?,?,?,?,?,?,?)')
+    .bind(Date.now(), a, AUDIT_CAT(a), role, clean(actor, 120), clean(String(tg), 120), clean(summary, 400), JSON.stringify(auditClean(b)).slice(0, 3000), clean(st.ip, 60)).run();
+  if (Math.random() < 0.01) await db.prepare('DELETE FROM audit WHERE at<?').bind(Date.now() - 180 * 864e5).run();
+}
+async function auditList(db, p) {
+  const w = [], v = [], lim = clampInt(p.limit, 1, 200, 50);
+  if (p.cat && /^(case|team|stock|warroom|chat|settings)$/.test(p.cat)) { w.push('cat=?'); v.push(p.cat); }
+  if (p.role && /^(central|warroom|team|public)$/.test(p.role)) { w.push('role=?'); v.push(p.role); }
+  if (p.before) { w.push('id<?'); v.push(clampInt(p.before, 0, 1e12, 0)); }
+  if (p.q) { const q = '%' + clean(p.q, 60).replace(/[%_]/g, '') + '%'; w.push('(summary LIKE ? OR actor LIKE ? OR target LIKE ?)'); v.push(q, q, q); }
+  const { results } = await db.prepare(`SELECT id,at,action,cat,role,actor,target,summary,data FROM audit${w.length ? ' WHERE ' + w.join(' AND ') : ''} ORDER BY id DESC LIMIT ?`).bind(...v, lim).all();
+  return { ok: true, items: results, more: results.length === lim };
+}
 async function wrAuth(db, key) {
   const k = String(key || '');
   if (/^wr_[a-z0-9]{16,40}$/.test(k)) { const r = await db.prepare('SELECT id,name FROM warrooms WHERE active=1 AND token=?').bind(k.slice(3)).first(); return r ? { ...r, role: 'lead', via: 'link' } : null; }
@@ -2197,6 +2255,7 @@ async function api(request, env) {
         try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} let geo = null; try { geo = await geocodePass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo }); } catch (e) { return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120) }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
+      case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
@@ -2232,6 +2291,7 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
+    { const st = RQ.getStore(); if (st && b && typeof b === 'object') { st.body = b; st.k0 = String(b.key || ''); st.ip = request.headers.get('cf-connecting-ip') || ''; } }
     if (b.action === 'app_apply') return json(await appApply(db, b, request.headers.get('cf-connecting-ip') || ''));
     if ((b.action === 'app_login' || b.action === 'wr_login') && !await ipLimit(db, request.headers.get('cf-connecting-ip') || '', 'login')) return json({ ok: false, error: 'too_many' });
     if (b.action === 'app_login') return json(await appLogin(db, b));
@@ -2282,6 +2342,7 @@ async function handle(request, env, ctx) {
       let res;
       try { res = await api(request, env); }
       catch (e) { res = json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
+      { const st = RQ.getStore(); if (request.method === 'POST' && st && st.body && !AUDIT_SKIP.has(st.body.action)) { const p = auditLog(env, st, res.clone()).catch(() => {}); if (ctx && ctx.waitUntil) ctx.waitUntil(p); } }
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }

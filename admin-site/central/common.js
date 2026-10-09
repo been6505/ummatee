@@ -10,7 +10,7 @@ function ago(t){t=Number(t);if(!t)return '';const m=Math.round((Date.now()-t)/60
 function toast(msg,ok){const t=document.createElement('div');t.className='toast'+(ok?' ok':'');t.textContent=msg;$('#toasts').append(t);setTimeout(()=>t.remove(),4000)}
 async function apiGet(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),25000);
   try{const r=await fetch(API_URL+'?'+new URLSearchParams({...params,key:ADM.key,t:Date.now()}),{signal:ctl.signal,cache:'no-store'});return await r.json()}finally{clearTimeout(tm)}}
-async function apiPost(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...body,key:ADM.key})});const j=await r.json();
+async function apiPost(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({by:store.get('uh_staff')||undefined,...body,key:ADM.key})});const j=await r.json();
   if(j&&j.error==='not_volunteer'){logout('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');throw new Error('auth')}return j}
 function staffName(){let n=store.get('uh_staff')||store.get('uh_team');if(!n){n=(prompt('ชื่อผู้บันทึก (ใช้ระบุว่าใครแก้ข้อมูล)')||'').trim();if(n)store.set('uh_staff',n)}return n}
 function logout(msg){store.set('uh_vol_key','');store.set('uh_vol_ok','');ADM.key='';$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||''}

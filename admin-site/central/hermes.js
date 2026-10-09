@@ -218,11 +218,11 @@ const HERMES=(()=>{
       if(typeof LOCALAI!=='undefined'&&LOCALAI.on()){const go=()=>S.busy?setTimeout(go,600):ask('ตรวจแผนจัดเคสที่ระบบคำนวณ (อยู่ท้ายข้อมูล) ว่าเหมาะไหม มีจุดเสี่ยงอะไร ถ้าควรปรับให้เสนอ actions ใหม่ ถ้าดีแล้วตอบสั้น ๆ',{label:'ให้ AI HELP ตรวจแผน',plan:P});go()}}}
   /* ปุ่มสรุปในรายละเอียดเคส (หน้าจัดการเคส) */
   function drawerHook(){const dr=document.getElementById('drawer');if(!dr)return;
-    new MutationObserver(()=>{const sm=dr.querySelector('.d-head small');if(!sm||dr.querySelector('.hz-sum'))return;const b=document.createElement('button');b.type='button';b.className='hz-sum';b.innerHTML='✦ สรุปด้วย AI HELP';
-      b.onclick=()=>{S.focus=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);ask('สรุปเคสที่กำลังดู: สถานการณ์ ความเสี่ยง สิ่งที่ต้องเตรียม และเสนอทีมที่เหมาะ (ใส่ actions ถ้ามีทีมเหมาะ)',{label:'สรุปเคสนี้'})};sm.after(b);
-      const t=document.createElement('button');t.type='button';t.className='hz-sum';t.innerHTML='✦ หาทีมให้เคสนี้';t.onclick=async()=>{const id=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);add('หาทีมให้เคสนี้','hz-m u');
+    new MutationObserver(()=>{const sm=dr.querySelector('.d-head small');if(!sm||dr.querySelector('.hz-sum'))return;const b=document.createElement('button');b.type='button';b.className='hz-sum';b.innerHTML='<span aria-hidden="true">✦</span> สรุปด้วย AI';
+      b.onclick=()=>{S.focus=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);ask('สรุปเคสที่กำลังดู: สถานการณ์ ความเสี่ยง สิ่งที่ต้องเตรียม และเสนอทีมที่เหมาะ (ใส่ actions ถ้ามีทีมเหมาะ)',{label:'สรุปเคสนี้'})};const row=document.createElement('div');row.className='hz-row';row.append(b);sm.after(row);
+      const t=document.createElement('button');t.type='button';t.className='hz-sum';t.innerHTML='<span aria-hidden="true">✦</span> หาทีมให้เคสนี้';t.onclick=async()=>{const id=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);add('หาทีมให้เคสนี้','hz-m u');
         const d=await data(),c=d.cases.find(x=>String(x.id)===id);if(!c){note('ไม่พบเคสในข้อมูล');return}const T=teamsFor(d,c);if(!T.length){note('ไม่มีทีมที่ว่าง');return}
-        note('ทีมที่เหมาะ (เลือกแล้วกดยืนยัน)');actCard({type:'assign',team:T[0].t.name,choices:T.slice(0,6).map(x=>({name:x.t.name,why:x.why})),cases:[id],why:'เรียงจากใกล้ · ว่าง · พาหนะเหมาะ'},d)};b.after(t)}).observe(dr,{childList:true,subtree:true})}
+        note('ทีมที่เหมาะ (เลือกแล้วกดยืนยัน)');actCard({type:'assign',team:T[0].t.name,choices:T.slice(0,6).map(x=>({name:x.t.name,why:x.why})),cases:[id],why:'เรียงจากใกล้ · ว่าง · พาหนะเหมาะ'},d)};row.append(t)}).observe(dr,{childList:true,subtree:true})}
   /* ร่างคำตอบในแชท: คืนข้อความให้คนแก้แล้วกดส่งเอง */
   async function draft(team,msgs){if(typeof LOCALAI==='undefined'||!LOCALAI.on())throw new Error('ยังไม่ได้เปิด Local AI (หน้า ตั้งค่า)');
     const d=await data().catch(()=>null),t=d&&d.roster.find(x=>x.name===team),g=d?d.cases.filter(c=>c.status==='going'&&vol(c)===team):[];

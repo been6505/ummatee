@@ -294,8 +294,8 @@ function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos
     const rv=(W.roster||[]).find(x=>x.name===l.team),html=`<i>${headArrow(l,rv&&rv.vehicle)}</i><span>${esc(l.team)}${mv?` · ${Math.round(l.speed)} กม./ชม.`:''}</span>`,cls='wr-team'+(s?' sos':stale?' stale':'')+(mv?' mv':'');
     const tip=esc(`${l.team} · ${stale?'ตำแหน่งเมื่อ '+ago(l.updatedAt):'ออนไลน์'}${l.battery!=null?' · แบต '+l.battery+'%':''}${l.speed?' · '+Math.round(l.speed)+' กม./ชม.':''}`);
     let mk=W.tm.get(l.team);
-    if(!mk){mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:cls,html,iconSize:[16,16],iconAnchor:[8,8]}),keyboard:false}).bindTooltip(tip,{direction:'top',offset:[0,-8]}).addTo(W.lt);mk._k=cls+html;W.tm.set(l.team,mk)}
-    else{glideTo(mk,[l.lat,l.lng]);if(mk._k!==cls+html){mk._k=cls+html;mk.setIcon(L.divIcon({className:cls,html,iconSize:[16,16],iconAnchor:[8,8]}))}mk.setTooltipContent(tip)}
+    if(!mk){mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:cls,html,iconSize:[42,36],iconAnchor:[21,18]}),keyboard:false}).bindTooltip(tip,{direction:'top',offset:[0,-8]}).addTo(W.lt);mk._k=cls+html;W.tm.set(l.team,mk)}
+    else{glideTo(mk,[l.lat,l.lng]);if(mk._k!==cls+html){mk._k=cls+html;mk.setIcon(L.divIcon({className:cls,html,iconSize:[42,36],iconAnchor:[21,18]}))}mk.setTooltipContent(tip)}
     mk.setZIndexOffset(s?3000:2000)});
   for(const [k,mk] of W.tm)if(!seen.has(k)){mk.remove();W.tm.delete(k)}
   return pts}

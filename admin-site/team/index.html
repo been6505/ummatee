@@ -128,7 +128,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
 </style>
-<script src="../central/verify.js?v=14"></script>
+<script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=10"></script>
 <script src="./native-track.js?v=2"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
@@ -203,9 +203,9 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
     <div id="cases"></div>
     <p class="sec">ขอของจากศูนย์</p>
     <div class="box"><div class="chips" id="supplies"></div><input id="sup-note" maxlength="200" placeholder="จำนวน / หมายเหตุ เช่น ถุงยังชีพ 20 ถุง"><button class="btn blue" id="sup-send" type="button"><i data-ic="send"></i> ส่งคำขอ</button></div>
+    <p class="at-mini" id="at-mini" hidden></p>
     <p class="sec web-only">ตั้งค่า</p>
     <div class="box web-only">
-      <p class="at-mini" id="at-mini" hidden></p>
       <details class="bg-trk gm-first" id="gm-trk"><summary><i data-ic="live"></i> แชร์ลิงก์ Google Maps ให้ศูนย์ <small>(ไม่บังคับ · ศูนย์เปิดดูผ่านลิงก์)</small></summary>
         <p class="hint">ใช้ Google Maps ที่มีในมือถืออยู่แล้ว ศูนย์กดลิงก์ดูตำแหน่งสดของทีมได้ตลอด แม้ปิดหน้านี้หรือจอดับ</p>
         <ol class="trk-steps">

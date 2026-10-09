@@ -77,7 +77,7 @@ const VERIFY=(()=>{
   async function flushEnv(){const ks=[...F.envPending].slice(0,300);F.envPending.clear();if(!ks.length)return;const now=Date.now();ks.forEach(k=>F.envAsk.set(k,now));
     let key='';try{key=localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){}const ab=typeof VERIFY.authBody==='function'?VERIFY.authBody():VERIFY.authBody,auth=ab||(key?{key}:null);if(!auth)return;
     try{const r=await fetch((typeof API_URL!=='undefined'?API_URL:'/api'),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'env_check',...auth,points:ks.map(k=>{const [a,o]=k.split(',');return {lat:+a,lng:+o}})})}).then(x=>x.json());
-      if(r&&r.ok){F.gistda=!!r.gistda;Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat){const retry=r.gistda&&(!v.sat||v.sat.pending||v.sat.error);F.env.set(k,{...v,sat:v.sat&&!v.sat.pending?v.sat:undefined,_t:Date.now(),_retry:retry})}});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
+      if(r&&r.ok){F.gistda=!!r.gistda;Object.entries(r.points||{}).forEach(([k,v])=>{if(v.rain||v.sat){const old=F.env.get(k),tries=(old&&old._tries||0)+1,retry=r.gistda&&(!v.sat||v.sat.pending)&&tries<6;F.env.set(k,{...v,sat:v.sat&&!v.sat.pending&&!v.sat.error?v.sat:undefined,_t:Date.now(),_retry:retry,_tries:retry?tries:0})}});F.loaded=Date.now();if(typeof VERIFY.onUpdate==='function')VERIFY.onUpdate()}}catch(e){}}
   function nearestGauge(lat,lng){let g=null;F.gauges.forEach(x=>{const d=dist(lat,lng,x.lat,x.lng);if(d<=10000&&(!g||d<g.d))g={...x,d}});return g}
 
   /* ---------- ประเมิน ---------- */

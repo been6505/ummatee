@@ -263,9 +263,8 @@ async function aiChat(db, b) {
   if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
   const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
   if (!msgs.length) return { ok: false, error: 'empty' };
-  await withIntel(db, msgs);
-  let total = msgs.reduce((a, m) => a + m.content.length, 0);
-  while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
+  if (!WRC) await withIntel(db, msgs); // War Room ย่อย: ไม่ใส่ข้อมูลภาพรวมทั้งประเทศ (เห็นเฉพาะพื้นที่ตัวเอง)
+  trimMsgs(msgs);
   let err = '';
   for (const model of HERMES_MODELS) {
     try {
@@ -277,16 +276,22 @@ async function aiChat(db, b) {
   return { ok: false, error: 'ai_failed', detail: err };
 }
 function aiMsgs(b) {
-  const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
+  return (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
+}
+/* จำกัดขนาดคำถามรวม ~22k ตัวอักษร: ตัดประวัติสนทนาเก่าก่อน · ไม่ตัดข้อมูลเคส (ข้อความผู้ใช้ข้อแรก) และคำถามล่าสุด · เหลือเกินค่อยย่อข้อมูลภาพรวม */
+function trimMsgs(msgs, max = 22000) {
   let total = msgs.reduce((a, m) => a + m.content.length, 0);
-  while (total > 20000 && msgs.length > 2) { const i = msgs.findIndex((m, k) => k > 0 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
-  return msgs;
+  const first = msgs.findIndex(m => m.role === 'user');
+  while (total > max) { const i = msgs.findIndex((m, k) => k !== first && k < msgs.length - 1 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
+  if (total > max) { const n = msgs.find(m => m._intel); if (n) { const cut = Math.max(800, n.content.length - (total - max)); total -= n.content.length - cut; n.content = n.content.slice(0, cut); } }
+  msgs.forEach(m => { delete m._intel; });
 }
 async function aiStream(b, db) {
   if (!ENV || !ENV.AI) return null;
   const msgs = aiMsgs(b);
   if (!msgs.length) return null;
-  if (db) await withIntel(db, msgs);
+  if (db && !WRC) await withIntel(db, msgs);
+  trimMsgs(msgs);
   for (const model of HERMES_MODELS) {
     try {
       const st = await ENV.AI.run(model, { messages: msgs, stream: true, max_tokens: Math.min(Number(b.max_tokens) || 700, 1500), temperature: Math.min(Math.max(Number(b.temperature) || 0.3, 0), 1) });
@@ -301,7 +306,7 @@ async function aiStream(b, db) {
    AI HELP ได้สรุปสั้น (intelBrief) ต่อท้ายคำสั่งระบบทุกครั้งที่ถาม */
 async function intelUpsert(db, rows) {
   const now = Date.now(), st = rows.map(r => db.prepare(`INSERT INTO intel (kind,k,at,seen,title,body,level,src,province,lat,lng,val,data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    ON CONFLICT(kind,k) DO UPDATE SET seen=excluded.seen, at=excluded.at, title=excluded.title, body=excluded.body, level=excluded.level, val=excluded.val, data=excluded.data`)
+    ON CONFLICT(kind,k) DO UPDATE SET seen=excluded.seen, at=excluded.at, title=excluded.title, body=excluded.body, level=excluded.level, val=excluded.val, data=excluded.data, src=excluded.src, province=excluded.province, lat=excluded.lat, lng=excluded.lng`)
     .bind(r.kind, String(r.k).slice(0, 200), r.at || now, now, clean(r.title, 300), clean(r.body, 1500), r.level || '', r.src || '', r.province || '', r.lat ?? null, r.lng ?? null, r.val ?? null, r.data ? JSON.stringify(r.data).slice(0, 2000) : null));
   for (let i = 0; i < st.length; i += 80) await db.batch(st.slice(i, i + 80));
   return rows.length;
@@ -326,11 +331,15 @@ async function intelTick(env, db, force) {
   // 2.5) เขื่อน: เขื่อนใหญ่ทุกแห่ง + อ่างขนาดกลางที่เกิน 100%
   try { const dm = await damData(), lv = p => p >= 100 ? 'over' : p >= 80 ? 'high' : '';
     res.dam = await intelUpsert(db, [...dm.large, ...dm.medium.filter(x => x.pct >= 100)].map(x => ({ kind: 'dam', k: x.size + ':' + x.id, at: x.t, title: (x.size === 'large' ? 'เขื่อน' : '') + x.name, val: x.pct, level: lv(x.pct || 0) + (x.size === 'large' ? ',large' : ''), lat: x.lat, lng: x.lng, src: 'ThaiWater/' + (x.agency || 'ชป.'), data: { inflow: x.inflow, released: x.released, spilled: x.spilled, storage: x.storage, date: x.date } }))); } catch (e) { res.damErr = String(e.message || e).slice(0, 80); }
-  // 3) ดาวเทียม GISTDA: เคส Help Me + เคสในระบบที่ยังไม่เสร็จ (ไม่เกิน 40 ช่อง)
-  if (env.GISTDA_KEY) try {
+  // 3) ดาวเทียม GISTDA: เคส Help Me + เคสในระบบที่ยังไม่เสร็จ · ทุก 30 นาที ครั้งละไม่เกิน 20 ช่อง (วนช่องถัดไปรอบหน้า) กันเกินโควตาคำขอย่อยต่อครั้ง
+  const satLast = Number(await getMeta(db, 'intel_sat_at')) || 0;
+  if (env.GISTDA_KEY && (force || Date.now() - satLast >= 30 * 60e3)) try {
+    await setMeta(db, 'intel_sat_at', String(Date.now()));
     const { results: cs } = await db.prepare("SELECT id,province,district,COALESCE(lat,glat) lat,COALESCE(lng,glng) lng FROM cases WHERE status<>'done' AND COALESCE(hmStatus,'')<>'skip' AND COALESCE(dupOf,'')='' AND COALESCE(lat,glat) IS NOT NULL").all();
     const S = 0.04, gc = new Map(); cs.forEach(c => { if (!c.lat || !c.lng) return; const k = Math.floor(c.lng / S) + ',' + Math.floor(c.lat / S); if (!gc.has(k)) gc.set(k, []); gc.get(k).push(c); });
-    const rows = [], cells = [...gc].slice(0, 40);
+    const allCells = [...gc].sort((x, y) => x[0] < y[0] ? -1 : 1), off = (Number(await getMeta(db, 'intel_sat_off')) || 0) % Math.max(1, allCells.length);
+    const rows = [], cells = [...allCells.slice(off), ...allCells.slice(0, off)].slice(0, 20);
+    await setMeta(db, 'intel_sat_off', String(allCells.length > 20 ? off + 20 : 0));
     for (let i = 0; i < cells.length; i += 8) await Promise.all(cells.slice(i, i + 8).map(async ([k, list]) => { const [cx, cy] = k.split(',').map(Number);
       try { const feats = await gistdaCell(env, cx, cy);
         list.forEach(c => { let inside = false, best = Infinity, date = ''; for (const f of feats) { if (f.d > date) date = f.d; if (!inside && inGeom(c.lat, c.lng, f.g)) inside = true; const d = inside ? 0 : geomDist(c.lat, c.lng, f.g); if (d < best) best = d; }
@@ -355,7 +364,7 @@ async function intelBrief(db) {
       q('SELECT level,title,scope,provinces,districts FROM broadcasts WHERE cancelledAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
       q('SELECT type,note,level FROM hazard_reports WHERE closedAt IS NULL AND expiresAt>? ORDER BY createdAt DESC LIMIT 5', now).catch(() => []),
       getMeta(db, 'intel_at'),
-      q("SELECT title,val,level,data FROM intel WHERE kind='dam' AND seen>? AND (level LIKE 'over%' OR level LIKE 'high%') ORDER BY val DESC LIMIT 400", now - 2 * 864e5)]);
+      q("SELECT title,val,level,data FROM intel WHERE kind='dam' AND seen>? AND (level LIKE 'over%' OR level LIKE 'high%') ORDER BY val DESC LIMIT 400", now - 3 * 3600e3)]);
     const t = x => new Date(x).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const L = [];
     if (warn.length) L.push('ประกาศเตือนภัยกรมอุตุฯ ที่มีผลตอนนี้: ' + warn.map(w => w.title).join(' | '));
@@ -377,7 +386,7 @@ async function intelBrief(db) {
 }
 async function withIntel(db, msgs) {
   try { const b = await intelBrief(db); if (!b.text) return;
-    const note = { role: 'system', content: b.text.slice(0, 6000) + '\nใช้ข้อมูลนี้ประกอบการวิเคราะห์ (อ้างแหล่งที่มาเมื่อใช้ เช่น GISTDA, ThaiWater, กรมอุตุฯ) · ถ้าข้อมูลขัดกับรายงานผู้แจ้ง ให้บอกและแนะนำให้โทรยืนยัน' };
+    const note = { _intel: true, role: 'system', content: b.text.slice(0, 4000) + '\nใช้ข้อมูลนี้ประกอบการวิเคราะห์ (อ้างแหล่งที่มาเมื่อใช้ เช่น GISTDA, ThaiWater, กรมอุตุฯ) · ถ้าข้อมูลขัดกับรายงานผู้แจ้ง ให้บอกและแนะนำให้โทรยืนยัน' };
     const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
   } catch (e) {}
 }
@@ -1801,25 +1810,28 @@ async function apiCases(env) {
     const j = await r.json(); if (!j || !Array.isArray(j.cases)) throw new Error('hm_api_bad');
     const ST = { open: 'open', going: 'going', done: 'done', skip: 'skip' };
     return j.cases.filter(c => c && c.id).map(c => { const address = String(c.address || '').trim(), photos = Array.isArray(c.photos) ? c.photos : String(c.photos || '').match(/[-\w]{25,}/g) || [];
-      return { id: String(c.id), createdAt: Number(c.createdAt) || 0, updatedAt: Number(c.updatedAt) || Number(c.createdAt) || 0, status: ST[c.status] || HM_STATUS[c.status] || 'open',
-        urgency: Math.min(3, Math.max(1, Number(c.urgency) || 1)), name: String(c.name || ''), phone: String(c.phone || '').replace(/^'/, ''), notes: String(c.notes || c.details || ''),
-        people: Number(c.people) || 1, address, district: /^หมู่/.test(String(c.district || '')) ? '' : String(c.district || ''), addrDistrict: bkkDistrictOf(address),
-        lat: num(c.lat, -90, 90), lng: num(c.lng, -180, 180), approx: !!c.approx, level: HELPME_LEVEL[c.level] || String(c.level || ''),
+      // ค่าที่ไม่มี = null (ตอนรวมกับชีตจะไม่ทับค่าดี) · ความเร่งด่วนเป็นข้อความไทยก็ได้
+      const u = Number(c.urgency) || HM_URG[String(c.urgency || '').trim()] || null;
+      return { id: String(c.id), createdAt: Number(c.createdAt) || 0, updatedAt: Number(c.updatedAt) || Number(c.createdAt) || 0, status: ST[c.status] || HM_STATUS[c.status] || null,
+        urgency: u ? Math.min(3, Math.max(1, u)) : null, name: String(c.name || ''), phone: String(c.phone || '').replace(/^'/, ''), notes: String(c.notes || c.details || ''),
+        people: Number(c.people) || null, address, district: /^หมู่/.test(String(c.district || '')) ? '' : String(c.district || ''), addrDistrict: bkkDistrictOf(address),
+        lat: c.approx ? null : num(c.lat, -90, 90), lng: c.approx ? null : num(c.lng, -180, 180), approx: !!c.approx, // พิกัดโดยประมาณ (ข้อมูลสาธารณะ) ไม่ใช้เป็นหมุดจริง level: HELPME_LEVEL[c.level] || String(c.level || ''),
         needs: Array.isArray(c.needs) ? c.needs : String(c.needs || '').split(/\s*,\s*/).filter(Boolean), volunteer: String(c.volunteer || ''), org: String(c.org || ''), pinSrc: '',
         pickedAt: Number(c.pickedAt) || 0, doneAt: Number(c.doneAt) || 0, photos }; });
   } finally { clearTimeout(tm); }
 }
 /* รวมสองแหล่ง: ระบบปัจจุบัน (สถานะ/เคสใหม่ล่าสุด) + ชีตเดิม (ชื่อ เบอร์ ที่อยู่ รูป พิกัดจริง ของเคสเก่า) · ไม่เข้าเกณฑ์ (skip) ไม่นำเข้า */
 async function helpmeAllCases(env) {
-  const [sh, api] = await Promise.all([sheetCases(env).catch(() => []), apiCases(env).catch(() => [])]);
-  if (!api.length) return sh.filter(c => c.status !== 'skip');
+  // ต้องได้ทั้งสองแหล่ง: แหล่งใดล่ม = ยกเลิกรอบนี้ (ไม่เขียนข้อมูลครึ่งเดียวทับของดี)
+  const [sh, api] = await Promise.all([sheetCases(env), apiCases(env)]);
+  if (!api.length) throw new Error('hm_api_empty');
   const byId = new Map(sh.map(c => [String(c.id), c])), out = [], skip = [];
   for (const a of api) {
     const o = byId.get(a.id); byId.delete(a.id);
     if (a.status === 'skip') { skip.push(a.id); continue; }
-    if (!o) { out.push(a); continue; }
+    if (!o) { out.push({ ...a, status: a.status || 'open', urgency: a.urgency || 1, people: a.people || 1 }); continue; }
     const newer = (a.updatedAt || 0) >= (o.updatedAt || 0), m = { ...o };
-    if (newer) Object.assign(m, { status: a.status, urgency: a.urgency, updatedAt: a.updatedAt, volunteer: a.volunteer || o.volunteer, org: a.org || o.org, pickedAt: a.pickedAt || o.pickedAt, doneAt: a.doneAt || o.doneAt, people: a.people || o.people, needs: a.needs.length ? a.needs : o.needs, level: a.level || o.level });
+    if (newer) Object.assign(m, { status: a.status || o.status, urgency: a.urgency || o.urgency, updatedAt: a.updatedAt, volunteer: a.volunteer || o.volunteer, org: a.org || o.org, pickedAt: a.pickedAt || o.pickedAt, doneAt: a.doneAt || o.doneAt, people: a.people || o.people, needs: a.needs.length ? a.needs : o.needs, level: a.level || o.level });
     for (const k of ['name', 'phone', 'notes', 'address']) if (!m[k] && a[k]) m[k] = a[k];
     if (!(m.photos || []).length && a.photos.length) m.photos = a.photos;
     if ((m.lat == null || m.lng == null) && a.lat != null && !a.approx) { m.lat = a.lat; m.lng = a.lng; }
@@ -2236,7 +2248,9 @@ async function syncHelpme(env, db, force) {
     const src = await helpmeAllCases(env);
     // Help Me ตัดสินว่า "ไม่เข้าเกณฑ์": ซ่อนจากรายการของเรา (ไม่ลบ · ทำเครื่องหมาย hmStatus='skip')
     const skipIds = src.skipIds || [];
-    for (let i = 0; i < skipIds.length; i += 90) { const part = skipIds.slice(i, i + 90); await db.prepare(`UPDATE cases SET hmStatus='skip' WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' AND id IN (${part.map(() => '?').join(',')})`).bind(...part).run(); }
+    let skipped = 0; // ไม่ซ่อนเคสที่ศูนย์กำลังทำอยู่ (มีทีมรับไปแล้ว) · ล้าง hmHash ให้เคสกลับมาได้เมื่อ Help Me เปลี่ยนใจ
+    for (let i = 0; i < skipIds.length; i += 90) { const part = skipIds.slice(i, i + 90); const w = await db.prepare(`UPDATE cases SET hmStatus='skip', hmHash=NULL WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' AND NOT (status='going' AND localAt IS NOT NULL) AND id IN (${part.map(() => '?').join(',')})`).bind(...part).run(); skipped += w.meta.changes || 0; }
+    if (skipped) await bumpRev(db);
     const cases = src.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
     await fillDistricts(db, cases); await checkPins(db, cases); await fillProvinces(db, cases);
     const known = new Map(), ids = cases.map(c => String(c.id));
@@ -2318,7 +2332,7 @@ async function helpmeCases(env, db) {
   // ยังไม่เคยซิงก์ → ซิงก์ก่อนตอบ · ซิงก์ล่าสุดเกิน 3 นาที (cron มีปัญหา) → ซิงก์เบื้องหลังแล้วตอบเลย
   let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
-  if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' ORDER BY createdAt").all()); }
+  if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all()); }
   else if (Date.now() - last > 180e3 && CTX && CTX.waitUntil) CTX.waitUntil(syncHelpme(env, db).catch(() => {}));
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,

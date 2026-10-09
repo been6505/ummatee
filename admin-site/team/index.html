@@ -127,6 +127,47 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .row{display:flex;gap:40px;justify-content:center}.ring .row button{width:72px;height:72px;border-radius:50%;border:0;color:#fff;cursor:pointer;display:grid;place-items:center}.ring .row .ic{width:30px;height:30px}
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:40;background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
+/* ---------- หน้าแรกแบบ helpme4u.com: แผนที่เต็มจอ · โลโก้แคปซูล · ปุ่มกลม · แผ่นล่าง · เมนูลอย ---------- */
+:root{--primary:#C8102E;--hm-red:#C8102E;--hm-red2:#A50D25}
+body{font-family:"IBM Plex Sans Thai",var(--font)}
+.top{background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;gap:8px!important;padding:calc(var(--sat) + 10px) 12px 8px!important}
+body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
+.brandpill{display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:8px 14px 8px 14px;box-shadow:0 6px 18px rgba(22,27,61,.14);min-width:0;flex:1;max-width:max-content}
+.brandpill img{height:16px;width:auto;flex:none}.brandpill .who{min-width:0;border-left:1px solid var(--line);padding-left:8px}
+.brandpill .who b{font-size:13.5px!important;line-height:1.2}.brandpill .who small{font-size:11px!important;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.top .st{margin-left:auto;border-radius:999px!important;box-shadow:0 6px 18px rgba(22,27,61,.12)}
+.rbtn{position:relative;width:46px;height:46px;flex:none;border-radius:50%;border:0;background:#fff;color:var(--hm-red);display:grid;place-items:center;box-shadow:0 6px 18px rgba(22,27,61,.14);cursor:pointer}
+.rbtn .ic{width:22px;height:22px}.rbtn .badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--hm-red);color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;padding:0 5px;border:2px solid #fff}
+.home{position:fixed;inset:0;z-index:1}
+.hmap{position:absolute;inset:0;background:#e9edf2}
+.hmap-btns{position:absolute;right:12px;top:calc(var(--sat) + 74px);z-index:500;display:grid;gap:10px}
+.hmap-btns .rbtn{border-radius:16px;color:var(--ink)}
+.hsheet{position:absolute;left:10px;right:10px;bottom:calc(var(--sab) + 86px);z-index:500;background:rgba(255,255,255,.97);border-radius:26px;box-shadow:0 10px 34px rgba(22,27,61,.2);padding:16px;display:grid;gap:12px;max-height:56vh;overflow:auto}
+.hs-big{display:flex;align-items:center;justify-content:center;gap:10px;min-height:62px;border:0;border-radius:999px;background:linear-gradient(180deg,#D7263D,var(--hm-red2));color:#fff;font:inherit;font-size:19px;font-weight:800;text-decoration:none;box-shadow:0 10px 22px rgba(200,16,46,.32);cursor:pointer}
+.hs-big .ic{width:24px;height:24px}.hs-big.idle{background:#EEF0F4;color:var(--muted);box-shadow:none;font-size:16px}
+.hs-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hs-pill{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:999px;border:1.5px solid #E2A3AC;background:#fff;color:var(--hm-red);font:inherit;font-weight:700;font-size:15.5px;text-decoration:none;cursor:pointer}
+.hs-pill.gray{border-color:var(--line);background:#F4F5F8;color:var(--ink)}
+.hs-case{display:grid;gap:2px}.hs-case b{font-size:16px}.hs-case small{color:var(--muted);font-size:13.5px}
+.hs-case .tag{justify-self:start}
+.hs-h{font-weight:700;font-size:15px;margin:2px 2px 0}
+.hs-layers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.hs-layers button{border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);display:grid;justify-items:center;gap:6px;cursor:pointer;padding:0}
+.hs-layers i{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#E6E8EE;color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+.hs-layers i .ic{width:24px;height:24px}
+.hs-layers button[aria-pressed=false] i{background:#E6E8EE!important;color:#9AA1B9}
+.hs-layers button[aria-pressed=false]{color:var(--muted)}
+/* เมนูล่างลอยแบบ helpme4u */
+nav.tabs{display:grid!important;grid-template-columns:repeat(4,1fr)!important;height:auto!important}
+nav.tabs button{min-height:56px}
+nav.tabs{left:10px!important;right:10px!important;bottom:calc(var(--sab) + 10px)!important;border-radius:999px!important;background:rgba(255,255,255,.94)!important;box-shadow:0 10px 30px rgba(22,27,61,.18)!important;border:0!important;padding:6px!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+nav.tabs button{border-radius:999px!important;color:var(--muted)!important}
+nav.tabs button[aria-selected=true]{background:#FCE8EB!important;color:var(--hm-red)!important}
+body.on-home .sos{bottom:calc(var(--sab) + 92px + var(--hs-h,240px))!important}
+body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left:12px;right:12px;top:calc(var(--sat) + 70px);z-index:550;border-radius:14px}
+.me-dot{width:18px;height:18px;border-radius:50%;background:#2D6BFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(45,107,255,.22)}
+.cs-pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+.cs-pin.u3{background:#E5383B}.cs-pin.u2{background:#F08A00}.cs-pin.u1{background:#2D45C8}.cs-pin.done{background:#2E9E57}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=10"></script>
@@ -143,7 +184,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 <!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
 <div class="qrs" id="qrs" hidden><video id="qrs-v" playsinline muted autoplay></video><div class="qrs-frame"></div><p class="qrs-tip">ส่องกล้องไปที่ QR โค้ดลิงก์ทีม<br><small style="font-weight:400;opacity:.8">ขอจากศูนย์ (หน้าทีม → ลิงก์ทีม)</small></p><button type="button" class="qrs-x" id="qrs-x">ปิด</button></div>
 <section class="card" id="login" hidden>
-  <img src="../assets/helpme-logo.png" alt="Helpme+" width="200" height="29">
+  <img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="182" height="29">
   <h1>หน้าทีม · Helpme+</h1>
   <p>สแกน QR หรือวางลิงก์ทีมที่ศูนย์ส่งให้</p>
   <button type="button" class="qr-btn" id="qr-go"><i data-ic="qr"></i> สแกน QR โค้ดทีม</button>
@@ -173,13 +214,19 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 </section>
 
 <div id="app" hidden>
-  <header class="top"><img src="../assets/hm-icon-192.png" alt="" width="30" height="30" style="border-radius:8px"><div class="who"><b id="tname"></b><small id="tsub"></small></div>
-    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกงาน</option><option value="rest">พัก</option></select></header>
+  <header class="top"><div class="brandpill"><img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="113" height="18"><div class="who"><b id="tname"></b><small id="tsub"></small></div></div>
+    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกงาน</option><option value="rest">พัก</option></select>
+    <button type="button" class="rbtn" id="bell" aria-label="แชทจากศูนย์"><i data-ic="chat"></i><b class="badge" id="b-bell" hidden></b></button></header>
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
   <p class="obar" id="obar" hidden role="status"></p>
-  <main id="v-work">
+  <section id="v-home" class="home" aria-label="หน้าแรก · แผนที่">
+    <div id="hmap" class="hmap"></div>
+    <div class="hmap-btns"><button type="button" class="rbtn" id="h-me" aria-label="ไปที่ตำแหน่งของฉัน"><i data-ic="locate"></i></button></div>
+    <div class="hsheet" id="hsheet"></div>
+  </section>
+  <main id="v-work" hidden>
     <section class="at-hero" id="at-hero" hidden aria-label="ติดตามตำแหน่งอัตโนมัติ">
       <div class="gm-h"><span class="gm-ic at-ic" aria-hidden="true"><i data-ic="gps"></i></span><div><b>ให้ศูนย์เห็นตำแหน่งตลอด แบบอัตโนมัติ</b><small>ติดตั้งแอปฟรีครั้งเดียว กดตั้งค่าปุ่มเดียว แล้วไม่ต้องทำอะไรอีก · ส่งตำแหน่งเองแม้ล็อกจอหรือปิดหน้านี้ · ไม่ต้องแชร์ลิงก์ Google Maps</small></div></div>
       <ol class="gm-steps">
@@ -252,7 +299,7 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
     <p class="hint" id="c-none" hidden>ศูนย์ยังไม่ได้ตั้งเบอร์โทร · ใช้โทรผ่านเน็ตแทน</p>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="work" aria-selected="true"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -261,7 +308,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const st={get:k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},set:(k,v)=>{try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}};
 const qs=new URLSearchParams(location.search);
-const S={tk:(qs.get('id')||'').replace(/[^a-z0-9]/g,''),key:'',team:'',name:'',me:null,msgs:[],lastN:0,seenN:+st.get('uh_tm_seen')||0,view:'work',sup:new Set(),handledCall:+st.get('uh_tm_call')||0};
+const S={tk:(qs.get('id')||'').replace(/[^a-z0-9]/g,''),key:'',team:'',name:'',me:null,msgs:[],lastN:0,seenN:+st.get('uh_tm_seen')||0,view:'home',sup:new Set(),handledCall:+st.get('uh_tm_call')||0};
 if(S.tk){st.set('uh_tm_tk',S.tk)}else{S.tk=st.get('uh_tm_tk');S.key=st.get('uh_vol_key');S.team=st.get('uh_chat_team')||qs.get('t')||''}
 S.name=st.get('uh_chat_name');
 const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
@@ -306,7 +353,7 @@ async function boot(){
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
   }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return} // ไม่มีเน็ต: ใช้ข้อมูลล่าสุดที่เก็บไว้
     if(S.me){S.offline=true;obUI();setTimeout(boot,15000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
-function start(){screen('#app');if(TR.want)track(true);render();pollChat(true);refresh();
+function start(){screen('#app');if(TR.want)track(true);go(S.view||'home');render();pollChat(true);refresh();
   clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
   st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
@@ -438,7 +485,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wa
 /* ---------- หน้างาน ---------- */
 /* ระดับเคสคำนวณแบบเดียวกับ CENTRAL (ข้อมูลที่ผู้แจ้งกรอก + ฝน/ดาวเทียม/น้ำท่วม/กล้อง) */
 if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
-function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
+function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();if(S.view==='home'||!S.view)HOME.draw();
   $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
   const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
@@ -477,7 +524,44 @@ $('#sup-send').onclick=async()=>{const items=[...S.sup],note=$('#sup-note').valu
   await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast(OB.get().length?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'ส่งคำขอแล้ว')};
 
 /* ---------- แท็บ ---------- */
-function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);
+/* ---------- หน้าแรก: แผนที่เต็มจอ + เคสของทีม + ตำแหน่งฉัน + ชั้นข้อมูล (ถนนน้ำท่วม · เรดาร์ฝน · กล้อง CCTV) ---------- */
+const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:false,radar:false,cctv:false},fit:false};
+  const LAY=[['cases','เคสของทีม','pin','#7C4DFF'],['roads','ถนนน้ำท่วม','drop','#E0533A'],['radar','เรดาร์ฝน','rain','#3B82F6'],['cctv','กล้อง CCTV','cam','#111827']];
+  const leaf=()=>window.L?Promise.resolve():new Promise((res,rej)=>{const c=document.createElement('link');c.rel='stylesheet';c.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.append(c);const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=res;s.onerror=rej;document.head.append(s)});
+  async function init(){if(H.map)return;try{await leaf()}catch(e){$('#hmap').innerHTML='<p class="hint" style="padding:120px 20px">โหลดแผนที่ไม่ได้ (ไม่มีเน็ต) · ดูงานได้ที่เมนู "งาน"</p>';return}
+    H.map=L.map('hmap',{zoomControl:false,attributionControl:false}).setView([13.75,100.55],11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(H.map);
+    H.cases=L.layerGroup().addTo(H.map);$('#h-me').onclick=()=>{const p=TR.pos;if(p)H.map.setView([p.lat,p.lng],15);else toast('ยังหาตำแหน่งไม่ได้')};draw()}
+  function draw(){if(!H.map)return;const p=TR.pos;
+    if(p){if(!H.me)H.me=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(H.map);else H.me.setLatLng([p.lat,p.lng])}
+    H.cases.clearLayers();const cs=((S.me&&S.me.cases)||[]).filter(hasPin);
+    if(H.on.cases)cs.forEach(c=>{const s=sev(c),done=c.status==='done';L.marker([+c.lat,+c.lng],{icon:L.divIcon({className:'',html:`<div class="cs-pin ${done?'done':'u'+s}"></div>`,iconSize:[30,30],iconAnchor:[15,30]})}).bindPopup(`<b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><br>${esc(c.people||1)} คน · ${esc(URG[s])}<br><small>${esc([c.address,c.district].filter(Boolean).join(' · '))}</small>`).addTo(H.cases)});
+    if(!H.fit){const pts=[...cs.map(c=>[+c.lat,+c.lng]),...(p?[[p.lat,p.lng]]:[])];if(pts.length){H.map.fitBounds(pts,{padding:[60,60],maxZoom:15});H.fit=true}}
+    sheet()}
+  async function layer(k,on){H.on[k]=on;if(k==='cases'){draw();return}
+    if(!on){if(H.L[k]){H.map.removeLayer(H.L[k])}return}
+    if(H.L[k]){H.L[k].addTo(H.map);return}
+    try{if(k==='roads'){const g=await fetch('https://www.floodboard.org/api/export/roads.geojson').then(r=>r.json());H.L[k]=L.geoJSON(g,{style:f=>({color:(f.properties||{}).closedAll||(f.properties||{}).depthCm>=30?'#E5383B':'#F59E0B',weight:5,opacity:.85})}).addTo(H.map)}
+      if(k==='radar'){const j=await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r=>r.json()),fr=(j.radar&&j.radar.past||[]).slice(-1)[0];if(fr)H.L[k]=L.tileLayer(j.host+fr.path+'/256/{z}/{x}/{y}/2/1_1.png',{opacity:.6}).addTo(H.map)}
+      if(k==='cctv'){const j=await fetch('../api?action=cctv').then(r=>r.json()),g=L.layerGroup();(j.cams||[]).forEach(c=>{if(!c.lat)return;L.circleMarker([c.lat,c.lng],{radius:5,color:'#fff',weight:2,fillColor:'#111827',fillOpacity:1}).bindPopup(`<b>${esc(c.title)}</b>${c.img?`<br><img src="${esc(c.img)}" style="width:220px;border-radius:8px;margin-top:6px">`:c.hls?'<br><a href="'+esc(c.hls)+'" target="_blank" rel="noopener">ดูภาพสด ↗</a>':''}`).addTo(g)});H.L[k]=g.addTo(H.map)}}
+    catch(e){toast('โหลดชั้นข้อมูลไม่ได้ (ต้องใช้เน็ต)');H.on[k]=false;sheet()}}
+  function sheet(){const el=$('#hsheet');if(!el)return;const cs=((S.me&&S.me.cases)||[]).filter(c=>c.status==='going'),c=cs[0];
+    let top;
+    if(c){const s=sev(c),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' '),p=tel(c.phone),rep=!!c.teamDoneAt;
+      top=`<div class="hs-case"><span class="tag u${s}">${URG[s]}${cs.length>1?` · งานถัดไป 1/${cs.length}`:''}</span><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน</b><small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</small>${c.hqNote?`<small style="color:#7a4300">ศูนย์: ${esc(c.hqNote)}</small>`:''}</div>
+      ${dest?`<a class="hs-big" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทางไปเคสนี้</a>`:''}
+      <div class="hs-row">${p.length>=9?`<a class="hs-pill" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:`<button class="hs-pill" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`}
+        ${rep?'<button class="hs-pill gray" type="button" disabled>รอศูนย์ปิดเคส</button>':`<button class="hs-pill gray" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}
+    else top=`<button class="hs-big idle" type="button" data-go="work"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>
+      <div class="hs-row"><button class="hs-pill" type="button" data-go="call"><i data-ic="phone"></i> โทรศูนย์</button><button class="hs-pill gray" type="button" data-go="chat"><i data-ic="chat"></i> แชทศูนย์</button></div>`;
+    el.innerHTML=top+`<p class="hs-h">ชั้นข้อมูลบนแผนที่</p><div class="hs-layers">${LAY.map(([k,t,ico,col])=>`<button type="button" data-hl="${k}" aria-pressed="${!!H.on[k]}"><i style="background:${col}">${typeof ic==='function'?ic(ico):''}</i>${t}</button>`).join('')}</div>`;
+    if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});
+    document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}
+    const g=e.target.closest('#hsheet [data-go]');if(g)go(g.dataset.go)});
+  return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);draw()})},draw}})();
+$('#bell')&&($('#bell').onclick=()=>go('chat'));
+function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');if(v==='home')HOME.show();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
 /* ---------- แชท ---------- */
@@ -492,7 +576,7 @@ async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)r
     if(!first&&fresh.length){buzz([150,80,150]);tone()}
     const call=msgs.filter(m=>m.kind==='call'&&m.sender==='hq'&&m.n>S.handledCall&&Date.now()-m.at<90000).pop();if(call)ring(call);
     const changed=last!==S.lastN||msgs.some((m,i)=>S.msgs[i]&&m.readHq!==S.msgs[i].readHq);S.lastN=last;S.msgs=msgs;
-    const unread=msgs.filter(m=>m.sender==='hq'&&!m.readTeam).length,b=$('#b-chat');b.hidden=!unread||S.view==='chat';b.textContent=unread;
+    const unread=msgs.filter(m=>m.sender==='hq'&&!m.readTeam).length,b=$('#b-chat');b.hidden=!unread||S.view==='chat';b.textContent=unread;const bb=$('#b-bell');if(bb){bb.hidden=!unread||S.view==='chat';bb.textContent=unread}
     document.title=(unread&&document.hidden?'('+unread+') ':'')+(S.team||'ทีม')+' · Helpme+';
     if(S.view==='chat'){if(changed||first)drawChat(first);if(unread&&!document.hidden)markRead()}}catch(e){}}
 function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam))post({action:'chat_read'}).catch(()=>{})}

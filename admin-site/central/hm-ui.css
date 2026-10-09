@@ -447,3 +447,7 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .trk-pin.mv i::after,.wr-team.mv i::after{animation:vehpulse 1.4s ease-out infinite}
 @keyframes vehpulse{0%{box-shadow:0 0 0 0 rgba(46,158,87,.6)}100%{box-shadow:0 0 0 8px rgba(46,158,87,0)}}
 .trk-pin .hd,.wr-team .hd{display:none!important}
+/* โลโก้ HELP ME 4U + CENTRAL (ทุกขนาดจอ) */
+.brand span{display:inline-flex!important;align-items:center;gap:2px;white-space:nowrap}
+.brand span b{font-weight:800;letter-spacing:.02em}
+@media (max-width:760px){.brand img.brand-logo{height:17px!important}.brand span{font-size:12.5px!important}.brand-plus{font-size:16px!important}.brand{gap:6px!important}}

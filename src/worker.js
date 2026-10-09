@@ -1803,7 +1803,7 @@ const HELPME_API2 = 'https://script.google.com/macros/s/AKfycbwxY1eDJnkqCInUCv9b
 /* รายการเคสจากระบบ Help Me ตัวปัจจุบัน → รูปแบบเดียวกับ sheetCases · มี HELPME_KEY = ได้ชื่อ/เบอร์/ที่อยู่/พิกัดจริง · ไม่มี = ข้อมูลสาธารณะ (พิกัดโดยประมาณ) */
 async function apiCases(env) {
   const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) }); if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
-  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 25000);
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 55000); // Apps Script แบบมีรหัสตอบช้า 15–40 วิ
   try {
     const r = await fetch((env.HELPME_API2 || HELPME_API2) + '?' + q, { headers: UA, redirect: 'follow', signal: ctl.signal });
     if (!r.ok) throw new Error('hm_api_' + r.status);

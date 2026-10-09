@@ -2,7 +2,9 @@
 const API_URL='/api';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',done:'ช่วยเหลือแล้ว'};
+const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',helped:'ช่วยเหลือแล้ว',done:'ปิดเคส'};
+/* "ช่วยเหลือแล้ว" = ทีมกำลังไป + ทีม/ศูนย์แจ้งว่าช่วยแล้ว (รอศูนย์ปิดเคส) · "ปิดเคส" = status done */
+const stOf=c=>c.status==='going'&&c.teamDoneAt?'helped':c.status;
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน / เครื่องช่วยหายใจ',dialysis:'ผู้ป่วยฟอกไต',chronic:'ผู้ป่วยโรคเรื้อรัง'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / หลังคา'};
@@ -88,7 +90,7 @@ function filtered(){
   return A.cases.filter(c=>{
     if(q){const h=hay(c);const ok=q.split(/\s+/).every(t=>{if(h.includes(t))return true;const d=digits(t);return /^[\d+\-\s]+$/.test(t)&&d.length>=3&&digits(c.phone).includes(d)});if(!ok)return false}
     if(st==='active'&&c.status==='done')return false;
-    if(['open','going','done'].includes(st)&&c.status!==st)return false;
+    if(st==='helped'){if(stOf(c)!=='helped')return false}else if(['open','going','done'].includes(st)&&c.status!==st)return false;
     if(u&&String(sev(c))!==u)return false;
     if(nd&&!(c.needs||[]).join(' ').includes(nd))return false;
     const fv=$('#f-vr').value;if(fv==='verified'){if(!VR_OK.has(vr(c).result.k))return false}else if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
@@ -154,7 +156,7 @@ function render(){
   const ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   // การ์ดตัวเลขกดได้: ตั้งตัวกรองรายการเคสตามการ์ดนั้น (กดซ้ำ = กลับเป็นค่าเริ่มต้น)
   const cur=statKey();
-  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ช่วยเหลือแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);
@@ -171,7 +173,7 @@ function renderList(list){
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}" title="ระดับที่ระบบตัดสินจากข้อมูลผู้แจ้ง + ข้อมูลระบบ">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
-      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(c.status)}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}</select>`}${c.status==='going'&&c.teamDoneAt?'<small class="td-tag">ทีมแจ้งช่วยแล้ว · รอปิดเคส</small>':''}</td>
+      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(stOf(c))}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${stOf(c)===k?'selected':''}>${v}</option>`).join('')}</select>`}${c.status==='going'&&c.teamDoneAt?'<small class="td-tag">ทีมแจ้งช่วยแล้ว · รอปิดเคส</small>':''}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
       <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
@@ -202,13 +204,16 @@ async function saveBags(id,val,inp){
 /* ---------- เปลี่ยนสถานะ ---------- */
 async function changeStatus(id,status,sel,team){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
-  if(status===c.status&&!team)return;
+  if(status===stOf(c)&&!team)return;
+  // ช่วยเหลือแล้ว = ยังเป็นทีมกำลังไป + ทำเครื่องหมายช่วยแล้ว (รอปิดเคส) · กลับเป็นทีมกำลังไป = ล้างเครื่องหมาย
+  const helped=status==='helped'?true:(status==='going'&&c.teamDoneAt?false:undefined);
+  if(status==='helped'){status='going';if(!team&&c.volunteer)team=String(c.volunteer).replace(/^'/,'')}
   if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
   if(team)store.set('uh_team',team,true);
-  const prev={status:c.status,volunteer:c.volunteer};c.status=status;if(status==='open')c.volunteer='';else if(team)c.volunteer=team;render();
-  try{const r=await post({action:'update',key:A.key,id:apiId(id),status,volunteer:team||c.volunteer||''});
+  const prev={status:c.status,volunteer:c.volunteer,teamDoneAt:c.teamDoneAt};c.status=status;if(status==='open')c.volunteer='';else if(team)c.volunteer=team;if(helped!==undefined)c.teamDoneAt=helped?Date.now():null;if(status==='open')c.teamDoneAt=null;render();
+  try{const r=await post({action:'update',key:A.key,id:apiId(id),status,volunteer:team||c.volunteer||'',...(helped!==undefined?{helped}:{})});
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
-    toast(`เคส #${id} → ${ST[status]}`,true)}
+    toast(`เคส #${id} → ${ST[stOf(c)]}`,true)}
   catch(e){Object.assign(c,prev);render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
 }
 

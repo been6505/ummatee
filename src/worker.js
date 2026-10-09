@@ -394,6 +394,8 @@ async function updateCase(db, b) {
     // มอบใหม่ (เปลี่ยนทีม/คืนเป็นรอ) = ล้างที่ทีมเคยแจ้งว่าช่วยแล้ว
     const vol = clean(b.volunteer, MAX.volunteer), prevVol = String(r.volunteer || '').replace(/^'/, '').trim();
     if (b.status === 'open' || (b.status === 'going' && vol && vol !== prevVol)) sets.push('teamDoneAt=NULL', "teamNote=''");
+    else if (b.status === 'going' && b.helped === true) { if (!r.teamDoneAt) { sets.push('teamDoneAt=?'); vals.push(Date.now()); } }
+    else if (b.status === 'going' && b.helped === false) sets.push('teamDoneAt=NULL');
     if (b.status === 'open') sets.push("volunteer=''");
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }
@@ -1041,7 +1043,7 @@ async function auditLog(env, st, res) {
   else { role = 'public'; actor = a === 'wr_login' || a === 'app_login' ? 'ผู้ใช้ ' + (b.username || '') : a === 'app_apply' ? 'ผู้สมัคร ' + (b.username || b.name || '') : 'ผู้ใช้ทั่วไป'; }
   const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
   const bits = [];
-  if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + ({ open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
+  if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + (b.helped === true ? 'ช่วยเหลือแล้ว' : b.helped === false ? 'ทีมกำลังไป' : { open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
     if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); }
   else if (a === 'team_case') bits.push(b.step === 'done' ? 'แจ้งช่วยเหลือแล้ว' : b.step === 'arrived' ? 'ถึงจุดแล้ว' : b.step || '');
   else if (a === 'team_status') bits.push('→ ' + b.status);

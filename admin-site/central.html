@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./admin.css?v=17">
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
-<link rel="stylesheet" href="./central/hm-ui.css?v=32">
+<link rel="stylesheet" href="./central/hm-ui.css?v=33">
 <script src="./central/icons.js?v=6"></script>
 </head>
 <body>
@@ -53,7 +53,7 @@
       <div class="bar-top"><label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหา: ชื่อ เบอร์ ที่อยู่ เขต ความต้องการ เลขเคส ทีม" aria-label="ค้นหาเคส"></label><button class="btn ghost sm f-toggle" id="f-toggle" aria-expanded="false" aria-controls="filters-box">ตัวกรอง<b id="f-n" hidden></b></button></div>
       <div class="bar-row">
         <div class="filters-box" id="filters-box">
-        <select id="f-status" aria-label="สถานะ"><option value="active">ยังไม่เสร็จ</option><option value="open">รอความช่วยเหลือ</option><option value="going">ทีมกำลังไป</option><option value="done">ช่วยเหลือแล้ว</option><option value="all">ทั้งหมด</option></select>
+        <select id="f-status" aria-label="สถานะ"><option value="active">ยังไม่เสร็จ</option><option value="open">รอความช่วยเหลือ</option><option value="going">ทีมกำลังไป</option><option value="helped">ช่วยเหลือแล้ว (รอปิดเคส)</option><option value="done">ปิดเคส</option><option value="all">ทั้งหมด</option></select>
         <select id="f-urg" aria-label="ความเร่งด่วน"><option value="">ทุกระดับ</option><option value="3">วิกฤต</option><option value="2">เร่งด่วน</option><option value="1">ทั่วไป</option></select>
         <select id="f-need" aria-label="ความต้องการ"><option value="">ทุกความต้องการ</option><option>อพยพ</option><option value="ผู้ป่วย">ผู้ป่วย / ผู้สูงอายุ</option><option value="อาหาร">อาหาร / น้ำดื่ม</option><option>ยา</option><option>ของใช้เด็ก</option><option value="เรือ">เรือ / รถสูง</option><option value="อื่น">อื่น ๆ</option></select>
         <select id="f-vr" aria-label="ผลตรวจพื้นที่"><option value="">ผลตรวจ: ทั้งหมด</option><option value="verified">ลำบาก + ยืนยันแล้ว</option><option value="confirmed">วิกฤตจริง</option><option value="likely">น่าจะวิกฤต</option><option value="conflict">ข้อมูลขัดแย้ง</option><option value="unverified">รอตรวจเพิ่ม</option><option value="notcrit">ไม่น่าวิกฤต</option><option value="covered">องค์กรอื่นเคยส่งมอบใกล้เคียง</option><option value="notcovered">ยังไม่มีองค์กรอื่นส่งมอบใกล้เคียง</option><option value="nopin">ยืนยันไม่ได้ (ไม่มีพิกัด/ที่อยู่)</option></select>
@@ -88,7 +88,7 @@
 
 <script src="./central/verify.js?v=12"></script>
 <script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=41"></script>
+<script src="./admin.js?v=42"></script>
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=12"></script>

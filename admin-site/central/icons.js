@@ -102,9 +102,13 @@ function glideTo(m,ll,ms=3000){if(!m||!window.L)return;const a=m.getLatLng(),b=L
   if(!a||a.distanceTo(b)<0.3)return;if(a.distanceTo(b)>3000||document.hidden){m.setLatLng(b);return}
   const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms);m.setLatLng([a.lat+(b.lat-a.lat)*k,a.lng+(b.lng-a.lng)*k]);if(k<1)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)}
 /* ลูกศรทิศทางเมื่อทีมกำลังเคลื่อนที่ (ความเร็ว ≥ 3 กม./ชม. และรู้ทิศ) */
-/* หมุดทีมบนแผนที่: รูปรถ (มองจากด้านบน) หันตามทิศที่วิ่ง · วิ่งอยู่ (≥3 กม./ชม.) มีเส้นความเร็วด้านหลัง */
-const headArrow=t=>{const mv=t&&t.speed!=null&&t.speed>=3,r=mv&&t.heading!=null?Math.round(+t.heading):0;
-  return `<s class="car${mv?' run':''}" style="--r:${r}deg" aria-hidden="true"><svg viewBox="0 0 24 24"><path class="wh" d="M6.2 6.5h1.6v3H6.2zM16.2 6.5h1.6v3h-1.6zM6.2 14.5h1.6v3H6.2zM16.2 14.5h1.6v3h-1.6z"/><rect class="bd" x="7.2" y="2.8" width="9.6" height="18.4" rx="3.6"/><path class="gl" d="M8.8 7.6c1.9-.9 4.5-.9 6.4 0l-.6 2.6c-1.6-.4-3.6-.4-5.2 0z"/><path class="gl" d="M9.2 16.6c1.7.4 3.9.4 5.6 0l.4 1.9c-2 .6-4.4.6-6.4 0z"/><path class="rf" d="M9.6 10.9h4.8v4.6H9.6z"/></svg></s>`};
+/* หมุดทีมบนแผนที่: ยานพาหนะ 3D ตามที่ทีมเลือก (Fluent Emoji 3D · MIT) · หันหน้าไปทางที่วิ่ง (ซ้าย/ขวา) · วิ่งอยู่ = เด้งเบา ๆ
+   ใช้: headArrow(ตำแหน่งทีม, ชนิดยานพาหนะของทีม) */
+const VEH_IMG={boat:'boat',truck:'truck',pickup:'pickup',car:'car',motorbike:'motorbike',foot:'foot',other:'other'};
+const VEH_FACE={boat:1,truck:-1,pickup:-1,car:-1,motorbike:-1,foot:1,other:1}; // 1 = รูปหันขวา · -1 = หันซ้าย
+const headArrow=(t,veh)=>{const v=VEH_IMG[veh]||'car',mv=t&&t.speed!=null&&t.speed>=3,h=mv&&t.heading!=null?((+t.heading%360)+360)%360:null;
+  const east=h==null?null:(h>0&&h<180),flip=east==null?1:((east?1:-1)*VEH_FACE[v]);
+  return `<s class="veh${mv?' run':''}" aria-hidden="true"><img src="/assets/veh/${v}.png" alt="" draggable="false" style="transform:scaleX(${flip})"></s>`};
 
 /* เมนูหลัก: ใส่ไอคอนหน้าชื่อเมนู (แสดงบนมือถือเป็นแถบล่างแบบ helpme4u.com) */
 addEventListener('DOMContentLoaded',()=>{const M=[['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];

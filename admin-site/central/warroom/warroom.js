@@ -291,7 +291,7 @@ $('#p-struct').addEventListener('click',e=>{const g=e.target.closest('[data-go]'
 W.tm=new Map();
 function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos||[]).map(s=>s.name)),seen=new Set(),pts=[];
   V.live.forEach(l=>{const m=mins(l.updatedAt),stale=m>10,s=sos.has(l.team),mv=l.speed!=null&&l.speed>=3;seen.add(l.team);pts.push([l.lat,l.lng]);
-    const html=`<i>${headArrow(l)}</i><span>${esc(l.team)}${mv?` · ${Math.round(l.speed)} กม./ชม.`:''}</span>`,cls='wr-team'+(s?' sos':stale?' stale':'')+(mv?' mv':'');
+    const rv=(W.roster||[]).find(x=>x.name===l.team),html=`<i>${headArrow(l,rv&&rv.vehicle)}</i><span>${esc(l.team)}${mv?` · ${Math.round(l.speed)} กม./ชม.`:''}</span>`,cls='wr-team'+(s?' sos':stale?' stale':'')+(mv?' mv':'');
     const tip=esc(`${l.team} · ${stale?'ตำแหน่งเมื่อ '+ago(l.updatedAt):'ออนไลน์'}${l.battery!=null?' · แบต '+l.battery+'%':''}${l.speed?' · '+Math.round(l.speed)+' กม./ชม.':''}`);
     let mk=W.tm.get(l.team);
     if(!mk){mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:cls,html,iconSize:[16,16],iconAnchor:[8,8]}),keyboard:false}).bindTooltip(tip,{direction:'top',offset:[0,-8]}).addTo(W.lt);mk._k=cls+html;W.tm.set(l.team,mk)}

@@ -21,7 +21,7 @@ const TRACK=(()=>{
   function update(live,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();
     (live||[]).forEach(t=>{const r=byName.get(tn(t.team)),k=tn(t.team);seen.add(k);
       const mv=t.speed!=null&&t.speed>=3,cls=`trk-pin ${isSos(r)?'sos':fresh(t)}${sel===k?' sel':''}${mv?' mv':''}`,
-        html=`<span class="${cls}"><i>${headArrow(t)}</i>${esc(k)}${mv?` <small>${Math.round(t.speed)} กม./ชม.</small>`:''}${t.battery!=null&&t.battery<=20?' · แบต '+t.battery+'%':''}</span>`;
+        html=`<span class="${cls}"><i>${headArrow(t,r&&r.vehicle)}</i>${esc(k)}${mv?` <small>${Math.round(t.speed)} กม./ชม.</small>`:''}${t.battery!=null&&t.battery<=20?' · แบต '+t.battery+'%':''}</span>`;
       let m=mk.get(k);
       if(!m){m=L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}),keyboard:false}).addTo(pins);m._html=html;m.on('click',()=>focus(k));mk.set(k,m)}
       else{glideTo(m,[+t.lat,+t.lng]);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}

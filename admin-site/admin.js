@@ -270,6 +270,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawe
 /* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
 // ผลตรวจหมุดเทียบที่อยู่ (หลังบ้านตรวจให้ เฉพาะเคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต)
+/* ช่องแก้ตัวเลขในรายละเอียดเคส (จำนวนคน · ถุงยังชีพ · ครัวเรือน) · บันทึกด้วยปุ่ม "บันทึก" */
+const edNum=(id,v,unit,ph,min)=>`<span class="d-ed"><input type="number" inputmode="numeric" id="${id}" min="${min}" max="9999" value="${esc(v)}" placeholder="${esc(ph)}" data-orig="${esc(v)}"><span>${unit}</span></span>`;
 function pinNote(c){const p=c.pinCheck;if(!p)return '';if(p.status==='geocoded')return `<br><small class="muted">📍 หมุดหาจากที่อยู่อัตโนมัติ (${esc(p.label||'ประมาณ')}) · ตรวจตำแหน่งก่อนส่งทีม</small>`;const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
   if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+p.level+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} ห่าง ${km} กม.`;
   return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${p.from.district} แต่ที่อยู่ระบุเขต${p.addrDistrict} · โทรยืนยันตำแหน่ง`}
@@ -281,10 +283,10 @@ const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.tes
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
   // วาดใหม่โดยไม่ทิ้งสิ่งที่ผู้ใช้กำลังทำ: ชื่อทีมที่พิมพ์ค้าง ส่วนที่กางไว้ ตำแหน่งเลื่อน และช่องที่โฟกัสอยู่
-  const same=d.dataset.case===String(c.id),keep=same?{team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:''}:null;
+  const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:''}:null;
   d.dataset.case=String(c.id);
-  const t=tel(c),rows=[['ระดับ (ระบบกำหนด)',URG[sev(c)]],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',(c.people||1)+' คน'],['ถุงยังชีพ',bagsOf(c)==null?`ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)`:bagsOf(c)+' ถุง'],['ครัวเรือน / ครอบครัว',hh(c)?hh(c)+' ครัวเรือน':'ไม่ระบุ'],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
-    ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
+  const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
+    ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?{h:`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c)}:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="d-grid"><div class="d-col d-col-a">
@@ -292,7 +294,7 @@ function renderDrawer(){
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
-    <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+    <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary" href="tel:${esc(t)}">โทรหาผู้แจ้ง</a>`:''}
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
@@ -304,11 +306,11 @@ function renderDrawer(){
   d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
-  if(keep){const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
+  if(keep){(keep.ed||[]).forEach(([id,v])=>{const i=d.querySelector('#'+id);if(i)i.value=v});const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
   // ปุ่มบันทึก: ขึ้นเมื่อแก้หมายเหตุ หรือเพิ่มของจากสต็อกไว้ในเคส
-  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0;sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
+  {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const dirty=nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig);sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
@@ -363,8 +365,10 @@ async function assignAct(c,act,btn){
     const it=A.stock.items.find(i=>String(i.id)===id);if(q>(+it.qty||0)){toast(`${it.name} เหลือ ${it.qty} ${it.unit||''}`);return}
     const L=stkPend(c),ex=L.find(x=>x.id===id);if(ex)ex.qty+=q;else L.push({id,name:it.name,qty:q});renderDrawer();return}
   if(act==='save'){const note=(($('#d-note')||{}).value||'').trim();btn.disabled=true;let ok=true,msg=[];
-    if(note!==(c.hqNote||'').trim()){const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',hqNote:note,metaOnly:true}).catch(()=>null);
-      if(r&&r.ok){c.hqNote=note;msg.push('หมายเหตุ')}else ok=false}
+    const ch={},ed=id=>{const i=$('#'+id);return i&&i.value!==i.dataset.orig?i.value:undefined};
+    if(note!==(c.hqNote||'').trim())ch.hqNote=note;if(ed('d-ppl')!==undefined)ch.people=Math.max(1,parseInt(ed('d-ppl'),10)||1);if(ed('d-bags')!==undefined)ch.bags=ed('d-bags')===''?'':Math.max(0,parseInt(ed('d-bags'),10)||0);if(ed('d-hh')!==undefined)ch.households=ed('d-hh')===''?'':Math.max(1,parseInt(ed('d-hh'),10)||1);
+    if(Object.keys(ch).length){const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',...ch,metaOnly:true}).catch(()=>null);
+      if(r&&r.ok){Object.assign(c,ch);if('bags' in ch)c.bags=ch.bags;vrCache.delete(c.id);msg.push({hqNote:'หมายเหตุ',people:'จำนวนคน',bags:'ถุงยังชีพ',households:'ครัวเรือน'}[Object.keys(ch)[0]]+(Object.keys(ch).length>1?` +${Object.keys(ch).length-1}`:''));render()}else ok=false}
     if(stkPend(c).length){const n=await stkCut(c,String(c.volunteer||'').replace(/^'/,''));if(n)msg.push(`ตัดสต็อก ${n} รายการ`);if(stkPend(c).length)ok=false}
     btn.disabled=false;toast(msg.length?'บันทึกแล้ว · '+msg.join(' · '):ok?'ไม่มีอะไรเปลี่ยน':'บันทึกไม่สำเร็จ',ok&&msg.length>0);renderDrawer();return}
   if(act==='stksave'){btn.disabled=true;const n=await stkCut(c,String(c.volunteer||'').replace(/^'/,''));btn.disabled=false;if(n)toast(`ตัดสต็อก ${n} รายการ · ส่งไปกับทีมแล้ว`,true);renderDrawer();return}

@@ -401,3 +401,11 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 #rt-out .r-warn{background:#fff4e5;color:#7a4300;border-radius:10px;padding:8px 10px;font-size:13.5px}#rt-out .r-ok{background:#e8f7ee;color:#1f6b3a;border-radius:10px;padding:8px 10px;font-size:13.5px}
 .rt-ic{display:grid!important;place-items:center;border-radius:50%;color:#fff;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .rt-ic.u3{background:#DD2027}.rt-ic.u2{background:#E8890C}.rt-ic.u1{background:#3442C2}.rt-ic.start{background:#0d5f62}
+/* ช่องแก้ตัวเลขในรายละเอียดเคส */
+.d-ed{display:inline-flex;align-items:center;gap:8px}
+.d-ed input{width:96px;font:inherit;font-size:15px;font-weight:600;min-height:38px;border:1px solid var(--line,#e2e4ea);border-radius:10px;padding:4px 10px;background:var(--surface,#fff);color:inherit}
+.d-ed input:focus{outline:2px solid var(--primary,#DD2027);outline-offset:1px}
+.d-ed input::placeholder{font-weight:400;color:var(--muted)}
+.d-ed>span{color:var(--muted);font-weight:500}
+.d-rows dd small.muted{display:block;margin-top:4px;font-weight:400;line-height:1.45}
+@media (max-width:760px){.d-ed input{font-size:16px}}

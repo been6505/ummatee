@@ -386,6 +386,9 @@ async function updateCase(db, b) {
   if (b.dupOf !== undefined) { sets.push('dupOf=?'); vals.push(clean(b.dupOf, 40)); }
   // เจ้าหน้าที่กำหนดระดับความเร่งด่วนเอง (1–3) ทับที่ระบบคัดกรอง · '' = กลับไปใช้ของระบบ
   if (b.sevSet !== undefined) { const v = b.sevSet === '' || b.sevSet === null ? null : clampInt(b.sevSet, 1, 3, null); sets.push('sevSet=?', 'sevBy=?'); vals.push(v, v ? clean(b.by, 60) : null); }
+  // เจ้าหน้าที่แก้จำนวนคน / ครัวเรือน
+  if (b.people !== undefined && b.people !== '') { sets.push('people=?'); vals.push(clampInt(b.people, 1, 9999, 1)); }
+  if (b.households !== undefined) { sets.push('households=?'); vals.push(b.households === '' ? null : clampInt(b.households, 1, 9999, 1)); }
   // หมายเหตุจากศูนย์ (ทีมเห็นในหน้าทีม)
   if (b.hqNote !== undefined && b.hqNote !== null) { sets.push('hqNote=?'); vals.push(clean(b.hqNote, 500)); }
   if (!meta) {
@@ -1051,7 +1054,7 @@ async function auditLog(env, st, res) {
   const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
   const bits = [];
   if (a === 'update') { if (b.status && !b.bagsOnly && !b.metaOnly) bits.push('สถานะ → ' + (b.helped === true ? 'ช่วยเหลือแล้ว' : b.helped === false ? 'ทีมกำลังไป' : { open: 'รอความช่วยเหลือ', going: 'มอบให้ทีม', done: 'ปิดเคส' }[b.status] || b.status)); if (b.volunteer && b.status === 'going') bits.push('ทีม ' + b.volunteer);
-    if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); if (b.sevSet !== undefined) bits.push(b.sevSet === '' || b.sevSet === null ? 'ระดับ → ใช้ของระบบ' : 'ระดับ → ' + ({ 1: 'ทั่วไป', 2: 'เร่งด่วน', 3: 'วิกฤต' }[b.sevSet] || b.sevSet)); }
+    if (b.hqNote !== undefined && b.hqNote !== null) bits.push('หมายเหตุ: ' + String(b.hqNote).slice(0, 80)); if (b.bags !== undefined && b.bags !== null) bits.push('ถุง ' + (b.bags === '' ? 'ล้าง' : b.bags)); if (b.cctv !== undefined) bits.push('CCTV ' + (b.cctv || 'ล้าง')); if (b.dupOf !== undefined) bits.push(b.dupOf ? 'ซ้ำกับ #' + b.dupOf : 'ยกเลิกเคสซ้ำ'); if (b.people !== undefined) bits.push('จำนวนคน ' + b.people); if (b.households !== undefined) bits.push('ครัวเรือน ' + (b.households === '' ? 'ล้าง' : b.households)); if (b.sevSet !== undefined) bits.push(b.sevSet === '' || b.sevSet === null ? 'ระดับ → ใช้ของระบบ' : 'ระดับ → ' + ({ 1: 'ทั่วไป', 2: 'เร่งด่วน', 3: 'วิกฤต' }[b.sevSet] || b.sevSet)); }
   else if (a === 'team_case') bits.push(b.step === 'done' ? 'แจ้งช่วยเหลือแล้ว' : b.step === 'arrived' ? 'ถึงจุดแล้ว' : b.step || '');
   else if (a === 'team_status') bits.push('→ ' + b.status);
   else if (a === 'stock_move') bits.push(`${b.type === 'out' ? 'จ่าย' : b.type === 'in' ? 'รับ' : b.type || ''} ${b.qty || ''}`.trim());

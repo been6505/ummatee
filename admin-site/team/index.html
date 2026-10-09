@@ -531,8 +531,8 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   async function init(){if(H.map)return;try{await leaf()}catch(e){$('#hmap').innerHTML='<p class="hint" style="padding:120px 20px">โหลดแผนที่ไม่ได้ (ไม่มีเน็ต) · ดูงานได้ที่เมนู "งาน"</p>';return}
     H.map=L.map('hmap',{zoomControl:false,attributionControl:false}).setView([13.75,100.55],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(H.map);
-    H.cases=L.layerGroup().addTo(H.map);$('#h-me').onclick=()=>{const p=TR.pos;if(p)H.map.setView([p.lat,p.lng],15);else toast('ยังหาตำแหน่งไม่ได้')};draw()}
-  function draw(){if(!H.map)return;const p=TR.pos;
+    H.cases=L.layerGroup().addTo(H.map);$('#h-me').onclick=()=>{const p=TR.pos||H.np;if(p)H.map.setView([p.lat,p.lng],15);else toast('ยังหาตำแหน่งไม่ได้')};draw()}
+  function draw(){if(!H.map)return;const p=TR.pos||H.np;
     if(p){if(!H.me)H.me=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(H.map);else H.me.setLatLng([p.lat,p.lng])}
     H.cases.clearLayers();const cs=((S.me&&S.me.cases)||[]).filter(hasPin);
     if(H.on.cases)cs.forEach(c=>{const s=sev(c),done=c.status==='done';L.marker([+c.lat,+c.lng],{icon:L.divIcon({className:'',html:`<div class="cs-pin ${done?'done':'u'+s}"></div>`,iconSize:[30,30],iconAnchor:[15,30]})}).bindPopup(`<b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><br>${esc(c.people||1)} คน · ${esc(URG[s])}<br><small>${esc([c.address,c.district].filter(Boolean).join(' · '))}</small>`).addTo(H.cases)});
@@ -559,7 +559,9 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
     document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
   document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}
     const g=e.target.closest('#hsheet [data-go]');if(g)go(g.dataset.go)});
-  return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);draw()})},draw}})();
+  // ในแอป: ตำแหน่งมาจากตัวติดตามของแอป (NTRK) · อัปเดตจุดของฉันทุก 10 วิ
+  setInterval(()=>{if(S.view!=='home'||!H.map)return;if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f){H.np={lat:f.lat,lng:f.lng};draw()}}).catch(()=>{});else if(TR.pos)draw()},10000);
+  return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f)H.np={lat:f.lat,lng:f.lng};draw()}).catch(()=>draw());else draw()})},draw}})();
 $('#bell')&&($('#bell').onclick=()=>go('chat'));
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');if(v==='home')HOME.show();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}

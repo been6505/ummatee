@@ -50,6 +50,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
   // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
+  `CREATE TABLE IF NOT EXISTS applications (id TEXT PRIMARY KEY, kind TEXT, status TEXT, name TEXT, phone TEXT, province TEXT, wrPref TEXT, username TEXT, salt TEXT, hash TEXT, data TEXT, result TEXT, fails INTEGER DEFAULT 0, lockUntil INTEGER, ip TEXT, createdAt INTEGER, decidedAt INTEGER, decidedBy TEXT, note TEXT)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS applications_u ON applications(kind, username)`,
   `CREATE TABLE IF NOT EXISTS wr_users (id TEXT PRIMARY KEY, warroom TEXT, username TEXT, name TEXT, role TEXT, salt TEXT, hash TEXT, active INTEGER, fails INTEGER DEFAULT 0, lockUntil INTEGER, lastLogin INTEGER, createdAt INTEGER, by_ TEXT)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS wr_users_u ON wr_users(warroom, username)`,
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
@@ -928,6 +930,80 @@ async function wrAuth(db, key) {
     return { id: s.warroom, name: s.name, role: s.role || 'staff', via: 'user', user: { id: s.userId, username: s.username, name: s.uname || '' } };
   }
   return null;
+}
+/* ---------- สมัครเป็น War Room / จิตอาสา (หน้า /join) ----------
+   สมัคร = เก็บคำตอบแบบสอบถามความสามารถ + ชื่อผู้ใช้/รหัสผ่าน (สถานะ pending)
+   War Room: CENTRAL อนุมัติ → สร้างห้อง (warrooms) + บัญชีหัวหน้า (wr_users ด้วยรหัสผ่านเดิม) → เข้าระบบที่ /join ได้เลย
+   จิตอาสา: CENTRAL หรือหัวหน้า War Room ที่ผู้สมัครเลือก อนุมัติ → สร้างทีม (roster) สังกัดห้อง → เข้าระบบแล้วไปหน้าทีม */
+const APP_KIND = ['warroom', 'volunteer'];
+const appClean = d => { const o = {}; for (const [k, v] of Object.entries(d || {}).slice(0, 60)) { const kk = String(k).replace(/[^\w]/g, '').slice(0, 30); if (!kk) continue;
+  o[kk] = Array.isArray(v) ? v.slice(0, 30).map(x => clean(x, 60)) : typeof v === 'number' ? v : typeof v === 'boolean' ? v : clean(v, 500); } return o; };
+async function appApply(db, b, ip) {
+  const kind = APP_KIND.includes(b.kind) ? b.kind : '', d = appClean(b.data), un = WR_USER(b.username), pw = String(b.password || '');
+  if (!kind) return { ok: false, error: 'bad_kind' };
+  const name = clean(kind === 'warroom' ? d.orgName : d.fullName, 80), phone = clean(d.phone, 20).replace(/[^\d+\-\s]/g, '');
+  if (!name || phone.replace(/\D/g, '').length < 9) return { ok: false, error: 'missing' };
+  if (!un || un.length < 3) return { ok: false, error: 'bad_username' };
+  if (pw.length < 6) return { ok: false, error: 'short_password' };
+  const now = Date.now(), recent = await db.prepare('SELECT COUNT(*) n FROM applications WHERE ip=? AND createdAt>?').bind(ip, now - 3600e3).first();
+  if (recent && recent.n >= 5) return { ok: false, error: 'too_many' };
+  if (await db.prepare('SELECT id FROM applications WHERE kind=? AND username=?').bind(kind, un).first()) return { ok: false, error: 'username_taken' };
+  const id = 'A' + rand(5), salt = rand(8);
+  await db.prepare('INSERT INTO applications (id,kind,status,name,phone,province,wrPref,username,salt,hash,data,ip,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, kind, 'pending', name, phone, provName(clean(d.province, 40)) || clean(d.province, 40), clean(d.warroom, 20), un, salt, await pwHash(pw, salt), JSON.stringify(d), ip, now).run();
+  await bumpRev(db);
+  return { ok: true, id, status: 'pending' };
+}
+/* เข้าระบบที่หน้า /join: War Room ที่อนุมัติแล้ว → ใช้บัญชีห้อง (wr_login) · จิตอาสา → สถานะ + ลิงก์หน้าทีม */
+async function appLogin(db, b) {
+  const kind = APP_KIND.includes(b.kind) ? b.kind : '', un = WR_USER(b.username), pw = String(b.password || ''), now = Date.now();
+  const a = kind && un && await db.prepare('SELECT * FROM applications WHERE kind=? AND username=?').bind(kind, un).first();
+  if (!a) return { ok: false, error: 'bad_login' };
+  if (a.lockUntil && a.lockUntil > now) return { ok: false, error: 'locked' };
+  if (await pwHash(pw, a.salt) !== a.hash) { const f = (a.fails || 0) + 1; await db.prepare('UPDATE applications SET fails=?, lockUntil=? WHERE id=?').bind(f >= 5 ? 0 : f, f >= 5 ? now + 10 * 60e3 : null, a.id).run(); return { ok: false, error: f >= 5 ? 'locked' : 'bad_login' }; }
+  await db.prepare('UPDATE applications SET fails=0, lockUntil=NULL WHERE id=?').bind(a.id).run();
+  const res = J0(a.result), out = { ok: true, kind, status: a.status, name: a.name, note: a.note || '' };
+  if (a.status !== 'approved') return out;
+  if (kind === 'warroom' && res.warroom) { const r = await wrLogin(db, { warroom: res.warroom, username: un, password: pw }); return r.ok ? { ...out, ...r } : { ...out, error: r.error }; }
+  if (kind === 'volunteer' && res.team) { const t = await db.prepare('SELECT token,name,warroom FROM roster WHERE id=? AND active=1').bind(res.team).first(); if (t) return { ...out, team: { name: t.name, link: '/team/?id=' + t.token } }; }
+  return out;
+}
+const J0 = v => { try { return v ? JSON.parse(v) : {}; } catch (e) { return {}; } };
+async function appsList(db) {
+  if (WRC && WRC.role !== 'lead') return { ok: false, error: 'lead_only' };
+  const q = WRC ? db.prepare("SELECT * FROM applications WHERE kind='volunteer' AND (wrPref=? OR wrPref='' OR wrPref IS NULL) ORDER BY status='pending' DESC, createdAt DESC LIMIT 200").bind(WRC.id)
+    : db.prepare("SELECT * FROM applications ORDER BY status='pending' DESC, createdAt DESC LIMIT 300");
+  const { results } = await q.all();
+  return { ok: true, apps: results.map(a => ({ id: a.id, kind: a.kind, status: a.status, name: a.name, phone: a.phone, province: a.province, wrPref: a.wrPref || '', username: a.username, data: J0(a.data), result: J0(a.result), createdAt: a.createdAt, decidedAt: a.decidedAt, decidedBy: a.decidedBy || '', note: a.note || '' })) };
+}
+async function appDecide(db, b) {
+  const a = await db.prepare('SELECT * FROM applications WHERE id=?').bind(clean(b.id, 20)).first();
+  if (!a) return { ok: false, error: 'not_found' };
+  if (WRC && (WRC.role !== 'lead' || a.kind !== 'volunteer' || (a.wrPref && a.wrPref !== WRC.id))) return { ok: false, error: 'lead_only' };
+  if (a.status === 'approved' && b.approve) return { ok: false, error: 'already' };
+  const now = Date.now(), by = clean(b.by || (WRC && WRC.user ? WRC.user.username : WRC ? WRC.name : 'CENTRAL'), 60), d = J0(a.data);
+  if (!b.approve) { await db.prepare("UPDATE applications SET status='rejected', decidedAt=?, decidedBy=?, note=? WHERE id=?").bind(now, by, clean(b.note, 300), a.id).run(); return { ok: true, status: 'rejected' }; }
+  let result = {};
+  if (a.kind === 'warroom') {
+    if (WRC) return { ok: false, error: 'central_only' };
+    const r = await saveWarroom(db, { by, warroom: { name: clean(d.roomName || a.name, 60), kind: 'zone', province: a.province, districts: d.districts || '', address: clean(d.address, 200), phone: a.phone, lead: clean(d.contact, 60),
+      lat: d.lat, lng: d.lng, radius: d.lat ? 5000 : 0, note: 'สมัครผ่านหน้า /join · ' + clean(d.capSummary || '', 300) } });
+    if (!r.ok) return r;
+    await db.prepare('INSERT OR IGNORE INTO wr_users (id,warroom,username,name,role,salt,hash,active,createdAt,by_) VALUES (?,?,?,?,?,?,?,1,?,?)')
+      .bind('U' + rand(5), r.id, a.username, clean(d.contact || a.name, 60), 'lead', a.salt, a.hash, now, 'สมัคร').run();
+    result = { warroom: r.id };
+  } else {
+    const wr = WRC ? WRC.id : clean(b.warroom || a.wrPref, 20);
+    const veh = (d.equipment || []).includes('เรือ') ? 'boat' : (d.equipment || []).some(x => /รถสูง|6 ล้อ/.test(x)) ? 'truck' : (d.equipment || []).includes('รถกระบะ') ? 'pickup' : 'foot';
+    let nm = clean((d.groupName || a.name), 60), r = await saveRoster(db, { by, team: { name: nm, leader: a.name, phone: a.phone, members: Number(d.groupSize) || 1, vehicle: veh, zone: clean(d.area, 80), note: 'จิตอาสา · ' + (d.skills || []).join(', ').slice(0, 250) } });
+    if (!r.ok && r.error === 'duplicate_name') { nm = clean(nm + ' (' + a.username + ')', 60); r = await saveRoster(db, { by, team: { name: nm, leader: a.name, phone: a.phone, members: Number(d.groupSize) || 1, vehicle: veh, zone: clean(d.area, 80), note: 'จิตอาสา' } }); }
+    if (!r.ok) return r;
+    await db.prepare('UPDATE roster SET token=?, warroom=? WHERE id=?').bind(teamToken(), wr || '', r.id).run();
+    result = { team: r.id, warroom: wr || '' };
+  }
+  await db.prepare("UPDATE applications SET status='approved', result=?, decidedAt=?, decidedBy=?, note=? WHERE id=?").bind(JSON.stringify(result), now, by, clean(b.note, 300), a.id).run();
+  await bumpRev(db);
+  return { ok: true, status: 'approved', ...result };
 }
 /* ---------- บัญชีผู้ใช้ War Room ย่อย ----------
    หัวหน้าห้อง (ผู้ถือลิงก์ห้อง หรือบัญชี role=lead) สร้างบัญชีให้ตัวเองและทีมงานได้ · เข้าระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (เฉพาะห้องนั้น)
@@ -2035,6 +2111,8 @@ async function api(request, env) {
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
       case 'broadcasts_all': return json(vol ? await listBroadcasts(db, true) : { ok: false, error: 'not_volunteer' });
       case 'discord_cfg': return json(vol && !WRC ? dcPublic(await dcCfg(db)) : { ok: false, error: 'central_only' });
+      case 'apps_list': return json(vol ? await appsList(db) : { ok: false, error: 'not_volunteer' });
+      case 'warrooms_public': { const { results } = await db.prepare("SELECT id,name,province FROM warrooms WHERE active=1 ORDER BY province, name").all(); return json({ ok: true, warrooms: results }); }
       case 'warroom_public': { const r = await db.prepare('SELECT name FROM warrooms WHERE id=? AND active=1').bind(clean(p.id, 20)).first(); return json(r ? { ok: true, name: r.name } : { ok: false }); }
       case 'wr_users': return json(vol ? await wrUsers(db) : { ok: false, error: 'not_volunteer' });
       case 'feedback_list': {
@@ -2058,6 +2136,8 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
+    if (b.action === 'app_apply') return json(await appApply(db, b, request.headers.get('cf-connecting-ip') || ''));
+    if (b.action === 'app_login') return json(await appLogin(db, b));
     if (b.action === 'wr_login') return json(await wrLogin(db, b));
     if (b.action === 'wr_logout') return json(await wrLogout(db, b));
     WRC = await wrAuth(db, b.key);
@@ -2075,7 +2155,7 @@ async function api(request, env) {
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
-      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
+      team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
       const t = await teamFrom(env, db, b);

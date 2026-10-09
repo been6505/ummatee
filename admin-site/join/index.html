@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F7">
+<title>เข้าร่วม Help Me · War Room / จิตอาสา</title>
+<link rel="icon" href="../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#DD2027;--tint:#FDEDEE;--ink:#17181C;--muted:#62656F;--line:#E8E8EC;--bg:#F5F5F7;--ok:#2E9E57;--blue:#2D45C8;--blue-t:#EEF1FD}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px 60px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:14px}.brand img{height:30px}.brand b{font-size:15px;color:var(--muted)}
+h1{font-size:26px;margin:4px 0 4px}.lead{color:var(--muted);margin:0 0 16px}
+.seg{display:flex;background:#fff;border-radius:999px;padding:5px;box-shadow:0 1px 3px rgba(22,27,61,.08);margin-bottom:16px}
+.seg button{flex:1;border:0;background:none;border-radius:999px;padding:11px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.card{background:#fff;border-radius:24px;padding:18px;box-shadow:0 1px 3px rgba(22,27,61,.06);margin-bottom:14px;display:grid;gap:14px}
+.card h2{margin:0;font-size:18px}.card h2 small{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+.kind{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kind button{border:2px solid var(--line);background:#fff;border-radius:20px;padding:16px 12px;text-align:left;font:inherit;cursor:pointer;display:grid;gap:4px;color:inherit}
+.kind button b{font-size:17px}.kind button small{color:var(--muted);font-size:13px;line-height:1.45}.kind button span{font-size:26px}
+.kind button[aria-pressed=true]{border-color:var(--primary);background:var(--tint)}
+label{display:grid;gap:5px;font-weight:600;font-size:14.5px}label small{font-weight:400;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;min-height:46px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff;color:inherit;width:100%}
+textarea{min-height:80px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chips label{display:block;font-weight:600}.chips input{position:absolute;opacity:0;width:0;height:0;min-height:0}
+.chips span{display:inline-block;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer;background:#fff}
+.chips input:checked+span{background:var(--ink);color:#fff;border-color:var(--ink)}.chips input:focus-visible+span{outline:3px solid #9fb0ff}
+.q{display:grid;gap:8px}.q>b{font-size:14.5px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border:0;border-radius:999px;font:inherit;font-weight:700;font-size:17px;cursor:pointer;text-decoration:none}
+.btn.red{background:var(--primary);color:#fff}.btn.ghost{background:var(--blue-t);color:var(--blue)}.btn:disabled{opacity:.6}
+.err{color:#C62828;font-weight:600;margin:0;min-height:1em}.ok{color:var(--ok);font-weight:700}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:500}.chk input{width:22px;height:22px;min-height:0;flex:none;margin-top:2px;accent-color:var(--primary)}
+.status{border-radius:20px;padding:16px;display:grid;gap:8px}.status.pending{background:#FFF4DE}.status.approved{background:#E9F7EF}.status.rejected{background:#FDECEC}
+.muted{color:var(--muted)}.small{font-size:13.5px}[hidden]{display:none!important}
+.pw{position:relative}.pw button{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:18px;cursor:pointer}
+@media(max-width:520px){.row2,.row3{grid-template-columns:1fr}.kind button{padding:12px 10px}.kind button small{font-size:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><img src="../assets/helpme-logo.png" alt="Help Me" width="166" height="24"><b>· เข้าร่วมเครือข่ายช่วยเหลือ</b></div>
+  <h1 id="h1">เข้าร่วม Help Me</h1>
+  <p class="lead">สำหรับศูนย์ช่วยเหลือ (War Room) และจิตอาสาที่ต้องการลงพื้นที่ช่วยผู้ประสบภัย</p>
+  <div class="seg" role="tablist"><button type="button" data-m="login" aria-pressed="true">เข้าสู่ระบบ</button><button type="button" data-m="apply" aria-pressed="false">สมัครใหม่</button></div>
+
+  <!-- ===== เลือกประเภท ===== -->
+  <div class="kind" id="kind">
+    <button type="button" data-k="warroom" aria-pressed="true"><span>🏢</span><b>War Room</b><small>ศูนย์ประสานงาน/องค์กร ที่ดูแลพื้นที่ มีทีมและของช่วยเหลือ</small></button>
+    <button type="button" data-k="volunteer" aria-pressed="false"><span>🙋</span><b>จิตอาสา</b><small>บุคคลหรือกลุ่มที่พร้อมลงพื้นที่ ขับเรือ ขนของ ทำอาหาร ฯลฯ</small></button>
+  </div>
+  <div style="height:14px"></div>
+
+  <!-- ===== เข้าสู่ระบบ ===== -->
+  <form class="card" id="f-login" autocomplete="on">
+    <h2 id="lg-h">เข้าสู่ระบบ War Room</h2>
+    <label id="lg-room-w">War Room ของคุณ<select id="lg-room"><option value="">กำลังโหลดรายชื่อ…</option></select></label>
+    <label>ชื่อผู้ใช้<input id="lg-user" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>รหัสผ่าน<span class="pw"><input id="lg-pass" type="password" autocomplete="current-password" required><button type="button" data-eye="lg-pass" aria-label="แสดงรหัส">👁</button></span></label>
+    <button class="btn red" id="lg-go">เข้าสู่ระบบ</button>
+    <p class="err" id="lg-err" role="alert"></p>
+    <div id="lg-status" hidden></div>
+    <p class="muted small">ลืมรหัสผ่าน: War Room ติดต่อหัวหน้าห้อง/ศูนย์ · จิตอาสาติดต่อ War Room ที่สังกัด</p>
+  </form>
+
+  <!-- ===== สมัคร War Room ===== -->
+  <form class="card-stack" id="f-wr" hidden>
+    <div class="card"><h2>ข้อมูลศูนย์<small>ใช้ตั้ง War Room และให้ศูนย์ติดต่อกลับ</small></h2>
+      <label>ชื่อองค์กร / หน่วยงาน *<input name="orgName" required maxlength="80" placeholder="เช่น มูลนิธิ… / ชมรม… / มัสยิด…"></label>
+      <label>ชื่อ War Room ที่จะแสดง<input name="roomName" maxlength="60" placeholder="เช่น War Room มีนบุรี"></label>
+      <div class="row2"><label>ผู้ประสานงานหลัก *<input name="contact" required maxlength="60"></label><label>เบอร์โทร *<input name="phone" required inputmode="tel" maxlength="20"></label></div>
+      <div class="row2"><label>LINE ID<input name="lineId" maxlength="40"></label><label>จังหวัด *<select name="province" required class="prov"></select></label></div>
+      <label>เขต/อำเภอที่ดูแล<small>คั่นด้วย ,</small><input name="districts" maxlength="300" placeholder="เช่น มีนบุรี, หนองจอก, ลาดกระบัง"></label>
+      <label>ที่ตั้งศูนย์<input name="address" maxlength="200"></label>
+      <button type="button" class="btn ghost" data-loc="wr">📍 ใช้ตำแหน่งปัจจุบันเป็นที่ตั้งศูนย์</button><p class="muted small" id="loc-wr"></p>
+    </div>
+    <div class="card"><h2>ความสามารถของ War Room<small>ช่วยให้ CENTRAL ส่งเคสและของได้ตรงกับศักยภาพ</small></h2>
+      <div class="q"><b>ให้บริการด้านใดได้บ้าง</b><div class="chips" data-name="services">กู้ภัยทางน้ำ|อพยพผู้ประสบภัย|แจกอาหาร/ถุงยังชีพ|ครัวกลาง|ศูนย์พักพิง|การแพทย์/ปฐมพยาบาล|ดูแลผู้ป่วยติดเตียง/ผู้สูงอายุ|ดูแลสัตว์|ฟื้นฟูหลังน้ำลด|ประสานงาน/คอลเซ็นเตอร์|รับบริจาค/คลังสินค้า</div></div>
+      <div class="row3"><label>เจ้าหน้าที่ประจำศูนย์ (คน)<input name="staffCount" type="number" min="0" inputmode="numeric"></label><label>จิตอาสาในเครือข่าย (คน)<input name="volunteers" type="number" min="0" inputmode="numeric"></label><label>ทีมลงพื้นที่ได้พร้อมกัน<input name="teams" type="number" min="0" inputmode="numeric"></label></div>
+      <div class="row3"><label>เรือ (ลำ)<input name="boats" type="number" min="0" inputmode="numeric"></label><label>รถสูง/6 ล้อ (คัน)<input name="highTrucks" type="number" min="0" inputmode="numeric"></label><label>รถกระบะ (คัน)<input name="pickups" type="number" min="0" inputmode="numeric"></label></div>
+      <div class="row3"><label>อาหารปรุงสุก/วัน (กล่อง)<input name="mealsPerDay" type="number" min="0" inputmode="numeric"></label><label>แพ็คถุงยังชีพ/วัน (ถุง)<input name="bagsPerDay" type="number" min="0" inputmode="numeric"></label><label>รับผู้อพยพได้ (คน)<input name="shelterCap" type="number" min="0" inputmode="numeric"></label></div>
+      <div class="row2"><label>บุคลากรการแพทย์<select name="medical"><option value="">ไม่มี</option><option>ปฐมพยาบาลเบื้องต้น</option><option>พยาบาล</option><option>แพทย์</option><option>แพทย์ + พยาบาล + ยา</option></select></label>
+        <label>พื้นที่เก็บของ<select name="warehouse"><option value="">ไม่มี</option><option>เล็ก (ห้อง/โรงรถ)</option><option>กลาง (โกดังเล็ก)</option><option>ใหญ่ (โกดัง)</option></select></label></div>
+      <div class="q"><b>อุปกรณ์สื่อสาร / พลังงาน</b><div class="chips" data-name="comms">วิทยุสื่อสาร|โทรศัพท์ดาวเทียม|Starlink/อินเทอร์เน็ตสำรอง|เครื่องปั่นไฟ|แบตสำรอง/โซลาร์</div></div>
+      <div class="row2"><label>เวลาทำการ<select name="hours"><option>24 ชั่วโมง</option><option>กลางวัน (06–18 น.)</option><option>ตามนัด</option></select></label><label>เปิดดำเนินการได้นาน<select name="duration"><option>มากกว่า 1 เดือน</option><option>2–4 สัปดาห์</option><option>ไม่เกิน 1 สัปดาห์</option></select></label></div>
+      <label>ข้อจำกัด / สิ่งที่ต้องการให้ CENTRAL ช่วย<textarea name="needs" maxlength="500" placeholder="เช่น ขาดเรือ ขาดน้ำดื่ม ต้องการจิตอาสาขับเรือ"></textarea></label>
+    </div>
+    <div class="card"><h2>บัญชีเข้าสู่ระบบ<small>ใช้เข้าเว็บ War Room ของคุณหลังได้รับอนุมัติ (เป็นหัวหน้า War Room)</small></h2>
+      <div class="row2"><label>ชื่อผู้ใช้ (a-z 0-9) *<input name="_u" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false" autocomplete="username"></label><label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
+      <label class="chk"><input type="checkbox" required> <span>ยินยอมให้ Help Me เก็บและใช้ข้อมูลนี้เพื่อประสานงานช่วยเหลือผู้ประสบภัยเท่านั้น</span></label>
+      <button class="btn red" type="submit">ส่งใบสมัคร War Room</button><p class="err" data-err></p>
+    </div>
+  </form>
+
+  <!-- ===== สมัครจิตอาสา ===== -->
+  <form class="card-stack" id="f-vol" hidden>
+    <div class="card"><h2>ข้อมูลจิตอาสา</h2>
+      <div class="row2"><label>ชื่อ-นามสกุล *<input name="fullName" required maxlength="80"></label><label>ชื่อเล่น<input name="nickname" maxlength="30"></label></div>
+      <div class="row2"><label>เบอร์โทร *<input name="phone" required inputmode="tel" maxlength="20"></label><label>LINE ID<input name="lineId" maxlength="40"></label></div>
+      <div class="row2"><label>ช่วงอายุ<select name="age"><option value="">ไม่ระบุ</option><option>ต่ำกว่า 18</option><option>18–25</option><option>26–40</option><option>41–60</option><option>60+</option></select></label><label>จังหวัดที่อยู่ *<select name="province" required class="prov"></select></label></div>
+      <label>พื้นที่ที่สะดวกไปช่วย<input name="area" maxlength="120" placeholder="เช่น มีนบุรี, ลาดกระบัง, ทั้ง กทม."></label>
+      <label>อยากสังกัด War Room<small>ไม่เลือกก็ได้ ศูนย์จะจัดให้</small><select name="warroom" class="rooms"><option value="">ให้ศูนย์จัดให้</option></select></label>
+      <div class="row2"><label>มาเป็นกลุ่ม: ชื่อกลุ่ม<input name="groupName" maxlength="60" placeholder="ถ้ามาคนเดียวเว้นว่าง"></label><label>จำนวนคนในกลุ่ม<input name="groupSize" type="number" min="1" inputmode="numeric" value="1"></label></div>
+    </div>
+    <div class="card"><h2>ความสามารถของคุณ<small>เลือกได้หลายข้อ · ศูนย์ใช้จัดงานให้ตรงความถนัด</small></h2>
+      <div class="q"><b>ทักษะ</b><div class="chips" data-name="skills">ขับเรือ|ว่ายน้ำ/กู้ภัยทางน้ำ|ปฐมพยาบาล|แพทย์/พยาบาล|ขับรถ 4x4/รถสูง|ช่างไฟ/ช่างซ่อม|ทำอาหาร|แพ็ค/ขนของ|ประสานงาน/คอลเซ็นเตอร์|ดูแลผู้สูงอายุ/เด็ก|ดูแลสัตว์|ภาษาต่างประเทศ/ภาษามือ|IT/จัดการข้อมูล|บินโดรน|ถ่ายภาพ/สื่อสาร</div></div>
+      <div class="q"><b>อุปกรณ์ที่มี</b><div class="chips" data-name="equipment">เรือ|เสื้อชูชีพ|รถกระบะ|รถสูง/6 ล้อ|เครื่องปั่นไฟ|ไฟฉาย/อุปกรณ์กู้ภัย|วิทยุสื่อสาร|โดรน|มอเตอร์ไซค์</div></div>
+      <div class="q"><b>ช่วงเวลาที่ว่าง</b><div class="chips" data-name="availability">วันธรรมดา|เสาร์–อาทิตย์|กลางคืน|ค้างคืนในพื้นที่ได้|พร้อมทันที</div></div>
+      <div class="row2"><label>ช่วยได้ต่อเนื่อง<select name="duration"><option>1–2 วัน</option><option>3–7 วัน</option><option>มากกว่า 1 สัปดาห์</option><option>ตามความสะดวก</option></select></label>
+        <label>ลุยน้ำ/ทำงานหนักได้<select name="fitness"><option>ได้</option><option>ได้บางส่วน</option><option>ไม่ได้ (งานในศูนย์)</option></select></label></div>
+      <label>โรคประจำตัว / ข้อจำกัดที่ศูนย์ควรรู้<input name="health" maxlength="200"></label>
+      <div class="row2"><label>ผู้ติดต่อฉุกเฉิน<input name="emergencyName" maxlength="60"></label><label>เบอร์ผู้ติดต่อฉุกเฉิน<input name="emergencyPhone" inputmode="tel" maxlength="20"></label></div>
+    </div>
+    <div class="card"><h2>บัญชีเข้าสู่ระบบ<small>ใช้ดูสถานะ และเข้าหน้าทีมเมื่อได้รับอนุมัติ</small></h2>
+      <div class="row2"><label>ชื่อผู้ใช้ (a-z 0-9) *<input name="_u" required minlength="3" maxlength="32" autocapitalize="none" spellcheck="false" autocomplete="username"></label><label>รหัสผ่าน (≥ 6 ตัว) *<input name="_p" type="password" required minlength="6" autocomplete="new-password"></label></div>
+      <label class="chk"><input type="checkbox" required> <span>ยินยอมให้ Help Me เก็บและใช้ข้อมูลนี้เพื่อประสานงานช่วยเหลือผู้ประสบภัยเท่านั้น</span></label>
+      <button class="btn red" type="submit">ส่งใบสมัครจิตอาสา</button><p class="err" data-err></p>
+    </div>
+  </form>
+</div>
+<script>
+/* หน้าเข้าร่วม: เข้าสู่ระบบ / สมัคร War Room หรือจิตอาสา · คำตอบแบบสอบถามส่งให้ CENTRAL พิจารณา */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const post=b=>fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)}).then(r=>r.json());
+const PROVS='กรุงเทพมหานคร กระบี่ กาญจนบุรี กาฬสินธุ์ กำแพงเพชร ขอนแก่น จันทบุรี ฉะเชิงเทรา ชลบุรี ชัยนาท ชัยภูมิ ชุมพร เชียงราย เชียงใหม่ ตรัง ตราด ตาก นครนายก นครปฐม นครพนม นครราชสีมา นครศรีธรรมราช นครสวรรค์ นนทบุรี นราธิวาส น่าน บึงกาฬ บุรีรัมย์ ปทุมธานี ประจวบคีรีขันธ์ ปราจีนบุรี ปัตตานี พระนครศรีอยุธยา พะเยา พังงา พัทลุง พิจิตร พิษณุโลก เพชรบุรี เพชรบูรณ์ แพร่ ภูเก็ต มหาสารคาม มุกดาหาร แม่ฮ่องสอน ยโสธร ยะลา ร้อยเอ็ด ระนอง ระยอง ราชบุรี ลพบุรี ลำปาง ลำพูน เลย ศรีสะเกษ สกลนคร สงขลา สตูล สมุทรปราการ สมุทรสงคราม สมุทรสาคร สระแก้ว สระบุรี สิงห์บุรี สุโขทัย สุพรรณบุรี สุราษฎร์ธานี สุรินทร์ หนองคาย หนองบัวลำภู อ่างทอง อำนาจเจริญ อุดรธานี อุตรดิตถ์ อุทัยธานี อุบลราชธานี'.split(' ');
+$$('select.prov').forEach(s=>s.innerHTML='<option value="">เลือกจังหวัด</option>'+PROVS.map(p=>`<option>${p}</option>`).join(''));
+$$('.chips[data-name]').forEach(c=>{const n=c.dataset.name;c.innerHTML=c.textContent.split('|').map(v=>`<label><input type="checkbox" name="${n}" value="${esc(v.trim())}"><span>${esc(v.trim())}</span></label>`).join('')});
+const S={m:new URLSearchParams(location.search).get('m')==='apply'?'apply':'login',k:new URLSearchParams(location.search).get('k')==='volunteer'?'volunteer':'warroom',rooms:[]};
+function view(){$$('.seg [data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===S.m)));$$('#kind [data-k]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===S.k)));
+  $('#f-login').hidden=S.m!=='login';$('#f-wr').hidden=!(S.m==='apply'&&S.k==='warroom');$('#f-vol').hidden=!(S.m==='apply'&&S.k==='volunteer');
+  $('#lg-h').textContent=S.k==='warroom'?'เข้าสู่ระบบ War Room':'เข้าสู่ระบบจิตอาสา';$('#lg-room-w').hidden=S.k!=='warroom';
+  $('#h1').textContent=S.m==='login'?'เข้าสู่ระบบ':S.k==='warroom'?'สมัครเป็น War Room':'สมัครเป็นจิตอาสา';$('#lg-status').hidden=true;$('#lg-err').textContent=''}
+$('.seg').onclick=e=>{const b=e.target.closest('[data-m]');if(b){S.m=b.dataset.m;view()}};
+$('#kind').onclick=e=>{const b=e.target.closest('[data-k]');if(b){S.k=b.dataset.k;view()}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-eye]');if(b){const i=document.getElementById(b.dataset.eye);i.type=i.type==='password'?'text':'password'}});
+fetch('/api?action=warrooms_public').then(r=>r.json()).then(r=>{S.rooms=r.ok?r.warrooms:[];const o=S.rooms.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}${w.province?' · '+esc(w.province):''}</option>`).join('');
+  $('#lg-room').innerHTML='<option value="">เลือก War Room</option>'+o;$$('select.rooms').forEach(s=>s.innerHTML='<option value="">ให้ศูนย์จัดให้</option>'+o)}).catch(()=>{$('#lg-room').innerHTML='<option value="">โหลดรายชื่อไม่ได้</option>'});
+/* ตำแหน่งศูนย์ */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-loc]');if(!b)return;const out=$('#loc-'+b.dataset.loc);out.textContent='กำลังหาตำแหน่ง…';
+  navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{b.form.dataset.lat=p.coords.latitude.toFixed(6);b.form.dataset.lng=p.coords.longitude.toFixed(6);out.textContent=`✓ ${b.form.dataset.lat}, ${b.form.dataset.lng}`},()=>{out.textContent='หาตำแหน่งไม่ได้ · ข้ามได้'},{enableHighAccuracy:true,timeout:15000}):out.textContent='อุปกรณ์นี้หาตำแหน่งไม่ได้'});
+const ERR={missing:'กรอกชื่อและเบอร์โทรให้ครบ',bad_username:'ชื่อผู้ใช้ใช้ได้เฉพาะ a-z 0-9 . _ - อย่างน้อย 3 ตัว',short_password:'รหัสผ่านอย่างน้อย 6 ตัว',username_taken:'ชื่อผู้ใช้นี้มีคนใช้แล้ว',too_many:'ส่งใบสมัครบ่อยเกินไป ลองใหม่ภายหลัง',bad_login:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',locked:'ใส่รหัสผิดหลายครั้ง · ลองใหม่ใน 10 นาที'};
+function formData(f){const d={};for(const el of f.elements){if(!el.name||el.name.startsWith('_'))continue;if(el.type==='checkbox'&&el.closest('.chips')){(d[el.name]=d[el.name]||[]);if(el.checked)d[el.name].push(el.value)}else if(el.type==='number'){if(el.value!=='')d[el.name]=Number(el.value)}else if(el.type!=='checkbox')d[el.name]=el.value.trim()}
+  if(f.dataset.lat){d.lat=+f.dataset.lat;d.lng=+f.dataset.lng}return d}
+function capSummary(d){return [d.services&&d.services.length?'บริการ: '+d.services.join(', '):'',d.boats?'เรือ '+d.boats:'',d.highTrucks?'รถสูง '+d.highTrucks:'',d.staffCount?'เจ้าหน้าที่ '+d.staffCount:'',d.mealsPerDay?'อาหาร '+d.mealsPerDay+'/วัน':'',d.shelterCap?'พักพิง '+d.shelterCap+' คน':'',d.medical?'การแพทย์: '+d.medical:''].filter(Boolean).join(' · ')}
+async function apply(e,kind){e.preventDefault();const f=e.target,err=f.querySelector('[data-err]'),btn=f.querySelector('button[type=submit]');const d=formData(f),un=f.elements._u.value;if(kind==='warroom')d.capSummary=capSummary(d);
+  btn.disabled=true;err.textContent='กำลังส่ง…';
+  try{const r=await post({action:'app_apply',kind,data:d,username:f.elements._u.value,password:f.elements._p.value});
+    if(r.ok){f.innerHTML=`<div class="card"><div class="status pending"><b class="ok">✓ ส่งใบสมัครแล้ว</b><span>สถานะ: รอ ${kind==='warroom'?'CENTRAL':'CENTRAL / War Room'} พิจารณา · จะติดต่อกลับทางเบอร์ที่ให้ไว้</span><span>ตรวจสถานะได้ที่ "เข้าสู่ระบบ" ด้วยชื่อผู้ใช้ <b>${esc(un)}</b></span></div><a class="btn ghost" href="?m=login&k=${kind}">ไปหน้าเข้าสู่ระบบ</a></div>`;scrollTo(0,0);return}
+    err.textContent=ERR[r.error]||'ส่งไม่สำเร็จ ลองใหม่'}catch(x){err.textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{btn.disabled=false}}
+$('#f-wr').onsubmit=e=>apply(e,'warroom');$('#f-vol').onsubmit=e=>apply(e,'volunteer');
+/* เข้าสู่ระบบ: War Room → บัญชีห้อง (ถ้ายังไม่อนุมัติ แสดงสถานะใบสมัคร) · จิตอาสา → สถานะ/หน้าทีม */
+function statusCard(r){const st={pending:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่ผ่านการอนุมัติ'}[r.status]||r.status;const box=$('#lg-status');box.hidden=false;
+  box.innerHTML=`<div class="status ${esc(r.status)}"><b>${esc(r.name)} · ${esc(st)}</b>${r.note?`<span>หมายเหตุจากศูนย์: ${esc(r.note)}</span>`:''}${r.status==='pending'?'<span>ศูนย์จะติดต่อกลับทางเบอร์ที่ให้ไว้</span>':''}
+    ${r.team?`<a class="btn red" href="${esc(r.team.link)}">เข้าหน้าทีม ${esc(r.team.name)}</a><span class="small muted">บันทึกลิงก์หน้าทีมไว้ หรือเพิ่มลงหน้าจอหลัก</span>`:r.status==='approved'&&r.kind==='volunteer'?'<span>รอศูนย์จัดเข้าทีม</span>':''}</div>`}
+$('#f-login').onsubmit=async e=>{e.preventDefault();const u=$('#lg-user').value,p=$('#lg-pass').value;$('#lg-go').disabled=true;$('#lg-err').textContent='กำลังตรวจ…';$('#lg-status').hidden=true;
+  try{if(S.k==='warroom'){const room=$('#lg-room').value;
+      const w=room?await post({action:'wr_login',warroom:room,username:u,password:p}):{ok:false};
+      if(w.ok){localStorage.setItem('uh_vol_key',w.key);localStorage.setItem('uh_vol_ok','1');localStorage.setItem('uh_wr_lock',w.warroom.id);location.href='/central/warroom/?wr='+encodeURIComponent(w.warroom.id);return}
+      if(w.error==='locked'){$('#lg-err').textContent=ERR.locked;return}
+      const a=await post({action:'app_login',kind:'warroom',username:u,password:p});
+      if(a.ok&&a.key){localStorage.setItem('uh_vol_key',a.key);localStorage.setItem('uh_vol_ok','1');localStorage.setItem('uh_wr_lock',a.warroom.id);location.href='/central/warroom/?wr='+encodeURIComponent(a.warroom.id);return}
+      if(a.ok){$('#lg-err').textContent='';statusCard(a);return}$('#lg-err').textContent=room?ERR[a.error]||ERR.bad_login:'เลือก War Room ก่อน (ถ้าสมัครแล้วรออนุมัติ ไม่ต้องเลือกก็ตรวจสถานะได้)'}
+    else{const a=await post({action:'app_login',kind:'volunteer',username:u,password:p});if(a.ok){$('#lg-err').textContent='';statusCard(a);if(a.team)localStorage.setItem('uh_join_team',a.team.link);return}$('#lg-err').textContent=ERR[a.error]||'เข้าสู่ระบบไม่ได้'}}
+  catch(x){$('#lg-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{$('#lg-go').disabled=false}};
+view();
+</script>
+</body>
+</html>

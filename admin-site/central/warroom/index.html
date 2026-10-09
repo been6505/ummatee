@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="../hm-ui.css?v=23">
 <link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="./wr-map.css?v=2">
-<link rel="stylesheet" href="./warroom.css?v=31">
+<link rel="stylesheet" href="./warroom.css?v=32">
 <script src="../icons.js?v=6"></script>
 </head>
 <body>
@@ -30,7 +30,7 @@
     <label class="fld"><span>รหัสผ่าน</span><span class="pw-wrap"><input id="wrl-pass" type="password" autocomplete="current-password" required><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส">👁</button></span></label>
     <button class="btn primary" type="submit" id="wrl-go">เข้าสู่ระบบ</button>
     <p class="err" id="wrl-err" role="alert"></p>
-    <p class="muted small">ยังไม่มีบัญชี? ขอจากหัวหน้า War Room หรือเปิดลิงก์ห้องที่ศูนย์ส่งให้</p>
+    <p class="muted small">ยังไม่มีบัญชี? ขอจากหัวหน้า War Room · หรือ <a href="/join/?m=apply">สมัคร War Room / จิตอาสา</a></p>
     <button type="button" class="linkish" id="wrl-central">เข้าด้วยรหัส CENTRAL</button>
   </form>
   <form id="login-form" class="login-card" autocomplete="off">
@@ -95,6 +95,7 @@
     <section class="wr-pane" id="p-struct" hidden>
       <div class="wr-tools"><h2 style="margin:0;font-size:18px">HELP ME CENTRAL · โครงสร้างการสั่งการ</h2><span class="muted small">CENTRAL → ศูนย์ประสานงานจังหวัด → War Room โซน → ทีม / เคสใกล้เคียง</span><button class="btn primary sm" id="st-new" type="button">+ สร้าง War Room</button></div>
       <div class="wr-sum" id="st-sum"></div>
+      <section class="wr-card wr-apps" id="st-apps" hidden></section>
       <div class="wr-tree" id="st-tree"></div>
     </section>
     <section class="wr-pane" id="p-cases" hidden>
@@ -102,6 +103,7 @@
       <div class="wr-clist"><h3 class="wr-ch" id="c-count"></h3><div id="c-body"></div></div>
     </section>
     <section class="wr-pane" id="p-teams" hidden>
+      <section class="wr-card wr-apps" id="t-apps" hidden></section>
       <section class="wr-card wr-dqbox" id="t-queue"></section>
       <h3 class="wr-h3">ทีมใน War Room</h3>
       <p class="muted small" id="t-hint"></p>
@@ -136,7 +138,7 @@
 <script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=11"></script>
 <script src="../summary.js?v=2"></script>
-<script src="./warroom.js?v=38"></script>
+<script src="./warroom.js?v=39"></script>
 <script src="../theme-toggle.js?v=2"></script>
 <script src="../chat.js?v=8"></script>
 <script src="../feedback.js?v=1"></script>

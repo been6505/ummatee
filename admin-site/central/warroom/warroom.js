@@ -239,7 +239,30 @@ function treeCases(list,label){const open=list.filter(c=>c.status!=='done').sort
   const row=c=>{const ph=photos(c);return `<a class="tc u${sev(c)}" href="${caseLink(c)}"><span class="tph">${ph.length?`<img src="${thumb(ph[0],96)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w96" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span>
     <span class="tt"><b>${esc((c.needs||[]).slice(0,2).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน · ${esc(c.district||provOf(c)||'')} · ${c.status==='going'?'กำลังไป':'รอ '+esc(waitTxt(c.createdAt))}</small></span><span class="tl">${URG[sev(c)]}</span></a>`};
   return `<details class="tcs"${open.length<=4?' open':''}><summary>${esc(label)} <b>${open.length}</b>${open.some(c=>sev(c)===3)?` <span class="k cr">วิกฤต ${open.filter(c=>sev(c)===3).length}</span>`:''}</summary><div class="tcl">${open.slice(0,12).map(row).join('')}${open.length>12?`<span class="muted small">และอีก ${open.length-12} เคส · เปิด War Room เพื่อดูทั้งหมด</span>`:''}</div></details>`}
-function structTab(){const open=W.cases.filter(c=>c.status!=='done'),zones=W.rooms.filter(r=>!isProv(r));
+/* ---------- ใบสมัครจากหน้า /join ----------
+   CENTRAL (แท็บจัดการ War Room): ทั้ง War Room และจิตอาสา · หัวหน้า War Room (แท็บทีม): จิตอาสาที่เลือกห้องนี้/ไม่ระบุห้อง */
+const APPK={warroom:'War Room',volunteer:'จิตอาสา'},APPS={pending:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ'};
+const APPF={orgName:'องค์กร',roomName:'ชื่อ War Room',contact:'ผู้ประสานงาน',lineId:'LINE',districts:'เขตที่ดูแล',address:'ที่ตั้ง',services:'บริการ',staffCount:'เจ้าหน้าที่',volunteers:'จิตอาสาในเครือข่าย',teams:'ทีมพร้อมกัน',boats:'เรือ',highTrucks:'รถสูง',pickups:'รถกระบะ',mealsPerDay:'อาหาร/วัน',bagsPerDay:'ถุงยังชีพ/วัน',shelterCap:'รับผู้อพยพ',medical:'การแพทย์',warehouse:'คลัง',comms:'สื่อสาร/พลังงาน',hours:'เวลาทำการ',duration:'ระยะเวลา',needs:'ต้องการให้ช่วย',
+  fullName:'ชื่อ',nickname:'ชื่อเล่น',age:'อายุ',area:'พื้นที่สะดวก',groupName:'กลุ่ม',groupSize:'จำนวนคน',skills:'ทักษะ',equipment:'อุปกรณ์',availability:'เวลาว่าง',fitness:'ลุยน้ำได้',health:'สุขภาพ',emergencyName:'ผู้ติดต่อฉุกเฉิน',emergencyPhone:'เบอร์ฉุกเฉิน'};
+async function appsCard(el,mode){if(!el)return;const r=await apiGet({action:'apps_list'}).catch(()=>null);if(!r||!r.ok){el.hidden=true;return}
+  const list=mode==='room'?r.apps.filter(a=>a.kind==='volunteer'):r.apps,pend=list.filter(a=>a.status==='pending');el.hidden=!list.length;if(!list.length)return;
+  const rooms=W.rooms.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('');
+  const row=a=>{const d=a.data||{},f=Object.entries(APPF).filter(([k])=>d[k]!==undefined&&d[k]!==''&&!(Array.isArray(d[k])&&!d[k].length)&&!['orgName','fullName'].includes(k)).map(([k,l])=>`<span><b>${esc(l)}</b> ${esc(Array.isArray(d[k])?d[k].join(', '):d[k])}</span>`).join('');
+    const pref=a.wrPref&&W.rooms.find(w=>w.id===a.wrPref);
+    return `<details class="app ${esc(a.status)}"${a.status==='pending'&&pend.length<=3?' open':''}><summary><span class="ak ${esc(a.kind)}">${APPK[a.kind]}</span><b>${esc(a.name)}</b><small>${esc(a.province||'')}${pref?' · อยากสังกัด '+esc(pref.name):''} · ${esc(APPS[a.status])}</small></summary>
+      <div class="ab"><div class="af"><span><b>โทร</b> <a href="tel:${esc(telOf(a.phone))}">${esc(a.phone)}</a></span><span><b>ชื่อผู้ใช้</b> @${esc(a.username)}</span>${f}</div>
+      ${a.status==='pending'?`<div class="aa">${a.kind==='volunteer'&&mode!=='room'?`<label>สังกัด<select data-app-wr="${esc(a.id)}"><option value="">ไม่สังกัดห้อง</option>${rooms}</select></label>`:''}
+        <input data-app-note="${esc(a.id)}" maxlength="300" placeholder="หมายเหตุถึงผู้สมัคร (ไม่บังคับ)">
+        <button type="button" class="btn primary sm" data-app-ok="${esc(a.id)}">${a.kind==='warroom'?'อนุมัติ · สร้าง War Room':'อนุมัติ · สร้างทีม'}</button><button type="button" class="btn ghost sm" data-app-no="${esc(a.id)}">ไม่อนุมัติ</button></div>`
+        :`<small class="muted">${esc(APPS[a.status])} โดย ${esc(a.decidedBy||'-')}${a.note?' · '+esc(a.note):''}</small>`}</div></details>`};
+  el.innerHTML=`<div class="wr-tools"><h2 style="margin:0;font-size:17px">ใบสมัคร${mode==='room'?'จิตอาสา':' War Room / จิตอาสา'} ${pend.length?`<span class="badge">${pend.length} รอพิจารณา</span>`:''}</h2><a class="btn ghost sm" href="/join/" target="_blank" rel="noopener">หน้าสมัคร ↗</a></div>${list.slice(0,40).map(row).join('')}`;
+  el.querySelectorAll('[data-app-wr]').forEach(s=>{const a=list.find(x=>x.id===s.dataset.appWr);if(a&&a.wrPref)s.value=a.wrPref})}
+document.addEventListener('click',async e=>{const ok=e.target.closest('[data-app-ok]'),no=e.target.closest('[data-app-no]');if(!ok&&!no)return;const id=(ok||no).dataset[ok?'appOk':'appNo'];
+  if(no&&!confirm('ไม่อนุมัติใบสมัครนี้?'))return;const wr=document.querySelector(`[data-app-wr="${id}"]`),note=document.querySelector(`[data-app-note="${id}"]`);(ok||no).disabled=true;
+  const r=await apiPost({action:'app_decide',id,approve:!!ok,warroom:wr?wr.value:'',note:note?note.value:'',by:store.get('uh_staff')||''}).catch(()=>null);
+  toast(r&&r.ok?(ok?'อนุมัติแล้ว · ผู้สมัครเข้าสู่ระบบที่หน้า /join ได้เลย':'บันทึกแล้ว'):'ทำไม่สำเร็จ'+(r&&r.error?' ('+r.error+')':''),!!(r&&r.ok));
+  if(r&&r.ok){await Promise.all([loadRooms(),loadTeams()]);W.appsAt='';render()}});
+function structTab(){if(W.appsAt!=='s'){W.appsAt='s';appsCard($('#st-apps'),'central')}const open=W.cases.filter(c=>c.status!=='done'),zones=W.rooms.filter(r=>!isProv(r));
   const covered=c=>W.rooms.some(r=>inRoom(c,r)),orphan=open.filter(c=>!covered(c)),freeTeams=W.roster.filter(t=>!t.warroom||!zones.some(z=>z.id===t.warroom));
   const provs=[...new Set(W.rooms.map(r=>r.province||'').concat(open.map(provOf).filter(Boolean)))].sort((a,b)=>(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:0)||a.localeCompare(b,'th'));
   $('#st-sum').innerHTML=[[W.rooms.length,'War Room ทั้งหมดทั่วประเทศ'],[new Set(W.rooms.map(r=>r.province).filter(Boolean)).size,'จังหวัดที่มี War Room'],[W.rooms.filter(isProv).length,'ศูนย์ประสานงานจังหวัด'],[zones.length,'War Room โซน'],[W.roster.length,'ทีมทั้งหมด'],[orphan.length,'เคสค้างที่ยังไม่มี War Room ดูแล',orphan.length?'crit':''],[freeTeams.length,'ทีมยังไม่สังกัดโซน',freeTeams.length?'warn':'']]
@@ -320,7 +343,7 @@ $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-
   b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c)});if(r.ok){c.status='done';toast('ปิดเคสแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
 /* ---------- แท็บ ทีม ---------- */
-function teamsTab(V){const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
+function teamsTab(V){if(W.appsAt!=='t'+V.r.id&&/^wru?_/.test(String(ADM.key||''))){W.appsAt='t'+V.r.id;appsCard($('#t-apps'),'room')}const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
   if(isProv(r)){dispatchQ(V);const zs=zonesOf(r.province);
     $('#t-hint').textContent=`ทีมในจังหวัด${r.province}: ${V.roster.length} ทีม ใน ${zs.length} War Room โซน · จัดทีมเข้าโซนได้ที่ War Room โซนนั้น`;
     $('#t-list').innerHTML=zs.length?zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="wr-tcard"><div class="h"><i class="rdot" style="background:${esc(z.color)}"></i><b>${esc(z.name)}</b><span class="st">${tn.length} ทีม</span></div>

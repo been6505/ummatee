@@ -289,3 +289,12 @@ body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{di
 @media(max-width:760px){body.wr-site .top{flex-wrap:nowrap!important}body.wr-site .top .brand{flex:1 1 auto;min-width:0;overflow:hidden}body.wr-site .top .top-r{flex:none}
   body.wr-site .top .brand img{display:none!important}body.wr-site .top .brand span{display:flex!important;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap}
   body.wr-site .top .brand span b{overflow:hidden;text-overflow:ellipsis}body.wr-site .top .brand .brand-plus{display:none}}
+
+/* ใบสมัครจากหน้า /join */
+.wr-apps{display:grid;gap:8px}.wr-apps .badge{background:var(--primary,#DD2027);color:#fff;border-radius:999px;font-size:12px;padding:2px 9px;vertical-align:2px}
+.app{border-radius:16px;background:var(--bg,#f5f5f7);padding:10px 12px}.app summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;list-style:none}.app summary::-webkit-details-marker{display:none}
+.app summary small{color:var(--muted);flex-basis:100%}.app.approved{opacity:.75}.app.rejected{opacity:.55}
+.ak{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px}.ak.warroom{background:#EEF1FD;color:#2D45C8}.ak.volunteer{background:#E9F7EF;color:#1F7A43}
+.ab{display:grid;gap:10px;margin-top:8px}.af{display:grid;gap:4px;font-size:13.5px}.af b{color:var(--muted);font-weight:600;margin-right:4px}
+.aa{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.aa input,.aa select{min-height:38px;border-radius:12px;border:1px solid var(--line,#e8e8ec);padding:4px 10px;font:inherit;font-size:14px;flex:1 1 180px;background:var(--surface,#fff);color:inherit}
+.aa label{display:flex;gap:6px;align-items:center;font-size:13.5px;flex:1 1 220px}

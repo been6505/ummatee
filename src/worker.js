@@ -937,6 +937,20 @@ const TEAM_POST = {
     await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `รวมพล "${r.label}": ${{ going: 'กำลังไป', arrived: 'ถึงจุดรวมพลแล้ว', declined: 'ไม่สะดวกไป' }[b.status]}${b.note ? ' · ' + clean(b.note, 200) : ''}`, lat: b.lat, lng: b.lng });
     await bumpRev(db); return { ok: true };
   },
+  // ทีมแก้โปรไฟล์ตัวเอง (หัวหน้า เบอร์ จำนวนคน ยานพาหนะ พื้นที่) · ชื่อทีมแก้ไม่ได้ (ผูกกับเคส/แชท) ต้องให้ศูนย์แก้
+  team_profile: async (db, t, b) => {
+    if (!t.row) return { ok: false, error: 'not_in_roster' };
+    const p = b.profile || {}, sets = [], vals = [];
+    if (p.leader !== undefined) { sets.push('leader=?'); vals.push(clean(p.leader, 60)); }
+    if (p.phone !== undefined) { sets.push('phone=?'); vals.push(clean(p.phone, 20).replace(/[^\d+\-\s]/g, '')); }
+    if (p.members !== undefined) { sets.push('members=?'); vals.push(p.members === '' ? null : clampInt(p.members, 0, 999, null)); }
+    if (p.vehicle !== undefined) { sets.push('vehicle=?'); vals.push(VEHICLES.includes(p.vehicle) ? p.vehicle : ''); }
+    if (p.zone !== undefined) { sets.push('zone=?'); vals.push(clean(p.zone, 80)); }
+    if (!sets.length) return { ok: false, error: 'nothing' };
+    sets.push('updatedAt=?', 'by_=?'); vals.push(Date.now(), clean('ทีม ' + t.name, 60));
+    await db.prepare(`UPDATE roster SET ${sets.join(',')} WHERE id=?`).bind(...vals, t.row.id).run();
+    await bumpRev(db); return { ok: true };
+  },
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   team_status: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
@@ -1314,7 +1328,7 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
 const AUDIT_SKIP = new Set(['kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_TH = { team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -2788,7 +2802,7 @@ async function api(request, env) {
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
-    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp'].includes(b.action))) {
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
       return json(await TEAM_POST[b.action](db, t, b));

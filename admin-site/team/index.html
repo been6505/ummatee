@@ -253,9 +253,15 @@ body.on-chat .top .st{display:none!important}
 /* แชท: เว้นที่ให้แถบเมนูล่างแบบลอย (สูง ~74 + ลอย 10 + ปุ่ม SOS ยื่นขึ้น) ช่องพิมพ์ไม่โดนทับ */
 #v-chat{padding-bottom:calc(var(--sab) + 108px)!important}
 .ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
+.db-edit{flex:none;border:0;background:var(--tint);color:var(--primary);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;margin-left:6px}.db-edit .ic{width:18px;height:18px}
+.db-team .db-st{margin-left:auto}
+.pf-f{display:grid;gap:6px;font-weight:600;font-size:14px}.pf-f input{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:14px;padding:11px 13px;background:#fff;color:inherit;width:100%}
+.pf-veh{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.pf-veh button{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:6px 2px;display:grid;justify-items:center;gap:2px;cursor:pointer;font:inherit}
+.pf-veh img{width:36px;height:30px;object-fit:contain}.pf-veh small{font-size:11px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
+.pf-veh button[aria-pressed=true]{border-color:var(--primary);background:var(--tint)}.pf-veh button[aria-pressed=true] small{color:var(--primary)}
 </style>
 <script src="../central/verify.js?v=15"></script>
-<script src="../central/icons.js?v=15"></script>
+<script src="../central/icons.js?v=16"></script>
 <script src="./native-track.js?v=4"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
@@ -762,7 +768,7 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
   const locOk=m!=null&&m<10,locTxt=m==null?'ยังไม่ส่งตำแหน่ง':m<1?'ส่งตำแหน่งล่าสุด ไม่ถึง 1 นาทีก่อน':`ส่งตำแหน่งล่าสุด ${m} นาทีก่อน`;
   const sup={};going.forEach(c=>(c.supplies||[]).forEach(x=>{sup[x.item]=(sup[x.item]||0)+x.qty}));
   const rl=(r.rallies||[]).filter(x=>!x.closedAt);
-  el.innerHTML=`<section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<span class="db-st ${esc(t.status||'ready')}">${STN[t.status]||'พร้อม'}</span>`:''}</section>
+  el.innerHTML=`<section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<span class="db-st ${esc(t.status||'ready')}">${STN[t.status]||'พร้อม'}</span><button type="button" class="db-edit" data-pfedit aria-label="แก้โปรไฟล์ทีม" title="แก้โปรไฟล์ทีม"><i data-ic="edit"></i></button>`:''}</section>
     ${rl.length?`<section class="db-card db-rally"><h3>📣 ศูนย์เรียกรวมพล</h3><p>${esc(rl[0].label||'')}</p><button type="button" class="btn red" data-dgo="home">ดูจุดรวมพล</button></section>`:''}
     <div class="db-tiles">
       <button type="button" class="db-tile go" data-dgo="work"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
@@ -810,6 +816,23 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
   if(t.dataset.areq){const c=(AC.list||[]).find(x=>String(x.id)===t.dataset.areq);if(!c)return;if(!confirm('ส่งข้อความขอรับเคสนี้ให้ศูนย์?'))return;
     send(`🙋 ขอรับเคส #${c.id} · ${(c.needs||[]).join(', ')||'เคส'} · ${c.people||1} คน · ${c.district||''}`,{caseId:c.id});toast('ส่งคำขอถึงศูนย์แล้ว · รอศูนย์มอบหมาย');t.disabled=true}});
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#dash [data-dgo]');if(b)go(b.dataset.dgo)});
+/* ทีมแก้โปรไฟล์เอง: หัวหน้า · เบอร์ · จำนวนคน · ยานพาหนะ · พื้นที่ (ชื่อทีมแก้ที่ศูนย์) */
+const PF_VEH=[['car','รถเก๋ง / รถตู้'],['pickup','รถกระบะ'],['truck','รถสูง / รถบรรทุก'],['boat','เรือ'],['motorbike','มอเตอร์ไซค์'],['foot','เดินเท้า'],['other','อื่น ๆ']];
+function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
+  sheet(`<h2>แก้โปรไฟล์ทีม</h2><p class="hint">ชื่อทีม "${esc(t.name)}" แก้ได้ที่ศูนย์ (ผูกกับเคสและแชท)</p>
+    <label class="pf-f">หัวหน้าทีม<input id="pf-leader" maxlength="60" value="${esc(t.leader||'')}" placeholder="ชื่อหัวหน้าทีม"></label>
+    <label class="pf-f">เบอร์ติดต่อ<input id="pf-phone" type="tel" inputmode="tel" maxlength="20" value="${esc(t.phone||'')}" placeholder="08x-xxx-xxxx"></label>
+    <label class="pf-f">จำนวนคนในทีม<input id="pf-mem" type="number" inputmode="numeric" min="0" max="999" value="${esc(t.members??'')}" placeholder="เช่น 4"></label>
+    <div class="pf-f"><span>ยานพาหนะ</span><div class="pf-veh">${PF_VEH.map(([k,l])=>`<button type="button" data-pfveh="${k}" aria-pressed="${t.vehicle===k}"><img src="../assets/veh/${k}.png" alt="" onerror="this.remove()"><small>${l}</small></button>`).join('')}</div></div>
+    <label class="pf-f">พื้นที่ที่ดูแล<input id="pf-zone" maxlength="80" value="${esc(t.zone||'')}" placeholder="เช่น ลาดกระบัง · มีนบุรี"></label>
+    <button type="button" class="btn red" id="pf-save">บันทึก</button><button type="button" class="btn" data-x>ยกเลิก</button>`);
+  const L=$('#layer');L.querySelectorAll('[data-pfveh]').forEach(b=>b.onclick=()=>L.querySelectorAll('[data-pfveh]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))));
+  $('#pf-save').onclick=async e=>{const b=e.currentTarget,v=L.querySelector('[data-pfveh][aria-pressed=true]');
+    const profile={leader:$('#pf-leader').value.trim(),phone:$('#pf-phone').value.trim(),members:$('#pf-mem').value.trim(),vehicle:v?v.dataset.pfveh:(t.vehicle||''),zone:$('#pf-zone').value.trim()};
+    b.disabled=true;b.textContent='กำลังบันทึก…';
+    try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}
+    catch(err){b.disabled=false;b.textContent='บันทึก';toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}}}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit]'))profileSheet()});
 $('#c-sms').onclick=()=>smsSheet();
 
 /* ---------- SOS ---------- */

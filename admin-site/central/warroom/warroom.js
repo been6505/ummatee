@@ -144,8 +144,6 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','board','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
-  // เมนูหลัก: "บอร์ดงาน" (CENTRAL) กับ "War Room" ไฮไลต์ตามแท็บที่เปิด
-  {const onB=W.tab==='board'&&!r;document.querySelectorAll('nav.tabs a').forEach(a=>{const h=a.getAttribute('href')||'';if(/warroom\/\?tab=board/.test(h)){onB?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current')}else if(/warroom\/$/.test(h)){onB?a.removeAttribute('aria-current'):a.setAttribute('aria-current','page')}})}
   document.body.classList.toggle('wr-overview',W.tab==='over')}
 $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';W.tab=W.room?'over':'struct';if(!W.room)await loadStock();
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});

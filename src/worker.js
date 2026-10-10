@@ -1010,12 +1010,11 @@ const TEAM_POST = {
       await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `แจ้งปัญหาเคส #${c.id}: ${why}${b.note ? ' · ' + clean(b.note, 200) : ''}`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
     if (b.step !== 'done' || c.status !== 'going') return { ok: false, error: 'bad_step' };
     const ph = await db.prepare("SELECT COUNT(*) n FROM case_photo WHERE caseId=? AND kind='handoff'").bind(c.id).first(), phn = ph ? ph.n : 0;
-    if (phn < 1) return { ok: false, error: 'need_photos', have: phn };
     const sets = ['teamDoneAt=?', 'teamNote=?', 'updatedAt=?', 'teamIssue=NULL', 'teamIssueAt=NULL'], vals = [Date.now(), clean(b.note, 300), Date.now()];
     if (b.bags !== undefined && b.bags !== '' && b.bags !== null) { sets.push('bags=?'); vals.push(clampInt(b.bags, 0, 9999, 0)); }
     await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, c.id).run();
     await bumpRev(db);
-    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือเคส #${c.id} แล้ว · รอศูนย์ปิดเคส · ภาพส่งมอบ ${phn} รูป${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือเคส #${c.id} แล้ว · รอศูนย์ปิดเคส${phn ? ` · ภาพส่งมอบ ${phn} รูป` : ''}${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
     return { ok: true, teamDone: true };
   },
   team_sos: async (db, t, b) => {

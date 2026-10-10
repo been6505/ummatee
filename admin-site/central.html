@@ -43,7 +43,7 @@
   </header>
 
   <main class="wrap">
-    <div class="view-row"><div class="seg view-sw" role="tablist" aria-label="มุมมองเคส"><button role="tab" data-view="cases" aria-selected="true"><i data-ic="list"></i> เคสในระบบ</button><button role="tab" data-view="leads" aria-selected="false"><i data-ic="megaphone"></i> รอคัดจากโซเชียล <b class="vbadge" id="leads-n" hidden></b></button><button role="tab" data-view="board" aria-selected="false"><i data-ic="board"></i> บอร์ด</button><button role="tab" data-view="days" aria-selected="false"><i data-ic="calendar"></i> วันที่</button></div><div class="bar-slot" id="bar-slot"></div></div>
+    <div class="view-row"><div class="seg view-sw" role="tablist" aria-label="มุมมองเคส"><button role="tab" data-view="cases" aria-selected="true"><i data-ic="list"></i> เคสในระบบ</button><button hidden role="tab" data-view="leads" aria-selected="false"><i data-ic="megaphone"></i> รอคัดจากโซเชียล <b class="vbadge" id="leads-n" hidden></b></button><button role="tab" data-view="board" aria-selected="false"><i data-ic="board"></i> บอร์ด</button><button role="tab" data-view="days" aria-selected="false"><i data-ic="calendar"></i> วันที่</button></div><div class="bar-slot" id="bar-slot"></div></div>
     <section id="leads-view" class="leads-view" hidden aria-label="เคสจากโซเชียลรอคัด"></section>
     <section class="stats" id="stats" aria-label="สรุปเคส"></section>
 
@@ -104,7 +104,7 @@
 <script src="./central/chat.js?v=22"></script>
 <script src="./central/feedback.js?v=1"></script>
 <script src="./central/localai.js?v=4"></script>
-<script src="./central/hermes.js?v=16"></script>
+<script src="./central/hermes.js?v=17"></script>
 <script src="./central/kbfit.js?v=2"></script>
 <script>document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="./bc.js?v=2" data-mode="staff" defer></script>

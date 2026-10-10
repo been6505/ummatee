@@ -244,6 +244,27 @@ async function aiGeo(env, c) {
   for (const q of qs) { const hit = await geoLookup(q, prov, must.filter(m => addrSk.includes(sk(m)))); if (hit && inAddr(hit.label)) return { ...hit, level: 'AI อ่านที่อยู่' + (j.place && q.includes(j.place) ? '' : am ? ' (อำเภอ/ตำบล)' : '') }; }
   return null;
 }
+const FIW = 'https://polaris.cdg.co.th/server/rest/services/Hosted/';
+async function fiwQ(layer, q) { const u = FIW + layer + '/FeatureServer/0/query?' + new URLSearchParams({ f: 'json', ...q }); const r = await fetch(u, { signal: AbortSignal.timeout(12000), cf: { cacheTtl: 300, cacheEverything: true } }); const j = await r.json(); if (j.error) throw new Error(j.error.message || 'fiw'); return j.features || []; }
+const fiwCell = a => ({ cls: a.hazard_class, score: a.current_flood_hazard_score != null ? Math.round(a.current_flood_hazard_score) : null, phys: a.physical_context_score, dyn: a.dynamic_score, rain24: a.mean_rain_24h != null ? Math.round(a.mean_rain_24h) : null, low: a.lowlying_score, elev: a.any_mean, river: a.any_river_250 ? 250 : a.any_river_500 ? 500 : a.any_river_1000 ? 1000 : a.river_2000 ? 2000 : null, sit: a.max_situation_level, rp: a.max_returnperiod, grid: a.grid_id });
+async function fiwOverview(db) {
+  const c = await getMeta(db, 'fiw_ov'); if (c) { try { const j = JSON.parse(c); if (Date.now() - j.at < 600e3) return j; } catch (e) {} }
+  const ctr = g => { const r = g && g.rings && g.rings[0]; if (!r) return null; let x = 0, y = 0; r.forEach(p => { x += p[0]; y += p[1]; }); return [+(y / r.length).toFixed(4), +(x / r.length).toFixed(4)]; };
+  const [cls, hi, rain, wl] = await Promise.all([
+    fiwQ('FI_Current_Flood_Hazard_H3', { where: '1=1', groupByFieldsForStatistics: 'hazard_class', outStatistics: JSON.stringify([{ statisticType: 'count', onStatisticField: 'objectid', outStatisticFieldName: 'n' }]) }).catch(() => []),
+    fiwQ('FI_Current_Flood_Hazard_H3', { where: "hazard_class='High'", outFields: '*', orderByFields: 'current_flood_hazard_score DESC', resultRecordCount: 25, outSR: 4326, geometryPrecision: 4, returnGeometry: true }).catch(() => []),
+    fiwQ('BFI_Rainfall_Live', { where: 'rain_24h>0', outFields: 'th,rain_1h,rain_24h,rainfall_datetime', orderByFields: 'rain_24h DESC', resultRecordCount: 12, outSR: 4326, returnGeometry: true }).catch(() => []),
+    fiwQ('FI_WaterLevel_Live', { where: 'situation_level>=3', outFields: 'river_name,basin,situation_level,diff_wl_bank_text,storage_percent,waterlevel_datetime', orderByFields: 'situation_level DESC', resultRecordCount: 15, outSR: 4326, returnGeometry: true }).catch(() => [])]);
+  const j = { at: Date.now(), classes: Object.fromEntries(cls.map(f => [f.attributes.hazard_class, f.attributes.n])),
+    high: hi.map(f => ({ ...fiwCell(f.attributes), c: ctr(f.geometry) })),
+    rain: rain.map(f => ({ name: f.attributes.th, r1: f.attributes.rain_1h, r24: f.attributes.rain_24h, at: f.attributes.rainfall_datetime, c: f.geometry ? [+f.geometry.y.toFixed(4), +f.geometry.x.toFixed(4)] : null })),
+    wl: wl.map(f => ({ river: f.attributes.river_name, basin: (() => { try { return JSON.parse(f.attributes.basin).basin_name.th; } catch (e) { return ''; } })(), lv: f.attributes.situation_level, bank: f.attributes.diff_wl_bank_text, store: f.attributes.storage_percent, at: f.attributes.waterlevel_datetime, c: f.geometry ? [+f.geometry.y.toFixed(4), +f.geometry.x.toFixed(4)] : null })) };
+  await setMeta(db, 'fiw_ov', JSON.stringify(j)); return j;
+}
+async function fiwPoints(pts) {
+  return Promise.all(pts.slice(0, 25).map(async ([lat, lng, id]) => { try { const f = await fiwQ('FI_Current_Flood_Hazard_H3', { geometry: `${lng},${lat}`, geometryType: 'esriGeometryPoint', inSR: 4326, spatialRel: 'esriSpatialRelIntersects', outFields: '*', returnGeometry: false });
+    return { id, ...(f[0] ? fiwCell(f[0].attributes) : { cls: 'นอกพื้นที่' }) }; } catch (e) { return { id, cls: 'ดึงไม่ได้' }; } }));
+}
 async function aiPin(db, b) {
   if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
   const c = await db.prepare('SELECT id,address,district,province,notes,lat,lng,glat,glng,intake FROM cases WHERE id=?').bind(clean(b.id, 40)).first(); if (!c) return { ok: false, error: 'not_found' };
@@ -1306,7 +1327,7 @@ const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'fiw', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -2770,6 +2791,8 @@ async function api(request, env) {
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
+      case 'fiw': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const pts = String(p.pts || '').split(';').map(x => x.split(',')).filter(x => x.length >= 2 && isFinite(+x[0]) && isFinite(+x[1]) && +x[0]) .map(x => [+x[0], +x[1], clean(x[2] || '', 40)]);
+        const [ov, at] = await Promise.all([fiwOverview(db).catch(() => null), pts.length ? fiwPoints(pts) : []]); return json({ ok: true, src: 'Flood Intelligence Watch (Esri Thailand / CDG)', ov, at }); }
       case 'photo_index': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const { results } = await db.prepare("SELECT caseId, n FROM case_photo WHERE kind='handoff' AND at>? ORDER BY n").bind(Date.now() - 30 * 864e5).all(); const m = {}; for (const r of results) (m[r.caseId] = m[r.caseId] || []).push(r.n); return json({ ok: true, m }); }
       case 'case_photos': { if (vol) return json(await casePhotos(db, p.id)); const t = p.tk && await teamFrom(env, db, p); if (!t) return json({ ok: false, error: 'not_volunteer' }); const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return json(c && String(c.volunteer || '').replace(/^'/, '').trim() === t.name ? await casePhotos(db, p.id) : { ok: false, error: 'not_your_case' }); }
       case 'case_photo': { if (vol) return casePhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? casePhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }

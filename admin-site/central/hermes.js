@@ -22,6 +22,18 @@ const HERMES=(()=>{
     const [h,o,r,t]=await Promise.all([get({action:'helpme_cases'}).catch(()=>null),get({action:'list'}).catch(()=>null),get({action:'roster'}).catch(()=>null),get({action:'teams'}).catch(()=>null)]);
     const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
     S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))).filter(c=>!c.dupOf),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
+  const HZ={High:'สูง',Moderate:'ปานกลาง',Low:'ต่ำ','Very Low':'ต่ำมาก','No Data':'ไม่มีข้อมูล'};
+  async function fiw(d){const pin=c=>c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&+c.lat;const open=d.cases.filter(c=>c.status!=='done'&&pin(c)).sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0));
+    const f=S.focus&&d.cases.find(c=>String(c.id)===S.focus),pick=[...(f&&pin(f)?[f]:[]),...open.filter(c=>c!==f)].slice(0,20),key=pick.map(c=>c.id).join(',');
+    if(S.fw&&S.fwKey===key&&Date.now()-S.fwAt<300000)return S.fw;
+    const r=await get({action:'fiw',pts:pick.map(c=>`${(+c.lat).toFixed(5)},${(+c.lng).toFixed(5)},${c.id}`).join(';')}).catch(()=>null);S.fw=r&&r.ok?r:null;S.fwKey=key;S.fwAt=Date.now();return S.fw}
+  function fiwText(F){if(!F)return '';const o=F.ov,L=[`ข้อมูลความเสี่ยงน้ำท่วม (${F.src}, ตาราง H3 ~0.1 ตร.กม.):`];
+    if(o){const c=o.classes||{};L.push(`ทั้งพื้นที่: เสี่ยงสูง ${c.High||0} ช่อง · ปานกลาง ${c.Moderate||0} · ต่ำ ${c.Low||0} · ต่ำมาก ${c['Very Low']||0}`);
+      if(o.high&&o.high.length)L.push('จุดเสี่ยงสูงสุด: '+o.high.slice(0,8).map(h=>`${h.c?h.c.join(','):'-'} (คะแนน ${h.score}${h.rain24!=null?`, ฝน24ชม. ${h.rain24} มม.`:''}${h.river?`, ใกล้แม่น้ำ ${h.river} ม.`:''})`).join(' · '));
+      if(o.rain&&o.rain.length)L.push('ฝนสะสม 24 ชม. สูงสุด: '+o.rain.slice(0,6).map(x=>`${x.name} ${x.r24} มม.`).join(' · '));
+      if(o.wl&&o.wl.length)L.push('สถานีระดับน้ำเฝ้าระวัง: '+o.wl.slice(0,6).map(x=>`${x.river||x.basin||'-'} ระดับ ${x.lv}/5${x.bank?` (${x.bank})`:''}${x.store?` น้ำ ${Math.round(x.store)}% ตลิ่ง`:''}`).join(' · '))}
+    if(F.at&&F.at.length)L.push('ความเสี่ยง ณ จุดเคส:\n'+F.at.map(x=>`#${x.id}: ${HZ[x.cls]||x.cls}${x.score!=null?` คะแนน ${x.score}/100`:x.phys!=null?` (สภาพพื้นที่ ${Math.round(x.phys)}/100)`:''}${x.rain24!=null?` · ฝน24ชม. ${x.rain24} มม.`:''}${x.low!=null?` · ที่ลุ่ม ${x.low}`:''}${x.elev!=null?` · สูง ~${Math.round(x.elev)} ม.`:''}${x.river?` · ห่างแม่น้ำสายหลัก <${x.river} ม.`:''}${x.sit?` · สถานีน้ำใกล้ระดับ ${x.sit}`:''}`).join('\n'));
+    return L.join('\n')}
   async function stock(){if(S.stk&&Date.now()-S.stkAt<60000)return S.stk;const r=await get({action:'stock'}).catch(()=>null);S.stk=r&&r.ok?r.items||[]:[];S.stkAt=Date.now();return S.stk}
   function stockText(items,d){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);if(!its.length)return 'สต็อก: ไม่มีข้อมูล';
     const byId=new Map(items.map(i=>[i.id,i]));
@@ -175,7 +187,7 @@ const HERMES=(()=>{
   async function ask(q,o={}){if(S.busy){note('รอคำตอบก่อนหน้าให้เสร็จก่อน');return}S.busy=true;add(E(o.label||q),'hz-m u');
     const t0=Date.now(),wait1=note('AI HELP กำลังคิด…'),tick=setInterval(()=>{wait1.textContent=`AI HELP กำลังคิด… ${Math.round((Date.now()-t0)/1000)} วิ`},1000);
     let bub=null;
-    try{const [d,stk]=await Promise.all([data(),stock()]),P=o.plan||null,ctx=context(d,P,stk);
+    try{const [d,stk]=await Promise.all([data(),stock()]),P=o.plan||null,F=await fiw(d).catch(()=>null),ctx=context(d,P,stk)+(F?'\n\n'+fiwText(F):'');
       if(typeof LOCALAI==='undefined'||!LOCALAI.on()){wait1.remove();note('ยังไม่ได้เปิด Local AI · กด ⚙ เพื่อตั้งค่า');return}
       const sys=(LOCALAI.cfg().system||'').replace('คุณคือ Hermes','คุณคือ AI HELP')+SYS;
       const msgs=[{role:'system',content:sys},{role:'user',content:'ข้อมูลปัจจุบัน:\n'+ctx},{role:'assistant',content:'รับทราบข้อมูลแล้ว'},...hist.slice(-6),{role:'user',content:q+'\n(ตอบกระชับ ไม่เกิน 10 บรรทัด)'}];

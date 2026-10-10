@@ -24,7 +24,7 @@ const PTT=(()=>{
 .ptt-unlock{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translateX(-50%);z-index:9002;border:0;background:#161B3D;color:#fff;border-radius:999px;padding:12px 20px;font:inherit;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);cursor:pointer;max-width:calc(100vw - 24px);animation:pttb 1.6s infinite}
 @keyframes pttb{50%{opacity:.3}}@keyframes pttw{0%,100%{height:5px}50%{height:18px}}`;
   const el=document.createElement('div');el.className='ptt-ui';el.innerHTML=`<div class="ptt-talk" hidden><span class="ptt-dot"></span><b class="ptt-tl">กำลังพูด…</b><span class="ptt-t">0.0</span><span class="ptt-lv"><i></i></span><small class="ptt-ts">ปล่อยเพื่อส่ง · ลากนิ้วออกเพื่อยกเลิก</small></div>
-    <button type="button" class="ptt-unlock" hidden>🔇 แตะที่นี่เพื่อเปิดเสียงวอ · เบราว์เซอร์ปิดเสียงไว้จนกว่าจะแตะหน้าจอ</button>
+    <button type="button" class="ptt-unlock" hidden>🔇 แตะเพื่อเปิดเสียงวอ</button>
     <div class="ptt-now" hidden><span class="ptt-wave"><i></i><i></i><i></i></span><span class="ptt-who"></span><button type="button" class="ptt-x" aria-label="หยุด">✕</button></div>
     <div class="ptt-panel" hidden role="dialog" aria-label="วอ"><div class="ptt-ph"><span class="ptt-conn"></span><b>📻 วอ</b><button type="button" class="ptt-close" aria-label="ปิด">✕</button></div>
       <p class="ptt-sec">ช่อง · แตะเพื่อเลือกช่องที่จะพูด · 🔔 = ฟังอยู่</p><div class="ptt-chs"></div><p class="ptt-sec">ฟังย้อนหลัง</p><div class="ptt-list"></div><p class="ptt-hint">กดค้างปุ่ม วอ เพื่อพูด</p></div>`;

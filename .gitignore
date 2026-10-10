@@ -4,3 +4,4 @@ node_modules/
 .secrets/
 pages-admin/dist/
 wrangler.localadmin.jsonc
+admin-site/app/*.apk

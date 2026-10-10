@@ -112,19 +112,20 @@ $('#hqp').addEventListener('submit',async e=>{e.preventDefault();try{const r=awa
 /* ลิงก์เฉพาะทีม: ทีมเปิดบนมือถือได้ทันที ไม่ต้องใช้รหัสกลาง · เปลี่ยนลิงก์ได้ถ้าหลุด */
 const QR_SRI='sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU';
 const teamUrl=t=>location.origin+'/team/?id='+encodeURIComponent(t.token||'');
+const appUrl=t=>location.origin+'/app/?id='+encodeURIComponent(t.token||''); // QR: สแกนด้วยกล้อง = หน้าดาวน์โหลดแอป + ลิงก์ทีม · สแกนในแอป = เข้าทีมเลย
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();return qrP||(qrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.integrity=QR_SRI;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>{qrP=null;rej()};document.head.append(s)}))}
-function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกงาน`;
+function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกงาน\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
   const sms=`sms:${p}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}`;
   const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="link"></i> ลิงก์ทีม ${esc(t.name)}</h2><p class="muted small">ลิงก์นี้ใช้แทนรหัส · ส่งให้ทีมนี้เท่านั้น</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
-    <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div>
+    <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div><p class="muted small" style="text-align:center;margin:0">สแกนด้วยกล้องมือถือ = ดาวน์โหลดแอป + เข้าทีม · สแกนในแอป = เข้าทีมทันที</p>
       <input class="tc-link" readonly value="${esc(url)}" aria-label="ลิงก์ทีม" onclick="this.select()">
       <div class="tc-acts"><button class="btn primary" type="button" id="l-copy"><i data-ic="copy"></i> คัดลอก</button>${p.length>=9?`<a class="btn ghost" href="${esc(sms)}"><i data-ic="chat"></i> ส่ง SMS</a>`:''}<a class="btn ghost" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">เปิดดู ↗</a></div>
       <p class="muted small">ติดตามได้แม้ทีมปิดหน้าเว็บ: ให้ทีมเปิดลิงก์นี้ → ตั้งค่า → "ให้ศูนย์ติดตามได้แม้ปิดหน้านี้" แล้วติดตั้งแอปฟรี Traccar Client ตามขั้นตอน</p>
       <p class="muted small">ลิงก์หลุดหรือคนออกจากทีม: สร้างลิงก์ใหม่ ลิงก์เดิมจะใช้ไม่ได้ทันที (แอปติดตามต้องใส่รหัสใหม่ด้วย)</p>
       <button class="btn ghost" type="button" id="l-new"><i data-ic="refresh"></i> สร้างลิงก์ใหม่</button></div>`;
   d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm;
-  loadQR().then(()=>{const q=$('#qr');if(q){q.innerHTML='';new QRCode(q,{text:url,width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}}).catch(()=>{const q=$('#qr');if(q)q.hidden=true});
+  loadQR().then(()=>{const q=$('#qr');if(q){q.innerHTML='';new QRCode(q,{text:appUrl(t),width:220,height:220,correctLevel:QRCode.CorrectLevel.M})}}).catch(()=>{const q=$('#qr');if(q)q.hidden=true});
   $('#l-copy').onclick=async e=>{try{await navigator.clipboard.writeText(url);toast('คัดลอกลิงก์แล้ว',true)}catch(err){d.querySelector('.tc-link').select()}};
   $('#l-new').onclick=async()=>{if(!confirm(`สร้างลิงก์ใหม่ให้ ${t.name}? ลิงก์เดิมจะใช้ไม่ได้`))return;try{const r=await apiPost({action:'team_link',id:t.id});if(r.ok){t.token=r.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งให้ทีมอีกครั้ง',true);linkSheet(t)}else toast('สร้างไม่สำเร็จ')}catch(err){}}}
 

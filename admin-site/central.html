@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./admin.css?v=17">
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
-<link rel="stylesheet" href="./central/hm-ui.css?v=64">
+<link rel="stylesheet" href="./central/hm-ui.css?v=65">
 <script src="./central/icons.js?v=13"></script>
 </head>
 <body>
@@ -45,7 +45,7 @@
   </header>
 
   <main class="wrap">
-    <div class="seg view-sw" role="tablist" aria-label="มุมมองเคส"><button role="tab" data-view="cases" aria-selected="true"><i data-ic="list"></i> เคสในระบบ</button><button role="tab" data-view="leads" aria-selected="false"><i data-ic="megaphone"></i> รอคัดจากโซเชียล <b class="vbadge" id="leads-n" hidden></b></button><button role="tab" data-view="board" aria-selected="false"><i data-ic="board"></i> บอร์ด</button></div>
+    <div class="seg view-sw" role="tablist" aria-label="มุมมองเคส"><button role="tab" data-view="cases" aria-selected="true"><i data-ic="list"></i> เคสในระบบ</button><button role="tab" data-view="leads" aria-selected="false"><i data-ic="megaphone"></i> รอคัดจากโซเชียล <b class="vbadge" id="leads-n" hidden></b></button><button role="tab" data-view="board" aria-selected="false"><i data-ic="board"></i> บอร์ด</button><button role="tab" data-view="days" aria-selected="false"><i data-ic="calendar"></i> วันที่</button></div>
     <section id="leads-view" class="leads-view" hidden aria-label="เคสจากโซเชียลรอคัด"></section>
     <section class="stats" id="stats" aria-label="สรุปเคส"></section>
 
@@ -66,6 +66,7 @@
       <p class="count" id="count" aria-live="polite"></p>
     </section>
 
+    <section id="days-view" class="days-view" hidden aria-label="เคสรายวัน"></section>
     <section id="kanban-view" class="kanban-view" hidden aria-label="บอร์ดเคส"></section>
     <section id="map-wrap" class="map-wrap">
       <div class="map-body">
@@ -89,12 +90,13 @@
 
 <script src="./central/verify.js?v=15"></script>
 <script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=57"></script>
+<script src="./admin.js?v=58"></script>
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=13"></script>
 <script src="./central/casekanban.js?v=1"></script>
-<script src="./central/leadsview.js?v=5"></script>
+<script src="./central/casedays.js?v=1"></script>
+<script src="./central/leadsview.js?v=6"></script>
 <script src="./central/theme-toggle.js?v=6"></script>
 <script src="./central/chat.js?v=13"></script>
 <script src="./central/feedback.js?v=1"></script>

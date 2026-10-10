@@ -630,3 +630,42 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
 body.kb-on .bar-row>.seg,body.kb-on #export,body.kb-on #count,body.kb-on #f-status,body.kb-on #f-sort{display:none!important}
 body.kb-on .bar-row{min-height:0}
 @media (max-width:760px){.view-sw button{white-space:nowrap;font-size:13px;padding-left:10px;padding-right:10px}.kb-tip{font-size:12px}}
+
+/* หน้าจัดการเคส · มุมมองวันที่ (เข้ามา / ช่วยแล้ว รายวัน) */
+.days-view{margin-top:10px;display:flex;flex-direction:column;gap:12px}
+.dv-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.dv-sum{display:flex;gap:8px;flex-wrap:wrap}
+.dv-sum>div{background:var(--card,#fff);border-radius:14px;padding:8px 14px;min-width:96px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dv-sum small{display:block;font-size:12px;color:var(--muted,#6b7280)}
+.dv-sum b{font-size:22px;color:#2D45C8}.dv-sum .ok b{color:#0e9f6e}.dv-sum .wt b{color:#e5484d}
+.dv-legend{font-size:12px;color:var(--muted,#6b7280);display:flex;align-items:center;gap:6px}
+.dv-legend span{width:10px;height:10px;border-radius:3px;display:inline-block}.dv-legend .i{background:#2D45C8}.dv-legend .o{background:#10b981;margin-left:8px}
+.dv-chart{display:flex;gap:4px;align-items:flex-end;background:var(--card,#fff);border-radius:16px;padding:28px 10px 8px;overflow-x:auto;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dv-bar{flex:1 0 26px;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:2px;border-radius:10px;cursor:pointer;font:inherit;color:inherit}
+.dv-bar.on,.dv-bar:hover{background:var(--soft,#f1f3f8)}
+.dv-bs{height:140px;display:flex;align-items:flex-end;gap:2px;width:100%;justify-content:center}
+.dv-bs i{width:44%;max-width:16px;border-radius:4px 4px 0 0;position:relative;min-height:2px}
+.dv-bs i.i{background:#2D45C8}.dv-bs i.o{background:#10b981}
+.dv-bs em{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-style:normal;font-size:10.5px;font-weight:700;line-height:1.4}
+.dv-bs i.i em{color:#2D45C8}.dv-bs i.o em{color:#0e9f6e}
+.dv-bar small{font-size:11px;color:var(--muted,#6b7280)}
+.dv-day{background:var(--card,#fff);border-radius:16px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dv-day h3{margin:0 0 8px;font-size:15px;display:flex;align-items:center;justify-content:space-between}
+.dv-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dv-two h4{margin:0 0 6px;font-size:13px;color:#2D45C8}.dv-two h4.ok{color:#0e9f6e}.dv-two h4 span{font-weight:400;color:var(--muted,#6b7280)}
+.dv-two>div{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.dv-case{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;text-align:left;border:1px solid var(--line,#e5e7eb);background:none;border-radius:12px;padding:7px 10px;cursor:pointer;font:inherit;color:inherit}
+.dv-case .urg{grid-row:1/3;font-size:11px}.dv-case b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-case small{grid-column:2;font-size:11.5px;color:var(--muted,#6b7280);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dv-st{grid-row:1/3;grid-column:3;font-size:11px;border-radius:999px;padding:2px 8px;background:#eef1ff;color:#2D45C8}
+.dv-st.st-open{background:#fdecec;color:#c62828}.dv-st.st-helped,.dv-st.st-done{background:#e7f8ef;color:#0e7a52}.dv-st.st-going{background:#fff4e0;color:#b45309}
+.dv-tbl{width:100%;border-collapse:collapse;background:var(--card,#fff);border-radius:16px;overflow:hidden;font-size:13.5px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.dv-tbl th,.dv-tbl td{padding:8px 12px;text-align:right;border-bottom:1px solid var(--line,#eef0f4)}
+.dv-tbl th:first-child,.dv-tbl td:first-child{text-align:left}
+.dv-tbl th{font-size:12px;color:var(--muted,#6b7280);font-weight:600}
+.dv-tbl tbody tr{cursor:pointer}.dv-tbl tbody tr:hover,.dv-tbl tr.on{background:var(--soft,#f4f6fb)}
+.dv-tbl td.ok{color:#0e9f6e;font-weight:700}.dv-tbl td.bad{color:#e5484d}
+body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-status,body.dv-on #f-sort{display:none!important}
+@media (max-width:760px){.dv-two{grid-template-columns:1fr}.dv-bs{height:110px}.dv-bar{flex-basis:22px}.view-sw{overflow-x:auto}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dv-sum>div,:root:not([data-theme="light"]) .dv-chart,:root:not([data-theme="light"]) .dv-day,:root:not([data-theme="light"]) .dv-tbl{background:#1f2430}}
+:root[data-theme="dark"] .dv-sum>div,:root[data-theme="dark"] .dv-chart,:root[data-theme="dark"] .dv-day,:root[data-theme="dark"] .dv-tbl{background:#1f2430}

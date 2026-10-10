@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F5F5F7">
+<meta name="robots" content="noindex">
+<title>ดาวน์โหลดแอป Help Me ทีม</title>
+<link rel="icon" href="../assets/hm-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#DD2027;--ink:#17181C;--muted:#62656F;--line:#E8E8EC;--bg:#F5F5F7;--ok:#1F7A43;--blue:#2D45C8;--blue-t:#EEF1FD}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 22px) 16px calc(env(safe-area-inset-bottom,0px) + 40px)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.brand img{width:64px;height:64px;border-radius:16px;box-shadow:0 6px 18px rgba(22,27,61,.12)}
+.brand h1{margin:0;font-size:22px;line-height:1.25}.brand small{display:block;color:var(--muted);font-size:14px;font-weight:500}
+.card{background:#fff;border-radius:24px;padding:18px;box-shadow:0 1px 3px rgba(22,27,61,.06);margin-bottom:14px;display:grid;gap:12px}
+.card h2{margin:0;font-size:17px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:999px;font:inherit;font-weight:700;font-size:17px;cursor:pointer;text-decoration:none}
+.btn.red{background:var(--primary);color:#fff;box-shadow:0 8px 20px rgba(221,32,39,.25)}.btn.green{background:var(--ok);color:#fff}.btn.ghost{background:var(--blue-t);color:var(--blue)}
+.btn svg{width:22px;height:22px}
+ol{margin:0;padding-left:22px;display:grid;gap:6px;color:#33363d}ol b{color:var(--ink)}
+.muted{color:var(--muted);font-size:14px;margin:0}
+.team{display:flex;align-items:center;gap:10px;background:#E9F6EE;color:var(--ok);border-radius:16px;padding:10px 14px;font-weight:600;font-size:14.5px}
+.tabs{display:flex;background:#fff;border-radius:999px;padding:5px;box-shadow:0 1px 3px rgba(22,27,61,.08);margin-bottom:14px}
+.tabs button{flex:1;border:0;background:none;border-radius:999px;padding:10px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.ok-t{color:var(--ok);font-weight:700;margin:0;min-height:1.2em;text-align:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="brand"><img src="../assets/hm-icon-192.png" alt=""><h1>Help Me ทีม<small>แอปสำหรับทีมอาสา · รับเคส · ส่งตำแหน่ง · แชท/โทรกับศูนย์</small></h1></div>
+  <div class="team" id="team" hidden>✓ มีลิงก์ทีมของคุณแล้ว · ติดตั้งแอปแล้วกลับมาที่หน้านี้</div>
+  <div class="tabs" role="group" aria-label="ระบบมือถือ"><button type="button" data-os="android" aria-pressed="true">Android</button><button type="button" data-os="ios" aria-pressed="false">iPhone</button></div>
+
+  <section class="card" data-for="android">
+    <h2>1. ดาวน์โหลดและติดตั้ง</h2>
+    <a class="btn red" href="./HelpMe-Team.apk" download="HelpMe-Team.apk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>ดาวน์โหลดแอป (Android)</a>
+    <ol><li>กด <b>ดาวน์โหลด</b> ถ้ามีคำเตือนให้กด <b>ดาวน์โหลดต่อ</b></li><li>เปิดไฟล์ <b>HelpMe-Team.apk</b> → ถ้าเครื่องถาม ให้ <b>อนุญาตติดตั้งจากแหล่งนี้</b></li><li>กด <b>ติดตั้ง</b></li></ol>
+    <p class="muted">ไฟล์ประมาณ 4.6 MB · แอปจากศูนย์ HELP ME CENTRAL (ยังไม่อยู่ใน Play Store)</p>
+  </section>
+
+  <section class="card" data-for="ios" hidden>
+    <h2>iPhone: ใช้หน้าทีมบนเว็บ</h2>
+    <p class="muted">แอป iPhone ยังไม่เปิดให้ดาวน์โหลด · ใช้หน้าเว็บทีมได้ทุกฟังก์ชัน และเพิ่มไว้หน้าจอโฮมให้เปิดเหมือนแอป</p>
+    <a class="btn red" id="open-web" href="../team/">เปิดหน้าทีม</a>
+    <ol><li>เปิดหน้านี้ใน <b>Safari</b></li><li>กดปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรขึ้น)</li><li>เลือก <b>เพิ่มไปยังหน้าจอโฮม</b></li></ol>
+  </section>
+
+  <section class="card" id="login" hidden>
+    <h2>2. เข้าทีมในแอป</h2>
+    <button type="button" class="btn green" id="copy">คัดลอกลิงก์ทีม</button>
+    <p class="ok-t" id="copied" aria-live="polite"></p>
+    <ol><li>เปิดแอป <b>Help Me ทีม</b></li><li>กด <b>วางลิงก์ทีม</b> แล้วกดเข้า · หรือกด <b>สแกน QR โค้ดทีม</b> แล้วสแกน QR เดิมจากศูนย์</li></ol>
+    <a class="btn ghost" id="open-web2" href="../team/">หรือใช้บนเว็บเลย (ไม่ติดตั้ง)</a>
+  </section>
+
+  <section class="card" id="nologin">
+    <h2>2. เข้าทีมในแอป</h2>
+    <p class="muted">เปิดแอปแล้วกด <b>สแกน QR โค้ดทีม</b> · ขอ QR หรือลิงก์ทีมจากศูนย์ (หน้า จัดทีม → ลิงก์ทีม)</p>
+  </section>
+</main>
+<script>
+(()=>{
+  const q=new URLSearchParams(location.search),id=(q.get('id')||'').trim();
+  const ok=/^[a-z0-9]{10,40}$/i.test(id);
+  const teamUrl=ok?location.origin+'/team/?id='+encodeURIComponent(id.toLowerCase()):'';
+  if(ok){document.getElementById('team').hidden=false;document.getElementById('login').hidden=false;document.getElementById('nologin').hidden=true;
+    document.getElementById('open-web').href=teamUrl;document.getElementById('open-web2').href=teamUrl}
+  const setOS=os=>{document.querySelectorAll('[data-os]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.os===os)));document.querySelectorAll('[data-for]').forEach(s=>{s.hidden=s.dataset.for!==os})};
+  document.querySelectorAll('[data-os]').forEach(b=>b.onclick=()=>setOS(b.dataset.os));
+  if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))setOS('ios');
+  document.getElementById('copy').onclick=async()=>{const m=document.getElementById('copied');
+    try{await navigator.clipboard.writeText(teamUrl);m.textContent='คัดลอกแล้ว · เปิดแอปแล้วกด "วางลิงก์ทีม"'}
+    catch(e){window.prompt('คัดลอกลิงก์นี้',teamUrl)}};
+})();
+</script>
+</body>
+</html>

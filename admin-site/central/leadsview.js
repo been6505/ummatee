@@ -9,13 +9,13 @@
   let frame=null;
   function setBadge(n){badge.hidden=!n;badge.textContent=n>99?'99+':String(n)}
   function show(view){
-    const leads=view==='leads',board=view==='board',kb=document.getElementById('kanban-view');
+    const leads=view==='leads',kbv=view==='board',dys=view==='days',board=kbv||dys,kb=document.getElementById('kanban-view'),dv=document.getElementById('days-view');
     sw.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===view)));
     caseParts.forEach(e=>{e.hidden=leads||(board&&!e.matches('.bar'))});box.hidden=!leads;
-    document.body.classList.toggle('kb-on',board);if(kb){kb.hidden=!board;if(board&&typeof KANBAN!=='undefined')KANBAN.draw()}
+    document.body.classList.toggle('kb-on',kbv);document.body.classList.toggle('dv-on',dys);if(kb){kb.hidden=!kbv;if(kbv&&typeof KANBAN!=='undefined')KANBAN.draw()}if(dv){dv.hidden=!dys;if(dys&&typeof CASEDAYS!=='undefined')CASEDAYS.draw()}
     if(leads&&!frame){frame=document.createElement('iframe');frame.src='./central/leads/?embed=1';frame.title='เคสจากโซเชียลรอคัด';frame.className='leads-frame';box.append(frame)}
     if(view==='cases')setTimeout(()=>window.dispatchEvent(new Event('resize')),60);
-    const h=leads?'#leads':board?'#board':'';if(location.hash!==h)history.replaceState(null,'',location.pathname+h)}
+    const h=leads?'#leads':kbv?'#board':dys?'#days':'';if(location.hash!==h)history.replaceState(null,'',location.pathname+h)}
   sw.addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)show(b.dataset.view)});
   window.addEventListener('message',e=>{
     if(e.origin!==location.origin||!e.data||e.data.src!=='uh-leads')return;
@@ -27,5 +27,5 @@
   // จำนวนรอคัดบนปุ่ม (ไม่ต้องเปิดมุมมองก่อน)
   async function count(){if(!A.key)return;try{const r=await api({action:'leads',key:A.key,days:30});if(r&&r.ok)setBadge(r.leads.filter(l=>l.status==='new').length)}catch(e){}}
   count();setInterval(()=>{if(!document.hidden&&box.hidden)count()},120000);
-  if(location.hash==='#leads')show('leads');else if(location.hash==='#board')show('board');
+  if(location.hash==='#leads')show('leads');else if(location.hash==='#board')show('board');else if(location.hash==='#days')show('days');
 })();

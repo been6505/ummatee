@@ -268,7 +268,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=22"></script>
-<script src="./native-track.js?v=6"></script>
+<script src="./native-track.js?v=7"></script>
 <script src="../central/ptt.js?v=8"></script>
 <script>(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
@@ -548,6 +548,19 @@ async function teleTick(){try{const C=window.Capacitor;const DS=C&&C.isNativePla
       if(r.battery!=null){TELE.batt=r.battery;TR.batt=r.battery}if(r.charging!=null)TELE.charging=!!r.charging;if(r.signal!=null)TELE.sig=r.signal;if(r.network)TELE.net=r.network;if(r.carrier)TELE.carrier=r.carrier}}catch(e){}
   const c=navigator.connection;if(c&&!TELE._native){TELE.net=c.type&&c.type!=='unknown'?c.type:(c.effectiveType||null);const et=c.effectiveType,dl=+c.downlink||0;TELE.sig=et==='4g'?(dl>=5?4:3):et==='3g'?2:et?1:null}}
 teleTick();setInterval(teleTick,20000);
+const ROAD=window.ROAD={on:false,lp:null,ss:0,n:0,pk:0,win:[],seg:null,out:[],perm:null,
+  fix:async()=>{if(NATIVE&&window.NTRK){const f=await NTRK.lastFix().catch(()=>null);return f&&Date.now()-(f.t||0)<8000?{lat:f.lat,lng:f.lng,spd:f.vel}:null}const p=TR.pos;return p&&Date.now()-p.at<8000&&p.speed!=null?{lat:p.lat,lng:p.lng,spd:p.speed*3.6}:null}};
+function roadMotion(e){const a=e.acceleration,g=e.accelerationIncludingGravity;let v;
+  if(a&&a.x!=null){v=Math.hypot(a.x,a.y,a.z)}else if(g&&g.x!=null){const m=Math.hypot(g.x,g.y,g.z);ROAD.lp=ROAD.lp==null?m:ROAD.lp*.96+m*.04;v=Math.abs(m-ROAD.lp)}else return;
+  ROAD.ss+=v*v;ROAD.n++;if(v>ROAD.pk)ROAD.pk=v}
+function roadOn(want){if(want===ROAD.on)return;ROAD.on=want;if(want){addEventListener('devicemotion',roadMotion)}else{removeEventListener('devicemotion',roadMotion);ROAD.seg=null}}
+function roadPerm(){const D=window.DeviceMotionEvent;if(ROAD.perm||!D||typeof D.requestPermission!=='function'){ROAD.perm=ROAD.perm||'ok';return}D.requestPermission().then(r=>{ROAD.perm=r==='granted'?'ok':'no'}).catch(()=>{})}
+document.addEventListener('click',function rp(){roadPerm();if(ROAD.perm)document.removeEventListener('click',rp)},true);
+setInterval(async()=>{const veh=S.me&&S.me.team&&S.me.team.vehicle,want=(NATIVE||TR.watch!=null)&&!document.hidden&&veh!=='boat'&&veh!=='foot';roadOn(want);if(!want||!ROAD.n)return;
+  const rms=Math.sqrt(ROAD.ss/ROAD.n),pk=ROAD.pk;ROAD.ss=0;ROAD.n=0;ROAD.pk=0;const f=await ROAD.fix();if(!f||!(f.spd>=10)){ROAD.seg=null;return}
+  let g=ROAD.seg;if(!g)g=ROAD.seg={lat:f.lat,lng:f.lng,rs:0,c:0,pk:0,b:0,sp:0};g.rs+=rms;g.c++;g.sp+=f.spd;if(pk>g.pk)g.pk=pk;if(pk>6)g.b++;
+  if(dist(g,f)>=60||g.c>=20){ROAD.out.push({at:Date.now(),lat:+((g.lat+f.lat)/2).toFixed(6),lng:+((g.lng+f.lng)/2).toFixed(6),rms:+(g.rs/g.c).toFixed(2),peak:+g.pk.toFixed(1),bumps:g.b,spd:Math.round(g.sp/g.c)});if(ROAD.out.length>600)ROAD.out=ROAD.out.slice(-600);ROAD.seg={lat:f.lat,lng:f.lng,rs:0,c:0,pk:0,b:0,sp:0}}},1000);
+setInterval(async()=>{if(!ROAD.out.length||!navigator.onLine)return;const pts=ROAD.out.slice(0,120);try{const r=await post({action:'road_q',pts});if(r&&r.ok)ROAD.out=ROAD.out.slice(pts.length)}catch(e){}},60000);
 function track(on){
   if(!on){if(TR.watch!=null)navigator.geolocation.clearWatch(TR.watch);TR.watch=null;TR.want=false;st.set('uh_tm_loc','');post({action:'team_ping',stop:true}).catch(()=>{});locUI();return}
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}

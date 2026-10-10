@@ -11,7 +11,7 @@ const TRACK=(()=>{
     [t.battery!=null?`แบต ${t.battery}%`:'',t.speed!=null&&t.speed>=1?`${Math.round(t.speed)} กม./ชม.`:'',t.accuracy?`±${t.accuracy} ม.`:''].filter(Boolean).join(' · '),
     t.caseId?`ถือเคส #${esc(t.caseId)}`:'',isSos(r)?'<b style="color:#E5383B">SOS</b>':'',
     `<a href="https://www.google.com/maps/dir/?api=1&destination=${+t.lat},${+t.lng}" target="_blank" rel="noopener">นำทางไปหาทีม ↗</a>`].filter(Boolean).join('<br>')}
-  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/',LY={sat:false,gis:true,cases:false,rally:false};
+  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/',LY={sat:false,gis:true,cases:false,rally:false,road:false};let rq=null,rqAt=0;
   try{Object.assign(LY,JSON.parse(localStorage.getItem('uh_tlay')||'{}'))}catch(e){}
   let bl=null,btok=0,gl=null,gisOk=null;
   function base(kind){const t=(u,a)=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true});if(bl)map.removeLayer(bl);
@@ -21,10 +21,18 @@ const TRACK=(()=>{
     if(gisOk==null){try{const r=await fetch('/api?action=gistda_status').then(r=>r.json());gisOk=!!(r&&r.enabled)}catch(e){gisOk=false}}if(!gisOk||!LY.gis)return;
     if(!map.getPane('gistda')){const p=map.createPane('gistda');p.style.zIndex=340;p.style.pointerEvents='none'}
     gl=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'}).addTo(map)}
+  const RQL=['ถนนเรียบ','ขรุขระเล็กน้อย','ขรุขระ','แย่มาก / หลุมบ่อ'],RQC=['#22A06B','#E5B800','#F97316','#D92D20'];
+  async function road(force){if(!LY.road){if(rq){rq.remove();rq=null}return}if(!force&&Date.now()-rqAt<120000)return;rqAt=Date.now();
+    let r;try{r=await apiGet({action:'road_q',hours:72})}catch(e){return}if(!r||!r.ok||!LY.road)return;
+    if(!map.getPane('roadq')){const p=map.createPane('roadq');p.style.zIndex=420}
+    if(rq)rq.clearLayers();else rq=L.layerGroup().addTo(map);const rd=L.canvas({pane:'roadq'});
+    r.cells.forEach(([la,ln,rms,pk,bu,n,tm,at,sp])=>{const lv=rms>=2.5||pk>=12?3:rms>=1.4||bu>=2||pk>=8?2:rms>=.8?1:0;
+      L.circleMarker([la,ln],{renderer:rd,pane:'roadq',radius:lv>=2?6:4,weight:1,color:'#fff',fillColor:RQC[lv],fillOpacity:.9}).bindTooltip(`<b>${RQL[lv]}</b><br>สั่น ${rms} m/s² · สูงสุด ${pk}${bu?` · กระแทก ${bu} ครั้ง`:''}<br>${n} ช่วง · ${tm} ทีม · ~${sp} กม./ชม. · ${ago(at)}`).addTo(rq)})}
+  setInterval(()=>{if(LY.road&&!document.hidden)road()},30000);
   function lyrCtl(){const C=L.Control.extend({options:{position:'topleft'},onAdd(){const d=L.DomUtil.create('div','trk-lyr');L.DomEvent.disableClickPropagation(d);
-      const draw=()=>{d.innerHTML=[['sat','ภาพดาวเทียม'],['gis','น้ำท่วม GISTDA'],['cases','เคสที่มอบแล้ว'],['rally','จุดรวมพล']].map(([k,l])=>`<button type="button" data-tl="${k}" aria-pressed="${!!LY[k]}">${l}</button>`).join('')};
+      const draw=()=>{d.innerHTML=[['sat','ภาพดาวเทียม'],['gis','น้ำท่วม GISTDA'],['cases','เคสที่มอบแล้ว'],['rally','จุดรวมพล'],['road','สภาพถนน']].map(([k,l])=>`<button type="button" data-tl="${k}" aria-pressed="${!!LY[k]}">${l}</button>`).join('')};
       d.onclick=e=>{const b=e.target.closest('[data-tl]');if(!b)return;const k=b.dataset.tl;LY[k]=!LY[k];try{localStorage.setItem('uh_tlay',JSON.stringify(LY))}catch(x){}
-        if(k==='sat')base(LY.sat?'sat':'road');else if(k==='gis')gistda();else if(k==='rally'){if(rl)LY.rally?rl.addTo(map):rl.remove()}else if(cp){LY.cases?cp.addTo(map):cp.remove()}draw()};draw();return d}});new C().addTo(map);if(LY.sat)base('sat')}
+        if(k==='sat')base(LY.sat?'sat':'road');else if(k==='gis')gistda();else if(k==='road')road(true);else if(k==='rally'){if(rl)LY.rally?rl.addTo(map):rl.remove()}else if(cp){LY.cases?cp.addTo(map):cp.remove()}draw()};draw();return d}});new C().addTo(map);if(LY.sat)base('sat')}
   async function init(el){if(map)return true;try{await loadLeaflet()}catch(e){el.innerHTML='<p class="empty">โหลดแผนที่ไม่ได้</p>';return false}
     map=L.map(el,{scrollWheelZoom:false,zoomControl:false}).setView([13.76,100.65],11);
     map.attributionControl.setPrefix(false);base('road');gistda();lyrCtl();

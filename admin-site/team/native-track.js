@@ -45,7 +45,22 @@ window.NTRK = (() => {
     } finally { S.busy = false; }
   }
   const dm = (a, b) => { const R = 6371e3, x = (b.lat - a.lat) * Math.PI / 180, y = (b.lng - a.lng) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const DS = () => PL('DeviceSense');
+  async function svc() {
+    const d = DS(); if (!d || !d.trackStart || !S.cfg || !S.cfg.tk || S.svc) return;
+    try { await d.trackStart({ host: S.cfg.host, tk: S.cfg.tk }); } catch (e) { return; }
+    S.svc = true; put('ntrk_svc', 1); flush();
+    const BG = PL('BackgroundGeolocation'); if (BG && S.wid) { try { await BG.removeWatcher({ id: S.wid }); } catch (e) {} S.wid = null; put('ntrk_wid', null); }
+    clearInterval(S.beatT); clearInterval(S.retryT);
+    const poll = async () => { try { const r = await d.trackStatus(); if (r.fix) { S.fix = { ...r.fix, t: r.fix.t || r.fixAt }; put('ntrk_fix', S.fix); }
+      if (r.err === 'denied') emit({ state: 'error', err: 'denied' }); else if (r.err === 'bad_link') emit({ state: 'fatal', err: 'bad_link' });
+      else if (r.err === 'offline') emit({ state: 'offline', err: 'offline', queued: r.queued }); else if (r.okAt) emit({ state: 'ok', at: r.okAt, err: '' });
+      S.battOpt = !!r.battOpt; if (!r.on && S.cfg) d.trackStart({ host: S.cfg.host, tk: S.cfg.tk }).catch(() => {}); } catch (e) {} };
+    clearInterval(S.pollT); S.pollT = setInterval(poll, 4000); poll();
+    if (!(await get('ntrk_bopt'))) { put('ntrk_bopt', 1); setTimeout(() => d.batteryOpt().catch(() => {}), 3000); }
+  }
   function enqueue(p) {
+    if (S.svc) return;
     S.lastSent = p;
     if (S.st.state === 'fatal') return;
     S.q.push(p); if (S.q.length > QMAX) S.q = S.q.slice(-QMAX);
@@ -70,7 +85,7 @@ window.NTRK = (() => {
         requestPermissions: true, stale: false, distanceFilter: 3 }, (l, err) => {
         if (err) { emit({ state: 'error', err: err.code === 'NOT_AUTHORIZED' ? 'denied' : String(err.message || err) }); return; }
         if (S.st.err === 'denied') emit({ err: '' });
-        onLoc(l);
+        onLoc(l); svc();
       });
       put('ntrk_wid', S.wid);
     } catch (e) { emit({ state: 'error', err: String(e.message || e) }); }
@@ -79,9 +94,12 @@ window.NTRK = (() => {
     if (!native) return false;
     S.on = on || S.on;
     const same = S.cfg && JSON.stringify(S.cfg) === JSON.stringify(cfg);
+    if (!same) S.svc = false;
     S.cfg = cfg; put('ntrk_cfg', cfg);
     if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
     if (!S.wid && !S.watching) { S.watching = true; S.q = (await get('ntrk_q')) || []; await watch(); }
+    if ((await get('ntrk_svc')) && !S.svc) svc();
+    if (S.svc) { emit({}); return true; }
     clearInterval(S.retryT); S.retryT = setInterval(flush, RETRY);
     clearInterval(S.beatT); S.beatT = setInterval(() => { if (S.fix && Date.now() - S.lastQ > BEAT && S.st.state !== 'fatal') enqueue({ ...S.fix, t: Date.now(), vel: 0 }); }, 5000);
     addEventListener('online', flush);
@@ -97,6 +115,6 @@ window.NTRK = (() => {
   function smsHref(body) { const hq = String((S.cfg && S.cfg.hq) || '').replace(/[^\d+]/g, ''); return `sms:${hq}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(body)}`; }
   async function lastFix() { return S.fix || (await get('ntrk_fix')) || (S.q.length ? S.q[S.q.length - 1] : null); }
   async function resume(on) { const c = await get('ntrk_cfg'); return c ? start(c, on) : false; }
-  return { native, start, resume, flush, smsText, smsHref, lastFix, offlineFor: () => S.offSince ? Date.now() - S.offSince : 0, status: () => ({ ...S.st, queued: S.q.length }),
+  return { native, start, resume, flush, smsText, smsHref, lastFix, offlineFor: () => S.offSince ? Date.now() - S.offSince : 0, status: () => ({ ...S.st, queued: S.q.length }), battOpt: () => !!S.battOpt, fixBatt: () => { const d = DS(); if (d && d.batteryOpt) d.batteryOpt().catch(() => {}); },
     openSettings: () => { const BG = PL('BackgroundGeolocation'); if (BG) BG.openSettings(); } };
 })();

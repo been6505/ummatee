@@ -55,6 +55,8 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
   `CREATE TABLE IF NOT EXISTS case_photo (n INTEGER PRIMARY KEY AUTOINCREMENT, caseId TEXT, team TEXT, kind TEXT, at INTEGER, lat REAL, lng REAL, size INTEGER, img BLOB)`,
   `CREATE INDEX IF NOT EXISTS case_photo_case ON case_photo(caseId, n)`,
+  `CREATE TABLE IF NOT EXISTS road_q (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, at INTEGER, lat REAL, lng REAL, rms REAL, peak REAL, bumps INTEGER, spd REAL)`,
+  `CREATE INDEX IF NOT EXISTS road_q_at ON road_q(at)`,
   `CREATE TABLE IF NOT EXISTS team_route (team TEXT PRIMARY KEY, caseId TEXT, data TEXT, at INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS ptt (n INTEGER PRIMARY KEY AUTOINCREMENT, ch TEXT, sender TEXT, kind TEXT, name TEXT, dur REAL, at INTEGER, audio BLOB)`,
   `CREATE INDEX IF NOT EXISTS ptt_at ON ptt(at)`,
@@ -985,6 +987,11 @@ const TEAM_POST = {
   },
   ptt_send: async (db, t, b) => { const au = await pttAuth(ENV, db, { ...b, tk: b.tk || '', team: t.name }, false); return pttSend(db, { sender: t.name, kind: 'team', name: b.name, chans: (au.chans || []).map(c => c.id) }, b); },
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
+  road_q: async (db, t, b) => {
+    const pts = (Array.isArray(b.pts) ? b.pts : []).slice(0, 120), now = Date.now(), st = [];
+    for (const p of pts) { const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180), at = Number(p.at); if (lat == null || lng == null || !lat || !lng) continue;
+      st.push(db.prepare('INSERT INTO road_q (team,at,lat,lng,rms,peak,bumps,spd) VALUES (?,?,?,?,?,?,?,?)').bind(t.name, at > now - 7 * 864e5 && at <= now + 6e4 ? at : now, lat, lng, num(p.rms, 0, 50) || 0, num(p.peak, 0, 80) || 0, clampInt(p.bumps, 0, 999, 0), num(p.spd, 0, 250) || 0)); }
+    if (st.length) await db.batch(st); return { ok: true, n: st.length }; },
   team_status: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
     if (!ROSTER_STATUS.includes(b.status)) return { ok: false, error: 'bad_status' };
@@ -1270,7 +1277,7 @@ const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -1335,7 +1342,7 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['road_q', 'case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2737,6 +2744,9 @@ async function api(request, env) {
       case 'case_photos': { if (vol) return json(await casePhotos(db, p.id)); const t = p.tk && await teamFrom(env, db, p); if (!t) return json({ ok: false, error: 'not_volunteer' }); const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return json(c && String(c.volunteer || '').replace(/^'/, '').trim() === t.name ? await casePhotos(db, p.id) : { ok: false, error: 'not_your_case' }); }
       case 'case_photo': { if (vol) return casePhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? casePhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }
       case 'route_list': return json(vol ? await routeList(db) : { ok: false, error: 'not_volunteer' });
+      case 'road_q': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const h = clampInt(p.hours, 1, 24 * 90, 72), G = 0.0003;
+        const { results } = await db.prepare('SELECT ROUND(lat/?) gy, ROUND(lng/?) gx, AVG(rms) rms, MAX(peak) peak, SUM(bumps) bumps, COUNT(*) n, COUNT(DISTINCT team) teams, MAX(at) at, AVG(spd) spd FROM road_q WHERE at>? GROUP BY gy, gx ORDER BY at DESC LIMIT 6000').bind(G, G, Date.now() - h * 3600e3).all();
+        return json({ ok: true, g: G, cells: results.map(r => [+(r.gy * G).toFixed(5), +(r.gx * G).toFixed(5), +(+r.rms).toFixed(2), +(+r.peak).toFixed(1), r.bumps, r.n, r.teams, r.at, Math.round(r.spd)]) }); }
       case 'ptt_auth': return json(vol || p.tk ? await pttAuth(env, db, p, vol) : { ok: false, error: 'not_volunteer' });
       case 'ptt_list': case 'ptt_audio': { const au = vol || p.tk ? await pttAuth(env, db, p, vol) : null; if (!au || !au.ok) return json({ ok: false, error: 'not_volunteer' }); const chans = au.chans.map(c => c.id);
         if (p.action === 'ptt_list') return json(await pttList(db, p, chans));

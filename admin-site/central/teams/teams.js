@@ -11,9 +11,10 @@ const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 
 async function loadAll(){T.loadedAt=Date.now();
   $('#sync').textContent='กำลังโหลด…';
-  try{const [r,c]=await Promise.all([apiGet({action:'roster'}),apiGet({action:'list'})]);
+  try{const [r,c,h]=await Promise.all([apiGet({action:'roster'}),apiGet({action:'list'}),apiGet({action:'helpme_cases'}).catch(()=>null)]);
     if(r&&r.ok){T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||''}
     if(c&&c.ok)T.cases=(c.cases||[]).map(x=>({...x,needs:Array.isArray(x.needs)?x.needs:String(x.needs||'').split(/\s*,\s*/).filter(Boolean)}));
+    if(h&&h.ok){const own=new Set(T.cases.map(x=>String(x.id)));T.hm=(h.cases||[]).filter(x=>!own.has(String(x.id))&&!x.dupOf).map(x=>({...x,_hm:true,needs:Array.isArray(x.needs)?x.needs:String(x.needs||'').split(/\s*,\s*/).filter(Boolean)}))}
     T.loaded=Date.now();render()}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
@@ -43,9 +44,9 @@ function side(){const el=$('#trk-side');if(!el)return;const now=Date.now();
 setInterval(()=>{if(document.hidden)return;const now=Date.now();document.querySelectorAll('#trk-side .ts-age[data-age]').forEach(x=>{const t=+x.dataset.age;if(!t)return;const a=now-t;x.textContent=a<60e3?Math.round(a/1000)+' วิ':Math.round(a/60e3)+' นาที'})},1000);
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#trk-side [data-tsel]');if(!b)return;const n=b.dataset.tsel;if(typeof TRACK!=='undefined'){TRACK.focus(n);const eta=TRACK.eta&&TRACK.eta(n);if(eta&&e.target.closest('.ts-case')&&TRACK.edit)TRACK.edit(n)}});
 setInterval(()=>{if(T.loaded&&!document.hidden)side()},5000);
-setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRACK.routes)TRACK.routes(T.live,T.cases)},5000);
+setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRACK.routes)TRACK.routes(T.live,allCases())},5000);
 if(typeof LIVE!=='undefined')LIVE.start(rows=>{if(!T.loaded)return;T.live=mergeLive(T.live,rows);liveUI()});
-function liveUI(){if(typeof TRACK!=='undefined'){TRACK.update(T.live,T.roster);if(TRACK.routes)TRACK.routes(T.live,T.cases)}side();
+function liveUI(){if(typeof TRACK!=='undefined'){TRACK.update(T.live,T.roster);if(TRACK.routes)TRACK.routes(T.live,allCases())}side();
   $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
 function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
   if(!lv)return `<span class="lv lv-none" data-live-of="${id}">${t.status==='out'?'<i data-ic="alert"></i> ไม่แชร์ตำแหน่ง':'ไม่แชร์ตำแหน่ง'}</span>`;
@@ -53,7 +54,8 @@ function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
   return `<span class="lv lv-${lost?'lost':k}" data-live-of="${id}">● ${lost?'ขาดการติดต่อ ':''}${esc(ago(lv.updatedAt))}${lv.battery!=null?` · แบต ${lv.battery}%`:''}${lv.speed!=null&&lv.speed>=1?` · ${Math.round(lv.speed)} กม./ชม.`:''}</span>`}
 const sosOn=t=>t&&t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);
 
-function teamCases(name){const n=tname(name);return T.cases.filter(c=>tname(c.volunteer)===n)}
+const allCases=()=>T.cases.concat((T.hm||[]).filter(c=>c.status==='going'));
+function teamCases(name){const n=tname(name);return allCases().filter(c=>tname(c.volunteer)===n)}
 function liveOf(name){return T.live.find(l=>tname(l.team)===tname(name))}
 function needsVehicle(c){const n=(c.needs||[]).join(' ');return /เรือ|รถสูง/.test(n)||c.level==='chest'||c.level==='roof'?'boat':''}
 function suggest(c){

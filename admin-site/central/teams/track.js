@@ -40,8 +40,8 @@ const TRACK=(()=>{
       m.setZIndexOffset(isSos(r)?3000:sel===k?2000:0);m.bindPopup(info(t,r))});
     for(const [k,m] of mk)if(!seen.has(k)){m.remove();mk.delete(k)}
     if(!fitted&&mk.size){fitted=true;const b=L.latLngBounds([...mk.values()].map(m=>m.getLatLng()));map.fitBounds(b.pad(.25),{maxZoom:14})}}
-  async function focus(name,hours=6){if(!map)return;sel=tn(name);live=null;trail.clearLayers();
-    const m=mk.get(sel);if(m){map.setView(m.getLatLng(),Math.max(map.getZoom(),14));m.openPopup()}
+  async function focus(name,hours=6){if(!map)return;sel=tn(name);live=null;trail.clearLayers();if(sp)sp._fit=null;
+    const m=mk.get(sel);if(m){map.setView(m.getLatLng(),Math.max(map.getZoom(),14));m.openPopup()}selPins();
     document.getElementById('trk-sel').textContent=`${sel} · กำลังโหลดเส้นทาง…`;
     try{const r=await apiGet({action:'team_track',team:sel,hours});const pts=(r.points||[]).map(p=>[p.lat,p.lng]);
       live=L.polyline(pts,{color:'#2D45C8',weight:4,opacity:.75}).addTo(trail);
@@ -49,7 +49,7 @@ const TRACK=(()=>{
         if(!m)map.fitBounds(L.latLngBounds(pts).pad(.2))}
       const km=pts.reduce((s,p,i)=>i?s+L.latLng(pts[i-1]).distanceTo(p)/1000:0,0);
       document.getElementById('trk-sel').innerHTML=`<b>${esc(sel)}</b> · เส้นทาง ${hours} ชม. ${pts.length>1?`${km.toFixed(1)} กม. (${pts.length} จุด)`:'ยังไม่มีข้อมูล'} <button class="linkish" id="trk-clear">ล้าง</button>`;
-      document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
+      document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();selPins();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
   let rt=null,PL={};const RT=new Map();
   const hasPin=TK.hasPin;
@@ -58,7 +58,7 @@ const TRACK=(()=>{
     xs.forEach(c=>{const team=tn(c.volunteer),done=!!c.teamDoneAt,lab=`#${esc(c.id)} · ${(c.needs||[]).slice(0,2).map(esc).join(', ')||'เคส'} · ${esc(c.people||1)} คน<br>ทีม: <b>${esc(team)}</b>${done?' · ช่วยแล้ว รอปิดเคส':''}`;
       const ic=typeof umPin==='function'?umPin(done?'done':'going',{extra:`<span class="cp-tag">${esc(team)}</span>`}):L.divIcon({className:'',html:'<div class="cp-dot"></div>',iconSize:[14,14]});
       L.marker([+c.lat,+c.lng],{icon:ic,zIndexOffset:500}).bindTooltip(lab).on('click',()=>focus(team)).addTo(cp)})}
-  function routes(live,cases){if(!map)return;if(!rt)rt=L.layerGroup().addTo(map);const seen=new Set();assigned(cases);
+  function routes(live,cases){if(!map)return;if(!rt)rt=L.layerGroup().addTo(map);const seen=new Set();lastCases=cases||[];selPins();assigned(cases);
     (live||[]).forEach(t=>{const k=tn(t.team),mine=(cases||[]).filter(c=>c.status==='going'&&!c.teamDoneAt&&tn(c.volunteer)===k&&hasPin(c));if(!mine.length)return;
       const me=L.latLng(+t.lat,+t.lng),tgt=mine.map(c=>({c,d:me.distanceTo([+c.lat,+c.lng])})).sort((a,b)=>a.d-b.d)[0].c;seen.add(k);
       let r=RT.get(k);if(!r){r={g:L.layerGroup().addTo(rt)};RT.set(k,r)}
@@ -76,6 +76,10 @@ const TRACK=(()=>{
     r.line=L.polyline(more,{color:pl?'#1F7A43':'#E5383B',weight:5,opacity:.9,dashArray:x?null:'8 8'}).bindTooltip((pl?'เส้นทางที่ศูนย์ส่งให้ · ':'')+lab+' · แตะเพื่อปรับเส้นทาง',{sticky:true}).addTo(r.g);
     const ed=()=>{if(typeof RTE!=='undefined')RTE.open(k,c,{lat:me.lat,lng:me.lng})};r.line.on('click',ed);
     L.marker(end,{icon:L.divIcon({className:'',html:`<div class="rt-goal${pl?' plan':''}"><i data-ic="flag"></i><span>${x?`${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} น.`:'เคส'}</span><b>${pl?'ศูนย์กำหนด':'ปรับ'}</b></div>`,iconSize:null,iconAnchor:[14,28]}),zIndexOffset:800}).bindTooltip(lab+' · แตะเพื่อปรับเส้นทาง').on('click',ed).addTo(r.g)}
+  let sp=null,lastCases=[];function selPins(){if(!map)return;if(!sp)sp=L.layerGroup().addTo(map);sp.clearLayers();if(!sel)return;
+    lastCases.filter(c=>c.status==='going'&&tn(c.volunteer)===sel&&hasPin(c)).forEach((c,i)=>{const done=!!c.teamDoneAt,ic=typeof umPin==='function'?umPin(done?'done':'going',{extra:`<span class="cp-tag sel">${i+1}. ${esc((c.needs||[]).slice(0,2).join(', ')||'เคส')}</span>`}):L.divIcon({className:'',html:'<div class="cp-dot"></div>',iconSize:[14,14]});
+      L.marker([+c.lat,+c.lng],{icon:ic,zIndexOffset:1200}).bindPopup(`<b>เคส #${esc(c.id)}</b><br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน<br>${esc([c.address,c.district].filter(Boolean).join(' · '))}${done?'<br><b style="color:#1F7A43">ทีมแจ้งช่วยแล้ว · รอปิดเคส</b>':''}`).addTo(sp)});
+    const pts=lastCases.filter(c=>c.status==='going'&&tn(c.volunteer)===sel&&hasPin(c)).map(c=>[+c.lat,+c.lng]),m=mk.get(sel);if(pts.length&&m){pts.push(m.getLatLng());if(!sp._fit||sp._fit!==sel){sp._fit=sel;map.fitBounds(L.latLngBounds(pts).pad(.25),{maxZoom:15})}}}
   let rl=null;function rallies(list){if(!map)return;if(!rl){rl=L.layerGroup();if(LY.rally)rl.addTo(map)}rl.clearLayers();
     (list||[]).forEach(r=>L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:900}).bindTooltip('รวมพล · '+esc(r.label)).addTo(rl))}
   return {init,update,focus,fresh,isSos,rallies,routes,map:()=>map,setPlans:p=>{PL=p||{}},refreshRoute:k=>{const r=RT.get(k);if(r)r.at=0},eta:k=>{const r=RT.get(k);return r&&r.info||null},edit:k=>{const r=RT.get(k);if(r&&r.info&&r.from&&typeof RTE!=='undefined')RTE.open(k,r.info.c,{lat:r.from.lat,lng:r.from.lng})},resize:()=>{if(map)map.invalidateSize()}}

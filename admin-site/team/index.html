@@ -273,7 +273,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=23"></script>
-<script src="./native-track.js?v=7"></script>
+<script src="./native-track.js?v=8"></script>
 <script src="../central/ptt.js?v=9"></script>
 <script>(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style><style>.top{--hh:50px;align-items:center!important;gap:8px!important}
@@ -480,6 +480,7 @@ function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location
   let later=false;try{later=Date.now()-(+localStorage.getItem('uh_gm_later')||0)<6*3600e3}catch(e){}
   $('#gm-hero').hidden=true;autoTrackUI()}
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+setInterval(function smsc(){if(S.tk&&S._smscFor!==S.tk&&window.crypto&&crypto.subtle){const t=S.tk;S._smscFor=t;crypto.subtle.digest('SHA-256',new TextEncoder().encode(t+':sms')).then(d=>{if(S.tk===t)S.smsc=[...new Uint8Array(d)].slice(0,6).map(b=>b.toString(16).padStart(2,'0')).join('')}).catch(()=>{})}return smsc}(),5000);
 const NT={started:false,at:0,err:'',q:0};setInterval(()=>{if(NATIVE&&NT.err==='offline')locUI()},30000);
 async function nativeTrack(){if(!NATIVE||!window.NTRK)return;
 const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
@@ -789,7 +790,7 @@ function gpsNow(cb){if(NATIVE&&window.NTRK){NTRK.lastFix().then(f=>{if(f){const 
   navigator.geolocation.getCurrentPosition(q=>cb({lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,at:Date.now()},false),()=>cb(TR.pos,!!TR.pos),{enableHighAccuracy:true,timeout:20000,maximumAge:30000})}
 function smsBody(kind,why,p){const t=new Date(),hm=t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const where=p?`พิกัด ${p.lat.toFixed(5)},${p.lng.toFixed(5)}${p.acc?` (±${Math.round(p.acc)} ม.)`:''} https://maps.google.com/?q=${p.lat.toFixed(5)},${p.lng.toFixed(5)}`:'หาพิกัดไม่ได้';
-  const code=p&&S.tk?` #HM:${S.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor((p.at||Date.now())/1000)}${kind==='SOS'?':SOS':''}`:'';
+  const code=p&&S.tk?` #HM:${S.smsc||S.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor((p.at||Date.now())/1000)}${kind==='SOS'?':SOS':''}`:'';
   return `Helpme+ ${kind} ทีม ${S.team||''}${why?' · '+why:''} · ${where} · เวลา ${hm}${TR.batt!=null?` · แบต ${TR.batt}%`:''}${p&&p.at&&Date.now()-p.at>120000?` (ตำแหน่งเมื่อ ${new Date(p.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})})`:''}${code}`}
 function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
   sheet(`<h2>${kind==='SOS'?'<span style="color:var(--red)">SOS</span> ทาง SMS':'ส่งพิกัดทาง SMS'}</h2><p class="hint">${esc(reason||'ไม่ต้องใช้เน็ต · ใช้แค่สัญญาณโทรศัพท์')}</p><p class="hint" id="sms-st">กำลังหาตำแหน่ง GPS…</p>`);

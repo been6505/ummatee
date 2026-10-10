@@ -24,6 +24,8 @@ export default {
     const init = { method: req.method, headers: new Headers(req.headers), redirect: 'manual' };
     if (!['GET', 'HEAD'].includes(req.method)) init.body = req.body;
     init.headers.delete('host');
+    init.headers.delete('x-hm-edge'); init.headers.delete('x-hm-client-ip');
+    if (center && env.EDGE_SECRET) { init.headers.set('x-hm-edge', env.EDGE_SECRET); init.headers.set('x-hm-client-ip', req.headers.get('cf-connecting-ip') || ''); }
     const res = await fetch(up, init);
     const loc = res.headers.get('location');
     if (loc) {
@@ -53,7 +55,7 @@ async function pttConnect(req, env, url) {
   return stub.fetch(new Request('https://ptt/ws', { headers: h }));
 }
 export class PttHub extends DurableObject {
-  constructor(ctx, env) { super(ctx, env); this.floor = new Map();
+  constructor(ctx, env) { super(ctx, env); this.floor = new Map(); this.rate = new WeakMap();
     this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}')); }
   async fetch(req) {
     let who; try { who = JSON.parse(decodeURIComponent(req.headers.get('x-ptt-who') || '')); } catch (e) {}
@@ -73,6 +75,8 @@ export class PttHub extends DurableObject {
     const a = ws.deserializeAttachment() || {};
     if (typeof msg !== 'string') {
       const ch = a.talk, f = ch && this.floor.get(ch); if (!f || f.ws !== ws) return;
+      if (msg.byteLength > 16384) return;
+      const now = Date.now(), r = this.rate.get(ws) || { t: now, n: 0 }; if (now - r.t > 1000) { r.t = now; r.n = 0; } r.n++; this.rate.set(ws, r); if (r.n > 120) return;
       const tag = new TextEncoder().encode(f.id + '|'), out = new Uint8Array(tag.length + msg.byteLength); out.set(tag); out.set(new Uint8Array(msg), tag.length);
       for (const w of this.peers(ch, ws)) try { w.send(out); } catch (e) {}
       return; }
@@ -85,10 +89,11 @@ export class PttHub extends DurableObject {
       if (a.talk && a.talk !== ch) this.release(a.talk);
       const id = (Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
       this.floor.set(ch, { ws, id, at: Date.now(), name: a.name, kind: a.kind }); a.talk = ch; ws.serializeAttachment(a);
-      ws.send(JSON.stringify({ t: 'granted', ch, id }));
+      ws.send(JSON.stringify({ t: 'granted', ch, id })); this.ctx.storage.setAlarm(Date.now() + 41e3).catch(() => {});
       const s = JSON.stringify({ t: 'start', ch, id, name: a.name, kind: a.kind }); for (const w of this.peers(ch, ws)) try { w.send(s); } catch (e) {}
     } else if (m.t === 'end') { if (a.talk) { const f = this.floor.get(a.talk); if (f && f.ws === ws) this.release(a.talk); } }
   }
+  async alarm() { this.sweep(); if (this.floor.size) await this.ctx.storage.setAlarm(Date.now() + 41e3); }
   async webSocketClose(ws) { const a = ws.deserializeAttachment() || {}; if (a.talk) { const f = this.floor.get(a.talk); if (f && f.ws === ws) this.release(a.talk, 'drop'); } }
   async webSocketError(ws) { return this.webSocketClose(ws); }
 }

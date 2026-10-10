@@ -95,6 +95,7 @@ window.NTRK = (() => {
     S.on = on || S.on;
     const same = S.cfg && JSON.stringify(S.cfg) === JSON.stringify(cfg);
     if (!same) S.svc = false;
+    if (cfg.tk && crypto.subtle) crypto.subtle.digest('SHA-256', new TextEncoder().encode(cfg.tk + ':sms')).then(d => { S.smsc = [...new Uint8Array(d)].slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join(''); }).catch(() => {});
     S.cfg = cfg; { const { key, ...safe } = cfg; put('ntrk_cfg', cfg.tk ? safe : cfg); }
     if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
     if (!S.wid && !S.watching) { S.watching = true; S.q = (await get('ntrk_q')) || []; await watch(); }
@@ -109,7 +110,7 @@ window.NTRK = (() => {
   function smsText(p, kind, why, team) {
     const c = S.cfg || {}, hm = p ? new Date(p.t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
     const where = p ? `${p.lat.toFixed(5)},${p.lng.toFixed(5)} (±${p.acc || '?'} ม.) เวลา ${hm} https://maps.google.com/?q=${p.lat.toFixed(5)},${p.lng.toFixed(5)}` : 'หาพิกัดไม่ได้';
-    const code = p && c.tk ? ` #HM:${c.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor(p.t / 1000)}${kind === 'SOS' ? ':SOS' : ''}` : '';
+    const code = p && c.tk ? ` #HM:${S.smsc || c.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor(p.t / 1000)}${kind === 'SOS' ? ':SOS' : ''}` : '';
     return `Helpme+ ${kind || 'แจ้งตำแหน่ง'} ทีม ${team || c.team || ''}${why ? ' · ' + why : ''} · ${where}${code}`;
   }
   function smsHref(body) { const hq = String((S.cfg && S.cfg.hq) || '').replace(/[^\d+]/g, ''); return `sms:${hq}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(body)}`; }

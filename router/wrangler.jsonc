@@ -8,7 +8,7 @@
     { "pattern": "www.helpme4u.com", "custom_domain": true },
     { "pattern": "admin.helpme4u.com", "custom_domain": true },
     { "pattern": "center.helpme4u.com", "custom_domain": true },
-    { "pattern": "central.helpme4u.com", "custom_domain": true }
+    { "pattern": "central.helpme4u.com/ptt/*", "zone_name": "helpme4u.com" }
   ],
   "triggers": { "crons": ["* * * * *"] },
   "durable_objects": { "bindings": [{ "name": "PTT", "class_name": "PttHub" }] },

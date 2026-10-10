@@ -670,7 +670,7 @@ async function smsIn(db, request, url) {
   const text = String(b.text || b.message || b.msg || b.body || b.content || b.sms || q.text || q.message || '');
   const now = Date.now(); let n = 0;
   for (const m of text.matchAll(/#HM:([a-z0-9]{10,40}):(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)(?::(\d{9,10}))?(:SOS)?/gi)) {
-    const row = await db.prepare('SELECT id,name FROM roster WHERE token=? AND active=1').bind(m[1].toLowerCase()).first();
+    const row = await teamBySms(db, m[1]);
     const lat = num(m[2], -90, 90), lng = num(m[3], -180, 180);
     if (!row || lat == null || lng == null) continue;
     const t0 = Number(m[4]) * 1000, t = t0 && t0 > now - 3 * 864e5 && t0 <= now + 60e3 ? t0 : now;
@@ -1615,6 +1615,14 @@ async function pwHash(pw, salt) {
 }
 const WR_USER = u => String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 32);
 const UN_OK = u => /^[a-z0-9._-]{3,32}$/.test(String(u || '').trim().toLowerCase());
+function clientIp(request) { const ip = request.headers.get('cf-connecting-ip') || '', fw = request.headers.get('x-hm-client-ip'), e = request.headers.get('x-hm-edge') || '';
+  return fw && ENV && ENV.EDGE_SECRET && ctEq(e, ENV.EDGE_SECRET) && /^[0-9a-fA-F:.]{3,45}$/.test(fw) ? fw : ip; }
+async function smsCode(tk) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tk + ':sms')); return [...new Uint8Array(d)].slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join(''); }
+async function teamBySms(db, c) { c = String(c || '').toLowerCase();
+  let row = await db.prepare('SELECT id,name FROM roster WHERE token=? AND active=1').bind(c).first(); if (row || !/^[0-9a-f]{12}$/.test(c)) return row;
+  const n = await getMeta(db, 'smsc:' + c); if (n) { row = await db.prepare('SELECT id,name,token FROM roster WHERE name=? AND active=1').bind(n).first(); if (row && row.token && await smsCode(row.token) === c) return row; }
+  const { results } = await db.prepare("SELECT id,name,token FROM roster WHERE active=1 AND token IS NOT NULL AND token<>''").all();
+  for (const r of results) if (await smsCode(r.token) === c) { await setMeta(db, 'smsc:' + c, r.name); return r; } return null; }
 async function quota(db, k, max, win, add = 1) {
   const key = 'q:' + k, now = Date.now(); let o = {}; try { o = JSON.parse(await getMeta(db, key) || '{}'); } catch (e) {}
   if (!o.t || now - o.t > win) o = { t: now, n: 0 }; o.n += add; await setMeta(db, key, JSON.stringify(o)); return o.n <= max;
@@ -1673,12 +1681,12 @@ async function ticketMake(db, env, key) {
 }
 async function ticketKey(db, env, t) { if (!/^[a-f0-9]{40}$/.test(String(t || ''))) return ''; const r = await db.prepare('SELECT k,exp FROM tickets WHERE t=?').bind(t).first(); return r && r.exp > Date.now() ? (r.k === '*' ? env.VOLUNTEER_KEY : r.k) : ''; }
 async function keyGuard(db, env, request, key) {
-  if (!key) return true; const ip = request.headers.get('cf-connecting-ip') || ''; if (!ip) return true;
+  if (!key) return true; const ip = clientIp(request) || ''; if (!ip) return true;
   let o = {}; try { o = JSON.parse(await getMeta(db, 'rl:key:' + ip) || '{}'); } catch (e) {}
   return !(o.t && Date.now() - o.t < 900e3 && (o.k || []).length > 20);
 }
 async function keyFail(db, request, key) {
-  const ip = request.headers.get('cf-connecting-ip') || ''; if (!ip) return; const m = 'rl:key:' + ip, now = Date.now();
+  const ip = clientIp(request) || ''; if (!ip) return; const m = 'rl:key:' + ip, now = Date.now();
   let o = {}; try { o = JSON.parse(await getMeta(db, m) || '{}'); } catch (e) {} if (!o.t || now - o.t > 900e3) o = { t: now, k: [] };
   const h = String(key).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
   if (!o.k.includes(h)) { o.k.push(h); if (o.k.length > 40) o.k = o.k.slice(-40); await setMeta(db, m, JSON.stringify(o)); }
@@ -2840,13 +2848,13 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
-    { const st = RQ.getStore(); if (st && b && typeof b === 'object') { st.body = b; st.k0 = String(b.key || ''); st.ip = request.headers.get('cf-connecting-ip') || ''; if (/^st_/.test(st.k0)) Object.defineProperty(b, '_raw', { value: st.k0, enumerable: false }); } }
-    if (b.action === 'app_apply') return json(await appApply(db, b, request.headers.get('cf-connecting-ip') || ''));
-    if ((b.action === 'app_login' || b.action === 'wr_login') && !await ipLimit(db, request.headers.get('cf-connecting-ip') || '', 'login')) return json({ ok: false, error: 'too_many' });
+    { const st = RQ.getStore(); if (st && b && typeof b === 'object') { st.body = b; st.k0 = String(b.key || ''); st.ip = clientIp(request) || ''; if (/^st_/.test(st.k0)) Object.defineProperty(b, '_raw', { value: st.k0, enumerable: false }); } }
+    if (b.action === 'app_apply') return json(await appApply(db, b, clientIp(request) || ''));
+    if ((b.action === 'app_login' || b.action === 'wr_login') && !await ipLimit(db, clientIp(request) || '', 'login')) return json({ ok: false, error: 'too_many' });
     if (b.action === 'app_login') return json(await appLogin(db, b));
     if (b.action === 'wr_login') return json(await wrLogin(db, b));
     if (b.action === 'wr_logout') return json(await wrLogout(db, b));
-    if (b.action === 'staff_login') { if (!await ipLimit(db, request.headers.get('cf-connecting-ip') || '', 'login')) return json({ ok: false, error: 'too_many' }); return json(await staffLogin(db, b)); }
+    if (b.action === 'staff_login') { if (!await ipLimit(db, clientIp(request) || '', 'login')) return json({ ok: false, error: 'too_many' }); return json(await staffLogin(db, b)); }
     if (b.action === 'staff_logout') return json(await staffLogout(db, b));
     if (b.key && !await keyGuard(db, env, request, b.key)) return json({ ok: false, error: 'too_many' }, 429);
     WRC = await wrAuth(db, b.key);
@@ -2864,7 +2872,7 @@ async function api(request, env) {
       const r = await aiStream(b, db);
       return r || json({ ok: false, error: 'ai_failed' });
     }
-    if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
+    if (b.action === 'create') return json(await createCase(db, b, clientIp(request) || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,

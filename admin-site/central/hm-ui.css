@@ -730,3 +730,59 @@ body.map-fs .ptt-fab,body.noscroll .ptt-fab{display:none}
 .stats.stats-row .stat b{font-size:20px!important;line-height:1.1!important;display:inline!important;flex:none}
 .stats.stats-row .stat span{font-size:12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 @media(max-width:1100px){.stats.stats-row{display:flex!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.stats.stats-row::-webkit-scrollbar{display:none}.stats.stats-row .stat{flex:0 0 auto}}
+
+/* หน้าจัดทีม: แผนที่ + แผงสถานะทีมสดด้านขวา */
+.trk-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:stretch}
+.trk-wrap .trk-map{height:min(62vh,560px)!important;min-height:360px}
+.trk-side{background:#F7F8FB;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:min(62vh,560px);min-height:360px;overflow:hidden}
+.ts-h{display:flex;align-items:baseline;justify-content:space-between;padding:2px 4px}.ts-h b{font-size:14px}.ts-h small{color:var(--muted,#6b7280);font-size:12px}
+.ts-list{overflow:auto;display:grid;gap:6px;align-content:start}
+.ts{display:grid;gap:5px;text-align:left;border:1px solid var(--line,#E8E8EC);background:#fff;border-radius:12px;padding:8px 10px;font:inherit;color:inherit;cursor:pointer}
+.ts:hover{border-color:#2D45C8}.ts.sos{border-color:#E5383B;background:#FFF5F5}
+.ts-1{display:flex;align-items:center;gap:7px;min-width:0}.ts-1 b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-dot{width:9px;height:9px;border-radius:50%;flex:none;background:#9AA1B9}.ts-dot.on{background:#2E9E57}.ts-dot.idle{background:#E08A00}
+.ts-st{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;background:#E3F4EA;color:#1F7A43}.ts-st.out{background:#FFF3DC;color:#B45309}.ts-st.rest{background:#ECEDF2;color:#5B6386}
+.ts-sos{font-size:11px;font-weight:800;color:#fff;background:#E5383B;border-radius:999px;padding:2px 8px;animation:pttb 1s infinite}
+.ts-g{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:12px;color:#3a3a3c}.ts-g span{display:flex;align-items:center;gap:5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ts-g .low{color:#E5383B;font-weight:700}
+.ts-g .ic{width:14px;height:14px;flex:none;color:#5B6386}
+.ts-sig{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;flex:none}.ts-sig i{width:3px;background:#D5D8E0;border-radius:1px}.ts-sig i:nth-child(1){height:4px}.ts-sig i:nth-child(2){height:6px}.ts-sig i:nth-child(3){height:9px}.ts-sig i:nth-child(4){height:12px}
+.ts-sig.b1 i:nth-child(-n+1),.ts-sig.b2 i:nth-child(-n+2){background:#E08A00}.ts-sig.b3 i:nth-child(-n+3),.ts-sig.b4 i:nth-child(-n+4){background:#2E9E57}
+.ts-bat{position:relative;width:20px;height:10px;border:1.5px solid currentColor;border-radius:3px;flex:none;opacity:.8}.ts-bat i{position:absolute;left:1px;top:1px;bottom:1px;max-width:calc(100% - 2px);background:currentColor;border-radius:1px}
+.ts-case{display:flex;align-items:center;gap:6px;font-size:12px;background:#FDECEC;color:#B42318;border-radius:8px;padding:4px 8px;min-width:0}.ts-case .ic{width:14px;height:14px;flex:none}.ts-case span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ts-case em{font-style:normal;font-weight:700;white-space:nowrap}
+.ts-x{color:var(--muted,#6b7280);font-size:11.5px}
+@media(max-width:1100px){.trk-wrap{grid-template-columns:1fr}.trk-side{max-height:none;min-height:0}.ts-list{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}}
+/* ปรับเส้นทาง (ศูนย์กำหนดเส้นทางให้ทีม) */
+.rte{position:fixed;right:16px;top:84px;bottom:110px;width:360px;z-index:2600;background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(22,27,61,.28);padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:14px}
+.rte-h{display:flex;gap:8px;align-items:flex-start}.rte-h div{flex:1;min-width:0}.rte-h b{display:block;font-size:16px}.rte-h small{color:var(--muted,#6b7280)}
+.rte-x{border:0;background:#EEF1FD;color:#2D45C8;width:32px;height:32px;border-radius:50%;cursor:pointer;flex:none}
+.rte-sent{margin:0;background:#E9F6EE;color:#1F7A43;border-radius:10px;padding:6px 10px;font-size:12.5px;font-weight:600}
+.rte-chk{display:flex;gap:8px;align-items:flex-start;font-size:13px}.rte-chk input{margin-top:3px}
+.rte-tools{display:flex;gap:6px;flex-wrap:wrap}.rte-tools button{border:1.5px solid var(--line,#E3E6EF);background:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}.rte-tools button.on{border-color:#2D45C8;background:#EEF1FD;color:#2D45C8}
+.rte-hint{margin:0;color:#5B6386;font-size:12.5px}.rte-err{margin:0;color:#B42318;font-size:13px}
+.rte-opts{display:grid;gap:6px}.rte-o{display:grid;grid-template-columns:1fr auto;gap:2px 8px;text-align:left;border:1.5px solid var(--line,#E3E6EF);background:#fff;border-radius:12px;padding:8px 10px;font:inherit;cursor:pointer}
+.rte-o.on{border-color:#1F7A43;background:#F0FAF4}.rte-o b{font-size:13.5px}.rte-o span{font-size:12.5px;color:#3a3a3c;text-align:right}.rte-o em{grid-column:1/-1;font-style:normal;font-size:12px;font-weight:600}.rte-o em.ok{color:#1F7A43}.rte-o em.bad{color:#B42318}
+.rte-note{display:grid;gap:4px;font-size:12.5px;font-weight:600}.rte-note textarea{font:inherit;font-size:13.5px;border:1px solid var(--line,#E3E6EF);border-radius:10px;padding:8px;resize:vertical}
+.rte-act{display:grid;gap:6px}.rte-act .btn{min-height:42px}
+.rte-pt{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;color:#fff;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:grab}.rte-pt.via{background:#2D45C8}.rte-pt.avoid{background:#111827}
+.rt-goal b{margin-left:4px;background:rgba(255,255,255,.25);border-radius:999px;padding:0 6px;font-size:11px}.rt-goal.plan{background:#1F7A43;box-shadow:0 4px 12px rgba(31,122,67,.35)}.rt-goal{cursor:pointer}
+@media(max-width:760px){.rte{left:8px;right:8px;width:auto;top:auto;bottom:calc(var(--tab-h,64px) + 20px);max-height:62vh}}
+.cp-tag{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);background:#fff;color:#161B3D;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(22,27,61,.2)}
+.cp-dot{width:14px;height:14px;border-radius:50%;background:#7C8CF0;border:2px solid #fff}
+
+/* จัดเส้นทาง ย้ายมาอยู่แท็บบอร์ดของหน้าจัดการเคส */
+body:not(.kb-on) #rt-board{display:none!important}
+.rt-board{margin:6px 0 12px;background:#fff;border-radius:16px;padding:12px 14px}.rt-board .panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.rt-board h2{font-size:16px;margin:0;display:flex;align-items:center;gap:6px}
+.kb-top{display:flex;justify-content:flex-end;margin:0 0 8px}.kb-top .btn[aria-pressed=true]{background:#EEF1FD;color:#2D45C8;border-color:#2D45C8}
+
+/* รวมพล: ปุ่มลอยเหนือ วอ + แผงลอย (หน้าจัดทีม) */
+.rally-fab{position:fixed;right:18px;bottom:214px;z-index:2490;width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;align-content:center;gap:0;color:#fff;background:linear-gradient(180deg,#F97316,#C2410C);box-shadow:0 8px 22px rgba(194,65,12,.35);font-family:inherit}
+.rally-fab .ic{width:20px;height:20px}.rally-fab b{font-size:10px;line-height:1}
+body.rl-open .rally-fab{box-shadow:0 0 0 6px rgba(249,115,22,.3)}
+@media(max-width:760px){.rally-fab{bottom:calc(var(--tab-h,64px) + 212px + var(--safe-b,0px));right:14px;width:50px;height:50px}}
+body.map-fs .rally-fab,body.noscroll .rally-fab{display:none}
+.rl-float{display:none;position:fixed!important;right:84px;bottom:110px;top:84px;width:min(440px,calc(100vw - 110px));z-index:2550;overflow:auto;margin:0!important;box-shadow:0 20px 50px rgba(22,27,61,.28)!important;border-radius:18px!important}
+body.rl-open .rl-float{display:block}
+.rl-float .panel-h{position:sticky;top:-1px;background:inherit;z-index:2;align-items:flex-start}.rl-x{margin-left:auto;border:0;background:#EEF1FD;color:#2D45C8;width:32px;height:32px;border-radius:50%;cursor:pointer;flex:none}
+@media(max-width:760px){.rl-float{left:8px;right:8px;width:auto;top:auto;bottom:calc(var(--tab-h,64px) + 20px);max-height:70vh}}
+.rl-float{background:#fff!important;padding:14px!important}
+.rl-float .panel-h{display:flex;flex-wrap:wrap;gap:4px 8px}.rl-float .panel-h h2{white-space:nowrap;margin:0}.rl-float .panel-h .muted{order:3;flex-basis:100%}

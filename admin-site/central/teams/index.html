@@ -15,8 +15,8 @@
 <link rel="stylesheet" href="../pages.css?v=14">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
-<link rel="stylesheet" href="../hm-ui.css?v=76">
-<script src="../icons.js?v=20"></script>
+<link rel="stylesheet" href="../hm-ui.css?v=79">
+<script src="../icons.js?v=21"></script>
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -42,17 +42,14 @@
     <div id="sos-list"></div>
     <section class="panel trk">
       <div class="panel-h"><h2><i data-ic="live"></i> ติดตามทีม</h2><form class="hqp" id="hqp"><label for="hq-phone" class="muted small">เบอร์ศูนย์ที่ทีมโทรเข้า</label><input id="hq-phone" type="tel" inputmode="tel" maxlength="20" placeholder="เช่น 0812345678"><button class="btn ghost sm" type="submit">บันทึก</button></form></div>
-      <div id="trk-map" class="trk-map"></div>
+      <div class="trk-wrap"><div id="trk-map" class="trk-map"></div><aside id="trk-side" class="trk-side" aria-label="สถานะทีมสด"></aside></div>
       <p class="muted small trk-foot"><span class="trk-lg"><i class="trk-dot on"></i>สด &lt;5 นาที <i class="trk-dot idle"></i>5–30 นาที <i class="trk-dot old"></i>นานกว่า <i class="trk-dot sos"></i>SOS</span><span id="trk-sel">กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง</span></p>
     </section>
-    <section class="panel rl-panel-w" id="rally">
-      <div class="panel-h"><h2>📣 รวมพล</h2><span class="muted small">เรียกทีมไปจุดเดียวกัน · ทีมขาดการติดต่อ หรือเคสต้องการกำลังเสริม</span></div>
+    <section class="panel rl-panel-w rl-float" id="rally" aria-label="รวมพล">
+      <div class="panel-h"><h2>📣 รวมพล</h2><span class="muted small">เรียกทีมไปจุดเดียวกัน · ทีมขาดการติดต่อ หรือเคสต้องการกำลังเสริม</span><button type="button" class="rl-x" onclick="document.body.classList.remove('rl-open')" aria-label="ปิด">✕</button></div>
       <div id="rl-panel"></div>
     </section>
-    <section class="panel rt-panel-w">
-      <div class="panel-h"><h2><i data-ic="route"></i> จัดเคสให้ทีม · จัดเส้นทาง</h2><span class="muted small">เลือกทีม → เลือกเคส → คำนวณ → มอบหมายทั้งเส้น</span></div>
-      <div id="rt-panel"></div>
-    </section>
+
     <div class="cols">
       <section class="panel">
         <div class="panel-h"><h2>ทีมอาสา</h2><button class="btn primary sm" id="add-team">+ เพิ่มทีม</button></div>
@@ -77,13 +74,14 @@
 <script src="../covered.js?v=9"></script>
 <script src="../teamcall.js?v=5"></script>
 <script src="../mapfs.js?v=1"></script>
-<script src="./track.js?v=100"></script>
-<script src="./teams.js?v=27"></script>
-<script src="./route.js?v=3"></script>
+<script src="./track.js?v=101"></script>
+<script src="./teams.js?v=29"></script>
+<script src="./route.js?v=5"></script>
+<script src="./routeedit.js?v=1"></script>
 <script src="./rally.js?v=4"></script>
 <script src="../theme-toggle.js?v=7"></script>
 <script src="../ptt.js?v=3"></script>
-<script src="../chat.js?v=16"></script>
+<script src="../chat.js?v=17"></script>
 <script src="../feedback.js?v=1"></script>
 <script src="../localai.js?v=4"></script>
 <script src="../hermes.js?v=16"></script>

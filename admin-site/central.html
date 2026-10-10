@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
 <link rel="stylesheet" href="./central/hm-ui.css?v=76">
-<script src="./central/icons.js?v=19"></script>
+<script src="./central/icons.js?v=21"></script>
 </head>
 <body>
 <!-- ===== เข้าสู่ระบบ ===== -->
@@ -67,6 +67,7 @@
     </section>
 
     <section id="days-view" class="days-view" hidden aria-label="เคสรายวัน"></section>
+    <section id="rt-board" class="panel rt-panel-w rt-board" hidden aria-label="จัดเส้นทาง"><div class="panel-h"><h2><i data-ic="route"></i> จัดเส้นทาง · มอบเคสให้ทีม</h2><button type="button" class="btn ghost sm" onclick="RTBOARD.toggle()">ปิด</button></div><div id="rt-panel"></div></section>
     <section id="kanban-view" class="kanban-view" hidden aria-label="บอร์ดเคส"></section>
     <section id="map-wrap" class="map-wrap">
       <div class="map-body">
@@ -94,12 +95,15 @@
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=13"></script>
-<script src="./central/casekanban.js?v=6"></script>
+<script src="./central/mapfs.js?v=1"></script>
+<script src="./central/routeshim.js?v=1"></script>
+<script src="./central/teams/route.js?v=5"></script>
+<script src="./central/casekanban.js?v=7"></script>
 <script src="./central/casedays.js?v=1"></script>
 <script src="./central/leadsview.js?v=7"></script>
 <script src="./central/theme-toggle.js?v=7"></script>
 <script src="./central/ptt.js?v=3"></script>
-<script src="./central/chat.js?v=16"></script>
+<script src="./central/chat.js?v=17"></script>
 <script src="./central/feedback.js?v=1"></script>
 <script src="./central/localai.js?v=4"></script>
 <script src="./central/hermes.js?v=16"></script>

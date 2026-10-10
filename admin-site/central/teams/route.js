@@ -92,4 +92,4 @@ const ROUTE=(()=>{
     if(k==='assign'){b.disabled=true;try{await assign()}finally{if(b.isConnected)b.disabled=false}return}
     if(k==='copy'){copy();return}if(k==='clear'){R.route=null;render();return}});
   async function init(){await hmCases();render()}
-  return {init,render,refresh:()=>{if(!R.route&&!document.activeElement?.closest?.('#rt-panel'))render()}}})();
+  return {nav:{valhalla,osrm,hazards,hitsOn},init,render,refresh:()=>{if(!R.route&&!document.activeElement?.closest?.('#rt-panel'))render()}}})();

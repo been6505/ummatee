@@ -32,11 +32,14 @@ $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set(
 function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean),createdAt:Number(c.createdAt)||0,updatedAt:Number(c.updatedAt)||0}));D.loaded=Date.now()}
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
-  try{const [r,sk,ld,tl]=await Promise.all([api({action:'list',key:D.key}),api({action:'stock',key:D.key}).catch(()=>null),api({action:'leads',key:D.key,days:30}).catch(()=>null),api({action:'teams',key:D.key}).catch(()=>null)]);if(!r||!r.ok)throw 0;
+  // ยิงทุกคำขอพร้อมกัน แต่วาดทันทีที่เคสมาถึง · สต็อก/โซเชียล/ทีม เติมทีหลังเมื่อมาถึง (ไม่รอตัวช้าสุด)
+  const later=(a,f)=>api(a).then(x=>{f(x);if(D.loaded)render()}).catch(()=>{});
+  later({action:'stock',key:D.key},sk=>{D.stock=sk&&sk.ok?sk:D.stock});later({action:'leads',key:D.key,days:30},ld=>{D.leads=ld&&ld.ok?ld.leads:D.leads});later({action:'teams',key:D.key},tl=>{if(tl&&tl.ok)D.live=tl.teams||[]});
+  try{const r=await api({action:'list',key:D.key});if(!r||!r.ok)throw 0;
     api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
     api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});
     if(!D.rosterN)api({action:'roster',key:D.key}).then(r=>{if(r&&r.ok){D.rosterN=(r.roster||[]).length;summary()}}).catch(()=>{});
-    D.stock=sk&&sk.ok?sk:null;D.leads=ld&&ld.ok?ld.leads:null;D.live=tl&&tl.ok?tl.teams||[]:[];
+    D.live=D.live||[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
 let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key)return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}

@@ -2241,10 +2241,17 @@ async function allCams() {
 /* สถิติแบบหน้า #stats ของ Help Me — คำนวณจากรายการเคสเต็ม (HELPME_KEY) ส่งกลับเฉพาะตัวเลขรวม ไม่มีชื่อ/เบอร์ · แคช 2 นาที
    ตัดเคสทดสอบ (test / ทดสอบ / เทส) · เวลาช่วยเสร็จใช้ updatedAt ของเคสที่ปิดแล้ว (ค่าประมาณ แบบเดียวกับ Help Me) */
 async function helpmeStats(env, db) {
+  // ตอบทันทีจากชุดล่าสุดที่เก็บไว้ (เร็ว) · เก่ากว่า 60 วิ = ดึงใหม่เบื้องหลังให้ครั้งถัดไป · ยังไม่เคยมี = ดึงสดแล้วรอ
+  if (db) { const last = await getMeta(db, 'helpme_stats_last'), at = Number(await getMeta(db, 'helpme_stats_at')) || 0;
+    if (last) {
+      if (Date.now() - at > 60e3 && CTX && CTX.waitUntil) { await setMeta(db, 'helpme_stats_at', String(Date.now())); // กันหลายคนดึงซ้อน
+        CTX.waitUntil(helpmeStatsLive(env, db).then(f => setMeta(db, 'helpme_stats_last', JSON.stringify(f))).catch(() => {})); }
+      return { ...JSON.parse(last), cachedAt: at || null };
+    } }
   // Apps Script ของ Help Me บางช่วงตอบช้าเกิน 25 วิ: เก็บชุดล่าสุดที่ดีไว้ใน meta แล้วส่งชุดนั้น (บอกว่าเก่า) แทนการว่างเปล่า
   try {
     const fresh = await helpmeStatsLive(env, db);
-    if (db) await setMeta(db, 'helpme_stats_last', JSON.stringify(fresh));
+    if (db) { await setMeta(db, 'helpme_stats_last', JSON.stringify(fresh)); await setMeta(db, 'helpme_stats_at', String(Date.now())); }
     return fresh;
   } catch (e) {
     const last = db ? await getMeta(db, 'helpme_stats_last') : '';
@@ -2686,7 +2693,8 @@ async function api(request, env) {
       case 'list': {
         const since = Number(p.since) || 0;
         const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme' ORDER BY createdAt").bind(since).all(); // เคส Help Me ส่งผ่าน helpme_cases
-        if (vol) { try { await fixOwnPins(db, results); } catch (e) {} }
+        // ตรวจหมุดกับที่อยู่ (อาจเรียกบริการแผนที่ภายนอก) ทำเบื้องหลัง ไม่ให้ผู้ใช้รอ · รอบหน้าได้ผลที่แก้แล้ว
+        if (vol) { const fx = fixOwnPins(db, results.map(r => ({ ...r }))).catch(() => {}); if (CTX && CTX.waitUntil) CTX.waitUntil(fx); }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
       case 'rev': { const r = await db.prepare("SELECT v FROM meta WHERE k='rev'").first(); return json({ ok: true, rev: r ? r.v : '0' }); }

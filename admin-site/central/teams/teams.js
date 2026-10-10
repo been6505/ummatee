@@ -10,7 +10,7 @@ const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math
 const tname=s=>String(s||'').replace(/^'/,'').trim();
 const tel=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 
-async function loadAll(){
+async function loadAll(){T.loadedAt=Date.now();
   $('#sync').textContent='กำลังโหลด…';
   try{const [r,c]=await Promise.all([apiGet({action:'roster'}),apiGet({action:'list'})]);
     if(r&&r.ok){T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||''}
@@ -18,7 +18,7 @@ async function loadAll(){
     T.loaded=Date.now();render()}
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
-setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},15000);document.addEventListener('visibilitychange',()=>{if(ADM.key&&!document.hidden)loadAll()});
+setInterval(()=>{if(ADM.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIVE.ok())||Date.now()-(T.loadedAt||0)>300000))loadAll()},15000);document.addEventListener('visibilitychange',()=>{if(ADM.key&&!document.hidden)loadAll()});
 /* ตำแหน่งสดทุก 15 วิ: อัปเดตแผนที่ + ป้ายสถานะบนการ์ด (ไม่วาดหน้าใหม่ทั้งหมด) */
 // ตำแหน่งสดทุก 3 วินาที (หมุดเลื่อนลื่นระหว่างรอบด้วย glideTo)
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy||(typeof LIVE!=='undefined'&&LIVE.ok()))return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);

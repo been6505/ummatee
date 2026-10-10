@@ -568,6 +568,24 @@ async function liveStream(db, p) {
   return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
 }
 /* เส้นทางแนะนำจากศูนย์: ศูนย์คำนวณ/ปรับเส้นทาง (เลี่ยงน้ำท่วม · จุดผ่าน · จุดอุปสรรค) แล้วส่งให้ทีม · ทีมละ 1 เส้น (ไปเคสที่กำลังไป) */
+/* หน้าทีม/แอปทีม: แจ้งทันทีเมื่อมีแชทใหม่ของทีมนี้ หรือข้อมูลงานเปลี่ยน (แทนการถามซ้ำทุก 5 วิ · ประหยัดแบต/เน็ต) */
+function teamStream(db, team) {
+  const enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
+  (async () => {
+    await w.write(enc.encode('retry: 1500\n\n'));
+    let rv = null, cr = null;
+    for (let i = 0; i < 25; i++) {
+      const { results } = await db.prepare('SELECT k,v FROM meta WHERE k IN (?,?)').bind('rev', 'chat_rev:' + team).all();
+      const m = Object.fromEntries(results.map(x => [x.k, x.v])), r = m.rev || '', c = m['chat_rev:' + team] || '';
+      if (rv !== null && c !== cr) await w.write(enc.encode('event: chat\ndata: ' + c + '\n\n'));
+      if (rv !== null && r !== rv) await w.write(enc.encode('event: rev\ndata: ' + r + '\n\n'));
+      if (rv === null || (i % 10 === 9)) await w.write(enc.encode(': hb\n\n'));
+      rv = r; cr = c; await new Promise(z => setTimeout(z, 1500));
+    }
+    await w.close();
+  })().catch(() => { try { w.abort(); } catch (e) {} });
+  return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store' } });
+}
 function cleanPts(a, max) { return (Array.isArray(a) ? a : []).slice(0, max).map(p => Array.isArray(p) ? [num(p[0], -90, 90), num(p[1], -180, 180)] : [num(p && p.lat, -90, 90), num(p && p.lng, -180, 180)]).filter(p => p[0] != null && p[1] != null).map(p => [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5]); }
 async function routeSet(db, b) {
   const team = clean(b.team, MAX.volunteer), caseId = clean(b.caseId, 40);
@@ -2718,6 +2736,7 @@ async function chatSend(db, b) {
   const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' || read ? 1 : 0, from === 'team' || read ? 1 : 0, kind, link).run();
   await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
+  await setMeta(db, 'chat_rev:' + team, String(r.meta.last_row_id || Date.now()));
   return { ok: true, n: r.meta.last_row_id };
 }
 async function chatList(db, p) {
@@ -2873,6 +2892,7 @@ async function api(request, env) {
         if (p.action === 'ptt_list') return json(await pttList(db, p, chans));
         const row = await db.prepare('SELECT ch FROM ptt WHERE n=?').bind(Number(p.n) || 0).first(); if (!row || !chans.includes(row.ch || 'all')) return new Response('not found', { status: 404 }); return pttAudio(db, p); }
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
+      case 'team_stream': { const t = await teamFrom(env, db, p); return t ? teamStream(db, t.name) : json({ ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat_threads': return json(vol ? await chatThreads(db) : { ok: false, error: 'not_volunteer' });
@@ -2947,7 +2967,13 @@ async function handle(request, env, ctx) {
     // ลิงก์เก่า (/admin… และ /center…) → ชื่อใหม่ /central
     const old = url.pathname.match(/^\/(?:admin|center)(\.html|\/.*)?$/);
     if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/central' + old[1] : '/central'; return Response.redirect(url.toString(), 301); }
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+    // ประหยัดเน็ต: ไฟล์ที่มีเลขเวอร์ชัน (?v=) ไม่เปลี่ยนเนื้อหา → เก็บในเครื่องได้นาน ไม่ต้องถามซ้ำทุกครั้ง · รูปในโฟลเดอร์ assets เก็บ 7 วัน
+    if (res.ok && request.method === 'GET') {
+      const ver = url.searchParams.has('v') && /\.(js|css|png|jpe?g|svg|webp|woff2?|ico)$/.test(url.pathname), img = !ver && /^\/assets\/.+\.(png|jpe?g|svg|webp)$/.test(url.pathname);
+      if (ver || img) { const h = new Headers(res.headers); h.set('cache-control', ver ? 'public, max-age=31536000, immutable' : 'public, max-age=604800'); return new Response(res.body, { status: res.status, headers: h }); }
+    }
+    return res;
   }
 }
 export default {

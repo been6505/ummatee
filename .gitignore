@@ -5,3 +5,4 @@ node_modules/
 pages-admin/dist/
 wrangler.localadmin.jsonc
 admin-site/app/*.apk
+wrangler.localdist.jsonc

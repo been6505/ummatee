@@ -71,7 +71,7 @@ async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').text
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
 let pollT=null;
-function startPolling(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!A.key)return;
+function startPolling(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!A.key)return;if((typeof LIVE!=='undefined'&&LIVE.ok())){if(Date.now()-A.loaded>600000)load();return}
   try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(A.rev!==null&&r.rev!==A.rev){A.rev=r.rev;load()}else A.rev=r.rev}}catch(e){}
   if(Date.now()-A.loaded>120000)load()},5000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A.key&&Date.now()-A.loaded>30000)load()});

@@ -278,10 +278,11 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 .m.mcase{background:none!important;box-shadow:none!important;padding:0!important;max-width:100%!important;width:100%}.m.mcase .who{margin:0 4px 6px}.m.mcase .case{margin:0}
 @keyframes pttb{50%{opacity:.4}}
 .hq-route{display:grid;gap:4px;background:#E9F6EE;border:1.5px solid #9BD3B0;border-radius:14px;padding:10px 12px;margin:8px 0}.hq-route b{display:flex;align-items:center;gap:6px;color:#1F7A43}.hq-route b .ic{width:18px;height:18px}.hq-route span{font-size:13.5px;font-weight:600}.hq-route p{margin:0;font-size:13.5px}.hq-route .btn{margin-top:4px;min-height:44px}
+.ac-ik{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:2px 0 0;font-size:13.5px;background:#F7F8FB;border-radius:12px;padding:8px 10px}.ac-ik dt{color:var(--muted);white-space:nowrap}.ac-ik dd{margin:0;font-weight:600;word-break:break-word}.ac-ik .tag{font-size:11.5px;padding:2px 8px;margin:0}.ac-na{color:#C2C6D3;font-style:normal;font-weight:400}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=21"></script>
-<script src="./native-track.js?v=5"></script>
+<script src="./native-track.js?v=6"></script>
 <script src="../central/ptt.js?v=3"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
@@ -473,8 +474,17 @@ function pttInit(){if(typeof PTT==='undefined'||!S.me)return;const b=$('#nav-ptt
   PTT.init({api,post,ws:pttWs,url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,...auth()}),me:()=>({sender:(S.me&&S.me.team&&S.me.team.name)||S.team||'ทีม',kind:'team'}),native:!!NATIVE,
     onState:s=>{if(!b)return;b.classList.toggle('ptt-off',!s.up);b.classList.toggle('ptt-busy',!!s.live);const l=b.querySelector('.ptt-chl');if(l)l.textContent=s.ch==='all'?'ช่องรวม':s.ch.startsWith('wr:')?'War Room':'ศูนย์'}});
   if(b&&!b._ptt){b._ptt=1;PTT.bind(b)}}
+/* แจ้งเตือนจากเซิร์ฟเวอร์แบบทันที (แชทใหม่ / งานเปลี่ยน) แทนการถามซ้ำ · หลุด = กลับไปถามซ้ำแบบเดิมอัตโนมัติ */
+const TS=(()=>{let es=null,refT=0;
+  function open(){if(!window.EventSource||!S.tk&&!S.key)return;if(es&&es.readyState<2)return;es=new EventSource('/api?'+new URLSearchParams({action:'team_stream',...auth()}));
+    es.addEventListener('chat',()=>pollChat());
+    es.addEventListener('rev',()=>{const now=Date.now();if(now-refT>8000){refT=now;refresh()}else{clearTimeout(TS.t);TS.t=setTimeout(()=>{refT=Date.now();refresh()},8000-(now-refT))}});
+    es.onerror=()=>{}}
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)open()});
+  return {open,ok:()=>!!(es&&es.readyState===1)}})();
+function tsOpen(){try{TS.open()}catch(e){}}
 function start(){screen('#app');setTimeout(pttInit,800);if(TR.want)track(true);go(S.view||'home');render();pollChat(true);refresh();
-  clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
+  clearInterval(S.t1);clearInterval(S.t2);tsOpen();S.t1=setInterval(()=>{if(!TS.ok()||Date.now()-(S.refAt||0)>180000)refresh()},30000);S.t2=setInterval(()=>{if(!TS.ok()||Date.now()-(S.chatAt||0)>60000)pollChat()},5000)}
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
   st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
 $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/api?'+new URLSearchParams({action:'roster',key:$('#code').value.trim()}))).json();if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
@@ -565,7 +575,7 @@ function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
 /* คำตอบรวมพลที่ยังค้างในกล่องขาออก: ใช้ค่าที่ตอบไว้แทนค่าจากเซิร์ฟเวอร์ (กันเตือนซ้ำ) */
 function obOverlay(r){const q=OB.get().filter(x=>x.b&&x.b.action==='rally_resp');(r.rallies||[]).forEach(x=>{const m=q.filter(y=>y.b.id===x.id).pop();if(m)x.my=m.b.status})}
-async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){obOverlay(r);S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
+async function refresh(){S.refAt=Date.now();try{const r=await api({action:'team_me'});if(r.ok){obOverlay(r);S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
 
 /* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
 const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
@@ -583,7 +593,7 @@ function track(on){
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
   TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,alt:p.coords.altitude,at:Date.now()};
-      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>15000||(dist(TR.sentPos,TR.pos)>3&&now-TR.sentAt>1000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
+      const now=Date.now();const slow=!(TR.pos.speed>0.6);if(!TR.sentPos||now-TR.sentAt>(slow?20000:15000)||(dist(TR.sentPos,TR.pos)>(slow?10:3)&&now-TR.sentAt>1000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
     {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
@@ -739,7 +749,7 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
     const voice=m.kind==='voice'&&m.link?`<button type="button" class="vmsg" data-vsrc="${esc(m.link)}"><span class="vplay">▶</span><span class="vbar"><i></i></span><span class="vlen">${esc((String(m.text).match(/(\d+) วิ/)||[])[1]||'')} วิ</span></button>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}${voice?' vm':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text&&!voice?`<p>${esc(m.text)}</p>`:voice?`<p class="vlab">${esc(String(m.text).replace(/ · \d+ วิ$/,''))}</p>${voice}`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
-async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที
+async function pollChat(first){S.chatAt=Date.now();try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที
 
     const fresh=msgs.filter(m=>m.sender==='hq'&&m.n>S.lastN);
     if(!first&&fresh.length){buzz([150,80,150]);tone()}
@@ -837,11 +847,13 @@ function allCases(){if(!AC.list)return '<p class="empty">กำลังโห�
   const ago=t=>{const m=Math.round((Date.now()-Number(t))/60000);return m<60?m+' น.':m<1440?Math.round(m/60)+' ชม.':Math.round(m/1440)+' วัน'};
   const km=d=>d==null?'':d<1000?Math.round(d)+' ม.':(d/1000).toFixed(d<10000?1:0)+' กม.';
   const chips=[['near','ใกล้ฉัน'],['crit','วิกฤต'],['new','ใหม่สุด']].map(([k,l])=>`<button type="button" class="chip" data-asort="${k}" aria-pressed="${AC.sort===k}">${l}</button>`).join('');
-  const rows=xs.slice(0,AC.lim).map(({c,d})=>{const s=sv(c),op=AC.open===String(c.id),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' ');
+  const rows=xs.slice(0,AC.lim).map(({c,d})=>{const s=sv(c),op=AC.open===String(c.id),p=tel((c.intake&&c.intake.phone)||c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' ');
     return `<article class="ac u${s}${op?' open':''}"><div class="ac-h" data-aopen="${esc(c.id)}" role="button" tabindex="0" aria-expanded="${op}"><div class="ac-r1"><span class="ac-id">#${esc(c.id)}</span><span class="tag u${s}">${URG[s]}</span>${d!=null?`<span class="ac-km">${km(d)}</span>`:''}</div>
-        <div class="ac-who"><i data-ic="user"></i><b>${esc(c.name||'ไม่ระบุชื่อ')}</b></div>
+        <div class="ac-who"><i data-ic="user"></i><b>${esc((c.intake&&c.intake.name)||c.name||'ไม่ระบุชื่อ')}</b></div>
         ${p.length>=9?`<a class="ac-tel" href="tel:${esc(p)}"><i data-ic="phone"></i>${esc(p.replace(/^(\d{3})(\d{3})(\d{3,4})$/,'$1-$2-$3'))}</a>`:'<span class="ac-tel off"><i data-ic="phone"></i>ไม่มีเบอร์</span>'}
-        <small class="ac-s">${esc((c.needs||[]).slice(0,2).join(' · ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''} · ${esc(ago(c.createdAt))}</small></div>
+        ${(()=>{const k=c.intake||{},LV={1:'ทั่วไป',2:'เร่งด่วน',3:'วิกฤต'},v=x=>x?esc(x):'<i class="ac-na">–</i>';
+          return `<dl class="ac-ik"><dt>จุดที่รถถึงใกล้สุด</dt><dd>${v(k.car)}</dd><dt>สถานที่ส่งมอบ</dt><dd>${v(k.handoff)}</dd><dt>ระดับน้ำ</dt><dd>${v(k.water||LEVEL[c.level]||c.level)}</dd><dt>ความเสี่ยง</dt><dd>${v(k.risks||(c.vulnerable||[]).join(', '))}</dd><dt>รับได้ถึง</dt><dd>${k.latest?esc(k.latest)+' น.':v('')}</dd><dt>ต้องการ / จำนวน</dt><dd>${v(k.items||(c.needs||[]).join(', '))}</dd><dt>ความเดือดร้อน</dt><dd><span class="tag u${s}">${LV[s]}</span> · ${esc(c.people||1)} คน</dd></dl>`})()}
+        <small class="ac-s">${c.district?esc(c.district)+' · ':''}แจ้ง ${esc(ago(c.createdAt))}ที่แล้ว</small></div>
       ${op?`<div class="ac-b"><dl><dt>ต้องการ</dt><dd>${esc((c.needs||[]).join(' · ')||'-')}</dd><dt>จำนวนคน</dt><dd>${esc(c.people||1)} คน${c.vulnerable&&c.vulnerable.length?' · '+esc(c.vulnerable.join(', ')):''}</dd>${c.level?`<dt>ระดับน้ำ</dt><dd>${esc(LEVEL[c.level]||c.level)}</dd>`:''}<dt>ที่อยู่</dt><dd>${esc([c.address,c.district].filter(Boolean).join(' · ')||'-')}</dd><dt>ผู้แจ้ง</dt><dd>${esc([c.name,c.phone].filter(Boolean).join(' · ')||'-')}</dd>${c.photos?`<dt>รูป</dt><dd>${c.photos} รูป</dd>`:''}${c.notes?`<dt>หมายเหตุ</dt><dd>${esc(c.notes)}</dd>`:''}<dt>แจ้งเมื่อ</dt><dd>${esc(ago(c.createdAt))}ที่แล้ว${d!=null?' · ห่าง '+km(d):''} · #${esc(c.id)}</dd></dl>
         <div class="ac-act">${p.length>=9?`<a class="btn red" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}${dest?`<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}<button type="button" class="btn green" data-areq="${esc(c.id)}"><i data-ic="hand"></i> ขอรับเคส</button></div></div>`:''}</article>`}).join('');
   return `<div class="ac-top"><b>รอความช่วยเหลือ ${AC.list.length} เคส</b><button type="button" class="ac-rf" data-arefresh aria-label="โหลดใหม่"><i data-ic="refresh"></i></button></div><div class="ac-chips">${chips}</div>${!me&&AC.sort==='near'?'<p class="hint">เปิดตำแหน่งเพื่อเรียงเคสใกล้ฉัน</p>':''}

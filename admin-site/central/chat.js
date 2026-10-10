@@ -105,7 +105,7 @@ const CHAT=(()=>{
   function agoMin(t){const m=Math.round((Date.now()-t)/60000);return m<60?m+' นาที':Math.floor(m/60)+' ชม. '+(m%60)+' นาที'}
   function ding(f=880){try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.15)}catch(e){}}
   // แท็บเบื้องหลังยังเช็กทุก 20 วิ (ตัวเลข + เสียงแจ้ง) · กลับมาที่แท็บแล้วเช็กทันที
-  function schedule(){clearInterval(S.timer);S.timer=setInterval(()=>{if(!document.hidden||Date.now()-(S.lastPoll||0)>7500)poll()},S.open?5000:8000)}
+  function schedule(){clearInterval(S.timer);S.timer=setInterval(()=>{const lv=(typeof LIVE!=='undefined'&&LIVE.ok()),gap=lv?(S.open?20000:30000):(S.open?5000:8000);if(Date.now()-(S.lastPoll||0)>=gap-500&&(!document.hidden||Date.now()-(S.lastPoll||0)>gap))poll()},5000)}
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&root)poll()});
   function start(){if(root||!KEY()||document.documentElement.classList.contains('embed'))return;build();poll(true);schedule()}
   /* เริ่มเมื่อเข้าระบบแล้ว (หน้าเข้าระบบยังไม่มีรหัส) */

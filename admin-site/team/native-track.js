@@ -54,7 +54,9 @@ window.NTRK = (() => {
       }
     } finally { S.busy = false; }
   }
+  const dm = (a, b) => { const R = 6371e3, x = (b.lat - a.lat) * Math.PI / 180, y = (b.lng - a.lng) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
   function enqueue(p) {
+    S.lastSent = p;
     if (S.st.state === 'fatal') return;
     S.q.push(p); if (S.q.length > QMAX) S.q = S.q.slice(-QMAX);
     S.lastQ = Date.now(); saveQ(); flush();
@@ -64,6 +66,8 @@ window.NTRK = (() => {
     const p = { lat: l.latitude, lng: l.longitude, acc: Math.round(l.accuracy || 0), vel: l.speed != null ? Math.round(l.speed * 3.6) : undefined,
       cog: l.bearing != null ? Math.round(l.bearing) : undefined, alt: l.altitude != null ? Math.round(l.altitude) : undefined, t: l.time || Date.now() };
     S.fix = p; put('ntrk_fix', p);
+    // ประหยัดแบต/เน็ต: อยู่กับที่ (ช้ากว่า 2 กม./ชม. และขยับไม่ถึง 10 ม. จากจุดที่ส่งล่าสุด) = ไม่ส่งซ้ำ · ส่งยืนยันทุก 20 วิ (BEAT)
+    if ((p.vel == null || p.vel < 2) && S.lastSent && dm(S.lastSent, p) < 10 && Date.now() - S.lastQ < BEAT) return;
     const wait = GAP - (Date.now() - S.lastQ);
     if (wait <= 0) { S.trail = null; clearTimeout(S.trailT); S.trailT = null; enqueue(p); return; }
     S.trail = p;

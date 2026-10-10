@@ -586,10 +586,10 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   W.room=new URLSearchParams(location.search).get('wr')||'';
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
-  setInterval(async()=>{if(busy())return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
+  setInterval(async()=>{if(busy()||(typeof LIVE!=='undefined'&&LIVE.ok()))return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
   setInterval(()=>{if(!(typeof LIVE!=='undefined'&&LIVE.ok()))pollLive()},2000); // สำรอง: ถามซ้ำเมื่อสายเรียลไทม์หลุด
   if(typeof LIVE!=='undefined')LIVE.start(rows=>{W.live=mergeLive(W.live,rows);if(!document.hidden&&W.tab==='over')moveTeams(view())});
-  setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
+  setInterval(async()=>{if(busy()||(typeof LIVE!=='undefined'&&LIVE.ok()))return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
   document.addEventListener('visibilitychange',async()=>{if(document.hidden||busy())return;await Promise.all([loadCases(),loadTeams(),loadRooms()]);render()});
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});
 

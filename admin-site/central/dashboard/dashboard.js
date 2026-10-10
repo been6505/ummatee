@@ -42,10 +42,10 @@ async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').clas
     D.live=D.live||[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
-let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key)return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
+let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key||(typeof LIVE!=='undefined'&&LIVE.ok()))return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
 $('#refresh').addEventListener('click',load);
 // อัปเดตเอง: เช็กการเปลี่ยนแปลงถี่ ๆ (poll) + โหลดใหม่ทั้งหมดทุก 60 วิ (รวมเคส Help Me) และเมื่อกลับมาที่แท็บ
-setInterval(()=>{if(D.key&&!document.hidden)load()},60000);document.addEventListener('visibilitychange',()=>{if(D.key&&!document.hidden)load()});
+setInterval(()=>{if(D.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIVE.ok())||Date.now()-D.loaded>600000))load()},60000);document.addEventListener('visibilitychange',()=>{if(D.key&&!document.hidden)load()});
 
 /* ---------- range ---------- */
 function startOfDay(t){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()}

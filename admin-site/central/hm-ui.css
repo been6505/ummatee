@@ -833,3 +833,11 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 .bar-row>#f-toggle{margin-left:auto}
 .bar-row>#filters-box{order:9}
 .bar-top:not(:has(>:not([hidden]))){display:none!important}
+@media(max-width:640px){
+  .bd-cols{grid-template-columns:minmax(0,1fr)!important;grid-auto-flow:row!important;grid-auto-columns:auto!important;overflow:visible!important;scroll-snap-type:none!important;gap:10px!important;padding-bottom:0!important}
+  .bd-col{min-height:0;padding:10px;border-radius:16px}
+  .bd-card{padding-right:72px}
+  .bd-top{align-items:center}.bd-tools{flex-wrap:wrap}
+  .bd-cal-h b{min-width:0;flex:1}
+  .bd-day{min-height:56px;padding:3px;border-radius:8px}.bd-cal{gap:3px}
+}

@@ -16,8 +16,9 @@ const KANBAN=(()=>{
       <small>${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''}</small>${vol(c)&&c.status!=='open'?`<small class="kb-team"><i data-ic="users"></i> ${esc(vol(c))}</small>`:''}
       ${c.teamIssue&&c.status==='going'?`<small class="kb-iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}<small class="kb-ago">${esc(ago(c.createdAt))}</small></div></article>`}
   function draw(){const el=box();if(!el||el.hidden)return;if(K.drag||K.ghost||document.querySelector('.kb-pick')){K.pend=true;return}K.pend=false;const sx=(el.querySelector('.kb-cols')||{}).scrollLeft||0,sy=[...el.querySelectorAll('.kb-list')].map(x=>x.scrollTop);const cs=list();
-    el.innerHTML=`<div class="kb-cols">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt));
-      return `<section class="kb-col kb-${k}" data-kbcol="${k}"><h3>${t} <span>${xs.length}</span></h3><div class="kb-list">${xs.slice(0,150).map(card).join('')||'<p class="kb-empty">วางการ์ดที่นี่</p>'}${xs.length>150?`<p class="kb-empty">+${xs.length-150} เคส · ใช้ตัวกรองเพื่อดูเพิ่ม</p>`:''}</div></section>`}).join('')}</div>`;
+    el.innerHTML=`<div class="kb-cols${K.showDone?'':' fold'}">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt));
+      if(k==='done'&&!K.showDone)return `<section class="kb-col kb-done kb-fold" data-kbcol="done"><h3>ปิดเคส <span>${xs.length}</span></h3><div class="kb-list"><p class="kb-empty"><i data-ic="check"></i><br>ลากการ์ดมาวาง<br>เพื่อปิดเคส</p>${xs.length?`<button type="button" class="btn ghost sm kb-show" data-kbshow>ดูเคสที่ปิด (24 ชม.)</button>`:''}</div></section>`;
+      return `<section class="kb-col kb-${k}" data-kbcol="${k}"><h3>${t} <span>${xs.length}</span>${k==='done'?'<button type="button" class="kb-hide" data-kbshow aria-label="ซ่อนเคสที่ปิด" title="ซ่อนเคสที่ปิด"><i data-ic="eyeoff"></i></button>':''}</h3><div class="kb-list">${xs.slice(0,150).map(card).join('')||'<p class="kb-empty">วางการ์ดที่นี่</p>'}${xs.length>150?`<p class="kb-empty">+${xs.length-150} เคส · ใช้ตัวกรองเพื่อดูเพิ่ม</p>`:''}</div></section>`}).join('')}</div>`;
     const nc=el.querySelector('.kb-cols');if(nc)nc.scrollLeft=sx;el.querySelectorAll('.kb-list').forEach((x,i)=>{x.scrollTop=sy[i]||0});
     if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)})}
   /* วางลงคอลัมน์ */
@@ -48,7 +49,7 @@ const KANBAN=(()=>{
   const end=e=>{clearTimeout(K.timer);if(K.ghost){const col=document.elementFromPoint(e.clientX,e.clientY),kc=col&&col.closest&&col.closest('#kanban-view [data-kbcol]'),id=K.start&&K.start.id;K.ghost.remove();K.ghost=null;document.querySelectorAll('.kb-card.dragging,.kb-col.over').forEach(x=>x.classList.remove('dragging','over'));K.start=null;if(kc&&id)drop(id,kc.dataset.kbcol);else if(K.pend)draw();K.justDragged=Date.now();return}K.start=null};
   document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
   document.addEventListener('touchmove',e=>{if(K.ghost)e.preventDefault()},{passive:false});
-  document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c||Date.now()-(K.justDragged||0)<400)return;openDrawer(c.dataset.kb)});
+  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#kanban-view [data-kbshow]')){K.showDone=!K.showDone;draw();return}const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c||Date.now()-(K.justDragged||0)<400)return;openDrawer(c.dataset.kb)});
   document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('#kanban-view .kb-card'))e.preventDefault()});
   return {draw};
 })();

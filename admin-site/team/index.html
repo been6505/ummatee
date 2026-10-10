@@ -197,6 +197,11 @@ body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left
 .me-dot{width:18px;height:18px;border-radius:50%;background:#2D6BFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(45,107,255,.22)}
 .cs-pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3)}
 .cs-pin.u3{background:#E5383B}.cs-pin.u2{background:#F08A00}.cs-pin.u1{background:#2D45C8}.cs-pin.done{background:#2E9E57}
+/* หน้าแชท: ปุ่มสถานะมุมขวาบนกลายเป็นปุ่มโทรหาศูนย์ */
+.top-call{display:none;margin-left:0;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 16px;font:inherit;font-weight:700;font-size:15px;background:#1F7A43;color:#fff;box-shadow:0 6px 18px rgba(31,122,67,.28);cursor:pointer}
+.top-call .ic{width:18px;height:18px}
+body.on-chat .top-call{display:inline-flex}
+body.on-chat .top .st{display:none!important}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=13"></script>
@@ -245,7 +250,8 @@ body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left
 <div id="app" hidden>
   <header class="top"><div class="brandpill"><img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="113" height="18"><div class="who"><b id="tname"></b><small id="tsub"></small></div></div>
     <button type="button" class="locdot" id="locdot" aria-label="สถานะการส่งตำแหน่ง"><i></i></button>
-    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกเคส</option><option value="rest">พัก</option></select></header>
+    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกเคส</option><option value="rest">พัก</option></select>
+    <button type="button" class="top-call" id="top-call" aria-label="โทรหาศูนย์"><i data-ic="phone"></i> โทร</button></header>
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
@@ -623,7 +629,7 @@ $('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
   ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
   ld.onclick=()=>{reveal=Date.now()+4000;lb.classList.remove('ok-hide');setTimeout(sync,4100)}}}
-function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');if(v==='home')HOME.show();
+function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
 /* ---------- แชท ---------- */
@@ -656,6 +662,7 @@ function callPane(link){const old=document.getElementById('call-pane');if(old)ol
   document.body.append(d);d.querySelector('.cp-back').onclick=()=>{d.remove();pollChat()}}
 addEventListener('message',e=>{if(e.origin===location.origin&&e.data&&e.data.hmCall==='ended'){const d=document.getElementById('call-pane');if(d)setTimeout(()=>{d.remove();pollChat()},1200)}});
 document.addEventListener('click',e=>{const a=e.target.closest('a.join,#r-yes');if(!a||!a.getAttribute('href'))return;e.preventDefault();callPane(a.getAttribute('href'))},true);
+$('#top-call').onclick=()=>callHq('voice');
 async function callHq(mode){
   try{const r=await post({action:'call_start',mode});if(!r.ok)throw 0;callPane(r.link)}catch(e){toast('โทรไม่ได้ ตรวจอินเทอร์เน็ต')}pollChat()}
 function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),video=m.text==='วิดีโอคอล';

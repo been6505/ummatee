@@ -245,3 +245,9 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   #main>.dcol.dcol-r>.grid{grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
   #main>.dcol.dcol-r>.grid>.card,#main>.dcol.dcol-r>.grid>.span2,#main>.dcol.dcol-r>.grid>.stock-sec{grid-column:1/-1!important}
 }
+@media(min-width:1024px){
+  #main>.dcol.dcol-r .stock-sec>.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+  #main>.dcol.dcol-r .stock-sec>.grid>.card.span2{grid-column:1/-1!important}
+  #main>.dcol.dcol-r .stock-sec>.grid>.card:not(.span2){grid-column:auto!important}
+  #main>.dcol.dcol-r .stock-sec #stock-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}

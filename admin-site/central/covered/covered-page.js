@@ -19,7 +19,7 @@ function render(){
     const pos=r.lat==null?'<small class="muted">ไม่พบตำแหน่ง</small>':r.approx?'<small class="muted">ตำแหน่งโดยประมาณ</small>':r.src==='known'?'<small class="cv-ok">ตำแหน่งที่ทีมตรวจแล้ว</small>':'<small class="cv-ok">ตำแหน่งจากลิงก์</small>';
     return `<tr><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="รายการ">${esc(r.items)}${r.items&&r.sets?'<br>':''}${r.sets?`<b>${/^[\d,]+$/.test(String(r.sets).trim())?nf(String(r.sets).replace(/,/g,''))+' ชุด':esc(r.sets)}</b>`:''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
       <td data-l="เคสที่อาจซ้ำ"${cs.length?'':' class="cv-nodup"'}>${cs.length?`<a class="cv-dup" href="../../central.html" title="${esc(cs.map(c=>'#'+c.id+' '+(c.address||'')).join('\n'))}"><span class="cv-m"><i data-ic="alert"></i> อาจซ้ำ </span>${cs.length} เคส</a>`:'<span class="muted">–</span>'}</td><td data-l="go">${r.lat!=null?`<button class="cv-go" data-i="${COVERED.C.rows.indexOf(r)}">ดูบนแผนที่</button>`:''}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">ไม่พบพื้นที่ที่ตรงกับการค้นหา</td></tr>';
-  drawMap(hit);
+  if(!document.documentElement.classList.contains('embed'))drawMap(hit);
   $('#sync').textContent=COVERED.C.loaded?'อัปเดต '+ago(COVERED.C.loaded):'';
 }
 let leafletP=null;const M={map:null,cov:null,cases:null,fitted:false,mk:new Map()};

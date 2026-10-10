@@ -11,9 +11,23 @@ const TRACK=(()=>{
     [t.battery!=null?`แบต ${t.battery}%`:'',t.speed!=null&&t.speed>=1?`${Math.round(t.speed)} กม./ชม.`:'',t.accuracy?`±${t.accuracy} ม.`:''].filter(Boolean).join(' · '),
     t.caseId?`ถือเคส #${esc(t.caseId)}`:'',isSos(r)?'<b style="color:#E5383B">SOS</b>':'',
     `<a href="https://www.google.com/maps/dir/?api=1&destination=${+t.lat},${+t.lng}" target="_blank" rel="noopener">นำทางไปหาทีม ↗</a>`].filter(Boolean).join('<br>')}
+  const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/',LY={sat:false,gis:true,cases:false,rally:false};
+  try{Object.assign(LY,JSON.parse(localStorage.getItem('uh_tlay')||'{}'))}catch(e){}
+  let bl=null,btok=0,gl=null,gisOk=null;
+  function base(kind){const t=(u,a)=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true});if(bl)map.removeLayer(bl);
+    bl=kind==='sat'?L.layerGroup([t(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]):t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
+    bl.addTo(map);const tok=++btok;if(kind==='road'&&typeof OFM!=='undefined')OFM.layer('road').then(l=>{if(!l||tok!==btok)return;map.removeLayer(bl);bl=l;l.addTo(map)})}
+  async function gistda(){if(gl){map.removeLayer(gl);gl=null}if(!LY.gis)return;
+    if(gisOk==null){try{const r=await fetch('/api?action=gistda_status').then(r=>r.json());gisOk=!!(r&&r.enabled)}catch(e){gisOk=false}}if(!gisOk||!LY.gis)return;
+    if(!map.getPane('gistda')){const p=map.createPane('gistda');p.style.zIndex=340;p.style.pointerEvents='none'}
+    gl=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'}).addTo(map)}
+  function lyrCtl(){const C=L.Control.extend({options:{position:'topleft'},onAdd(){const d=L.DomUtil.create('div','trk-lyr');L.DomEvent.disableClickPropagation(d);
+      const draw=()=>{d.innerHTML=[['sat','ภาพดาวเทียม'],['gis','น้ำท่วม GISTDA'],['cases','เคสที่มอบแล้ว'],['rally','จุดรวมพล']].map(([k,l])=>`<button type="button" data-tl="${k}" aria-pressed="${!!LY[k]}">${l}</button>`).join('')};
+      d.onclick=e=>{const b=e.target.closest('[data-tl]');if(!b)return;const k=b.dataset.tl;LY[k]=!LY[k];try{localStorage.setItem('uh_tlay',JSON.stringify(LY))}catch(x){}
+        if(k==='sat')base(LY.sat?'sat':'road');else if(k==='gis')gistda();else if(k==='rally'){if(rl)LY.rally?rl.addTo(map):rl.remove()}else if(cp){LY.cases?cp.addTo(map):cp.remove()}draw()};draw();return d}});new C().addTo(map);if(LY.sat)base('sat')}
   async function init(el){if(map)return true;try{await loadLeaflet()}catch(e){el.innerHTML='<p class="empty">โหลดแผนที่ไม่ได้</p>';return false}
     map=L.map(el,{scrollWheelZoom:false,zoomControl:false}).setView([13.76,100.65],11);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+    map.attributionControl.setPrefix(false);base('road');gistda();lyrCtl();
     if(typeof MAPFS!=='undefined')MAPFS.add(map);L.control.zoom({position:'topright'}).addTo(map);trail=L.layerGroup().addTo(map);pins=L.layerGroup().addTo(map);return true}
   function update(rows,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();
     (rows||[]).forEach(t=>{const r=byName.get(tn(t.team)),k=tn(t.team);seen.add(k);
@@ -39,7 +53,7 @@ const TRACK=(()=>{
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
   let rt=null,PL={};const RT=new Map();
   const hasPin=TK.hasPin;
-  let cp=null,cpKey='';function assigned(cases){if(!map)return;if(!cp)cp=L.layerGroup().addTo(map);
+  let cp=null,cpKey='';function assigned(cases){if(!map)return;if(!cp){cp=L.layerGroup();if(LY.cases)cp.addTo(map)}
     const xs=(cases||[]).filter(c=>c.status==='going'&&hasPin(c)),key=xs.map(c=>c.id+':'+c.volunteer+':'+(c.teamDoneAt?1:0)).join('|');if(key===cpKey)return;cpKey=key;cp.clearLayers();
     xs.forEach(c=>{const team=tn(c.volunteer),done=!!c.teamDoneAt,lab=`#${esc(c.id)} · ${(c.needs||[]).slice(0,2).map(esc).join(', ')||'เคส'} · ${esc(c.people||1)} คน<br>ทีม: <b>${esc(team)}</b>${done?' · ช่วยแล้ว รอปิดเคส':''}`;
       const ic=typeof umPin==='function'?umPin(done?'done':'going',{extra:`<span class="cp-tag">${esc(team)}</span>`}):L.divIcon({className:'',html:'<div class="cp-dot"></div>',iconSize:[14,14]});
@@ -62,7 +76,7 @@ const TRACK=(()=>{
     r.line=L.polyline(more,{color:pl?'#1F7A43':'#E5383B',weight:5,opacity:.9,dashArray:x?null:'8 8'}).bindTooltip((pl?'เส้นทางที่ศูนย์ส่งให้ · ':'')+lab+' · แตะเพื่อปรับเส้นทาง',{sticky:true}).addTo(r.g);
     const ed=()=>{if(typeof RTE!=='undefined')RTE.open(k,c,{lat:me.lat,lng:me.lng})};r.line.on('click',ed);
     L.marker(end,{icon:L.divIcon({className:'',html:`<div class="rt-goal${pl?' plan':''}"><i data-ic="flag"></i><span>${x?`${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} น.`:'เคส'}</span><b>${pl?'ศูนย์กำหนด':'ปรับ'}</b></div>`,iconSize:null,iconAnchor:[14,28]}),zIndexOffset:800}).bindTooltip(lab+' · แตะเพื่อปรับเส้นทาง').on('click',ed).addTo(r.g)}
-  let rl=null;function rallies(list){if(!map)return;if(!rl)rl=L.layerGroup().addTo(map);rl.clearLayers();
+  let rl=null;function rallies(list){if(!map)return;if(!rl){rl=L.layerGroup();if(LY.rally)rl.addTo(map)}rl.clearLayers();
     (list||[]).forEach(r=>L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:900}).bindTooltip('รวมพล · '+esc(r.label)).addTo(rl))}
   return {init,update,focus,fresh,isSos,rallies,routes,map:()=>map,setPlans:p=>{PL=p||{}},refreshRoute:k=>{const r=RT.get(k);if(r)r.at=0},eta:k=>{const r=RT.get(k);return r&&r.info||null},edit:k=>{const r=RT.get(k);if(r&&r.info&&r.from&&typeof RTE!=='undefined')RTE.open(k,r.info.c,{lat:r.from.lat,lng:r.from.lng})},resize:()=>{if(map)map.invalidateSize()}}
 })();

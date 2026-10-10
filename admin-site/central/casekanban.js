@@ -16,7 +16,7 @@ const KANBAN=(()=>{
       <small>${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''}</small>${vol(c)&&c.status!=='open'?`<small class="kb-team"><i data-ic="users"></i> ${esc(vol(c))}</small>`:''}
       ${c.teamIssue&&c.status==='going'?`<small class="kb-iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}<small class="kb-ago">${esc(ago(c.createdAt))}</small></div></article>`}
   function draw(){const el=box();if(!el||el.hidden)return;if(K.drag||K.ghost||document.querySelector('.kb-pick')){K.pend=true;return}K.pend=false;const sx=(el.querySelector('.kb-cols')||{}).scrollLeft||0,sy=[...el.querySelectorAll('.kb-list')].map(x=>x.scrollTop);const cs=list();
-    el.innerHTML=`<p class="kb-tip">ลากการ์ดเพื่อเปลี่ยนสถานะ (มือถือ: แตะค้างแล้วลาก) · แตะ = ดูรายละเอียด</p><div class="kb-cols">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt));
+    el.innerHTML=`<div class="kb-cols">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt));
       return `<section class="kb-col kb-${k}" data-kbcol="${k}"><h3>${t} <span>${xs.length}</span></h3><div class="kb-list">${xs.slice(0,150).map(card).join('')||'<p class="kb-empty">วางการ์ดที่นี่</p>'}${xs.length>150?`<p class="kb-empty">+${xs.length-150} เคส · ใช้ตัวกรองเพื่อดูเพิ่ม</p>`:''}</div></section>`}).join('')}</div>`;
     const nc=el.querySelector('.kb-cols');if(nc)nc.scrollLeft=sx;el.querySelectorAll('.kb-list').forEach((x,i)=>{x.scrollTop=sy[i]||0});
     if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)})}

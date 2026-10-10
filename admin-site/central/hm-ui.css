@@ -665,3 +665,14 @@ body.kb-on .bar-row{min-height:0}
 .dv-tbl td.ok{color:#0e9f6e;font-weight:700}.dv-tbl td.bad{color:#e5484d}
 body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-status,body.dv-on #f-sort{display:none!important}
 @media (max-width:760px){.dv-two{grid-template-columns:1fr}.dv-bs{height:110px}.dv-bar{flex-basis:22px}.view-sw{overflow-x:auto}}
+
+/* บอร์ด/วันที่: ช่องค้นหาย้ายขึ้นมาแถวเดียวกับแท็บมุมมอง และแคบลง */
+.view-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.view-row>.view-sw{margin:0}
+.bar-slot{flex:0 1 420px;margin-left:auto;min-width:0}
+.bar-slot[hidden]{display:none}
+.bar-slot .bar{position:static;padding:0;background:none;gap:6px}
+.bar-slot .bar-row:not(:has(#filters-box.open)){display:none}
+.bar-slot .bar-top .search{min-height:42px}
+.bar-slot .bar-top .search input{min-height:40px;font-size:14px}
+@media (max-width:760px){.bar-slot{flex:1 1 100%;margin-left:0}}

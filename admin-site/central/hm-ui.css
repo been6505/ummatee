@@ -781,3 +781,4 @@ body.rte-on .rally-fab{display:none!important}
 .tc-eta{display:flex;align-items:center;gap:4px}.tc-eta .ic{width:14px;height:14px}
 .tc-jump{margin-top:6px;border:0;background:#EEF1FB;color:#2D45C8;font-weight:700;font-size:12.5px;border-radius:999px;padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}.tc-jump .ic{width:14px;height:14px}
 .empty.sm{padding:10px;font-size:13px}
+.kb-ho{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px}.kb-ho a{position:relative;display:block;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#E3E6EF}.kb-ho img{width:100%;height:100%;object-fit:cover;display:block}.kb-ho b{position:absolute;inset:0;display:grid;place-items:center;background:rgba(22,27,61,.55);color:#fff;font-size:14px}

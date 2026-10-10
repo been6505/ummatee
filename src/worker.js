@@ -1275,7 +1275,7 @@ const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -2739,6 +2739,7 @@ async function api(request, env) {
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
+      case 'photo_index': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const { results } = await db.prepare("SELECT caseId, n FROM case_photo WHERE kind='handoff' AND at>? ORDER BY n").bind(Date.now() - 30 * 864e5).all(); const m = {}; for (const r of results) (m[r.caseId] = m[r.caseId] || []).push(r.n); return json({ ok: true, m }); }
       case 'case_photos': { if (vol) return json(await casePhotos(db, p.id)); const t = p.tk && await teamFrom(env, db, p); if (!t) return json({ ok: false, error: 'not_volunteer' }); const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return json(c && String(c.volunteer || '').replace(/^'/, '').trim() === t.name ? await casePhotos(db, p.id) : { ok: false, error: 'not_your_case' }); }
       case 'case_photo': { if (vol) return casePhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? casePhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }
       case 'route_list': return json(vol ? await routeList(db) : { ok: false, error: 'not_volunteer' });

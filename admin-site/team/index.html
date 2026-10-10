@@ -229,6 +229,21 @@ body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left
 .top-call .ic{width:18px;height:18px}
 body.on-chat .top-call{display:inline-flex}
 body.on-chat .top .st{display:none!important}
+.db-seg{display:flex;background:#fff;border-radius:999px;padding:4px;box-shadow:0 1px 3px rgba(22,27,61,.08)}
+.db-seg button{flex:1;border:0;background:none;border-radius:999px;padding:9px;font:inherit;font-weight:700;font-size:14.5px;color:var(--muted);cursor:pointer}
+.db-seg button[aria-selected=true]{background:var(--ink);color:#fff}.db-seg b{background:var(--red);color:#fff;border-radius:999px;padding:0 7px;font-size:12px;margin-left:4px}
+.ac-top{display:flex;align-items:center;justify-content:space-between;padding:2px 4px}.ac-top b{font-size:15px}
+.ac-rf{border:0;background:#fff;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;box-shadow:0 1px 3px rgba(22,27,61,.1);color:var(--ink);cursor:pointer}.ac-rf .ic{width:18px;height:18px}
+.ac-chips{display:flex;gap:6px;overflow-x:auto}
+.ac-list{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(22,27,61,.06)}
+.ac{border-left:4px solid #C9CCD8}.ac+.ac{border-top:1px solid var(--line)}.ac.u3{border-left-color:var(--red)}.ac.u2{border-left-color:var(--amber)}
+.ac-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,.9fr) auto 18px;align-items:center;gap:8px;width:100%;border:0;background:none;padding:12px 10px;font:inherit;text-align:left;color:inherit;cursor:pointer}
+.ac-h .tag{font-size:11.5px;padding:3px 8px}.ac-n{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-h b{font-size:15px}.ac-d{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ac-h small{color:var(--muted);font-size:12px;white-space:nowrap}
+.ac-h .ic{width:16px;height:16px;color:var(--muted);transition:transform .2s}.ac.open .ac-h .ic{transform:rotate(180deg)}
+.ac-b{padding:0 14px 14px}.ac-b dl{display:grid;grid-template-columns:84px 1fr;gap:6px 10px;margin:0 0 12px;font-size:14px}.ac-b dt{color:var(--muted)}.ac-b dd{margin:0;word-break:break-word}
+.ac-act{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}.ac-act .btn{min-height:46px;font-size:15px;border-radius:999px}
+.ac-more{width:100%}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=13"></script>
@@ -726,7 +741,7 @@ function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
     $('#sms-again').onclick=()=>{TR.pos=null;smsSheet(kind,why,reason)}})}
 
 /* ---------- แดชบอร์ดทีม (แท็บล่างขวา): สถานะทีม · งานตอนนี้ · ยอดช่วยเหลือ · กราฟ 7 วัน · ตำแหน่ง · ของที่นำไป · รวมพล · ติดต่อศูนย์ ---------- */
-function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const t=r.team,st=r.stats||{total:0,helped:0,people:0,week:[]};
+function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helped:0,people:0,week:[]};
   const going=r.cases.filter(c=>c.status==='going'),waitClose=going.filter(c=>c.teamDoneAt),act=going.filter(c=>!c.teamDoneAt);
   const day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()},today=day(Date.now());
   const days=[...Array(7)].map((_,i)=>today-(6-i)*864e5),cnt=days.map(d=>st.week.filter(([at])=>at>=d&&at<d+864e5).length),max=Math.max(1,...cnt);
@@ -751,6 +766,36 @@ function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const t=r.team,st=r
       <div class="db-row"><i class="dot ${navigator.onLine?'':'off'}"></i><span>${navigator.onLine?'ออนไลน์':'ไม่มีเน็ต · ข้อความจะส่งเมื่อมีสัญญาณ'}</span></div>
     </section>
     ${Object.keys(sup).length?`<section class="db-card"><h3>ของที่ศูนย์ส่งมากับงาน</h3><div class="db-chips">${Object.entries(sup).map(([k,v])=>`<span>${esc(k)} × ${v}</span>`).join('')}</div></section>`:''}`}
+
+/* แดชบอร์ด: สลับ ภาพรวม / รวมเคส (เคสที่ยังรอช่วยทั้งหมด · เรียงใกล้ฉันได้ · ขอรับเคสจากศูนย์ผ่านแชท) */
+const AC={list:null,at:0,open:'',sort:'near',lim:30,busy:false};
+async function loadAll(force){if(AC.busy||(!force&&AC.list&&Date.now()-AC.at<60000))return;AC.busy=true;try{const r=await api({action:'team_cases'});if(r&&r.ok){AC.list=r.cases;AC.at=Date.now();if(S.view==='call'&&S.dtab==='cases')DASH()}}catch(e){}finally{AC.busy=false}}
+function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const tab=S.dtab||'over';
+  const seg=`<div class="db-seg" role="tablist"><button type="button" role="tab" data-dtab="over" aria-selected="${tab==='over'}">ภาพรวม</button><button type="button" role="tab" data-dtab="cases" aria-selected="${tab==='cases'}">รวมเคส${AC.list?` <b>${AC.list.length}</b>`:''}</button></div>`;
+  const ct=document.querySelector('.db-contact');if(ct)ct.hidden=tab==='cases';
+  if(tab==='cases'){el.innerHTML=seg+allCases();loadAll()}else{dashOverview(el);el.insertAdjacentHTML('afterbegin',seg);loadAll()}}
+function myPos(){if(TR.pos)return TR.pos;const l=S.me&&S.me.live;return l&&l.lat!=null?{lat:+l.lat,lng:+l.lng}:null}
+const sv=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
+function allCases(){if(!AC.list)return '<p class="empty">กำลังโหลดเคส…</p>';const me=myPos();
+  let xs=AC.list.map(c=>({c,d:me&&hasPin(c)?dist(me,{lat:+c.lat,lng:+c.lng}):null}));
+  if(AC.sort==='near'&&me)xs.sort((a,b)=>(a.d??1e12)-(b.d??1e12));else if(AC.sort==='crit')xs=xs.filter(x=>sv(x.c)>=3);else if(AC.sort==='new')xs.sort((a,b)=>Number(b.c.createdAt)-Number(a.c.createdAt));
+  const ago=t=>{const m=Math.round((Date.now()-Number(t))/60000);return m<60?m+' น.':m<1440?Math.round(m/60)+' ชม.':Math.round(m/1440)+' วัน'};
+  const km=d=>d==null?'':d<1000?Math.round(d)+' ม.':(d/1000).toFixed(d<10000?1:0)+' กม.';
+  const chips=[['near','ใกล้ฉัน'],['crit','วิกฤต'],['new','ใหม่สุด']].map(([k,l])=>`<button type="button" class="chip" data-asort="${k}" aria-pressed="${AC.sort===k}">${l}</button>`).join('');
+  const rows=xs.slice(0,AC.lim).map(({c,d})=>{const s=sv(c),op=AC.open===String(c.id),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' ');
+    return `<article class="ac u${s}${op?' open':''}"><button type="button" class="ac-h" data-aopen="${esc(c.id)}" aria-expanded="${op}"><span class="tag u${s}">${URG[s]}</span><span class="ac-n">${esc((c.needs||[])[0]||'ขอความช่วยเหลือ')}${(c.needs||[]).length>1?` +${c.needs.length-1}`:''}</span><b>${esc(c.people||1)}</b><span class="ac-d">${esc(c.district||'')}</span><small>${d!=null?km(d):ago(c.createdAt)}</small><i data-ic="chev"></i></button>
+      ${op?`<div class="ac-b"><dl><dt>ต้องการ</dt><dd>${esc((c.needs||[]).join(' · ')||'-')}</dd><dt>จำนวนคน</dt><dd>${esc(c.people||1)} คน${c.vulnerable&&c.vulnerable.length?' · '+esc(c.vulnerable.join(', ')):''}</dd>${c.level?`<dt>ระดับน้ำ</dt><dd>${esc(LEVEL[c.level]||c.level)}</dd>`:''}<dt>ที่อยู่</dt><dd>${esc([c.address,c.district].filter(Boolean).join(' · ')||'-')}</dd><dt>ผู้แจ้ง</dt><dd>${esc([c.name,c.phone].filter(Boolean).join(' · ')||'-')}</dd>${c.photos?`<dt>รูป</dt><dd>${c.photos} รูป</dd>`:''}${c.notes?`<dt>หมายเหตุ</dt><dd>${esc(c.notes)}</dd>`:''}<dt>แจ้งเมื่อ</dt><dd>${esc(ago(c.createdAt))}ที่แล้ว${d!=null?' · ห่าง '+km(d):''} · #${esc(c.id)}</dd></dl>
+        <div class="ac-act">${p.length>=9?`<a class="btn red" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}${dest?`<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}<button type="button" class="btn green" data-areq="${esc(c.id)}"><i data-ic="hand"></i> ขอรับเคส</button></div></div>`:''}</article>`}).join('');
+  return `<div class="ac-top"><b>รอความช่วยเหลือ ${AC.list.length} เคส</b><button type="button" class="ac-rf" data-arefresh aria-label="โหลดใหม่"><i data-ic="refresh"></i></button></div><div class="ac-chips">${chips}</div>${!me&&AC.sort==='near'?'<p class="hint">เปิดตำแหน่งเพื่อเรียงเคสใกล้ฉัน</p>':''}
+    <div class="ac-list">${rows||'<p class="empty">ไม่มีเคสที่รอความช่วยเหลือ</p>'}</div>${xs.length>AC.lim?`<button type="button" class="btn ac-more" data-amore>ดูเพิ่ม (${xs.length-AC.lim})</button>`:''}`}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#dash [data-dtab],#dash [data-aopen],#dash [data-asort],#dash [data-amore],#dash [data-arefresh],#dash [data-areq]');if(!t)return;
+  if(t.dataset.dtab){S.dtab=t.dataset.dtab;DASH();$('#v-call').scrollTop=0;return}
+  if(t.dataset.aopen){AC.open=AC.open===t.dataset.aopen?'':t.dataset.aopen;DASH();return}
+  if(t.dataset.asort){AC.sort=t.dataset.asort;AC.lim=30;DASH();return}
+  if(t.hasAttribute('data-amore')){AC.lim+=30;DASH();return}
+  if(t.hasAttribute('data-arefresh')){loadAll(true);return}
+  if(t.dataset.areq){const c=(AC.list||[]).find(x=>String(x.id)===t.dataset.areq);if(!c)return;if(!confirm('ส่งข้อความขอรับเคสนี้ให้ศูนย์?'))return;
+    send(`🙋 ขอรับเคส #${c.id} · ${(c.needs||[]).join(', ')||'เคส'} · ${c.people||1} คน · ${c.district||''}`,{caseId:c.id});toast('ส่งคำขอถึงศูนย์แล้ว · รอศูนย์มอบหมาย');t.disabled=true}});
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#dash [data-dgo]');if(b)go(b.dataset.dgo)});
 $('#c-sms').onclick=()=>smsSheet();
 

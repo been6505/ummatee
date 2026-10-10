@@ -735,6 +735,11 @@ async function teamMe(db, t) {
     hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now,
     rallies: await teamRallies(db, t.name), stats: await teamStats(db, t.name, now) };
 }
+/* แดชบอร์ดทีม · รวมเคส: เคสที่ยังรอความช่วยเหลือทั้งหมด (ทีมเห็นเพื่อวางแผน/ขอรับเคสจากศูนย์) */
+async function teamCases(db) {
+  const { results } = await db.prepare("SELECT * FROM cases WHERE status='open' AND COALESCE(dupOf,'')='' ORDER BY urgency DESC, createdAt DESC LIMIT 400").all();
+  return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).length; return { ...outCase(c, true), photos: ph }; }), now: Date.now() };
+}
 /* แดชบอร์ดทีม: ยอดรวมของทีม (ช่วยแล้ว = ปิดเคส หรือทีมแจ้งช่วยแล้ว) + เวลาที่ช่วยใน 7 วันล่าสุด (ไว้วาดกราฟรายวัน) */
 async function teamStats(db, name, now) {
   const DONE = "(status='done' OR COALESCE(teamDoneAt,0)>0)", AT = 'COALESCE(teamDoneAt,doneAt,updatedAt)';
@@ -2695,6 +2700,7 @@ async function api(request, env) {
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
+      case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat_threads': return json(vol ? await chatThreads(db) : { ok: false, error: 'not_volunteer' });
       case 'chat_rev': return json(vol ? { ok: true, rev: await getMeta(db, 'chat_rev') || '0' } : { ok: false, error: 'not_volunteer' });

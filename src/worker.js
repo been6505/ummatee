@@ -1022,7 +1022,7 @@ const TEAM_POST = {
     if (b.bags !== undefined && b.bags !== '' && b.bags !== null) { sets.push('bags=?'); vals.push(clampInt(b.bags, 0, 9999, 0)); }
     await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, c.id).run();
     await bumpRev(db);
-    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือเคส #${c.id} แล้ว · รอศูนย์ปิดเคส${phn ? ` · ภาพส่งมอบ ${phn} รูป` : ''}${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือแล้ว · เคส #${c.id}`, caseId: c.id });
     return { ok: true, teamDone: true };
   },
   team_sos: async (db, t, b) => {

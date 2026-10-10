@@ -40,12 +40,22 @@ const PTT=(()=>{
       P.out=P.ctx.destination;if(P.cfg&&P.cfg.native&&P.ctx.createMediaStreamDestination){P.mdest=P.ctx.createMediaStreamDestination();P.media=new Audio();P.media.srcObject=P.mdest.stream;P.media.setAttribute('playsinline','')}}
     if(P.ctx.state!=='running')P.ctx.resume().catch(()=>{});if(P.media&&P.media.paused)P.media.play().catch(()=>{});return P.ctx}
   const outNode=()=>P.mdest&&document.hidden?P.mdest:P.ctx.destination;
-  function note(c,t,f1,f2,d,v,type){const o=c.createOscillator(),h=c.createOscillator(),g=c.createGain(),hg=c.createGain(),lp=c.createBiquadFilter();
-    o.type=type||'sine';h.type='sine';o.frequency.setValueAtTime(f1,t);h.frequency.setValueAtTime(f1*2,t);if(f2&&f2!==f1){o.frequency.exponentialRampToValueAtTime(f2,t+d);h.frequency.exponentialRampToValueAtTime(f2*2,t+d)}
-    hg.gain.value=.18;lp.type='lowpass';lp.frequency.value=3400;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.006);g.gain.setValueAtTime(v,t+Math.max(0.006,d-0.025));g.gain.exponentialRampToValueAtTime(0.0001,t+d);
-    o.connect(g);h.connect(hg);hg.connect(g);g.connect(lp);lp.connect(outNode());o.start(t);h.start(t);o.stop(t+d+0.02);h.stop(t+d+0.02)}
-  const SND={permit:[[1046,1046,.055],[1568,1568,.085,.07]],roger:[[1568,988,.14]],rx:[[1319,1319,.03],[1760,1760,.04,.045]],over:[[880,660,.11]],busy:[[480,480,.12],[480,480,.12,.2],[480,480,.12,.4]],err:[[330,262,.28]]};
-  function sfx(name,vol){try{const c=ctxGet(),t0=c.currentTime+0.01,v=vol||0.22;(SND[name]||[]).forEach(([a,b,d,at])=>note(c,t0+(at||0),a,b,d,name==='busy'?v*.8:v,name==='busy'||name==='err'?'triangle':'sine'))}catch(e){}
+  function spk(c,v){const hp=c.createBiquadFilter(),lp=c.createBiquadFilter(),ws=c.createWaveShaper(),g=c.createGain();hp.type='highpass';hp.frequency.value=380;lp.type='lowpass';lp.frequency.value=3100;
+    if(!P.curve){const n=1024,k=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1)*2-1;k[i]=Math.tanh(2.2*x)/Math.tanh(2.2)}P.curve=k}ws.curve=P.curve;g.gain.value=v;hp.connect(lp);lp.connect(ws);ws.connect(g);g.connect(outNode());return hp}
+  function tn(c,dst,t,f,d,type,lvl){const o=c.createOscillator(),g=c.createGain();o.type=type||'square';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(lvl||.5,t+0.004);g.gain.setValueAtTime(lvl||.5,t+Math.max(0.005,d-0.008));g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g);g.connect(dst);o.start(t);o.stop(t+d+0.02)}
+  function nz(c,dst,t,d,lvl,fc,tail){if(!P.nzb){const b=c.createBuffer(1,c.sampleRate*0.6,c.sampleRate),a=b.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;P.nzb=b}
+    const s=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();s.buffer=P.nzb;bp.type='bandpass';bp.frequency.value=fc||1700;bp.Q.value=.6;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(lvl,t+0.003);if(tail){g.gain.setValueAtTime(lvl,t+d*.7);g.gain.exponentialRampToValueAtTime(0.0001,t+d)}else{g.gain.exponentialRampToValueAtTime(lvl*.5,t+d*.6);g.gain.exponentialRampToValueAtTime(0.0001,t+d)}
+    s.connect(bp);bp.connect(g);g.connect(dst);s.start(t,Math.random()*.3);s.stop(t+d+0.02)}
+  function clk(c,dst,t,lvl){const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.setValueAtTime(2400,t);o.frequency.exponentialRampToValueAtTime(300,t+0.012);g.gain.setValueAtTime(lvl||.6,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.015);o.connect(g);g.connect(dst);o.start(t);o.stop(t+0.03)}
+  const SND={
+    permit:(c,d,t)=>{clk(c,d,t,.5);[0,1,2].forEach(i=>tn(c,d,t+0.02+i*0.07,1000,0.045,'square',.32))},
+    roger:(c,d,t)=>{tn(c,d,t,1250,0.06,'square',.3);tn(c,d,t+0.065,950,0.07,'square',.28);nz(c,d,t+0.14,0.17,.5,1800,true);clk(c,d,t+0.31,.35)},
+    rx:(c,d,t)=>{clk(c,d,t,.45);nz(c,d,t+0.004,0.09,.45,1600)},
+    over:(c,d,t)=>{tn(c,d,t,1150,0.07,'square',.28);nz(c,d,t+0.08,0.2,.5,1800,true);clk(c,d,t+0.28,.3)},
+    busy:(c,d,t)=>{[0,1,2].forEach(i=>tn(c,d,t+i*0.22,420,0.15,'square',.35))},
+    err:(c,d,t)=>{tn(c,d,t,300,0.12,'sawtooth',.35);tn(c,d,t+0.14,220,0.2,'sawtooth',.35)}};
+  function sfx(name,vol){try{const c=ctxGet(),f=SND[name];if(f)f(c,spk(c,(vol||0.22)*1.3),c.currentTime+0.01)}catch(e){}
     try{navigator.vibrate&&navigator.vibrate({permit:35,roger:[20,40,20],busy:[60,60,60,60,60],err:120,rx:15}[name]||0)}catch(e){}}
   function beep(f,ms,at=0){sfx(f===880?'permit':f===660?'roger':f===1200?'rx':f===420?(at?'':'busy'):'err')}
   const canPlay=()=>P.ctx&&P.ctx.state==='running';

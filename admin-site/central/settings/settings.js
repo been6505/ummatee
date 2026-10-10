@@ -5,7 +5,7 @@ $('#st-name').value=store.get('uh_staff')||'';
 $('#st-name').addEventListener('change',e=>{try{localStorage.setItem('uh_staff',e.target.value.trim())}catch(err){}toast('บันทึกชื่อแล้ว',true)});
 const markTheme=()=>$$('#st-theme [data-th]').forEach(b=>b.setAttribute('aria-pressed',String((root.dataset.theme==='dark'?'dark':'light')===b.dataset.th)));
 $('#st-theme').addEventListener('click',e=>{const b=e.target.closest('[data-th]');if(!b)return;const t=b.dataset.th;
-  if(t==='dark')root.dataset.theme='dark';else delete root.dataset.theme;try{localStorage.setItem('uh_theme',t)}catch(err){}markTheme()});
+  if(t==='dark')root.dataset.theme='dark';else root.dataset.theme='light';try{localStorage.setItem('uh_theme',t)}catch(err){}markTheme()});
 markTheme();
 /* ---------- Local AI ---------- */
 const P=LOCALAI.PRESETS;let cur=LOCALAI.cfg();

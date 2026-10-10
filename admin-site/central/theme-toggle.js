@@ -3,7 +3,7 @@
    หน้าเดียวกันหลายแท็บ / กรอบคิวที่ฝังในหน้าจัดการเคส เปลี่ยนตามกันผ่าน storage event */
 (()=>{
   const root=document.documentElement;
-  const apply=t=>{if(t==='dark')root.dataset.theme='dark';else delete root.dataset.theme;const b=document.getElementById('theme-btn');if(b)label(b)};
+  const apply=t=>{if(t==='dark')root.dataset.theme='dark';else root.dataset.theme='light';const b=document.getElementById('theme-btn');if(b)label(b)};
   const label=b=>{const dark=root.dataset.theme==='dark',t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.innerHTML=ic(dark?'sun':'moon');b.setAttribute('aria-pressed',String(dark));b.setAttribute('aria-label',t);b.title=t};
   window.addEventListener('storage',e=>{if(e.key==='uh_theme')apply(e.newValue)});
   /* มุมขวาบน: ปุ่มค้นหาทุกอย่าง (แทนปุ่มโหมดมืด · เปลี่ยนธีมได้ที่หน้าตั้งค่า) */

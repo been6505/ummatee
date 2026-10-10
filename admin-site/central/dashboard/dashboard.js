@@ -357,7 +357,7 @@ const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
   const sync=()=>{const dark=root.dataset.theme==='dark';b.innerHTML=ic(dark?'sun':'moon');b.setAttribute('aria-pressed',String(dark));
     const t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.setAttribute('aria-label',t);b.title=t;
     const mc=document.querySelector('meta[name=theme-color]');if(mc)mc.content=dark?'#0F1222':'#F2F3F7'};
-  b.addEventListener('click',()=>{const dark=root.dataset.theme!=='dark';if(dark)root.dataset.theme='dark';else delete root.dataset.theme;
+  b.addEventListener('click',()=>{const dark=root.dataset.theme!=='dark';if(dark)root.dataset.theme='dark';else root.dataset.theme='light';
     try{localStorage.setItem('uh_theme',dark?'dark':'light')}catch(e){}sync();
     let base='road';try{base=localStorage.getItem('uh_base')||'road'}catch(e){}
     if(M.map&&base!=='sat')setBase(dark?'dark':'road');

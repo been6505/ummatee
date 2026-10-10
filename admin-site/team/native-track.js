@@ -18,18 +18,20 @@ window.NTRK = (() => {
   const saveQ = () => put('ntrk_q', S.q);
 
   /* ส่ง 1 จุด: คืน 'ok' | 'drop' (จุดเสีย ทิ้งได้) | 'fatal' (ลิงก์/รหัสใช้ไม่ได้) · โยน error = ลองใหม่ภายหลัง */
+  // ข้อมูลเครื่องจากหน้าทีม (window.TELE): แบต · ชาร์จ · สัญญาณ · เครือข่าย · ค่าย
+  const tele = () => { const T = window.TELE || {}; return { batt: T.batt ?? undefined, chg: T.charging == null ? undefined : (T.charging ? 1 : 0), sig: T.sig ?? undefined, net: T.net || undefined, carrier: T.carrier || undefined }; };
   async function send(p) {
     const c = S.cfg;
     if (c.tk) {
       const r = await fetch(c.host + '/api/track/' + c.tk, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _type: 'location', lat: p.lat, lon: p.lng, acc: p.acc, vel: p.vel, cog: p.cog, tst: Math.floor(p.t / 1000) }) });
+        body: JSON.stringify({ _type: 'location', lat: p.lat, lon: p.lng, acc: p.acc, vel: p.vel, cog: p.cog, tst: Math.floor(p.t / 1000), alt: p.alt, ...tele() }) });
       if (r.ok) return 'ok';
       if (r.status === 403) return 'fatal';
       if (r.status === 400) return 'drop';
       throw new Error('HTTP ' + r.status);
     }
     const r = await fetch(c.host + '/api', { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'team_ping', key: c.key, team: c.team, name: c.name || '', lat: p.lat, lng: p.lng, accuracy: p.acc, speed: p.vel, heading: p.cog }) });
+      body: JSON.stringify({ action: 'team_ping', key: c.key, team: c.team, name: c.name || '', lat: p.lat, lng: p.lng, accuracy: p.acc, speed: p.vel, heading: p.cog, alt: p.alt, battery: (window.TELE || {}).batt, charging: (window.TELE || {}).charging, sig: (window.TELE || {}).sig, net: (window.TELE || {}).net, carrier: (window.TELE || {}).carrier }) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json().catch(() => ({}));
     if (j.ok) return 'ok';
@@ -60,7 +62,7 @@ window.NTRK = (() => {
   /* จำกัดถี่: ส่งทันทีถ้าห่างจากครั้งก่อน ≥ 8 วิ ไม่งั้นเก็บจุดล่าสุดไว้ แล้วส่งตามหลังเมื่อครบ 8 วิ */
   function onLoc(l) {
     const p = { lat: l.latitude, lng: l.longitude, acc: Math.round(l.accuracy || 0), vel: l.speed != null ? Math.round(l.speed * 3.6) : undefined,
-      cog: l.bearing != null ? Math.round(l.bearing) : undefined, t: l.time || Date.now() };
+      cog: l.bearing != null ? Math.round(l.bearing) : undefined, alt: l.altitude != null ? Math.round(l.altitude) : undefined, t: l.time || Date.now() };
     S.fix = p; put('ntrk_fix', p);
     const wait = GAP - (Date.now() - S.lastQ);
     if (wait <= 0) { S.trail = null; clearTimeout(S.trailT); S.trailT = null; enqueue(p); return; }

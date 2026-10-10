@@ -599,3 +599,5 @@ $('#st-new').onclick=()=>roomForm(null);
 /* ถาม Hermes (Local AI) · หลังยืนยันการกระทำ โหลดข้อมูลใหม่ */
 $('#wr-ai').onclick=()=>{if(typeof HERMES!=='undefined')HERMES.open()};
 window.addEventListener('hermes:done',async()=>{await Promise.all([loadCases(),loadTeams()]);render()});
+
+window.addEventListener('hm-rev',e=>{if(e.detail.what.includes('rev')&&typeof full==='function')full()});

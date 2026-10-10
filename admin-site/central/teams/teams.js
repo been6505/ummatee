@@ -29,16 +29,23 @@ function side(){const el=$('#trk-side');if(!el)return;const now=Date.now();
   const rows=T.roster.map(t=>{const l=liveOf(t.name),age=l?now-Number(l.updatedAt):null,cs=teamCases(t.name).filter(c=>c.status==='going'&&!c.teamDoneAt),sos=sosOn(t);return {t,l,age,cs,sos}})
     .sort((a,b)=>(b.sos-a.sos)||((b.cs.length>0)-(a.cs.length>0))||((a.age??9e15)-(b.age??9e15)));
   const on=rows.filter(r=>r.age!=null&&r.age<30*60e3).length;
-  el.innerHTML=`<div class="ts-h"><b>สถานะทีมสด</b><small>ออนไลน์ ${on}/${rows.length}</small></div><div class="ts-list">${rows.map(({t,l,age,cs,sos})=>{const [bars,sl,sk]=sig(age),eta=TRACK.eta?TRACK.eta(t.name):null,bat=l&&l.battery!=null?+l.battery:null,sp=l&&l.speed!=null?Math.round(+l.speed):null;
-    return `<button type="button" class="ts ${sos?'sos':''}" data-tsel="${esc(t.name)}"><div class="ts-1"><span class="ts-dot ${sk}"></span><b>${esc(t.name)}</b>${sos?'<span class="ts-sos">SOS</span>':`<span class="ts-st ${esc(t.status||'ready')}">${esc(TST[t.status]||'พร้อม')}</span>`}</div>
+  const NET={WIFI:'Wi-Fi',wifi:'Wi-Fi',cellular:'มือถือ','4g':'4G','3g':'3G','2g':'2G','slow-2g':'2G',OFFLINE:'ไม่มีเน็ต'};
+  el.innerHTML=`<div class="ts-h"><b>สถานะทีมสด</b><small>ออนไลน์ ${on}/${rows.length}${typeof LIVE!=='undefined'&&LIVE.ok()?' · <span class="ts-live">● สด</span>':''}</small></div><div class="ts-list">${rows.map(({t,l,age,cs,sos})=>{
+    const fresh=sig(age),realSig=l&&l.sig!=null&&age!=null&&age<15*60e3,bars=realSig?Math.max(0,Math.min(4,+l.sig)):fresh[0],eta=TRACK.eta?TRACK.eta(t.name):null,bat=l&&l.battery!=null?+l.battery:null,sp=l&&l.speed!=null?Math.round(+l.speed):null;
+    const net=l&&l.net?(NET[l.net]||String(l.net).toUpperCase()):'',alt=l&&l.alt!=null?Math.round(+l.alt):null;
+    return `<button type="button" class="ts ${sos?'sos':''}" data-tsel="${esc(t.name)}"><div class="ts-1"><span class="ts-dot ${fresh[2]}"></span><b>${esc(t.name)}</b><small class="ts-age" data-age="${l?Number(l.updatedAt):''}">${age!=null?(age<60e3?Math.round(age/1000)+' วิ':Math.round(age/60e3)+' นาที'):'–'}</small>${sos?'<span class="ts-sos">SOS</span>':`<span class="ts-st ${esc(t.status||'ready')}">${esc(TST[t.status]||'พร้อม')}</span>`}</div>
       <div class="ts-g">
-        <span title="สัญญาณ (จากความสดของตำแหน่ง)"><i class="ts-sig b${bars}"><i></i><i></i><i></i><i></i></i>${sl}${age!=null?` · ${age<60e3?Math.round(age/1000)+' วิ':Math.round(age/60e3)+' นาที'}`:''}</span>
-        <span title="แบตเตอรี่" class="${bat!=null&&bat<=20?'low':''}"><i class="ts-bat"><i style="width:${bat??0}%"></i></i>${bat!=null?bat+'%':'–'}</span>
-        <span title="ความเร็ว · ทิศ"><i data-ic="nav" style="transform:rotate(${l&&l.heading!=null?+l.heading:0}deg)"></i>${sp!=null?sp+' กม./ชม.':'–'}${sp>=3&&l.heading!=null?' · '+dir(l.heading):sp===0||sp<3?' · จอดอยู่':''}</span>
-        <span title="ความแม่นยำ GPS"><i data-ic="locate"></i>${l&&l.accuracy?'±'+Math.round(l.accuracy)+' ม.':'–'}</span>
+        <span title="${realSig?'สัญญาณมือถือ (จากเครื่อง)':'ประมาณจากความสดของตำแหน่ง'}"><i class="ts-sig b${bars}"><i></i><i></i><i></i><i></i></i>${realSig?['ไม่มี','อ่อนมาก','อ่อน','ดี','ดีมาก'][bars]:fresh[1]}${net?' · '+esc(net):''}${l&&l.carrier?' · '+esc(l.carrier):''}</span>
+        <span title="แบตเตอรี่" class="${bat!=null&&bat<=20&&!(l&&l.charging)?'low':''}"><i class="ts-bat${l&&l.charging?' chg':''}"><i style="width:${bat??0}%"></i></i>${bat!=null?bat+'%':'–'}${l&&l.charging?' · ชาร์จ':''}</span>
+        <span title="ความเร็ว · ทิศ"><i data-ic="nav" style="transform:rotate(${l&&l.heading!=null?+l.heading:0}deg)"></i>${sp!=null?sp+' กม./ชม.':'–'}${sp>=3&&l.heading!=null?' · '+dir(l.heading):sp!=null&&sp<3?' · จอดอยู่':''}</span>
+        <span title="ความสูงจากระดับน้ำทะเล (GPS) · ความแม่นยำ"><i data-ic="mountain"></i>${alt!=null?alt+' ม.':'–'}${l&&l.accuracy?` · ±${Math.round(l.accuracy)} ม.`:''}</span>
+        <span title="อุณหภูมิ ณ จุดทีม (สถานีอากาศ)"><i data-ic="sun"></i>${l&&l.temp!=null?(+l.temp).toFixed(1)+'°C':'–'}</span>
+        <span title="ความชื้นสัมพัทธ์ ณ จุดทีม (สถานีอากาศ)"><i data-ic="drop"></i>${l&&l.hum!=null?Math.round(+l.hum)+'%':'–'}</span>
       </div>
       ${cs.length?`<div class="ts-case"><i data-ic="flag"></i><span>เคส #${esc(cs[0].id)} · ${esc((cs[0].needs||[]).slice(0,2).join(', ')||'เคส')}${cs.length>1?` +${cs.length-1}`:''}</span>${eta?`<em>${eta.km.toFixed(1)} กม.${eta.min!=null?` · ~${Math.max(1,Math.round(eta.min))} น.`:''}${eta.plan?' · ศูนย์กำหนด':''}</em>`:''}</div>`:''}
       ${t.vehicle||t.members?`<small class="ts-x">${esc([VEH[t.vehicle]||'',t.members?t.members+' คน':'',t.phone?tel(t.phone):''].filter(Boolean).join(' · '))}</small>`:''}</button>`}).join('')||'<p class="muted small">ยังไม่มีทีม</p>'}</div>`}
+/* นับเวลาส่งตำแหน่งล่าสุดแบบสด (ทุก 1 วิ) โดยไม่วาดแผงใหม่ */
+setInterval(()=>{if(document.hidden)return;const now=Date.now();document.querySelectorAll('#trk-side .ts-age[data-age]').forEach(x=>{const t=+x.dataset.age;if(!t)return;const a=now-t;x.textContent=a<60e3?Math.round(a/1000)+' วิ':Math.round(a/60e3)+' นาที'})},1000);
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#trk-side [data-tsel]');if(!b)return;const n=b.dataset.tsel;if(typeof TRACK!=='undefined'){TRACK.focus(n);const eta=TRACK.eta&&TRACK.eta(n);if(eta&&e.target.closest('.ts-case')&&TRACK.edit)TRACK.edit(n)}});
 setInterval(()=>{if(T.loaded&&!document.hidden)side()},5000);
 setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRACK.routes)TRACK.routes(T.live,T.cases)},5000);
@@ -191,3 +198,5 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy
 {const one=new URLSearchParams(location.search).get('team');if(one){T.one=one;T.filter='one'}}
 if(T.filter!=='all'){T.sf=T.filter;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===T.filter)));
   const go=()=>{const p=$('#team-list')&&$('#team-list').closest('.panel');if(p&&$$('#team-list .team').length)p.scrollIntoView({block:'start'});else if(!go.n||go.n++<20)setTimeout(go,500)};go.n=1;setTimeout(go,800)}
+
+window.addEventListener('hm-rev',e=>{if(ADM.key&&T.loaded&&e.detail.what.includes('rev'))loadAll()});

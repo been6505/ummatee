@@ -525,3 +525,6 @@ function vrFig(){const el=document.getElementById('vr-map');
 {const _rd2=renderDrawer;renderDrawer=function(){_rd2();vrFig()}}
 
 window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});
+
+/* เรียลไทม์: ข้อมูลเคสเปลี่ยนที่ใดก็ตาม → โหลดใหม่ทันที (ผ่าน livestream.js) */
+window.addEventListener('hm-rev',e=>{if(A.key&&e.detail.what.includes('rev')){A.rev=e.detail.rev;load()}});

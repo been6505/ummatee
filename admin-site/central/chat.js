@@ -38,6 +38,7 @@ const CHAT=(()=>{
       if(k==='silent'){a.disabled=true;post({action:'silent_ack',team:v}).then(()=>poll());S.alerts.silent=(S.alerts.silent||[]).filter(x=>x.name!==v);drawAlerts();return}
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
+    window.addEventListener('hm-rev',e=>{if(e.detail.what.includes('chat'))poll(true)}); // เรียลไทม์: แชท/แจ้งเตือนใหม่ทันที
     // วอ (กดค้างพูด) · ช่องรวมทุกทีม + ศูนย์ · ไม่เปิดให้ War Room ย่อย
     // รวมพล: ปุ่มลอยเหนือปุ่ม วอ · หน้าจัดทีม = เปิด/ปิดแผงรวมพล · หน้าอื่น = ไปหน้าจัดทีมพร้อมเปิดแผง
     if(KEY()&&!/^wr/.test(KEY())){const rb=document.createElement('button');rb.type='button';rb.className='rally-fab';rb.setAttribute('aria-label','รวมพล · เรียกทีมไปจุดเดียวกัน');rb.title='รวมพล';rb.innerHTML='<i data-ic="megaphone"></i><b>รวมพล</b>';document.body.append(rb);

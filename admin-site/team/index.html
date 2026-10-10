@@ -281,7 +281,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=21"></script>
-<script src="./native-track.js?v=4"></script>
+<script src="./native-track.js?v=5"></script>
 <script src="../central/ptt.js?v=3"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
@@ -553,7 +553,7 @@ $('#gm-save').onclick=async()=>{const raw=$('#gm-in').value.trim(),m=raw.match(/
   if(raw&&!/^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|(www\.)?google\.(com|co\.th)\/maps|maps\.google\.)/.test(url)){toast('ต้องเป็นลิงก์แชร์จาก Google Maps เช่น https://maps.app.goo.gl/…');return}
   $('#gm-save').disabled=true;try{const r=await post({action:'team_gmaps',gmaps:url});if(r.ok){toast(url?'ส่งลิงก์ตำแหน่งสดให้ศูนย์แล้ว':'ลบลิงก์แล้ว');refresh()}else toast(r.error==='not_in_roster'?'ทีมนี้ยังไม่อยู่ในรายชื่อทีมของศูนย์':'บันทึกไม่สำเร็จ')}catch(e){toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}finally{$('#gm-save').disabled=false}};
 $('#loc-now').onclick=()=>{if(TR.pos&&Date.now()-TR.pos.at<15000){ping().then(()=>toast('ส่งตำแหน่งแล้ว'));return}
-  navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>{TR.pos={lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,speed:q.coords.speed,heading:q.coords.heading,at:Date.now()};ping().then(()=>toast(TR.fail?'ส่งไม่ได้ จะลองใหม่เมื่อมีเน็ต':'ส่งตำแหน่งแล้ว'))},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
+  navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>{TR.pos={lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,speed:q.coords.speed,heading:q.coords.heading,alt:q.coords.altitude,at:Date.now()};ping().then(()=>toast(TR.fail?'ส่งไม่ได้ จะลองใหม่เมื่อมีเน็ต':'ส่งตำแหน่งแล้ว'))},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
 /* เน็ตกลับมา / กลับมาเปิดหน้านี้: ส่งตำแหน่งล่าสุดทันที (แบบ Traccar) */
 addEventListener('online',()=>{if(TR.watch!=null&&TR.pos)ping()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>5000)ping()});
@@ -570,18 +570,25 @@ async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){obOv
 /* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
 const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
 const dist=(a,b)=>{const R=6371e3,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
-try{navigator.getBattery&&navigator.getBattery().then(b=>{const u=()=>TR.batt=Math.round(b.level*100);u();b.onlevelchange=u})}catch(e){}
+/* ข้อมูลเครื่อง (ส่งมากับตำแหน่ง): แบต · กำลังชาร์จ · สัญญาณมือถือ 0–4 · ชนิดเครือข่าย · ค่าย
+   แอป: ปลั๊กอิน DeviceSense (Android อ่านระดับสัญญาณจริงได้ · iPhone ไม่เปิดให้อ่านสัญญาณ) · เว็บ: Battery API + Network Information (ประมาณสัญญาณจากความเร็วเน็ต) */
+const TELE=window.TELE={batt:null,charging:null,sig:null,net:null,carrier:null};
+try{navigator.getBattery&&navigator.getBattery().then(b=>{const u=()=>{TR.batt=Math.round(b.level*100);if(TELE.batt==null||!TELE._native){TELE.batt=TR.batt;TELE.charging=b.charging}};u();b.onlevelchange=u;b.onchargingchange=u})}catch(e){}
+async function teleTick(){try{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.registerPlugin){const DS=TELE._ds||(TELE._ds=C.registerPlugin('DeviceSense'));const r=await DS.info();TELE._native=true;
+      if(r.battery!=null){TELE.batt=r.battery;TR.batt=r.battery}if(r.charging!=null)TELE.charging=!!r.charging;if(r.signal!=null)TELE.sig=r.signal;if(r.network)TELE.net=r.network;if(r.carrier)TELE.carrier=r.carrier}}catch(e){}
+  const c=navigator.connection;if(c&&!TELE._native){TELE.net=c.type&&c.type!=='unknown'?c.type:(c.effectiveType||null);const et=c.effectiveType,dl=+c.downlink||0;TELE.sig=et==='4g'?(dl>=5?4:3):et==='3g'?2:et?1:null}}
+teleTick();setInterval(teleTick,20000);
 function track(on){
   if(!on){if(TR.watch!=null)navigator.geolocation.clearWatch(TR.watch);TR.watch=null;TR.want=false;st.set('uh_tm_loc','');post({action:'team_ping',stop:true}).catch(()=>{});locUI();return}
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
-  TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,at:Date.now()};
+  TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,alt:p.coords.altitude,at:Date.now()};
       const now=Date.now();if(!TR.sentPos||now-TR.sentAt>15000||(dist(TR.sentPos,TR.pos)>3&&now-TR.sentAt>1000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
     {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
   const cur=(S.me&&S.me.cases||[]).find(c=>c.status==='going');
-  try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TR.batt,speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});
+  try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TELE.batt??TR.batt,charging:TELE.charging,sig:TELE.sig,net:TELE.net||'',carrier:TELE.carrier||'',alt:p.alt!=null?Math.round(p.alt):'',speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});
     TR.fail=r.ok?0:TR.fail+1}catch(e){TR.fail++}locUI()}
 setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>20000)ping();locUI()},10000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;

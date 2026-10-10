@@ -94,7 +94,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -551,8 +551,12 @@ async function liveStream(db, p) {
   let last = Number(p.since) || 0;
   (async () => {
     await w.write(enc.encode('retry: 800\n\n'));
-    for (let i = 0; i < 40; i++) {
-      const { results } = await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading FROM teams_live WHERE updatedAt>?').bind(last || Date.now() - TEAM_FRESH_MS).all();
+    let rv = '', cr = '';
+    for (let i = 0; i < 30; i++) {
+      // ทุก 2 วิ: ข้อมูลเคส/แชทเปลี่ยน → แจ้งทุกหน้า CENTRAL ให้โหลดใหม่ทันที (ไม่ต้องรอรอบถามซ้ำ)
+      if (i % 2 === 0) { const { results: mm } = await db.prepare("SELECT k,v FROM meta WHERE k IN ('rev','chat_rev')").all(); const m = Object.fromEntries(mm.map(x => [x.k, x.v]));
+        if (i === 0 || (m.rev || '') !== rv || (m.chat_rev || '') !== cr) { rv = m.rev || ''; cr = m.chat_rev || ''; await w.write(enc.encode('event: rev\ndata: ' + JSON.stringify({ rev: rv, chat: cr }) + '\n\n')); } }
+      const { results } = await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt FROM teams_live WHERE updatedAt>?').bind(last || Date.now() - TEAM_FRESH_MS).all();
       const rows = sc ? results.filter(r => sc.teams.has(r.team)) : results;
       if (results.length) last = Math.max(last, ...results.map(r => Number(r.updatedAt) || 0));
       if (rows.length) await w.write(enc.encode('data: ' + JSON.stringify(rows.map(t => ({ ...t, caseId: t.caseId || '' }))) + '\n\n'));
@@ -633,7 +637,8 @@ async function pttAudio(db, p) {
 async function readTeams(db) {
   const { results } = await db.prepare('SELECT * FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS).all();
   return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
-    battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading }));
+    battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading,
+    alt: t.alt ?? null, charging: t.charging ?? null, sig: t.sig ?? null, net: t.net || null, carrier: t.carrier || null, temp: t.temp ?? null, hum: t.hum ?? null, devAt: t.devAt || null }));
 }
 /* ---------- ติดตามตำแหน่งทีมแม้ไม่ได้เปิดหน้าเว็บ: แอปติดตามฟรีที่ทำงานเบื้องหลัง ----------
    Traccar Client (iOS/Android): Server URL = https://<โดเมน>/api/track · Device identifier = รหัสลิงก์ทีม (?id=… ในลิงก์ทีม)
@@ -692,9 +697,9 @@ async function trackApp(db, request, url, pathTk) {
   if (loc && loc.coords) {
     const c = loc.coords, lv = loc.battery && loc.battery.level;
     p = { lat: c.latitude, lng: c.longitude, acc: c.accuracy, speed: c.speed >= 0 ? c.speed * 3.6 : null, heading: c.heading >= 0 ? c.heading : null,
-      batt: lv >= 0 && lv <= 1 ? Math.round(lv * 100) : null, t: Date.parse(loc.timestamp) };
+      batt: lv >= 0 && lv <= 1 ? Math.round(lv * 100) : null, t: Date.parse(loc.timestamp), alt: c.altitude };
   } else if (body._type === 'location') {
-    p = { lat: body.lat, lng: body.lon, acc: body.acc, speed: body.vel, heading: body.cog, batt: body.batt, t: Number(body.tst) * 1000 };
+    p = { lat: body.lat, lng: body.lon, acc: body.acc, speed: body.vel, heading: body.cog, batt: body.batt, t: Number(body.tst) * 1000, alt: body.alt };
   } else if (body._type) {
     return json([]); // OwnTracks ข้อความอื่น (waypoint, transition ฯลฯ) ไม่ใช้
   } else {
@@ -712,8 +717,24 @@ async function trackApp(db, request, url, pathTk) {
     db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(row.name, lat, lng, acc, batt, speed, t),
     db.prepare('UPDATE teams_live SET appAt=? WHERE team=?').bind(now, row.name), // แอปเบื้องหลัง (OwnTracks/Traccar) ส่งมาล่าสุดเมื่อไร
   ]);
+  await saveTele(db, row.name, { alt: p.alt, sig: body.sig, net: body.net, carrier: body.carrier, charging: body.chg }, lat, lng).catch(() => {});
   if (Math.random() < 0.01) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 864e5).run();
   return body._type ? json([]) : out({ ok: true });
+}
+/* ข้อมูลเครื่องของทีม (ส่งมากับตำแหน่ง): ความสูง · กำลังชาร์จ · สัญญาณมือถือ (0–4) · ชนิดเครือข่าย · ค่ายมือถือ
+   อุณหภูมิ/ความชื้น: มือถือไม่มีเซนเซอร์ → ใช้อากาศปัจจุบัน ณ ตำแหน่งทีม (Open-Meteo) ทุก 10 นาที/ทีม */
+async function saveTele(db, team, b, lat, lng) {
+  const alt = num(b.alt ?? b.altitude, -500, 9000), chg = b.charging === true || b.charging === 1 || b.charging === '1' || b.chg === 1 ? 1 : b.charging === false || b.charging === 0 || b.charging === '0' || b.chg === 0 ? 0 : null;
+  const sig = clampInt(b.sig, 0, 4, null), net = clean(b.net, 20) || null, carrier = clean(b.carrier, 40) || null;
+  if (alt != null || chg != null || sig != null || net || carrier)
+    await db.prepare('UPDATE teams_live SET alt=COALESCE(?,alt),charging=COALESCE(?,charging),sig=COALESCE(?,sig),net=COALESCE(?,net),carrier=COALESCE(?,carrier),devAt=? WHERE team=?').bind(alt, chg, sig, net, carrier, Date.now(), team).run();
+  const row = await db.prepare('SELECT wxAt FROM teams_live WHERE team=?').bind(team).first();
+  if (row && Date.now() - (Number(row.wxAt) || 0) > 10 * 60e3) {
+    await db.prepare('UPDATE teams_live SET wxAt=? WHERE team=?').bind(Date.now(), team).run();
+    const job = (async () => { const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lng.toFixed(3)}&current=temperature_2m,relative_humidity_2m&timezone=Asia%2FBangkok`, { headers: UA });
+      const j = await r.json(), c = j && j.current; if (c) await db.prepare('UPDATE teams_live SET temp=?,hum=? WHERE team=?').bind(num(c.temperature_2m, -50, 70), num(c.relative_humidity_2m, 0, 100), team).run(); })().catch(() => {});
+    if (CTX && CTX.waitUntil) CTX.waitUntil(job); else await job;
+  }
 }
 async function pingTeam(db, b) {
   const team = clean(b.team, MAX.volunteer);
@@ -724,6 +745,7 @@ async function pingTeam(db, b) {
   const now = Date.now(), acc = clampInt(b.accuracy, 0, 100000, null), batt = clampInt(b.battery, 0, 100, null), speed = num(b.speed, 0, 200), heading = num(b.heading, 0, 360);
   await db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,caseId=excluded.caseId,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading')
     .bind(team, lat, lng, acc, clean(b.caseId, 30), now, batt, speed, heading).run();
+  await saveTele(db, team, b, lat, lng).catch(() => {});
   // จุดเส้นทาง: เก็บเมื่อขยับเกิน 20 ม. หรือห่างจุดก่อน 2 นาที
   const last = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? ORDER BY n DESC LIMIT 1').bind(team).first();
   if (!last || km(last.lat, last.lng, lat, lng) > 0.02 || now - last.at > 120e3) {

@@ -164,6 +164,7 @@ function render(){
   const ownOnly=all.length-(A.hm?A.hm.length:0);
   $('#count').textContent=`แสดง ${list.length} จาก ${all.length} เคส`+(A.hm?` · Help Me ${A.hm.length}${ownOnly?` + ขององค์กร ${ownOnly}`:''}`:' · กำลังโหลดเคส Help Me…');
   $('#sync').textContent=(A.loaded?'อัปเดต '+new Date(A.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'')+(VERIFY.F.error?' · '+VERIFY.F.error:VERIFY.F.loaded?' · น้ำท่วม '+new Date(VERIFY.F.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'');
+  if(typeof KANBAN!=='undefined')KANBAN.draw();
   if(A.mode!=='map'){if(document.activeElement&&document.activeElement.matches('.bag-in')){A.pendingList=true}else renderList(list)}
   if(A.mode!=='list')drawMap(list);
   if(A.openId)renderDrawer();

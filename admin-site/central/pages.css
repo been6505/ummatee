@@ -1,4 +1,3 @@
-/* หน้าจัดทีม + สต็อก (ต่อจาก admin.css) */
 .muted{color:var(--muted)}.small{font-size:13px}.mt{margin-top:18px}
 .stats{grid-template-columns:repeat(7,minmax(0,1fr));margin-bottom:14px}
 .cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;align-items:start}
@@ -20,14 +19,12 @@
 .assign{display:flex;gap:6px;margin-top:4px}.assign select{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;min-height:38px;padding:4px 8px;font-size:13.5px;background:#fff}
 .vr{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}.vr-confirmed{background:#c62828;color:#fff}.vr-likely{background:#fde3e3;color:#a32121}.vr-conflict{background:#fff0dc;color:#9a4d00}.vr-unverified{background:#eef2f4;color:#4f6670}.vr-notcrit{background:#e4f4e9;color:#277343}
 .urg{display:inline-block;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}.urg-3{background:var(--red);color:#fff}.urg-2{background:#fff0dc;color:#a24f00}.urg-1{background:#fff7d1;color:#7a5f00}
-/* drawer forms */
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:#fff;z-index:41;overflow:auto;padding:20px 20px 40px;box-shadow:-10px 0 40px rgba(0,0,0,.15)}
 .drawer-bg{position:fixed;inset:0;background:rgba(16,47,66,.35);z-index:40}
 .d-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:14px}.d-head h2{margin:2px 0;font-size:20px}
 .x{border:0;background:var(--bg);border-radius:50%;width:40px;height:40px;font-size:16px;flex:none}
 .form-grid{display:grid;gap:12px}.form-grid select,.form-grid input:not([type=checkbox]){border:1px solid var(--line);border-radius:10px;min-height:46px;padding:8px 12px;font-size:16px;background:#fff;width:100%}
 .form-act{display:flex;gap:8px;flex-wrap:wrap}.warn{color:#a76115!important}
-/* stock */
 .bar{position:static;padding:0 0 10px}
 .stk td{cursor:default}.stk .r{text-align:right}.stk .qty{font-size:20px;font-weight:700;white-space:nowrap}.stk .qty small{font-size:12px}
 .stk tr.zero td:first-child{border-left-color:var(--red)}.stk tr.low td:first-child{border-left-color:var(--orange)}.stk tr td:first-child{border-left-color:#2e9e57}
@@ -47,7 +44,6 @@
 .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}.seg::-webkit-scrollbar{display:none}.seg button{flex:none;white-space:nowrap}
 .bar,.bar-row,.bar-top,.cols>*,.qcase,.team{min-width:0}
 .assign select{width:100%}.team-h>div{min-width:0}.tcases li{overflow-wrap:anywhere}
-/* ฟอร์มเพิ่ม/แก้ไข แสดงเต็มจอ */
 .drawer{left:0;right:0;top:0;bottom:0;width:100%;max-width:none;padding:0;box-shadow:none;background:var(--bg)}
 .drawer>.d-head,.drawer>form{max-width:860px;margin-left:auto;margin-right:auto}
 .drawer>.d-head{position:sticky;top:0;z-index:2;background:#fff;margin:0 auto;padding:18px 24px;border-bottom:1px solid var(--line);max-width:none}
@@ -58,18 +54,15 @@
 .drawer .form-act .btn{min-width:160px;min-height:50px;font-size:16px}
 .drawer .fld span{font-size:15px}
 @media(max-width:700px){.drawer>.d-head{padding:14px 16px}.drawer>form{margin:12px;padding:16px;border-radius:14px}.drawer .form-grid{grid-template-columns:1fr}.drawer .form-act .btn{flex:1}}
-/* ไม่ต้องเลื่อน: มือถือใช้ 2 คอลัมน์แบบกะทัดรัด, จอเตี้ยลดระยะห่าง */
 @media(max-width:700px){.drawer .form-grid{grid-template-columns:1fr 1fr;gap:10px}.drawer>form{margin:10px;padding:12px}
   .drawer .fld{gap:4px}.drawer .fld span{font-size:13px}.drawer .form-grid select,.drawer .form-grid input:not([type=checkbox]){min-height:42px;font-size:15px;padding:6px 10px}
   .drawer>.d-head{padding:10px 14px}.drawer>.d-head h2{font-size:18px}.drawer .x{width:36px;height:36px}}
 @media(max-height:820px) and (min-width:701px){.drawer>.d-head{padding:10px 24px}.drawer>form{margin-top:10px;padding:16px 24px}.drawer .form-grid{gap:10px 20px}.drawer .form-grid select,.drawer .form-grid input:not([type=checkbox]){min-height:40px}}
 #preview:empty{display:none}
-/* สต็อก: แท็บคลังของ / ถุงยังชีพ */
 .views{display:flex;gap:8px;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .views button{border:0;background:none;padding:10px 16px 12px;font:inherit;font-weight:700;font-size:16px;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:8px;min-height:46px}
 .views button[aria-selected=true]{color:var(--teal);border-bottom-color:var(--teal)}
 .vbadge{background:var(--tint);color:var(--teal);border-radius:999px;padding:1px 9px;font-size:13px}.vbadge:empty{display:none}
-/* chip ของที่หมด / ใกล้หมด */
 .lowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-4px 0 12px}.lowchips:empty{display:none}
 .lc-lab{font-size:13.5px;font-weight:700;color:#a76115;margin-right:2px}
 .lchip{border:1px solid;border-radius:999px;padding:5px 12px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;background:#fff;min-height:34px}
@@ -78,7 +71,6 @@
 .lchip:hover{filter:brightness(.97)}
 .schip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:700;vertical-align:2px}
 .schip.zero{background:var(--red);color:#fff}.schip.low{background:#fff0dc;color:#a24f00}
-/* แท็บถุงยังชีพ */
 .bagcount{display:flex;align-items:baseline;gap:12px;margin:8px 0 4px;font-size:14px}.bagcount b{font-size:22px;color:var(--ink)}
 .team-f{justify-content:flex-start}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -89,7 +81,6 @@
 @media(max-width:900px){.views button{flex:1;justify-content:center;padding:10px 8px 12px;font-size:15px}}
 .drawer .form-grid>.wide{grid-column:1/-1}
 .bag-it.zero{border-left-color:var(--red)}.bag-it.low{border-left-color:var(--orange)}
-/* สต็อกแบบตาราง */
 .gt-wrap{overflow-x:auto;margin:-4px -6px 0}
 .gt{width:100%;border-collapse:collapse;font-size:14px}
 .gt th{position:sticky;top:0;background:#f6f9fa;text-align:left;font-size:12.5px;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -111,7 +102,6 @@
 #view-stock .cols-stock>.panel:last-child>#log{grid-column:2;grid-row:2;max-height:360px}
 #view-stock .cols-stock>.panel:last-child>#need-list{grid-column:1;grid-row:2}
 @media(max-width:800px){#view-stock .cols-stock>.panel:last-child{display:block}#view-stock .cols-stock>.panel:last-child>.panel-h.mt{margin-top:18px}}
-/* ของในถุงยังชีพ */
 .kit-box{max-width:860px;margin:0 auto 40px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 24px}
 .kit-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}.kit-h h3{margin:0;font-size:17px}.kit-h small{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
 .kit-t{width:100%;border-collapse:collapse;font-size:14px}.kit-t th{text-align:left;font-size:12.5px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -130,7 +120,6 @@
 @media(max-width:700px){.gt th:nth-child(1),.gt td:nth-child(1),.gt th:nth-child(7),.gt td:nth-child(7){display:none}}
 
 .cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap}
-/* ติดตามทีม + ลิงก์ทีม + SOS */
 .trk{margin-bottom:14px}.trk .panel-h{flex-wrap:wrap}
 .trk-map{height:380px;border-radius:12px;overflow:hidden;background:var(--bg);position:relative;isolation:isolate;z-index:0}
 .trk-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;margin:8px 0 0}
@@ -150,7 +139,6 @@
 .link-sheet .qr{justify-self:center;padding:10px;background:#fff;border-radius:12px;border:1px solid var(--line)}.link-sheet .qr img,.link-sheet .qr canvas{display:block}
 @media(max-width:900px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.trk-map{height:300px}}
 @media(max-width:520px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hqp input{width:100%}.hqp{width:100%}}
-/* ทีมกำลังเคลื่อนที่: ลูกศรทิศทาง + ความเร็ว */
 .trk-pin i{position:relative;flex:none}
 .trk-pin .hd,.wr-team .hd{position:absolute;left:50%;top:50%;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid #2D45C8;transform:translate(-50%,-50%) rotate(var(--r)) translateY(-13px);filter:drop-shadow(0 0 1px #fff)}
 .trk-pin small{font-weight:500;opacity:.75}

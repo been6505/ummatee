@@ -1,5 +1,3 @@
-/* การ์ดสรุปแบบหน้า "สรุป" ของ helpme4u.com (ใช้ใน War Room และแดชบอร์ด) */
-/* สรุป War Room แบบหน้า "สรุป" ของ helpme4u.com */
 .wr-kpis.hm-sum{display:grid!important;grid-template-columns:minmax(0,4fr) minmax(0,8fr)!important;gap:12px!important;align-items:stretch}
 .wr-hero{background:#1d1d1f;color:#fff;border-radius:28px;padding:20px 24px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;box-shadow:var(--shadow-soft);min-width:0}
 .wr-hero-t{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.14)}
@@ -28,7 +26,6 @@
   .wr-now{padding:14px;border-radius:24px}.wr-st{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-sti b{font-size:28px}
   .wr-ppl{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-ppl>div:last-child{grid-column:1/-1}
 }
-/* สรุปแบบ helpme4u.com/#stats (ตรงตามหน้าสรุปบนโทรศัพท์) */
 .wr-hero{background:#11131A!important;border-radius:32px!important;padding:24px 26px!important;gap:0!important}
 .wr-hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px;color:rgba(255,255,255,.6);letter-spacing:.02em}
 .wr-hero-top span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wr-hero-top .tm{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.wr-hero-top svg{width:17px;height:17px}

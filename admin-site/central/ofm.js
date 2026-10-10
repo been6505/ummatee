@@ -1,6 +1,3 @@
-/* แผนที่ฐาน OpenFreeMap (เวกเตอร์ · ป้ายชื่อภาษาไทยก่อน) แบบเดียวกับ Help Me ช่วยด้วย
-   วาดด้วย MapLibre GL ผ่านปลั๊กอิน maplibre-gl-leaflet · เครื่องที่ไม่มี WebGL หรือโหลดไม่ได้ คืน null ให้หน้าใช้แผนที่แบบภาพเดิม
-   ใช้: const lyr=await OFM.layer('road'|'dark'); if(lyr)lyr.addTo(map) */
 const OFM=(()=>{
   const CFG={
     road:'https://tiles.openfreemap.org/styles/liberty',dark:'https://tiles.openfreemap.org/styles/dark',
@@ -16,7 +13,6 @@ const OFM=(()=>{
     const css=document.createElement('link');css.rel='stylesheet';css.href=CFG.mlCss;css.integrity=CFG.mlCssSri;css.crossOrigin='anonymous';document.head.append(css);
     libP=(window.maplibregl?Promise.resolve():script(CFG.mlJs,CFG.mlJsSri)).then(()=>L.maplibreGL?null:script(CFG.plug,CFG.plugSri)).catch(e=>{libP=null;throw e});return libP}
   const styles={};
-  /* ป้ายชื่อ (ถนน ซอย สถานที่) ใช้ชื่อภาษาไทยก่อน ไม่มีค่อยใช้ชื่อเดิม */
   async function thai(url){if(styles[url])return JSON.parse(JSON.stringify(styles[url]));
     const st=await (await fetch(url)).json(),name=['coalesce',['get','name:th'],['get','name'],['get','name:latin']];
     st.layers.forEach(l=>{const tf=l.layout&&l.layout['text-field'];if(tf&&JSON.stringify(tf).includes('name'))l.layout['text-field']=name});

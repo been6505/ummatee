@@ -1,6 +1,3 @@
-/* HELP ME CENTRAL · หน้าตาแบบหน้า "สรุป" ของ helpme4u.com (เรียบ ขาว-เทา ตัวเลขใหญ่ ตัวอักษร SF/IBM Plex Sans Thai)
-   เน้นคอมพิวเตอร์: หัวเว็บแถบเดียวบาง ๆ · ตัวเลขสำคัญอยู่แถวเดียว · หน้าจัดการเคสแบ่งซ้ายแผนที่/ขวารายการ · แดชบอร์ด 3 คอลัมน์ → เลื่อนน้อยลง
-   โหลดเป็นไฟล์สุดท้ายของทุกหน้า CENTRAL (หลัง helpme-skin.css) · โหมดมืดใช้สีเดิมของ theme.css */
 :root:not([data-theme="dark"]){
   --bg:#F5F5F7;--page:#F5F5F7;--ink:#1d1d1f;--ink-2:#3a3a3c;--muted:#6e6e73;--line:rgba(0,0,0,.08);--surface:#fff;--tint:#ececf0;
   --shadow-soft:0 1px 2px rgba(0,0,0,.04);--shadow-float:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05)
@@ -9,25 +6,19 @@
 body{-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
 h1,h2,h3{letter-spacing:-.01em}
 
-/* การ์ด: ขาวล้วน มุม 20 เงาบางมาก */
 :root:not([data-theme="dark"]) :is(.card,.nw-card,.wr-card,.bc-card,.wr-tcard,.cv-stat,.wr-mapcard,.mapcard,.map-wrap,.wr-tw,.cv-tw,.team,.qcase,.bar-card){background:#fff;box-shadow:var(--shadow-soft)!important;border:0!important}
 :is(.card,.nw-card,.wr-card,.bc-card){border-radius:20px!important}
 :is(.card,.nw-card,.wr-card,.bc-card) h2{font-size:16px;font-weight:700}
 
-/* ตัวเลขสำคัญ: เลขใหญ่หนา ป้ายเล็กสีเทา (แบบการ์ด "สถานะตอนนี้") */
 :is(.kpi,.wr-kpi,.stat,.cv-stat){border-radius:16px!important;border:0!important}
 :root:not([data-theme="dark"]) :is(.kpi,.wr-kpi,.stat,.cv-stat){background:#fff!important;box-shadow:var(--shadow-soft)!important}
 :is(.kpi,.wr-kpi,.cv-stat) b{font-weight:700;letter-spacing:-.02em}
 :is(.kpi,.wr-kpi,.stat,.cv-stat) span{color:var(--muted)}
-/* ตัวเลขแรกของแถว = การ์ดเด่นสีเข้ม (แบบ "ภาพรวมทั้งหมด") */
 
-/* ปุ่ม/ตัวเลือกที่เลือกอยู่: สีหมึกเข้ม (เหมือนชิปในหน้าสรุป) */
 :root:not([data-theme="dark"]) :is(.seg button[aria-selected=true],.seg button[aria-pressed=true],.wr-roomtabs button[aria-selected=true]){background:#1d1d1f!important;color:#fff!important;box-shadow:none!important}
 :root:not([data-theme="dark"]) .seg{background:#fff!important;box-shadow:var(--shadow-soft)!important}
 
-/* ---------- คอมพิวเตอร์ (≥ 1024px) ---------- */
-@media(min-width:761px){ /* แท็บเล็ตขึ้นไปใช้หัวเว็บ/เมนูแบบเดสก์ท็อป */
-  /* หัวเว็บแบบ helpme4u.com: โลโก้แคปซูลขาวซ้าย · ปุ่มในแคปซูลกระจกขวา · ไม่มีแถบเต็มความกว้าง */
+@media(min-width:761px){
   .top{position:sticky!important;top:0;z-index:1200;padding:12px clamp(14px,1.6vw,28px) 6px!important;gap:14px!important;background:transparent!important;border:0!important;
     display:flex!important;justify-content:space-between;align-items:center;pointer-events:none}
   .top>*{pointer-events:auto}.top::before{display:none!important}
@@ -38,7 +29,6 @@ h1,h2,h3{letter-spacing:-.01em}
   [data-theme="dark"] .top .top-r{background:rgba(27,31,51,.8)!important;border-color:rgba(255,255,255,.08)!important}[data-theme="dark"] .top .brand{background:#1B1F33!important}
   .top-r .btn{min-height:40px!important;padding:4px 14px!important;font-size:13.5px!important;border-radius:999px!important}
   .top-r .btn.theme-btn,.top-r #refresh{width:44px;padding:0!important;justify-content:center}
-  /* เมนูหลัก = แถบลอยด้านล่างแบบ helpme4u.com (ไอคอนบน ชื่อล่าง) ทุกขนาดจอ */
   .tabs{position:fixed!important;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b,0px) + 14px);top:auto;margin:0!important;
     display:flex!important;gap:4px!important;padding:6px!important;width:auto!important;max-width:calc(100% - 24px);flex:none!important;justify-content:center;
     background:rgba(255,255,255,.72)!important;-webkit-backdrop-filter:blur(22px) saturate(1.8)!important;backdrop-filter:blur(22px) saturate(1.8)!important;
@@ -54,14 +44,12 @@ h1,h2,h3{letter-spacing:-.01em}
   body.map-fs .tabs,body.noscroll .tabs{display:none!important}
   .wrap{padding-top:8px!important}
 
-  /* แดชบอร์ด: การ์ด 3 คอลัมน์ (เดิม 2) → เลื่อนน้อยลงเกือบครึ่ง */
   #main>.grid,#main>.dcol>.grid,.stock-sec>.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   #main>.grid>.span2,#main>.dcol>.grid>.span2,.stock-sec>.grid>.span2{grid-column:span 2!important}
   #main>.grid>.stock-sec,#main>.dcol>.grid>.stock-sec{grid-column:1/-1!important}
 }
 @media(min-width:1600px){#main>.grid,#main>.dcol>.grid,.stock-sec>.grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 
-/* ---------- หน้าจัดการเคส: "แผนที่ + รายการ" บนจอกว้าง = แผนที่ซ้าย (ค้างไว้) · รายการขวา (เลื่อนเฉพาะรายการ) ---------- */
 @media(min-width:1024px){
   main.wrap:has(>#map-wrap.compact:not([hidden])){display:grid;grid-template-columns:minmax(0,1.1fr) minmax(380px,1fr);column-gap:16px;align-items:start}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>*{grid-column:1/-1;min-width:0}
@@ -70,11 +58,9 @@ h1,h2,h3{letter-spacing:-.01em}
   main.wrap>#map-wrap.compact .map-side{display:none!important}
   main.wrap>#map-wrap.compact #map{height:calc(100vh - 110px)!important;min-height:520px}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{grid-column:2;margin-top:0}
-  /* สรุปตัวเลขเคส + แถบค้นหา อยู่แถวเดียวกันให้กินที่ด้านบนน้อยลง */
   main.wrap>.stats{margin-bottom:8px!important}
 }
 @media(min-width:1024px){
-  /* รายการเคสข้างแผนที่: แสดงเป็นการ์ด (ตารางกว้างไม่พอ) */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl thead{display:none}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list :is(.tbl,.tbl tbody,.tbl tr,.tbl td){display:block;width:100%}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl{border-spacing:0}
@@ -89,20 +75,16 @@ h1,h2,h3{letter-spacing:-.01em}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.act{text-align:right}
 }
 @media(min-width:1024px){
-  /* แดชบอร์ด: ตัวเลขสำคัญขึ้นก่อนแผนที่ · แผนที่สูงพอดีจอ */
   #main:has(>.dcol){display:flex;flex-direction:column}
   #main .dcol-m{order:3}#main #kpis{order:2}#main #hm-kpis{order:2}#main .dcol>.grid{order:4}#main .cov-sec{order:5}
   #main .mapcard .dmap,#main .mapcard #dmap{height:min(52vh,520px)!important;min-height:360px}
-  /* จัดทีม: แผนที่เตี้ยลง · รายชื่อทีมกับคิวเคสเลื่อนในกรอบของตัวเอง (หน้าไม่ยาว) */
   .trk .trk-map{height:min(40vh,420px)!important;min-height:300px}
   .cols>.panel{max-height:calc(100vh - 84px);overflow:auto;position:sticky;top:72px;scrollbar-width:thin}
 }
 @media(min-width:1024px){
-  /* รายการเคสเลื่อนในกรอบข้างแผนที่ (ทั้งหน้าไม่ต้องเลื่อนยาว) */
   main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;scrollbar-width:thin;padding-right:4px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) .bar-row .btn#export{order:9}
 }
-/* ---------- การ์ดเคส (มือถือ + ข้างแผนที่): หัวการ์ดแถวเดียว = ระดับ · สถานะ · ผลตรวจ (ขวา) ---------- */
 .tbl .claim{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;white-space:nowrap}
 .vr-lv{padding:8px 12px;border-radius:12px;background:var(--bg)}.vr-lv.lv3{background:#fdecec}.vr-lv.lv3 b{color:#b42318}.vr-lv.lv2 b{color:#b45309}
 @media(max-width:900px){
@@ -122,7 +104,6 @@ h1,h2,h3{letter-spacing:-.01em}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell{grid-column:3;grid-row:1;text-align:right;display:flex!important;flex-direction:column;align-items:flex-end;gap:2px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs{grid-row:2}
 }
-/* ---------- War Room บนมือถือ: แถบเลือกห้องเลื่อนข้างแถวเดียว ---------- */
 @media(max-width:760px){
   .wr-rooms{flex-wrap:nowrap;gap:6px}
   .wr-roomtabs{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;min-width:0}.wr-roomtabs::-webkit-scrollbar{display:none}
@@ -136,14 +117,12 @@ h1,h2,h3{letter-spacing:-.01em}
   .wr-kpi{padding:8px 10px!important}.wr-kpi b{font-size:20px!important}.wr-kpi span{font-size:11.5px!important;line-height:1.3}
 }
 
-/* ===== สีและรูปทรงชุดเดียวกับ helpme4u.com (app.css) ===== */
 :root:not([data-theme="dark"]){
   --primary:#DD2027;--primary-2:#B8161D;--tint:#FDEDEE;--tint-2:#F9D5D7;--red:#E5383B;
   --ink:#17181C;--ink-2:#2B2D33;--navy:#17181C;--muted:#62656F;--line:#E8E8EC;--bg:#F5F5F7;
   --open:#2D45C8;--open-tint:#E9ECFB;--going:#D4A100;--going-tint:#FFF3C4;--going-ink:#7A5A00;--ok:#2E9E57;--ok-tint:#E3F5E9;--ok-ink:#1D6B3B;
   --shadow-float:0 8px 28px rgba(22,27,61,.12),0 1px 3px rgba(22,27,61,.08)
 }
-/* ปุ่มหลัก: แดงไล่เฉด แบบปุ่ม "ขอความช่วยเหลือ" · ปุ่มรอง: ขาวขอบแดง แบบ "แจ้งแทน" */
 :root:not([data-theme="dark"]) .btn.primary{background:linear-gradient(180deg,#E3262D,#B8161D)!important;color:#fff!important;border:0!important;box-shadow:0 6px 16px rgba(221,32,39,.28)!important}
 :root:not([data-theme="dark"]) .btn.primary:hover{filter:brightness(1.05)}
 :root:not([data-theme="dark"]) .btn.ghost{background:#fff!important;color:var(--ink)!important;box-shadow:inset 0 0 0 1.5px var(--line)!important}
@@ -151,7 +130,6 @@ h1,h2,h3{letter-spacing:-.01em}
 :root:not([data-theme="dark"]) :is(a,.lnk,.linkish){color:var(--primary)}
 :is(.card,.nw-card,.wr-card,.bc-card,.panel,.map-wrap,.wr-mapcard){border-radius:24px!important}
 :is(input,select,textarea){border-radius:14px}
-/* เมนู: ไอคอน + ชื่อ แบบแถบล่างของ helpme4u.com · หน้าปัจจุบัน = พื้นชมพูอ่อน ตัวแดง */
 .tabs a .tab-ic{display:none}
 :root:not([data-theme="dark"]) .tabs a[aria-current=page]{background:var(--tint)!important;color:var(--primary)!important}
 @media(min-width:1024px){:root:not([data-theme="dark"]) .tabs a[aria-current=page]{background:var(--tint)!important;color:var(--primary)!important}}
@@ -160,45 +138,31 @@ h1,h2,h3{letter-spacing:-.01em}
   .tabs a{display:flex!important;flex-direction:column;align-items:center;gap:2px;min-width:64px;padding:6px 6px!important;font-size:11.5px!important;font-weight:600;border-radius:18px!important}
   .tabs a .tab-ic{display:block;width:22px;height:22px}
 }
-/* ป้ายสถานะแบบ helpme4u.com */
 :root:not([data-theme="dark"]) .st-open{background:var(--open-tint)!important;color:var(--open)!important}
 :root:not([data-theme="dark"]) .st-going{background:var(--going-tint)!important;color:var(--going-ink)!important}
 :root:not([data-theme="dark"]) .st-done{background:var(--ok-tint)!important;color:var(--ok-ink)!important}
-/* พื้นที่มอบแล้ว (มือถือ): ชื่อองค์กรแถวเดียว เลื่อนไปด้านข้าง */
 @media(min-width:0px){
   .cv-tools #orgs{flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-radius:999px!important;flex:1 1 100%;min-width:0}
   .cv-tools #orgs::-webkit-scrollbar{display:none}
   .cv-tools #orgs button{flex:none!important;white-space:nowrap}
 }
-/* แผนที่ไม่ทะลุหัวเว็บ/แถบเมนู: ให้แต่ละแผนที่เป็นชั้นของตัวเอง (Leaflet ใช้ z-index 400–1000 ภายใน) */
 .leaflet-container{isolation:isolate;z-index:0}
 .top{z-index:1300!important}
 .tabs{z-index:1400!important}
 
-/* อัปเดตเองแบบเรียลไทม์ทุกหน้า: ไม่ต้องมีปุ่มรีเฟรช */
 .top-r #refresh,#refresh{display:none!important}
-/* ข้อความน้อย ดูสะอาดแบบ helpme4u.com: ซ่อนคำอธิบายรอง (ตัวเลข/หัวข้อ/ปุ่มยังอยู่ครบ) */
 main p.sub,main .card>.sub,main .map-h .sub,.hm-src,.sec-h small,.wr-now-h span,
 main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.small,
 .kpi>small,.kpi .hm-tag,.hm-k small,main details>summary~.chart-note{display:none!important}
 .kpi{min-height:0!important}
 .card h2{margin-bottom:6px}
 @media(max-width:760px){
-  /* ตัวเลขสรุปบนมือถือ: 3 ช่องต่อแถว กะทัดรัด */
   main .kpis{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
   main .kpis .kpi{padding:10px 12px!important;border-radius:16px!important}
   main .kpis .kpi b{font-size:22px!important;line-height:1.15}main .kpis .kpi span{font-size:12px!important;line-height:1.3}
 }
 
-/* iPhone: ช่องกรอกต้อง ≥ 16px ไม่อย่างนั้น Safari ซูมหน้าตอนแตะแล้วค้างอยู่ (ขอบจอโดนตัด) */
 @media(max-width:760px){input,textarea,select,.chat-in,.hz-f input{font-size:16px!important}}
-/* ---------- การ์ดเคส (มือถือ/จอแคบ): จัดเป็นชั้น ๆ อ่านง่าย ----------
-   [ระดับ · Help Me ........ สถานะ]
-   [ความต้องการ (ตัวหนา) + ระดับน้ำ]
-   [รูป]
-   [ชิปผลตรวจ · ชิปพื้นที่มอบแล้ว · คะแนน]
-   [คน ........ ถุงยังชีพ]
-   [ที่อยู่]  [ผู้ติดต่อ · เบอร์]  [ทีม ........ เวลา #รหัส] */
 @media(max-width:900px){
   #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
     gap:8px 10px!important;padding:14px 16px!important;border-radius:20px!important;border:0!important;box-shadow:inset 5px 0 0 var(--lc,#E0B53A),0 1px 3px rgba(22,27,61,.06)!important;background:var(--surface,#fff)!important;margin-bottom:12px!important}
@@ -215,30 +179,24 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
   #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
   #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
   #list .tbl tbody td:nth-child(11){display:none!important}
-  /* หัวการ์ด */
   #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
   #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
   #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
-  /* ความต้องการ + รูป */
   #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
   #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
   #list .tbl .row-photos{margin-top:8px;gap:6px}#list .tbl .row-photos img,#list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
-  /* ชิปผลตรวจ */
   #list .tbl td.vr-cell .cov,#list .tbl td.vr-cell .vr,#list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
-  /* คน · ถุงยังชีพ */
   #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
   #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
   #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
   #list .tbl td.bag small{font-size:13px;color:var(--muted)}
-  /* ผู้ติดต่อ · ทีม · เวลา */
   #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
   #list .tbl td.time small{display:block;font-size:11px}
   #list .tbl td.addr small{display:inline-block;margin-left:6px}
 }
 .stat .hm-tag{display:none!important}
 
-/* แท็บเล็ต/คอมพิวเตอร์: รายการข้างแผนที่ใช้การ์ดแบบเดียวกับมือถือ (จัดเป็นชั้น ไม่ซ้อนกัน) */
 @media(min-width:1024px){
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
     gap:8px 10px!important;padding:14px 16px!important;border-radius:20px!important;border:0!important;box-shadow:inset 5px 0 0 var(--lc,#E0B53A),0 1px 3px rgba(22,27,61,.06)!important;background:var(--surface,#fff)!important;margin-bottom:12px!important}
@@ -255,39 +213,31 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(11){display:none!important}
-  /* หัวการ์ด */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
-  /* ความต้องการ + รูป */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos{margin-top:8px;gap:6px}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos img,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
-  /* ชิปผลตรวจ */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .cov,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
-  /* คน · ถุงยังชีพ */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag small{font-size:13px;color:var(--muted)}
-  /* ผู้ติดต่อ · ทีม · เวลา */
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.time small{display:block;font-size:11px}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.addr small{display:inline-block;margin-left:6px}
 }
 @media(min-width:1024px){main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
   main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell>*{margin:0!important}}
-/* การ์ดตัวเลขหน้าจัดการเคส = ปุ่มกรอง */
 button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%;appearance:none;-webkit-appearance:none;transition:box-shadow .15s,transform .1s}
 :root:not([data-x]) button.stat:hover{box-shadow:0 0 0 2px var(--tint-2,#F9D5D7),var(--shadow-soft)!important}button.stat:active{transform:scale(.98)}
 :root:not([data-x]) button.stat[aria-pressed=true]{box-shadow:0 0 0 2.5px var(--primary,#DD2027),var(--shadow-soft)!important}
 button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .cols>.panel{scroll-margin-top:84px}
-/* รายละเอียดเคส (drawer) อยู่เหนือแถบหัวและเมนูล่าง ไม่โดนบัง · แชท/AI HELP ยังอยู่เหนือ drawer */
 .drawer{z-index:1600!important}.drawer-bg{z-index:1550!important}.toasts{z-index:2700!important}
 @media (max-width:760px){.drawer{padding-top:calc(env(safe-area-inset-top,0px) + 16px)!important}}
-/* หัวรายละเอียดเคส: ป้าย · ชื่อเคส · รหัส · ปุ่ม AI เป็นแถวของตัวเอง */
 .d-head{align-items:flex-start}
 .d-head>div{min-width:0;flex:1}
 .d-head .urg,.d-head .st{display:inline-flex;align-items:center;min-height:26px;padding:2px 10px;border-radius:999px;font-size:13px;font-weight:700;vertical-align:middle}
@@ -300,10 +250,8 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .hz-row .hz-sum span{font-size:15px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hz-row .hz-sum{background:#2a2140!important;border-color:#43356a!important;color:#d6c4ff!important}}
 :root[data-theme="dark"] .hz-row .hz-sum{background:#2a2140!important;border-color:#43356a!important;color:#d6c4ff!important}
-/* หน้าจัดการเคสมี 9 การ์ด: จอใหญ่แถวเดียว · มือถือ/แท็บเล็ต 3×3 */
 .stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(9,minmax(0,1fr))!important}
 @media (max-width:1100px){.stats:has(> :nth-child(9):last-child){grid-template-columns:repeat(3,minmax(0,1fr))!important}}
-/* ภาพประกอบผลตรวจพื้นที่ (แผนที่ย่อ) */
 .vr-fig{position:relative;margin:12px 0 4px;border-radius:16px;overflow:hidden;background:#dfe5ea;border:1px solid var(--line,#e6e8ef)}
 .vr-fig-map{height:220px;width:100%;z-index:0}
 @media (min-width:761px){.vr-fig-map{height:260px}}
@@ -317,7 +265,6 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .vr-fig .lg-road{width:16px;height:4px;border-radius:2px;border:0;background:linear-gradient(90deg,#22c55e 50%,#ef4444 50%)}
 .vr-fig .lg-sat{border-radius:3px;background:rgba(37,99,235,.55)}
 .vr-cams{margin-top:10px}
-/* ภาพถนน + ภาพจาก GISTDA */
 .vr-pics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 4px}
 @media (max-width:520px){.vr-pics{grid-template-columns:1fr}}
 .vr-pic{margin:0;border-radius:16px;overflow:hidden;background:var(--card,#fff);border:1px solid var(--line,#e6e8ef);display:flex;flex-direction:column}
@@ -335,10 +282,8 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .vr-pic .t-bad{color:#b42318}
 .vr-pic-tag{position:absolute;left:8px;top:8px;z-index:2;padding:3px 9px;border-radius:999px;background:rgba(17,24,39,.75);color:#fff;font-size:11.5px;font-weight:700}
 .vr-pic-tag.old{background:rgba(180,83,9,.9)}
-/* สถานะ "ช่วยเหลือแล้ว (รอปิดเคส)" · "ปิดเคส" */
 .st-sel.st-helped,.st.st-helped{background:#e6f6f1!important;color:#0f6b52!important}
 .st-sel.st-done,.st.st-done{background:#eef0f3!important;color:#374151!important}
-/* ของจากสต็อกที่ส่งไปกับทีม */
 .d-stk{display:grid;gap:8px}.d-lbl-t{font-size:13px;font-weight:600;color:var(--muted,#64748b)}
 .d-stk-add{display:grid;grid-template-columns:minmax(0,1fr) 72px auto;gap:6px}
 .d-stk-add select,.d-stk-add input{font:inherit;font-size:15px;min-height:42px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--card,#fff);color:inherit;min-width:0}
@@ -347,7 +292,6 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-stk-chip button{border:0;background:rgba(30,75,138,.12);color:inherit;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1}
 .d-stk-sent{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13.5px}.d-stk-sent li{display:flex;align-items:center;gap:6px}.d-stk-sent svg{width:15px;height:15px}.d-stk-sent small{color:var(--muted)}
 @media (max-width:760px){.d-stk-add select,.d-stk-add input{font-size:16px}}
-/* ค้นหาทุกอย่าง */
 .gs{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.45);display:flex;justify-content:center;align-items:flex-start;padding:calc(env(safe-area-inset-top,0px) + 70px) 14px 14px}
 .gs[hidden]{display:none}
 .gs-box{width:min(640px,100%);max-height:calc(100dvh - 100px);display:flex;flex-direction:column;background:var(--surface,#fff);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden;color:var(--ink,#111)}
@@ -363,26 +307,20 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .gs-ic{width:34px;height:34px;flex:none;border-radius:10px;background:var(--bg,#f4f5f8);display:grid;place-items:center}.gs-ic svg{width:18px;height:18px}
 .gs-tx{display:grid;min-width:0}.gs-tx b{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gs-tx small{color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:760px){.gs{padding:calc(env(safe-area-inset-top,0px) + 12px) 10px 10px}.gs-box{max-height:calc(100dvh - 24px)}}
-/* เปลี่ยนระดับเอง */
 .vr-lv p{margin:0}
 .lv-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
 .lv-set>span{font-size:12.5px;color:var(--muted);font-weight:600;margin-right:2px}
 .lv-b{border:1px solid var(--line,#e2e4ea);background:var(--surface,#fff);color:inherit;font:inherit;font-size:13px;font-weight:600;border-radius:999px;padding:5px 12px;cursor:pointer}
 .lv-b.lv3[aria-pressed=true]{background:#DD2027;border-color:#DD2027;color:#fff}.lv-b.lv2[aria-pressed=true]{background:#E8890C;border-color:#E8890C;color:#fff}.lv-b.lv1[aria-pressed=true]{background:#4b5563;border-color:#4b5563;color:#fff}
 .lv-b.lv-auto{border-style:dashed;color:var(--muted)}
-/* ปุ่มบันทึกในกล่องมอบหมาย */
 .d-save{width:100%;display:inline-flex!important;align-items:center;justify-content:center;gap:6px;background:#1F7A43!important;color:#fff!important;border:0!important;min-height:44px}
 .d-save[hidden]{display:none!important}.d-save svg{width:18px;height:18px}
-/* จัดเส้นทางย้ายไปหน้าจัดทีม: แผนที่หน้าจัดการเคสเต็มความกว้าง */
 .map-side[hidden]{display:none!important}
 .map-wrap:has(> .map-side[hidden]),main.wrap>#map-wrap:has(> .map-side[hidden]){grid-template-columns:minmax(0,1fr)!important}
-/* ปุ่มบันทึก: แสดงตลอด · สีเขียวเมื่อมีสิ่งที่ยังไม่บันทึก */
 .d-save{background:var(--bg,#f1f2f5)!important;color:var(--muted,#64748b)!important;opacity:1!important}
 .d-save.on{background:#1F7A43!important;color:#fff!important;box-shadow:0 6px 16px rgba(31,122,67,.25)}
-/* แถวเพิ่มของจากสต็อกบนมือถือ + เว้นท้ายรายละเอียดเคสไม่ให้ปุ่มแชทบัง */
 @media (max-width:760px){.d-stk-add{grid-template-columns:minmax(0,1fr) 84px}.d-stk-add select{grid-column:1/-1}.d-stk-add .btn{min-height:42px}
   .drawer{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))!important}}
-/* จัดเคสให้ทีม · จัดเส้นทาง (หน้าจัดทีม) */
 .rt-panel-w{margin-bottom:14px}
 .rt-steps{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end}
 @media (max-width:1100px){.rt-steps{grid-template-columns:1fr}}
@@ -401,7 +339,6 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 #rt-out .r-warn{background:#fff4e5;color:#7a4300;border-radius:10px;padding:8px 10px;font-size:13.5px}#rt-out .r-ok{background:#e8f7ee;color:#1f6b3a;border-radius:10px;padding:8px 10px;font-size:13.5px}
 .rt-ic{display:grid!important;place-items:center;border-radius:50%;color:#fff;font-weight:700;font-size:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .rt-ic.u3{background:#DD2027}.rt-ic.u2{background:#E8890C}.rt-ic.u1{background:#3442C2}.rt-ic.start{background:#0d5f62}
-/* ช่องแก้ตัวเลขในรายละเอียดเคส */
 .d-ed{display:inline-flex;align-items:center;gap:8px}
 .d-ed input{width:96px;font:inherit;font-size:15px;font-weight:600;min-height:38px;border:1px solid var(--line,#e2e4ea);border-radius:10px;padding:4px 10px;background:var(--surface,#fff);color:inherit}
 .d-ed input:focus{outline:2px solid var(--primary,#DD2027);outline-offset:1px}
@@ -409,31 +346,23 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .d-ed>span{color:var(--muted);font-weight:500}
 .d-rows dd small.muted{display:block;margin-top:4px;font-weight:400;line-height:1.45}
 @media (max-width:760px){.d-ed input{font-size:16px}}
-/* ปุ่มสถานะใต้ปุ่มบันทึก: แบ่งเท่า ๆ กันตามจำนวนปุ่ม */
 .d-status .d-st-btns{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important;grid-auto-flow:column}
 .d-status .d-save{margin-top:2px}
-/* ปุ่มออกจากระบบย้ายไปอยู่ในหน้าตั้งค่า (แถว "ออกจากระบบ") */
 .top #logout,.top-r #logout{display:none!important}
-.top #fb-btn,.top-r #fb-btn{display:none!important} /* ข้อเสนอแนะย้ายไปหน้าตั้งค่า */
-/* แถบเมนูล่างว่างเปล่าบางช่วง (iOS Safari): เนื้อหาในกล่อง backdrop-filter + เลื่อนข้าง หายตอนเลื่อนหน้า
-   → ให้แต่ละปุ่มมีเลเยอร์ของตัวเอง · จัดกลางแบบปลอดภัย (ล้นเมื่อไรเริ่มจากซ้าย ไม่ตกขอบจนว่าง) */
+.top #fb-btn,.top-r #fb-btn{display:none!important}
 .tabs{justify-content:flex-start!important;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;transform:translate3d(-50%,0,0)!important;will-change:transform;isolation:isolate}
 .tabs::-webkit-scrollbar{display:none}
 .tabs>a:first-child{margin-left:auto!important}.tabs>a:last-child{margin-right:auto!important}
 .tabs>a{transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden;flex:none}
-/* มุมขวาบนเหลือปุ่มค้นหาปุ่มเดียว: ไม่ต้องมีกล่องขาวรอบปุ่ม · ปุ่มเป็นวงกลมลอยของตัวเอง */
 .top .top-r,.top-r{background:transparent!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0!important}
 .top-r #gs-btn{width:48px;height:48px;border-radius:50%!important;background:var(--surface,#fff)!important;border:1px solid var(--line,#e8e8ec)!important;box-shadow:0 6px 18px rgba(22,27,61,.12)!important;display:grid!important;place-items:center;padding:0!important}
 .top-r #gs-btn svg{width:22px;height:22px}
 [data-theme="dark"] .top-r #gs-btn{background:#1B1F33!important;border-color:rgba(255,255,255,.08)!important}
-/* ปุ่มสถานะในการ์ดเคส: กว้างพอดีข้อความ ไม่มีที่ว่างเกิน */
 #list .tbl .st-sel{field-sizing:content;width:auto!important;min-width:0!important;max-width:170px!important;padding:2px 22px 2px 10px!important;text-indent:0!important;background-position:right 7px center!important;background-size:10px!important;flex:none}
-/* แถวเพิ่มของ: เลือกของ · จำนวน · ปุ่มเพิ่ม อยู่แถวเดียวกันทุกขนาดจอ */
 .d-stk-add{grid-template-columns:minmax(0,1fr) 58px auto!important}
 .d-stk-add select{grid-column:auto!important}
 .d-stk-add input{text-align:center;padding:6px 4px!important}
 .d-stk-add .btn{padding:0 12px!important;white-space:nowrap}
-/* หมุดทีม = ยานพาหนะ 3D ตามที่ทีมเลือก (หน้าจัดทีม + War Room) · จุดสีมุมล่าง = สถานะการส่งตำแหน่ง */
 .trk-pin.on,.wr-team{--st:#2E9E57}.trk-pin.idle{--st:#E08A00}.trk-pin.old,.wr-team.stale{--st:#9AA1B9}.trk-pin.sos,.wr-team.sos{--st:#E5383B}
 .trk-pin i,.wr-team i{width:42px!important;height:36px!important;background:none!important;border:0!important;box-shadow:none!important;border-radius:0!important;display:block!important;position:relative;flex:none;margin:-6px 0 -6px -4px;animation:none!important}
 .trk-pin i::after,.wr-team i::after{content:"";position:absolute;right:0;bottom:2px;width:11px;height:11px;border-radius:50%;background:var(--st,#2E9E57);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -441,22 +370,18 @@ button.stat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
 .wr-team span{left:44px!important;top:8px!important}
 s.veh{position:absolute;inset:0;display:block;text-decoration:none}
 s.veh img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 3px rgba(0,0,0,.35));transition:transform .4s ease;pointer-events:none;-webkit-user-drag:none}
-/* วิ่งอยู่: รถเด้งเบา ๆ + จุดสถานะกระพริบ */
 s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 @keyframes vehbob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
 .trk-pin.mv i::after,.wr-team.mv i::after{animation:vehpulse 1.4s ease-out infinite}
 @keyframes vehpulse{0%{box-shadow:0 0 0 0 rgba(46,158,87,.6)}100%{box-shadow:0 0 0 8px rgba(46,158,87,0)}}
 .trk-pin .hd,.wr-team .hd{display:none!important}
-/* โลโก้ HELP ME 4U + CENTRAL (ทุกขนาดจอ) */
 .brand span{display:inline-flex!important;align-items:center;gap:2px;white-space:nowrap}
 .brand span b{font-weight:800;letter-spacing:.02em}
 @media (max-width:760px){.brand img.brand-logo{height:17px!important}.brand span{font-size:12.5px!important}.brand-plus{font-size:16px!important}.brand{gap:6px!important}}
-/* รายการตัวเลือกใต้ช่อง (แทน datalist) */
 .combo-pop{position:fixed;z-index:5000;background:var(--surface,#fff);border:1px solid var(--line,#e6e8ef);border-radius:14px;box-shadow:0 14px 34px rgba(22,27,61,.22);overflow:auto;padding:4px;display:grid;align-content:start}
 .combo-pop button{border:0;background:none;text-align:left;font:inherit;font-size:16px;padding:11px 12px;border-radius:10px;color:inherit;cursor:pointer}
 .combo-pop button:hover,.combo-pop button:active{background:var(--bg,#f2f4f8)}
 .combo-pop p{margin:0;padding:12px;color:var(--muted);font-size:14px}
-/* หน้าจอโทรในหน้าเดิม */
 .call-pane{position:fixed;inset:0;z-index:6000;background:rgba(10,14,30,.6);display:flex;flex-direction:column;padding:max(12px,env(safe-area-inset-top)) 12px 12px}
 .call-pane .cp-bar{display:flex;align-items:center;gap:10px;background:#16A34A;color:#fff;border-radius:18px 18px 0 0;padding:10px 12px 10px 16px}
 .call-pane .cp-bar b{font-size:16px}.call-pane .cp-bar small{opacity:.85;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -465,7 +390,6 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 @media (min-width:900px){.call-pane{padding:4vh 18vw}}
 .d-issue{background:#FFF1E6!important;color:#9A3B00!important;border-color:#F8C9A4!important}.td-tag.iss{color:#B4530A}
 .al-silent{background:#C26A00}.al-silent small a{color:#fff;text-decoration:underline}
-/* รวมพล */
 .rl-panel-w{margin-bottom:14px;scroll-margin-top:80px}
 .rl-new{min-height:46px}
 .rl-form{display:grid;gap:10px;margin-bottom:12px}
@@ -487,7 +411,6 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .rl-sum .ok,.rl-b.ok{background:#E3F4EA;color:#1F7A43}.rl-sum .go,.rl-b.go{background:#E9ECFB;color:#2D45C8}.rl-sum .wait,.rl-b.wait{background:#F1F2F4;color:#4b5563}.rl-sum .no,.rl-b.no{background:#FDE7E7;color:#B4161C}
 .rl-resp{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}.rl-resp li{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rl-resp small{color:var(--muted)}
 .rl-pin{width:36px;height:36px;border-radius:50%;background:#C8102E;display:grid;place-items:center;font-size:18px;border:3px solid #fff;box-shadow:0 0 0 6px rgba(200,16,46,.25),0 4px 10px rgba(0,0,0,.3)}
-/* ---------- บอร์ดงาน ---------- */
 #p-board{display:grid;gap:12px}
 .bd-top{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between}.bd-top h2{margin:0;font-size:19px}
 .bd-tools{display:flex;gap:8px;align-items:center}.bd-tools .seg button[aria-selected=true]{background:var(--ink,#111827);color:#fff}
@@ -531,14 +454,12 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .bd-cases{display:flex;flex-wrap:wrap;gap:6px}.bd-case{display:inline-flex;gap:4px;align-items:center;background:#FFF1F3;color:#8E0F22;border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}.bd-case button{border:0;background:rgba(0,0,0,.08);border-radius:50%;width:20px;height:20px;cursor:pointer}
 .bd-act{display:flex;gap:10px;align-items:center;justify-content:space-between;position:sticky;bottom:-16px;background:var(--surface,#fff);padding:10px 0}
 .btn.danger{color:#C62828}
-/* สร้างทีมใหม่จากกล่องมอบหมาย */
 .d-teamrow{display:flex;gap:6px;align-items:stretch}.d-teamrow select{flex:1;min-width:0}.d-teamrow .btn{flex:none;white-space:nowrap}
 .d-newteam{display:grid;gap:8px;padding:12px;border:1.5px dashed #F2B8BF;border-radius:14px;background:#FFF8F8}
 .d-nt-row{display:flex;gap:6px;flex-wrap:wrap}.d-nt-row>*{flex:1;min-width:110px}.d-nt-row .btn{flex:0 0 auto;min-width:0}
 .d-nt-row input,.d-nt-row select{font:inherit;font-size:15px;min-height:40px;border:1px solid var(--line,#e2e4ea);border-radius:10px;padding:6px 10px;background:var(--surface,#fff);color:inherit}
 @media(max-width:760px){.d-nt-row input,.d-nt-row select{font-size:16px}}
-body.noscroll .al-silent{display:none!important} /* เปิดรายละเอียดเคสอยู่: ซ่อนเตือนทีมเงียบ (SOS/สายเข้ายังแสดง) */
-/* หน้าจัดการเคส: การ์ดสรุปเล็กลง · ตัวกรองรวมอยู่ในปุ่ม "ตัวกรอง" ทุกขนาดจอ */
+body.noscroll .al-silent{display:none!important}
 #stats.stats:has([data-sf="teams"]){grid-template-columns:repeat(auto-fill,minmax(118px,1fr))!important;gap:8px!important}
 #stats.stats:has([data-sf="teams"]) .stat{padding:8px 12px!important;min-height:0!important;border-radius:14px!important}
 #stats.stats:has([data-sf="teams"]) .stat b{font-size:20px!important;line-height:1.15}
@@ -548,8 +469,6 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
 #filters-box.filters-box{display:none!important;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;width:100%}
 #filters-box.filters-box.open{display:grid!important}
 #filters-box.filters-box select{min-height:40px;width:100%}
-/* ---------- รายละเอียดเคสบนจอคอม: จัดให้อ่านง่าย ----------
-   คอลัมน์ขวา: งานที่ทำบ่อยขึ้นก่อน (มอบหมายทีม → ติดต่อ/นำทาง → ข้อมูลเคส) · ข้อมูลเป็นตาราง 2 ช่องอ่านง่าย · ข้อความซิงก์ย่อเล็ก */
 @media (min-width:900px){
   .drawer:has(>.d-grid) .d-grid{grid-template-columns:minmax(0,1fr) minmax(380px,.9fr)!important;gap:20px!important}
   .drawer:has(>.d-grid) .d-col:last-child{display:flex;flex-direction:column;gap:12px}
@@ -565,7 +484,6 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
   .drawer:has(>.d-grid) .d-status{border-radius:16px!important;padding:14px!important}
   .drawer:has(>.d-grid) .hz-row{margin-top:10px}
 }
-/* รายละเอียดเคส: ข้อความน้อย · เลื่อนน้อย (รายละเอียดเต็มยังอยู่ใน "รายละเอียด / ตรวจเอง") */
 .vr-box>.vr-why:not(.vr-lv),.vr-box>.vr-note,.drawer .hm-sync,.cov-box>p:not(:first-of-type){display:none!important}
 .vr-box .vr-top p{display:none}
 .vr-fig-map{height:180px!important}
@@ -574,26 +492,22 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
 .cov-box li:nth-child(n+2){display:none}
 .d-photos img{max-height:110px}
 .drawer:has(>.d-grid) .d-notes{padding:8px 12px!important}
-/* กล่องมอบหมายทีมกระชับ: ป้ายหัวช่องซ่อน (ช่องมีคำอธิบายในตัวอยู่แล้ว) · หมายเหตุขยายเมื่อพิมพ์ */
 .d-status .d-lbl{font-size:0!important;gap:0!important}
 .d-status .d-lbl-t{display:none}
 .d-status #d-note{min-height:42px;transition:min-height .15s}.d-status #d-note:focus,.d-status #d-note:not(:placeholder-shown){min-height:84px}
 .d-status{gap:8px!important}
 .al-silent{padding-top:8px!important;padding-bottom:8px!important}.al-silent small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}
-/* ปุ่มไอคอน */
 .ic-btn{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
 .btn.sm.ic-btn{min-width:42px;padding:0 10px!important}
 .ic-btn svg,.seg [data-mode] svg,.seg [data-bv] svg,.d-act svg{width:20px;height:20px;flex:none}
 .seg [data-mode],.seg [data-bv]{display:inline-flex!important;align-items:center;justify-content:center;min-width:44px}
 #f-toggle b{margin-left:2px}
 
-/* ปุ่ม AI ในรายละเอียดเคส: ไอคอนอย่างเดียว */
 .hz-row{gap:6px;margin-top:8px}
 .hz-row .hz-sum.hz-ic{flex:0 0 auto;width:40px;min-height:36px;height:36px;padding:0!important;border-radius:12px!important;position:relative;font-size:16px!important}
 .hz-row .hz-sum.hz-ic .ic{width:18px;height:18px}
 .hz-row .hz-sum.hz-ic .hz-spark{position:absolute;top:3px;right:4px;font-size:9px}
 
-/* หน้าจัดการเคส · บอร์ดเคส (ลากเปลี่ยนสถานะ) */
 .kanban-view{margin-top:10px}
 .kb-tip{margin:0 0 8px;font-size:12.5px;color:var(--muted,#6b7280)}
 .kb-cols{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
@@ -629,7 +543,6 @@ body.kb-on .bar-row>.seg,body.kb-on #export,body.kb-on #count,body.kb-on #f-stat
 body.kb-on .bar-row{min-height:0}
 @media (max-width:760px){.view-sw button{white-space:nowrap;font-size:13px;padding-left:10px;padding-right:10px}.kb-tip{font-size:12px}}
 
-/* หน้าจัดการเคส · มุมมองวันที่ (เข้ามา / ช่วยแล้ว รายวัน) */
 .days-view{margin-top:10px;display:flex;flex-direction:column;gap:12px}
 .dv-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
 .dv-sum{display:flex;gap:8px;flex-wrap:wrap}
@@ -666,7 +579,6 @@ body.kb-on .bar-row{min-height:0}
 body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-status,body.dv-on #f-sort{display:none!important}
 @media (max-width:760px){.dv-two{grid-template-columns:1fr}.dv-bs{height:110px}.dv-bar{flex-basis:22px}.view-sw{overflow-x:auto}}
 
-/* บอร์ด/วันที่: ช่องค้นหาย้ายขึ้นมาแถวเดียวกับแท็บมุมมอง และแคบลง */
 .view-row{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .view-row>.view-sw{margin:0}
 .bar-slot{flex:0 1 420px;margin-left:auto;min-width:0}
@@ -677,7 +589,6 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .bar-slot .bar-top .search input{min-height:40px;font-size:14px}
 @media (max-width:760px){.bar-slot{flex:1 1 100%;margin-left:0}}
 
-/* บอร์ดเคส: คอลัมน์ปิดเคสพับไว้ (ซ่อนเคสที่ปิด · ยังลากมาวางเพื่อปิดได้) */
 .kb-cols.fold{grid-template-columns:repeat(3,minmax(240px,1fr)) 170px}
 .kb-fold .kb-list{justify-content:center;align-items:center;gap:10px;border:2px dashed #d5d8e0;border-radius:12px;margin:0 2px 2px}
 .kb-fold .kb-empty{margin:0;line-height:1.5}.kb-fold .kb-empty .ic{width:22px;height:22px;color:#9ca3af}
@@ -687,7 +598,6 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 
 .kb-mark{height:4px;border-radius:4px;background:#2D45C8;margin:-2px 4px;flex:none;box-shadow:0 0 0 3px rgba(45,69,200,.15)}
 
-/* หมุดทีม (หน้าจัดทีม): รถ 3D ยืนบนแผนที่ + ป้ายชื่อเล็กข้าง ๆ (จุดสีในป้าย = สถานะ) · ไม่แสดงความเร็ว */
 .trk-pin{background:none!important;box-shadow:none!important;padding:0!important;gap:0!important;outline:none!important;animation:none!important}
 .trk-pin i::after{display:none!important}
 .trk-pin .nm{display:inline-flex;align-items:center;gap:6px;margin-left:-2px;background:#fff;border-radius:999px;padding:4px 10px 4px 8px;font-weight:700;font-size:12.5px;line-height:1.2;color:#161B3D;box-shadow:0 2px 8px rgba(22,27,61,.22);white-space:nowrap}
@@ -698,7 +608,6 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .trk-pin.sos .nm{background:#E5383B;color:#fff;animation:trkp 1.2s infinite}.trk-pin.sos .nm::before{background:#fff}
 .wr-team span{font-weight:700}
 
-/* รายละเอียดเคส · ข้อมูลส่งมอบ 9 ช่อง */
 .d-intake{background:#fff;border:1px solid var(--line,#E8E8EC);border-radius:18px;padding:14px;margin:0 0 12px;display:grid;gap:12px}
 .d-intake.dirty{border-color:#2D45C8;box-shadow:0 0 0 3px rgba(45,69,200,.1)}
 .ik-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ik-h b{display:flex;align-items:center;gap:6px;font-size:15px}.ik-h b .ic{width:18px;height:18px}.ik-h small{margin-left:auto;color:var(--muted,#6b7280);font-size:12px}
@@ -715,7 +624,6 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .ik-save{width:100%;min-height:44px}
 @media (max-width:560px){.ik-g{grid-template-columns:1fr}}
 
-/* วอ (CENTRAL): ปุ่มลอยเหนือปุ่ม AI */
 .ptt-fab{position:fixed;right:18px;bottom:150px;z-index:2490;width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;align-content:center;gap:0;color:#fff;background:linear-gradient(180deg,#2D45C8,#1A2C8F);box-shadow:0 8px 22px rgba(45,69,200,.35);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:inherit}
 .ptt-fab .ic{width:20px;height:20px}.ptt-fab b{font-size:11px;line-height:1}
 body.ptt-on .ptt-fab{background:linear-gradient(180deg,#E5383B,#B3121F);transform:scale(1.12);box-shadow:0 0 0 10px rgba(229,56,59,.25)}
@@ -724,14 +632,12 @@ body.map-fs .ptt-fab,body.noscroll .ptt-fab{display:none}
 .ptt-fab.ptt-off{filter:grayscale(.7);opacity:.75}
 .chat-voice{width:100%;max-width:240px;height:36px;margin-top:4px}.chat-case{display:inline-block;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.25);border-radius:999px;padding:2px 8px;margin-bottom:4px}
 .rt-goal{display:inline-flex;align-items:center;gap:5px;background:#E5383B;color:#fff;border-radius:999px;padding:4px 10px 4px 6px;font-weight:700;font-size:12px;white-space:nowrap;box-shadow:0 4px 12px rgba(229,56,59,.35);border:2px solid #fff;transform:translate(0,-50%)}.rt-goal .ic{width:15px;height:15px}
-/* หน้าจัดทีม: การ์ดสรุปแถวเดียว หลายคอลัมน์ · เตี้ยลง (ตัวเลข + ชื่ออยู่บรรทัดเดียว) */
 .stats.stats-row{display:grid!important;grid-template-columns:repeat(8,minmax(0,1fr))!important;gap:8px!important;margin-bottom:10px!important}
 .stats.stats-row .stat{display:flex!important;align-items:baseline;gap:8px;padding:8px 12px!important;min-height:0!important;border-radius:12px!important;text-align:left}
 .stats.stats-row .stat b{font-size:20px!important;line-height:1.1!important;display:inline!important;flex:none}
 .stats.stats-row .stat span{font-size:12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 @media(max-width:1100px){.stats.stats-row{display:flex!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.stats.stats-row::-webkit-scrollbar{display:none}.stats.stats-row .stat{flex:0 0 auto}}
 
-/* หน้าจัดทีม: แผนที่ + แผงสถานะทีมสดด้านขวา */
 .trk-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:stretch}
 .trk-wrap .trk-map{height:min(62vh,560px)!important;min-height:360px}
 .trk-side{background:#F7F8FB;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;max-height:min(62vh,560px);min-height:360px;overflow:hidden}
@@ -751,7 +657,6 @@ body.map-fs .ptt-fab,body.noscroll .ptt-fab{display:none}
 .ts-case{display:flex;align-items:center;gap:6px;font-size:12px;background:#FDECEC;color:#B42318;border-radius:8px;padding:4px 8px;min-width:0}.ts-case .ic{width:14px;height:14px;flex:none}.ts-case span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ts-case em{font-style:normal;font-weight:700;white-space:nowrap}
 .ts-x{color:var(--muted,#6b7280);font-size:11.5px}
 @media(max-width:1100px){.trk-wrap{grid-template-columns:1fr}.trk-side{max-height:none;min-height:0}.ts-list{grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}}
-/* ปรับเส้นทาง (ศูนย์กำหนดเส้นทางให้ทีม) */
 .rte{position:fixed;right:16px;top:84px;bottom:110px;width:360px;z-index:2600;background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(22,27,61,.28);padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto;font-size:14px}
 .rte-h{display:flex;gap:8px;align-items:flex-start}.rte-h div{flex:1;min-width:0}.rte-h b{display:block;font-size:16px}.rte-h small{color:var(--muted,#6b7280)}
 .rte-x{border:0;background:#EEF1FD;color:#2D45C8;width:32px;height:32px;border-radius:50%;cursor:pointer;flex:none}
@@ -769,12 +674,10 @@ body.map-fs .ptt-fab,body.noscroll .ptt-fab{display:none}
 .cp-tag{position:absolute;left:50%;top:-6px;transform:translate(-50%,-100%);background:#fff;color:#161B3D;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(22,27,61,.2)}
 .cp-dot{width:14px;height:14px;border-radius:50%;background:#7C8CF0;border:2px solid #fff}
 
-/* จัดเส้นทาง ย้ายมาอยู่แท็บบอร์ดของหน้าจัดการเคส */
 body:not(.kb-on) #rt-board{display:none!important}
 .rt-board{margin:6px 0 12px;background:#fff;border-radius:16px;padding:12px 14px}.rt-board .panel-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.rt-board h2{font-size:16px;margin:0;display:flex;align-items:center;gap:6px}
 .kb-top{display:flex;justify-content:flex-end;margin:0 0 8px}.kb-top .btn[aria-pressed=true]{background:#EEF1FD;color:#2D45C8;border-color:#2D45C8}
 
-/* รวมพล: ปุ่มลอยเหนือ วอ + แผงลอย (หน้าจัดทีม) */
 .rally-fab{position:fixed;right:18px;bottom:214px;z-index:2490;width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;align-content:center;gap:0;color:#fff;background:linear-gradient(180deg,#F97316,#C2410C);box-shadow:0 8px 22px rgba(194,65,12,.35);font-family:inherit}
 .rally-fab .ic{width:20px;height:20px}.rally-fab b{font-size:10px;line-height:1}
 body.rl-open .rally-fab{box-shadow:0 0 0 6px rgba(249,115,22,.3)}

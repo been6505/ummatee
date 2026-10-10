@@ -1,4 +1,3 @@
-/* หน้า "พื้นที่มอบแล้ว": ตารางสดจากชีต + นับเคสที่อาจซ้ำ */
 const P={cases:[],org:'',q:''};
 $('#sheet-link').href=COVERED.SHEET_URL;
 function render(){
@@ -7,7 +6,6 @@ function render(){
   if(!rows.length){st.hidden=false;st.innerHTML=COVERED.C.error?esc(COVERED.C.error)+' · ตรวจว่าชีตแชร์แบบ "ทุกคนที่มีลิงก์ดูได้" <button class="linkish" id="retry">ลองใหม่</button>':'กำลังโหลดข้อมูลจากชีต…';
     const r=$('#retry');if(r)r.onclick=()=>{COVERED.C.loaded=0;load()};$('#tb').innerHTML='';$('#stats').innerHTML='';return}
   st.hidden=true;
-  // นับเคสที่ยังไม่เสร็จที่ตรงกับแต่ละพื้นที่
   const hit=new Map();P.cases.filter(c=>c.status!=='done').forEach(c=>{const m=COVERED.match(c);if(m)m.all.forEach(h=>{const a=hit.get(h.r)||[];a.push(c);hit.set(h.r,a)})});
   const cnt={};rows.forEach(r=>{if(r.org)cnt[r.org]=(cnt[r.org]||0)+1});const orgs=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||a.localeCompare(b,'th'));
   $('#orgs').innerHTML=['',...orgs].map(o=>`<button data-o="${esc(o)}" aria-selected="${o===P.org}">${o?esc(o):'ทั้งหมด'} <small>${o?rows.filter(r=>r.org===o).length:rows.length}</small></button>`).join('');
@@ -24,7 +22,6 @@ function render(){
   drawMap(hit);
   $('#sync').textContent=COVERED.C.loaded?'อัปเดต '+ago(COVERED.C.loaded):'';
 }
-/* ---- แผนที่ ---- */
 let leafletP=null;const M={map:null,cov:null,cases:null,fitted:false,mk:new Map()};
 function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;leafletP=new Promise((res,rej)=>{
   const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);
@@ -42,7 +39,6 @@ function drawMap(hit){
       `<b><i data-ic="hand"></i> ${esc(r.org)}</b><br>${esc(r.area)}${r.district?' · เขต'+esc(r.district):''}<br>วันที่ ${esc(r.date)}${r.items?'<br>'+esc(r.items):''}${r.sets?' · '+esc(r.sets)+(/^[\d,]+$/.test(String(r.sets).trim())?' ชุด':''):''}${cs?`<br><b style="color:#5b2d91">เคสที่อาจซ้ำ ${cs} เคส</b>`:''}${r.approx?'<br><small>ตำแหน่งโดยประมาณจากชื่อพื้นที่</small>':''}${r.link?`<br><a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดใน Google Maps ↗</a>`:''}`).addTo(M.cov);
     M.mk.set(r,m)});
   if($('#mt-cases').checked)P.cases.filter(c=>c.status!=='done'&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)).forEach(c=>{
-    // หมุดหยดน้ำแบบหน้าแดชบอร์ด/จัดการเคส: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป
     const u=typeof VERIFY!=='undefined'?VERIFY.level(c):1,k=c.status==='going'?'going':u===3?'danger':u===2?'urgent':'open';
     L.marker([+c.lat,+c.lng],{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200}[k],keyboard:false}).bindPopup(`เคส #${esc(c.id)}<br>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}<br>${esc(c.address||'')}<br><a href="../../central.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   const miss=rows.filter(r=>r.lat==null).length;$('#map-miss').textContent=COVERED.C.loading?'กำลังหาตำแหน่ง…':miss?`ไม่พบตำแหน่ง ${miss} พื้นที่`:'';
@@ -56,12 +52,10 @@ $('#mt-cases').addEventListener('change',()=>render());
 COVERED.C.onupdate=()=>render();
 function load(){render();return COVERED.load(API_URL,ADM.key).then(render,render)}
 $('#orgs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.org=b.dataset.o;M.fitted=false;
-  // เลือกองค์กร: แผนที่แสดงเฉพาะพื้นที่ขององค์กรนั้น (ซ่อนจุดเคส) แล้วซูมไปพื้นที่นั้น · "ทั้งหมด" = กลับมาแสดงทุกอย่าง
   const mc=$('#mt-cases');if(mc){if(P.org){if(P.casesWas==null)P.casesWas=mc.checked;mc.checked=false}else if(P.casesWas!=null){mc.checked=P.casesWas;P.casesWas=null}}
   b.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});render()});
 $('#q').addEventListener('input',e=>{P.q=e.target.value;render()});
 $('#refresh').addEventListener('click',async()=>{COVERED.C.loaded=0;const r=await apiGet({action:'list'}).catch(()=>null);if(r&&r.cases)P.cases=r.cases;load()});
 setInterval(()=>{if(!document.hidden)load()},5*60e3);
 adminBoot({action:'list'},'cases',r=>{P.cases=r.cases||[];render();load();if(typeof VERIFY!=='undefined'){VERIFY.onUpdate=()=>render();VERIFY.load().then(render,render)}});
-// เข้าระบบไว้แล้ว: โหลดข้อมูลชีตทันที ไม่ต้องรอรายการเคส (Apps Script ช้า)
 if(ADM.key)load();

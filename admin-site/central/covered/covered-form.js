@@ -1,12 +1,10 @@
-/* ฟอร์มกรอก "พื้นที่ที่มอบแล้ว" → เขียนแถวใหม่ลงชีต (ผ่านระบบหลังบ้าน) แทนการเปิดชีตกรอกเอง
-   ถ้าระบบหลังบ้านยังไม่รองรับ จะให้คัดลอกแถวไปวางในชีตแทน */
 (()=>{
 const ITEMS=['ถุงยังชีพ','อาหารกล่อง','น้ำดื่ม','ข้าวสาร','ยา/เวชภัณฑ์','ของใช้จำเป็น','ผ้าห่ม/เสื้อผ้า','นมผง/ของเด็ก'];
 const two=n=>String(n).padStart(2,'0');
 const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())};
 const thaiDate=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(+m[3])+'/'+(+m[2])+'/'+(+m[1]+543):''};
 const LL=/^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{2,3}\.\d+)\s*$/;
-let pick=null;   // แผนที่เล็กในฟอร์ม
+let pick=null;
 
 function open(){
   const orgs=[...new Set(COVERED.C.rows.map(r=>r.org).filter(Boolean))];
@@ -69,7 +67,6 @@ function openPick(){
     ()=>{hint('โหลดแผนที่ไม่ได้ ใช้วิธีวางลิงก์แทน');return false})}
 function putMk(ll){if(!pick)return;if(pick.mk){pick.mk.setLatLng(ll);return}
   pick.mk=L.marker(ll,{draggable:true}).addTo(pick.map);pick.mk.on('dragend',()=>{const p=pick.mk.getLatLng();setLL(p.lat,p.lng)})}
-/* ค้นหาพิกัดจากข้อความในช่องสถานที่ทั้งกล่อง: ลองทั้งข้อความก่อน แล้วค่อยตัดคำท้ายทีละคำถ้าไม่พบ */
 const BBOX='99.8,13.3,101.4,14.3';
 async function geo(q,nomi){const out=[];
   try{const j=await fetch('https://photon.komoot.io/api/?limit=5&lat=13.75&lon=100.6&location_bias_scale=0.5&bbox='+BBOX+'&q='+encodeURIComponent(q)).then(x=>x.json());
@@ -85,7 +82,6 @@ async function find(){
   const base=raw.replace(/\d[\d,]*\s*ชุด/g,' ').replace(/[()]/g,' ').replace(/\s+/g,' ').trim();
   const words=base.split(' ');const tries=[];for(let n=words.length;n>=1&&tries.length<4;n--){const q=words.slice(0,n).join(' ');if(q.length>=3)tries.push(q)}
   let res=[],used='';for(const q of tries){res=await geo(q+(/กรุงเทพ/.test(q)?'':' กรุงเทพ'));if(!res.length)res=await geo(q);if(res.length){used=q;break}}
-  // สำรอง: OpenStreetMap Nominatim (จำกัด 1 ครั้ง/วินาที จึงลองแค่ 2 แบบ)
   if(!res.length)for(const q of tries.slice(0,2)){res=await geo(q,true);if(res.length){used=q;break}await new Promise(s=>setTimeout(s,1100))}
   if(my!==finding)return;btn.disabled=false;btn.textContent='ค้นหาตำแหน่งจากชื่อสถานที่';
   if(!res.length){box.innerHTML='ไม่พบตำแหน่งจากชื่อนี้ · ลองพิมพ์ชื่อซอย/ถนนให้สั้นลง หรือกด "เลือกบนแผนที่" แล้วแตะตรงจุด';return}
@@ -96,7 +92,6 @@ async function find(){
     openPick().then(ok=>{setLL(r.lat,r.lng);if(ok&&pick)pick.map.setView([r.lat,r.lng],16);hint('ตำแหน่งจากการค้นหา: '+r.lat.toFixed(5)+', '+r.lng.toFixed(5)+' · ตรวจว่าหมุดตรงจุดจริง ลากหมุดเพื่อขยับได้')})};
   box.querySelectorAll('.cf-res button').forEach(b=>b.onclick=()=>use(+b.dataset.i));use(0);
 }
-/* เตือนก่อนบันทึก ถ้ามีองค์กรมอบใกล้จุดนี้หรือชื่อสถานที่ซ้ำ */
 function checkDup(){
   const f=$('#cform'),box=$('#cf-dup'),ll=curLL(),place=f.elements.place.value.trim();
   const ks=place.length>=3?[...COVERED.keys(place)].filter(k=>k.length>=4):[];
@@ -124,7 +119,6 @@ async function save(f){
     $('#drawer').hidden=true;$('#drawer-bg').hidden=true;pick=null;toast('บันทึกแล้ว: '+row.place);
     M.fitted=true;render();if(nr.lat!=null&&M.map)M.map.setView([nr.lat,nr.lng],14);
     setTimeout(()=>{COVERED.C.loaded=0;load()},4000);return}
-  // ระบบหลังบ้านยังไม่รองรับ / ส่งไม่ได้: ให้คัดลอกแถวไปวางในชีตเอง
   const tsv=[row.org,row.date,row.items,row.qty,row.place,row.location].join('\t');
   err.innerHTML=(r&&r.error&&r.error!=='unknown_action'?'บันทึกไม่สำเร็จ ('+esc(r.error)+')':r?'ระบบ CENTRAL ยังไม่เปิดให้บันทึกจากฟอร์ม':'ส่งข้อมูลไม่ได้ ตรวจอินเทอร์เน็ต')+
     ' · ใช้วิธีสำรอง: <button type="button" class="linkish" id="cf-copy">คัดลอกแถวนี้</button> แล้ว <a href="'+esc(COVERED.SHEET_URL)+'" target="_blank" rel="noopener">เปิดชีต ↗</a> วางที่ช่อง A ของแถวว่างล่างสุด';

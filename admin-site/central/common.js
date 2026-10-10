@@ -1,4 +1,3 @@
-/* ส่วนกลางหน้าหลังบ้าน (จัดทีม / สต็อก): เข้าระบบด้วยรหัสทีม, เรียก API, แจ้งเตือน */
 const API_URL='/api';
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,7 +13,6 @@ async function apiPost(body){const r=await fetch(API_URL,{method:'POST',headers:
   if(j&&j.error==='not_volunteer'){logout('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');throw new Error('auth')}return j}
 function staffName(){let n=store.get('uh_staff')||store.get('uh_team');if(!n){n=(prompt('ชื่อผู้บันทึก (ใช้ระบุว่าใครแก้ข้อมูล)')||'').trim();if(n)store.set('uh_staff',n)}return n}
 function logout(msg){store.set('uh_vol_key','');store.set('uh_vol_ok','');ADM.key='';$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||''}
-/* onReady(firstResponse) เรียกเมื่อเข้าระบบได้ */
 function adminBoot(probe,field,onReady){
   const good=r=>r&&r.ok&&r[field]!==undefined;
   $('#logout').addEventListener('click',()=>logout('ออกจากระบบแล้ว'));
@@ -23,7 +21,6 @@ function adminBoot(probe,field,onReady){
       if(good(r)){const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';$('#login').hidden=true;$('#app').hidden=false;onReady(r)}
       else{ADM.key='';$('#login-err').textContent=r&&r.error==='not_volunteer'?'รหัสไม่ถูกต้อง':r&&r.ok?'ระบบ CENTRAL ยังไม่รองรับหน้านี้ ต้องอัปเดต Code.gs ก่อน':'ใช้งานไม่ได้: '+(r&&r.error||'')}}
     catch(err){ADM.key='';$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
-  /* เปิดหน้า: ตรวจรหัสด้วยการเรียก API · ลองซ้ำ 3 ครั้งเมื่อเน็ตสะดุด · เน็ตหลุดจริงก็ไม่ลบหน้า แค่แสดงแถบให้ลองใหม่ */
   if(ADM.key){$('#app').hidden=false;
     const fail=html=>{let n=document.getElementById('boot-err');if(!n){n=document.createElement('p');n.id='boot-err';n.className='empty boot-err';$('#main').prepend(n)}n.innerHTML=html};
     const go=async(tries=0)=>{try{const r=await apiGet(probe);const n=document.getElementById('boot-err');if(n)n.remove();

@@ -1,21 +1,9 @@
-/* War Room: โครงสร้าง HELP ME CENTRAL → ศูนย์ประสานงานจังหวัด → War Room โซน → ทีม
-   - CENTRAL: ภาพรวมทั้งหมด (Common Operating Picture) + แท็บโครงสร้าง
-   - ศูนย์ประสานงานจังหวัด (kind=province): เห็นเคส/ทีม/โซนทั้งจังหวัด
-   - War Room โซน (kind=zone): ขอบเขตในจังหวัด = รายชื่อเขต/อำเภอ และ/หรือ วงกลม · ทีมสังกัดโซน
-   - War Room ย่อย: ขอบเขต = รายชื่อเขต และ/หรือ วงกลม (จุดกลาง + รัศมี) · มีทีมประจำ (roster.warroom) · คลังของเอง (stock.warroom) · ทีมงานประจำห้อง
-   - แท็บในห้อง: ภาพรวม · เคส (มอบทีม/เปลี่ยนสถานะเคสในระบบ · เคส Help Me เปิดที่ Help Me) · ทีม · สต็อก · โปรไฟล์
-   ข้อมูล: เคส Help Me (หลัก) + เคสในระบบ · ทีม/ตำแหน่งสด (roster) · SOS/สายเข้า/แชท (chat_threads) · ประกาศกรมอุตุฯ (news)
-   อัปเดตเอง: เคส 30 วิ · ทีม/แจ้งเตือน 15 วิ · ประกาศ 10 นาที */
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
   room:'',tab:new URLSearchParams(location.search).get('tab')==='board'?'board':new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
-/* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
-  // คนที่เข้า CENTRAL ด้วยรหัสหลักอยู่แล้ว: เปิดห้องนั้นแบบปกติ ไม่ทับรหัส CENTRAL และไม่ล็อกหน้า
-  // CENTRAL กดเปิดเว็บย่อยของห้อง: ดูแบบที่ทีม War Room เห็น เฉพาะแท็บนี้ (ไม่ทับรหัส CENTRAL)
   const cur=store.get('uh_vol_key');if(k&&wr&&cur&&!/^wru?_/.test(cur)){try{sessionStorage.setItem('uh_wr_preview',wr);history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}return}
   if(k&&wr){store.set('uh_vol_key','wr_'+k,true);store.set('uh_vol_ok','1',true);store.set('uh_wr_lock',wr,true);ADM.key='wr_'+k;
     try{history.replaceState(null,'','?wr='+encodeURIComponent(wr))}catch(e){}}})();
-/* เข้าเว็บย่อยของห้องด้วยบัญชี (ชื่อผู้ใช้ + รหัสผ่าน): แสดงฟอร์มนี้แทนรหัส CENTRAL เมื่อเปิดจากลิงก์ห้อง (?wr=…) */
 (()=>{const wr=new URLSearchParams(location.search).get('wr')||store.get('uh_wr_lock');if(!wr||ADM.key)return;
   const f=$('#wrl-form'),c=$('#login-form');f.hidden=false;c.hidden=true;
   fetch('/api?action=warroom_public&id='+encodeURIComponent(wr)).then(r=>r.json()).then(r=>{if(r&&r.ok)$('#wrl-title').textContent=r.name}).catch(()=>{});
@@ -27,7 +15,7 @@ const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],
     catch(err){$('#wrl-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{$('#wrl-go').disabled=false}}})();
 const PREVIEW=()=>{try{return /^wru?_/.test(String(ADM.key||''))?'':sessionStorage.getItem('uh_wr_preview')||''}catch(e){return ''}};
 const LOCK=()=>/^wru?_/.test(String(ADM.key||''))?store.get('uh_wr_lock'):PREVIEW();
-const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
 const ST={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'};
 const CST={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'};
@@ -48,24 +36,20 @@ const telOf=p=>String(p||'').replace(/^'/,'').replace(/[^\d+]/g,'');
 const room=()=>W.rooms.find(r=>r.id===W.room)||null;
 const PROVINCES='กรุงเทพมหานคร กระบี่ กาญจนบุรี กาฬสินธุ์ กำแพงเพชร ขอนแก่น จันทบุรี ฉะเชิงเทรา ชลบุรี ชัยนาท ชัยภูมิ ชุมพร เชียงราย เชียงใหม่ ตรัง ตราด ตาก นครนายก นครปฐม นครพนม นครราชสีมา นครศรีธรรมราช นครสวรรค์ นนทบุรี นราธิวาส น่าน บึงกาฬ บุรีรัมย์ ปทุมธานี ประจวบคีรีขันธ์ ปราจีนบุรี ปัตตานี พระนครศรีอยุธยา พะเยา พังงา พัทลุง พิจิตร พิษณุโลก เพชรบุรี เพชรบูรณ์ แพร่ ภูเก็ต มหาสารคาม มุกดาหาร แม่ฮ่องสอน ยโสธร ยะลา ร้อยเอ็ด ระนอง ระยอง ราชบุรี ลพบุรี ลำปาง ลำพูน เลย ศรีสะเกษ สกลนคร สงขลา สตูล สมุทรปราการ สมุทรสงคราม สมุทรสาคร สระแก้ว สระบุรี สิงห์บุรี สุโขทัย สุพรรณบุรี สุราษฎร์ธานี สุรินทร์ หนองคาย หนองบัวลำภู อ่างทอง อำนาจเจริญ อุดรธานี อุตรดิตถ์ อุทัยธานี อุบลราชธานี'.split(' ');
 const BKK='พระนคร ดุสิต หนองจอก บางรัก บางเขน บางกะปิ ปทุมวัน ป้อมปราบศัตรูพ่าย พระโขนง มีนบุรี ลาดกระบัง ยานนาวา สัมพันธวงศ์ พญาไท ธนบุรี บางกอกใหญ่ ห้วยขวาง คลองสาน ตลิ่งชัน บางกอกน้อย บางขุนเทียน ภาษีเจริญ หนองแขม ราษฎร์บูรณะ บางพลัด ดินแดง บึงกุ่ม สาทร บางซื่อ จตุจักร บางคอแหลม ประเวศ คลองเตย สวนหลวง จอมทอง ดอนเมือง ราชเทวี ลาดพร้าว วัฒนา บางแค หลักสี่ สายไหม คันนายาว สะพานสูง วังทองหลาง คลองสามวา บางนา ทวีวัฒนา ทุ่งครุ บางบอน'.split(' ');
-// จังหวัดของเคส: จากระบบ (Help Me) หรือเดาจากที่อยู่/เขต
 const provOf=c=>{if(c.province)return c.province;const a=String(c.address||''),m=a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if(m){const n=m[1];return /^(กรุงเทพ|กทม)/.test(n)?'กรุงเทพมหานคร':(PROVINCES.find(p=>n.startsWith(p))||n)}
   if(/กรุงเทพ|กทม/.test(a)||BKK.includes(normD(c.district)))return 'กรุงเทพมหานคร';
   const am=String(c.district||'').match(/^อำเภอเมือง\s*([ก-๙]+)/);return am?(PROVINCES.find(p=>am[1].startsWith(p))||''):''};
 const isProv=r=>r&&r.kind==='province';
-/* "ใกล้เคียง" ของศูนย์จังหวัด = เคสนอกจังหวัดที่อยู่ห่างจุดกลางจังหวัดไม่เกิน 20 กม. */
 const NEAR_KM=20,PROV_LL={'กรุงเทพมหานคร':[13.756,100.502],'กระบี่':[8.086,98.906],'กาญจนบุรี':[14.023,99.533],'กาฬสินธุ์':[16.432,103.506],'กำแพงเพชร':[16.483,99.522],'ขอนแก่น':[16.441,102.836],'จันทบุรี':[12.611,102.104],'ฉะเชิงเทรา':[13.69,101.077],'ชลบุรี':[13.361,100.985],'ชัยนาท':[15.186,100.125],'ชัยภูมิ':[15.807,102.032],'ชุมพร':[10.493,99.18],'เชียงราย':[19.91,99.841],'เชียงใหม่':[18.788,98.985],'ตรัง':[7.558,99.611],'ตราด':[12.243,102.515],'ตาก':[16.884,99.126],'นครนายก':[14.206,101.213],'นครปฐม':[13.82,100.062],'นครพนม':[17.392,104.769],'นครราชสีมา':[14.979,102.098],'นครศรีธรรมราช':[8.432,99.963],'นครสวรรค์':[15.704,100.137],'นนทบุรี':[13.862,100.514],'นราธิวาส':[6.426,101.823],'น่าน':[18.783,100.779],'บึงกาฬ':[18.36,103.646],'บุรีรัมย์':[14.993,103.103],'ปทุมธานี':[14.02,100.525],'ประจวบคีรีขันธ์':[11.812,99.797],'ปราจีนบุรี':[14.05,101.372],'ปัตตานี':[6.869,101.25],'พระนครศรีอยุธยา':[14.353,100.568],'พะเยา':[19.166,99.902],'พังงา':[8.451,98.525],'พัทลุง':[7.617,100.078],'พิจิตร':[16.442,100.349],'พิษณุโลก':[16.821,100.265],'เพชรบุรี':[13.112,99.94],'เพชรบูรณ์':[16.419,101.16],'แพร่':[18.145,100.141],'ภูเก็ต':[7.89,98.398],'มหาสารคาม':[16.184,103.301],'มุกดาหาร':[16.545,104.723],'แม่ฮ่องสอน':[19.301,97.969],'ยโสธร':[15.794,104.145],'ยะลา':[6.541,101.281],'ร้อยเอ็ด':[16.053,103.652],'ระนอง':[9.966,98.635],'ระยอง':[12.682,101.278],'ราชบุรี':[13.536,99.817],'ลพบุรี':[14.8,100.653],'ลำปาง':[18.289,99.49],'ลำพูน':[18.574,99.008],'เลย':[17.486,101.722],'ศรีสะเกษ':[15.118,104.322],'สกลนคร':[17.155,104.148],'สงขลา':[7.189,100.595],'สตูล':[6.623,100.067],'สมุทรปราการ':[13.599,100.597],'สมุทรสงคราม':[13.409,100.002],'สมุทรสาคร':[13.547,100.274],'สระแก้ว':[13.824,102.065],'สระบุรี':[14.529,100.911],'สิงห์บุรี':[14.888,100.401],'สุโขทัย':[17.007,99.823],'สุพรรณบุรี':[14.474,100.117],'สุราษฎร์ธานี':[9.14,99.333],'สุรินทร์':[14.882,103.493],'หนองคาย':[17.878,102.742],'หนองบัวลำภู':[17.204,102.44],'อ่างทอง':[14.589,100.455],'อำนาจเจริญ':[15.866,104.626],'อุดรธานี':[17.415,102.787],'อุตรดิตถ์':[17.62,100.099],'อุทัยธานี':[15.383,100.025],'อุบลราชธานี':[15.244,104.847]};
-// จุดกลาง = ที่ตั้งศูนย์จังหวัด (ถ้าตั้งไว้) หรือตัวเมืองของจังหวัด
 function provCenter(r){return r.lat!=null&&r.lng!=null?[r.lat,r.lng]:PROV_LL[r.province]||null}
 const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
-/* ---------- ขอบเขตของ War Room ---------- */
-const allCases=r=>r&&r.districts.includes('*');   // War Room ที่ดูแลทุกเคสในระบบ (ไม่จำกัดพื้นที่)
+const allCases=r=>r&&r.districts.includes('*');
 function inRoom(c,r){if(!r||allCases(r))return true;
   const pv=provOf(c);
-  if(isProv(r))return pv===r.province||(hasPin(c)&&(()=>{const ctr=provCenter(r);return ctr&&km(ctr[0],ctr[1],+c.lat,+c.lng)<=NEAR_KM})()); // ในจังหวัด + ใกล้เคียง
+  if(isProv(r))return pv===r.province||(hasPin(c)&&(()=>{const ctr=provCenter(r);return ctr&&km(ctr[0],ctr[1],+c.lat,+c.lng)<=NEAR_KM})());
   if(r.province&&pv&&pv!==r.province)return false;
   if(r.districts.length&&c.district&&r.districts.some(d=>normD(d).replace(/^อำเภอ/,'')===normD(c.district).replace(/^อำเภอ/,'')))return true;
   if(r.radius&&r.lat!=null&&hasPin(c))return km(r.lat,r.lng,+c.lat,+c.lng)*1000<=r.radius;
@@ -79,12 +63,10 @@ function view(){const r=room();
   const threads=W.threads.filter(t=>names.has(t.team));
   return {r,cases,roster,names,live,alerts,threads}}
 
-/* ---------- ข้อมูล ---------- */
 async function loadCases(){
   const [h,o]=await Promise.all([apiGet({action:'helpme_cases'}).catch(()=>null),apiGet({action:'list'}).catch(()=>null)]);
   const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
-  // เคสในระบบที่ไม่ใช่สำเนาของเคส Help Me (สำเนามีรหัสเดียวกัน)
-  W.cases=hm.map(c=>({...c,needs:c.needs||[],src:'hm'})).concat(own.filter(c=>!ids.has(String(c.id))).map(c=>({...c,needs:c.needs||[],src:'own'}))).filter(c=>!c.dupOf); // เคสที่รวมเป็นเคสซ้ำแล้วไม่แสดง
+  W.cases=hm.map(c=>({...c,needs:c.needs||[],src:'hm'})).concat(own.filter(c=>!ids.has(String(c.id))).map(c=>({...c,needs:c.needs||[],src:'own'}))).filter(c=>!c.dupOf);
   W.at=Date.now();
 }
 async function loadTeams(){
@@ -97,14 +79,10 @@ async function loadRooms(){const r=await apiGet({action:'warrooms'}).catch(()=>n
 async function loadStock(){const r=await apiGet({action:'stock'}).catch(()=>null);if(r&&r.ok){W.items=r.items||[];W.log=r.log||[]}}
 async function loadWarn(){try{const n=await apiGet({action:'news'});if(n&&n.ok)W.warn=n.warnings||[]}catch(e){}}
 
-/* ---------- เลือกห้อง / แท็บ ---------- */
-/* เว็บย่อยของ War Room (เปิดจากลิงก์ /wr/<id>): หัวเว็บเป็นชื่อห้อง · ใช้เมนูของห้อง · ไม่มีเมนู CENTRAL */
 function siteBrand(r){document.body.classList.add('wr-site');if(!r)return;const b=document.querySelector('.top .brand');
   if(b){b.href='?wr='+encodeURIComponent(r.id);const sp=b.querySelector('span');if(sp)sp.innerHTML=`<i class="rdot" style="background:${esc(r.color)}"></i> <b>${esc(r.name)}</b>`}
   document.title=r.name+' · Helpme+ War Room';
   const pv=$('#wr-preview');if(pv){pv.hidden=!PREVIEW();}}
-/* CENTRAL: ปุ่มเปิดเว็บย่อยของห้องที่เลือก + คัดลอก/แชร์ลิงก์ให้ทีม War Room */
-/* บัญชีผู้ใช้ของ War Room ย่อย (แท็บโปรไฟล์ · เฉพาะคนที่เข้าจากลิงก์ห้อง/บัญชีห้อง) */
 const UR={lead:'หัวหน้า War Room · สร้าง/จัดการบัญชีได้',staff:'ทีมงาน'};
 async function usersCard(){const el=$('#pf-users');if(!el)return;if(!/^wru?_/.test(String(ADM.key||''))){el.hidden=true;return}
   const r=await apiGet({action:'wr_users'}).catch(()=>null);if(!r||!r.ok){el.hidden=true;return}el.hidden=false;const lead=r.me.role==='lead',me=r.me.user;
@@ -132,7 +110,6 @@ function linkBar(r){const el=$('#wr-linkbar');if(!el)return;if(!r||!r.linkKey){e
 function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   const chip=(r,label)=>{const act=r?all.filter(c=>inRoom(c,r)):all,crit=act.filter(c=>sev(c)===3&&c.status!=='going').length,id=r?r.id:'';
     return `<button type="button" role="tab" data-room="${esc(id)}" aria-selected="${id===W.room}" class="${!r?'central':isProv(r)?'prov':'zone'}">${r?`<i class="rdot" style="background:${esc(r.color)}"></i>`:'<i data-ic="board"></i><span class="lbl-long">HELP ME CENTRAL · </span>'}${esc(label||(isProv(r)&&/^ศูนย์ประสานงานจังหวัด/.test(r.name)?'ศูนย์ประสานงาน':r.name)||'(ไม่มีชื่อ)')} <small>${act.length}${crit?` · <b class="cr">${crit} วิกฤต</b>`:''}</small></button>`};
-  // จัดกลุ่มตามจังหวัด: ศูนย์ประสานงานจังหวัด แล้วตามด้วย War Room โซนในจังหวัดนั้น
   const provs=[...new Set(W.rooms.map(r=>r.province||''))].sort((a,b)=>!a-!b||(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:a.localeCompare(b,'th')));
   const lk=LOCK();document.body.classList.toggle('wr-locked',!!lk);$('#wr-new').hidden=!!lk;
   if(lk){if(W.room!==lk)W.room=lk;const r0=W.rooms.find(r=>r.id===lk);siteBrand(r0);$('#rooms').innerHTML=r0?chip(r0):'<span class="muted">ไม่พบ War Room ของลิงก์นี้ (อาจถูกปิดหรือสร้างลิงก์ใหม่แล้ว)</span>'}
@@ -140,7 +117,7 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
   linkBar(lk?null:room());
   const r=room();$('#subtabs').hidden=false;
-  const tabs=!r?['struct','board']:['over','cases','teams','board','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้ว
+  const tabs=!r?['struct','board']:['over','cases','teams','board','stock','prof'];
   if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','board','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
@@ -149,7 +126,6 @@ $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-r
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
 $('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(!W.room){try{history.replaceState(null,'',location.pathname+(W.tab==='board'?'?tab=board':''))}catch(err){}}if(W.tab==='prof')W.uAt='';if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
-/* ---------- ภาพรวม ---------- */
 function kpis(V){const rm=room(),fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
   hmSummary($('#kpis'),{cases:V.cases,title:rm?rm.name:'ภาพรวมทั้งหมด',online:fresh.size,teams:V.roster.length,sev})
 }
@@ -190,7 +166,6 @@ function feed(V){
   $('#feed').innerHTML=it.length?it.slice(0,25).map(x=>`<li class="${x.cls}"><time>${esc(new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}))}</time><span>${x.html}</span></li>`).join(''):'<li class="muted">ยังไม่มีความเคลื่อนไหวใน 6 ชม.</li>';
 }
 
-/* ---------- แผนที่ ---------- */
 let leafP=null;
 function loadLeaflet(){if(window.L)return Promise.resolve();return leafP||(leafP=new Promise((res,rej)=>{
   const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);
@@ -198,11 +173,9 @@ function loadLeaflet(){if(window.L)return Promise.resolve();return leafP||(leafP
 async function drawMap(V){
   try{await loadLeaflet()}catch(e){$('#map-note').textContent='โหลดแผนที่ไม่ได้';return}
   if(!W.map){W.map=L.map('wmap',{zoomControl:true,scrollWheelZoom:true}).setView([13.75,100.6],11);
-    // ชุดเดียวกับแดชบอร์ด: แบบแผนที่ ถนน/ดาวเทียม/มืด · ชั้นข้อมูล (เรดาร์ฝน ดาวเทียม เครือข่าย ศูนย์พักพิง กล้อง) · ปุ่มลอย · เต็มจอ
     W.map.zoomControl.setPosition('bottomright');W.map.attributionControl.setPrefix(false);W.map.attributionControl.addAttribution('น้ำท่วม: Floodboard.org');
     L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(W.map);let bs='road';try{bs=localStorage.getItem('uh_base')||'road'}catch(e){}setBase(['road','sat','dark'].includes(bs)?bs:'road');
     W.lf=L.layerGroup();W.lr=L.layerGroup().addTo(W.map);W.lc=L.layerGroup().addTo(W.map);W.lt=L.layerGroup().addTo(W.map);if(typeof MAPL!=='undefined')MAPL.attach(W.map)}
-  // ถนนน้ำท่วม (Floodboard ผ่าน verify.js) · ทีม · ช่วยแล้ว ตามสวิตช์ในเมนูชั้นข้อมูล
   const on=id=>{const e=document.getElementById(id);return !!(e&&e.checked)},F=typeof VERIFY!=='undefined'?VERIFY.F:null;
   if(F&&W.floodAt!==F.loaded){W.floodAt=F.loaded;W.lf.clearLayers();F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':'#fbc02d';
     r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${esc(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(W.lf))})}
@@ -210,7 +183,6 @@ async function drawMap(V){
   if(on('mt-live'))W.lt.addTo(W.map);else W.lt.remove();
   const dl=$('#dleg');if(dl){dl.querySelector('.lg-done').hidden=!on('mt-done');dl.querySelector('.lg-flood').hidden=!on('mt-flood');dl.querySelector('.lg-live').hidden=!on('mt-live')}
   W.lc.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;
-  // ขอบเขต War Room: ห้องที่เลือก หรือทุกห้อง (ภาพรวม)
   (V.r?[V.r]:W.rooms).forEach(r=>{if(r.lat==null||!r.radius)return;
     L.circle([r.lat,r.lng],{radius:r.radius,color:r.color,weight:2,fillColor:r.color,fillOpacity:V.r?.04:.07,dashArray:'6 6',interactive:!V.r}).bindTooltip(esc(r.name),{sticky:true}).on('click',()=>{if(!V.r){W.room=r.id;W.fitted='';render()}}).addTo(W.lr);
     if(V.r)pts.push([r.lat,r.lng])});
@@ -221,7 +193,6 @@ async function drawMap(V){
       .on('click',()=>{location.href=caseLink(c)}).addTo(W.lc)});
   moveTeams(V).forEach(p=>pts.push(p));
   let note=nopin?`ไม่มีหมุด ${nopin} เคส`:'';
-  // ซูมไปพื้นที่ที่มีเคสหนาแน่น (ไม่ให้หมุดไกล ๆ ไม่กี่จุดทำให้แผนที่ซูมออกทั้งประเทศ)
   if(W.fitted!==(W.room||'*')&&pts.length){const med=a=>a.slice().sort((x,y)=>x-y)[a.length>>1],mla=med(pts.map(p=>p[0])),mlo=med(pts.map(p=>p[1]));
     const near=V.r?pts:pts.filter(p=>Math.abs(p[0]-mla)<0.7&&Math.abs(p[1]-mlo)<0.7),far=pts.length-near.length;
     W.map.fitBounds(near.length?near:pts,{padding:[30,30],maxZoom:14});W.fitted=W.room||'*';if(far)note+=(note?' · ':'')+`นอกพื้นที่หลัก ${far} จุด (ซูมออกเพื่อดู)`}
@@ -229,18 +200,14 @@ async function drawMap(V){
   setTimeout(()=>W.map.invalidateSize(),60);
 }
 
-/* ---------- CENTRAL: โครงสร้างการสั่งการ ---------- */
 function stats(cs,names){const act=cs.filter(c=>c.status!=='done');const live=new Set(W.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
   return {act:act.length,crit:act.filter(c=>sev(c)===3&&c.status!=='going').length,going:act.filter(c=>c.status==='going').length,teams:names.length,on:names.filter(n=>live.has(n)).length,
     low:W.items.filter(i=>i.warroom&&i.min!==''&&Number(i.qty)<=Number(i.min)).length}}
 function chipsOf(st){return `<span class="k">${st.act} เคสค้าง</span>${st.crit?`<span class="k cr">${st.crit} วิกฤต</span>`:''}<span class="k">${st.going} กำลังไป</span><span class="k">ทีม ${st.on}/${st.teams} ออนไลน์</span>`}
-/* แผนผัง: เคสค้างใต้แต่ละ War Room (วิกฤตก่อน · รอนานก่อน) */
 function treeCases(list,label){const open=list.filter(c=>c.status!=='done').sort((a,b)=>sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0));if(!open.length)return '';
   const row=c=>{const ph=photos(c);return `<a class="tc u${sev(c)}" href="${caseLink(c)}"><span class="tph">${ph.length?`<img src="${thumb(ph[0],96)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w96" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span>
     <span class="tt"><b>${esc((c.needs||[]).slice(0,2).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน · ${esc(c.district||provOf(c)||'')} · ${c.status==='going'?'กำลังไป':'รอ '+esc(waitTxt(c.createdAt))}</small></span><span class="tl">${URG[sev(c)]}</span></a>`};
   return `<details class="tcs"${open.length<=4?' open':''}><summary>${esc(label)} <b>${open.length}</b>${open.some(c=>sev(c)===3)?` <span class="k cr">วิกฤต ${open.filter(c=>sev(c)===3).length}</span>`:''}</summary><div class="tcl">${open.slice(0,12).map(row).join('')}${open.length>12?`<span class="muted small">และอีก ${open.length-12} เคส · เปิด War Room เพื่อดูทั้งหมด</span>`:''}</div></details>`}
-/* ---------- ใบสมัครจากหน้า /join ----------
-   CENTRAL (แท็บจัดการ War Room): ทั้ง War Room และจิตอาสา · หัวหน้า War Room (แท็บทีม): จิตอาสาที่เลือกห้องนี้/ไม่ระบุห้อง */
 const APPK={warroom:'หน่วยงาน',volunteer:'จิตอาสา'},APPS={pending:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ'};
 const APPF={orgType:'ประเภท',orgName:'หน่วยงาน',roomName:'ชื่อที่แสดง',page:'เพจ/เว็บ',contact:'ผู้ประสานงาน',lineId:'LINE',districts:'เขตที่ดูแล',address:'ที่ตั้ง',services:'บริการ',staffCount:'เจ้าหน้าที่',volunteers:'จิตอาสาในเครือข่าย',teams:'ทีมพร้อมกัน',boats:'เรือ',highTrucks:'รถสูง',pickups:'รถกระบะ',mealsPerDay:'อาหาร/วัน',bagsPerDay:'ถุงยังชีพ/วัน',shelterCap:'รับผู้อพยพ',medical:'การแพทย์',warehouse:'คลัง',comms:'สื่อสาร/พลังงาน',hours:'เวลาทำการ',duration:'ระยะเวลา',needs:'ต้องการให้ช่วย',
   fullName:'ชื่อ',nickname:'ชื่อเล่น',age:'อายุ',area:'พื้นที่สะดวก',groupName:'กลุ่ม',groupSize:'จำนวนคน',skills:'ทักษะ',equipment:'อุปกรณ์',availability:'เวลาว่าง',fitness:'ลุยน้ำได้',health:'สุขภาพ',emergencyName:'ผู้ติดต่อฉุกเฉิน',emergencyPhone:'เบอร์ฉุกเฉิน'};
@@ -287,7 +254,6 @@ $('#p-struct').addEventListener('click',e=>{const g=e.target.closest('[data-go]'
   const np=e.target.closest('[data-newprov]');if(np){roomForm({kind:'province',province:np.dataset.newprov,districts:[]});return}
   const nz=e.target.closest('[data-newzone]');if(nz)roomForm({kind:'zone',province:nz.dataset.newzone,districts:[]})});
 
-/* หมุดทีมแบบคงอยู่: ตำแหน่งใหม่ทุก 3 วินาที เลื่อนลื่น (glideTo) แทนการลบแล้ววาดใหม่ */
 W.tm=new Map();
 function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos||[]).map(s=>s.name)),seen=new Set(),pts=[];
   V.live.forEach(l=>{const m=mins(l.updatedAt),stale=m>10,s=sos.has(l.team),mv=l.speed!=null&&l.speed>=3;seen.add(l.team);pts.push([l.lat,l.lng]);
@@ -302,7 +268,6 @@ function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos
 async function pollLive(){if(document.hidden||W.tab!=='over'||W.liveBusy)return;W.liveBusy=true;
   try{const r=await apiGet({action:'teams'});if(r&&r.ok){W.live=r.teams||[];moveTeams(view())}}catch(e){}finally{W.liveBusy=false}}
 
-/* ---------- แท็บ เคส ---------- */
 function casesTab(V){
   const cnt=k=>V.cases.filter(c=>k==='all'||c.status===k).length;
   $('#c-st').innerHTML=[['open','รอช่วย'],['going','กำลังไป'],['done','ช่วยแล้ว'],['all','ทั้งหมด']].map(([k,l])=>`<button type="button" data-st="${k}" aria-selected="${k===W.cst}">${l} <small>${cnt(k)}</small></button>`).join('');
@@ -310,7 +275,6 @@ function casesTab(V){
   const list=V.cases.filter(c=>(W.cst==='all'||c.status===W.cst)&&(!q||[(c.needs||[]).join(' '),c.district,c.address,vol(c)].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>(a.status==='done')-(b.status==='done')||sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,300);
   const teamOpts=sel=>`<option value="">— เลือกทีม —</option>`+V.roster.map(t=>`<option${t.name===sel?' selected':''}>${esc(t.name)}</option>`).join('');
-  // รายการแบบ helpme4u.com: แถวสั้น (รูป · ระดับ · ไอคอนความต้องการ · จำนวนคน · พื้นที่ · รอ) กดแล้วขยายรายละเอียด + ปุ่มจัดการ
   const NI=[[/อาหาร/,'food'],[/น้ำดื่ม|น้ำ/,'water'],[/ยา|การแพทย์|แพทย์/,'pill'],[/อพยพ|เรือ/,'boat'],[/ผู้ป่วย|ผู้สูงอายุ|ติดเตียง|พิการ/,'patient']];
   const nIc=c=>{const seen=[];(c.needs||[]).forEach(n=>{const m=NI.find(([re])=>re.test(n));const k=m?m[1]:'more';if(!seen.includes(k))seen.push(k)});return seen};
   const UC={3:'u3',2:'u2',1:'u1'},row=(l,v)=>v?`<dt>${l}</dt><dd>${v}</dd>`:'';
@@ -342,7 +306,6 @@ $('#c-body').addEventListener('click',e=>{const t=e.target.closest('[data-ctog]'
 $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('ปิดเคสนี้ว่าช่วยเสร็จแล้ว?'))return;
   b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c)});if(r.ok){c.status='done';toast('ปิดเคสแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
-/* ---------- แท็บ ทีม ---------- */
 function teamsTab(V){if(W.appsAt!=='t'+V.r.id&&/^wru?_/.test(String(ADM.key||''))){W.appsAt='t'+V.r.id;appsCard($('#t-apps'),'room')}const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
   if(isProv(r)){dispatchQ(V);const zs=zonesOf(r.province);
     $('#t-hint').textContent=`ทีมในจังหวัด${r.province}: ${V.roster.length} ทีม ใน ${zs.length} War Room โซน · จัดทีมเข้าโซนได้ที่ War Room โซนนั้น`;
@@ -364,7 +327,6 @@ $('#t-list').addEventListener('click',async e=>{const gz=e.target.closest('[data
   try{const r=await apiPost({action:'team_warroom',team:b.dataset.tw,warroom:b.dataset.to});if(r.ok){const t=W.roster.find(x=>x.name===b.dataset.tw);if(t)t.warroom=b.dataset.to;toast(b.dataset.to?'เพิ่มทีมเข้า War Room แล้ว':'นำทีมออกแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
-/* ---------- จัดทีมใน War Room: คิวเคสที่ยังไม่มีทีม + ทีมที่แนะนำ (ใกล้สุด/ว่าง) → กดมอบหมาย ---------- */
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 function suggestTeams(c,teams){const live=new Map(W.live.map(l=>[l.team,l])),busy=new Map();W.cases.forEach(x=>{if(x.status==='going'){const v=vol(x);if(v)busy.set(v,(busy.get(v)||0)+1)}});
   const needBoat=/เรือ/.test((c.needs||[]).join(' '))||['chest','roof'].includes(c.level);
@@ -392,7 +354,6 @@ function teamForm(){const r=room();if(!r)return;
     if(!res.ok){toast(res.error==='duplicate_name'?'มีทีมชื่อนี้แล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     await apiPost({action:'team_warroom',team:name,warroom:r.id});toast('เพิ่มทีมแล้ว · ส่ง "ลิงก์ทีม" ให้ทีมได้ที่หน้าจัดทีม',true);await loadTeams();render()})}
 
-/* ---------- แท็บ สต็อก ---------- */
 function stockTab(V){const r=V.r,items=W.items.filter(i=>i.warroom===r.id),ids=new Set(items.map(i=>i.id));
   $('#s-title').textContent=`คลังของ ${r.name} · ${items.length} รายการ`;
   $('#s-body').innerHTML=items.length?items.map(i=>{const low=i.min!==''&&Number(i.qty)<=Number(i.min);
@@ -422,7 +383,6 @@ function itemForm(it){const r=room();if(!r)return;it=it||{};
     const q=f.qty&&Math.round(Number(f.qty.value));if(!it.id&&q>0)await apiPost({action:'stock_move',itemId:res.id,type:'set',amount:q,by:staffName()||'War Room',note:'ยอดตั้งต้น War Room: '+r.name});
     toast('บันทึกแล้ว',true);await loadStock();render()})}
 
-/* ---------- แท็บ โปรไฟล์ ---------- */
 function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);if(W.uAt!==r.id){W.uAt=r.id;usersCard()}
   const crit=V.cases.filter(c=>c.status!=='done'&&sev(c)===3).length,act=V.cases.filter(c=>c.status!=='done').length;
   $('#pf-info').innerHTML=`<div class="wr-tools"><h2 style="margin:0"><i class="rdot" style="background:${esc(r.color)}"></i> ${esc(r.name)}</h2><button type="button" class="btn ghost sm" id="pf-edit">แก้ไขข้อมูล War Room</button></div>
@@ -433,13 +393,12 @@ function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);if(W.uAt!==
   $('#pf-staff').innerHTML=staff.length?`<table class="wr-tbl wr-stf"><thead><tr><th>ชื่อ</th><th>หน้าที่</th><th>เบอร์</th><th>เวร / กะ</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><b>${esc(s.name)}</b>${s.note?`<small>${esc(s.note)}</small>`:''}</td><td>${esc(ROLES[s.role]||s.role)}</td><td>${s.phone?`<a href="tel:${esc(telOf(s.phone))}">${esc(s.phone)}</a>`:'—'}</td><td>${esc(s.shift||'—')}</td><td class="act"><button type="button" class="btn ghost sm" data-pedit="${esc(s.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-pdel="${esc(s.id)}">ลบ</button></td></tr>`).join('')}</tbody></table>`
     :'<p class="muted">ยังไม่มีรายชื่อทีมงาน · กด "+ เพิ่มคน" เพื่อใส่หัวหน้า ผู้สั่งการ ผู้ดูแลคลัง ฯลฯ</p>';
   $('#pf-edit').onclick=()=>roomForm(r);
-  // ลิงก์ประจำห้อง (สร้างอัตโนมัติ · เห็นเฉพาะศูนย์กลาง)
   if(!LOCK()&&r.linkKey){const url=wrUrl(r),msg=`HELP ME CENTRAL · ${r.name}\nลิงก์เข้าระบบ War Room (ส่งเฉพาะทีมงาน): ${url}`;
     $('#pf-info').insertAdjacentHTML('beforeend',`<div class="wr-link"><b><i data-ic="link"></i> ลิงก์สำหรับทีม War Room นี้</b>
     <p class="muted small">ส่งให้ทีมงานของห้องนี้ เปิดแล้วเข้าระบบได้เลย (ไม่ต้องใช้รหัสกลาง) · จัดการเคส จัดทีม สต็อก และโปรไฟล์ของห้องนี้ได้ · ส่งต่อเฉพาะคนในทีม</p>
     <div class="wr-link-row"><input readonly value="${esc(url)}" onclick="this.select()" aria-label="ลิงก์ War Room"><button type="button" class="btn primary sm" data-wlcopy="${esc(url)}">คัดลอก</button><a class="btn ghost sm" href="https://line.me/R/share?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">ส่ง LINE</a><button type="button" class="btn ghost sm" id="wl-renew">สร้างลิงก์ใหม่</button></div></div>`);
     $('#wl-renew').onclick=()=>wrLink(r,true)}}
-const wrUrl=r=>location.origin+'/wr/'+encodeURIComponent(r.id)+'?k='+r.linkKey; // ลิงก์สั้นของ War Room ย่อย (เซิร์ฟเวอร์พาไปหน้าห้อง)
+const wrUrl=r=>location.origin+'/wr/'+encodeURIComponent(r.id)+'?k='+r.linkKey;
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-wlcopy]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.wlcopy);toast('คัดลอกลิงก์ War Room แล้ว',true)}catch(err){}});
 async function wrLink(r,renew){if(!confirm('สร้างลิงก์ใหม่? ลิงก์เดิมจะใช้ไม่ได้ทันที (คนที่เข้าด้วยลิงก์เดิมจะถูกออกจากระบบ)'))return;
   const res=await apiPost({action:'warroom_link',id:r.id,renew:true}).catch(()=>({}));if(!res.ok){toast('สร้างลิงก์ไม่สำเร็จ');return}r.linkKey=res.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งลิงก์ใหม่ให้ทีม',true);render()}
@@ -491,21 +450,17 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
 }
 $('#wr-new').onclick=()=>roomForm(null);
 
-/* ---------- ค้นหาที่อยู่ขณะพิมพ์ → แตะเลือกแล้วกรอกให้อัตโนมัติ ----------
-   ค้นพร้อมกัน 2 แหล่งของ OpenStreetMap (Photon + Nominatim) แล้วรวมผล · ไม่เจอ → ลองตัดคำนำหน้า (โรงเรียน/ร.ร./รร) แล้วค้นใหม่ */
 async function geoSearch(q,c){
   const P=qq=>fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(qq)}&limit=8&lang=default&lat=${c.lat.toFixed(3)}&lon=${c.lng.toFixed(3)}&bbox=97.3,5.6,105.7,20.5`).then(x=>x.json()).then(r=>(r.features||[]).filter(f=>!f.properties.countrycode||f.properties.countrycode==='TH').map(f=>{const p=f.properties||{};
       return {name:p.name||[p.housenumber,p.street].filter(Boolean).join(' ')||p.district||'',sub:[p.street&&p.name?p.street:'',p.district,p.city||p.county,p.state].filter((v,i,a)=>v&&a.indexOf(v)===i).join(', '),lat:f.geometry.coordinates[1],lng:f.geometry.coordinates[0],province:p.state||(/กรุงเทพ/.test(p.city||p.county||'')?'กรุงเทพมหานคร':''),district:p.district||p.county||''}})).catch(()=>[]);
   const N=qq=>fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(qq)}&format=jsonv2&countrycodes=th&limit=8&accept-language=th&addressdetails=1`).then(x=>x.json()).then(r=>(r||[]).map(x=>{const a=x.address||{};
       return {name:x.name||String(x.display_name||'').split(',')[0],sub:String(x.display_name||'').split(',').slice(1,5).join(',').trim(),lat:+x.lat,lng:+x.lon,province:a.state||a.province||(/กรุงเทพ/.test(a.city||'')?'กรุงเทพมหานคร':''),district:a.city_district||a.district||a.county||a.suburb||''}})).catch(()=>[]);
-  // ใช้ข้อความทั้งหมด: ค้นทั้งแบบที่พิมพ์ และแบบเติม "ซอย" (เช่น "รามคำแหง 22" → "ซอยรามคำแหง 22")
   const vs=[q];if(!/^(ซอย|ซ\.|ถนน|ถ\.)/.test(q)&&/\d/.test(q))vs.push('ซอย'+q.replace(/\s+(?=\d)/,' '));
   const all=(await Promise.all([N(q),...vs.map(P)])).flat();
   const norm=t=>String(t||'').toLowerCase().replace(/[\s.,()\-]/g,'').replace(/^ซ(?=\d)/,'ซอย');
   const toks=q.split(/\s+/).map(norm).filter(Boolean),seen=new Set();
   const scored=all.map(x=>{const t=norm(x.name+' '+x.sub),n=toks.filter(k=>t.includes(k)).length,exact=norm(x.name).includes(norm(q));return {...x,s:n*10+(exact?15:0)+(toks.length&&n===toks.length?20:0)}})
     .filter(x=>{const k=x.lat.toFixed(4)+','+x.lng.toFixed(4)+x.name;if(!x.name||seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>b.s-a.s);
-  // มีผลที่ตรงครบทุกคำ → แสดงเฉพาะชุดนั้น · ไม่มี → แสดงที่ใกล้เคียงที่สุด
   const full=scored.filter(x=>toks.length&&toks.every(k=>norm(x.name+' '+x.sub).includes(k)));
   return (full.length?full:scored).slice(0,8)}
 function addrAuto(input,onPick){
@@ -526,14 +481,12 @@ function addrAuto(input,onPick){
   input.addEventListener('keydown',e=>{if(e.key==='Escape')box.hidden=true});
 }
 
-/* ---------- กล่องฟอร์ม ---------- */
 function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
   f.innerHTML=html+`<div class="acts end"><button type="button" class="btn ghost" value="cancel" id="dlg-x">ยกเลิก</button><button type="submit" class="btn primary" id="dlg-ok">บันทึก</button></div>`;
   $('#dlg-x').onclick=()=>d.close();
   f.onsubmit=async e=>{e.preventDefault();if(!f.reportValidity())return;$('#dlg-ok').disabled=true;let keep=false;try{keep=(await onSave(f))===false}catch(err){toast('บันทึกไม่สำเร็จ');keep=true}$('#dlg-ok').disabled=false;if(!keep)d.close()};
   d.showModal();setTimeout(()=>{const i=f.querySelector('input');if(i)i.focus()},30)}
 
-/* ---------- วาดทั้งหมด ---------- */
 function render(){roomsBar();const V=view();chatScope(V);
   if(W.tab==='over'){kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
   else if(!V.r&&W.tab==='struct')structTab();
@@ -541,7 +494,6 @@ function render(){roomsBar();const V=view();chatScope(V);
   else if(V.r&&W.tab==='cases')casesTab(V);else if(V.r&&W.tab==='teams')teamsTab(V);else if(V.r&&W.tab==='stock')stockTab(V);else if(V.r&&W.tab==='prof')profTab(V);
   $("#status").textContent=`${V.r?V.r.name+' · ':''}อัปเดต ${new Date(W.at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · เคส ${V.cases.length} · อัปเดตเองทุก 30 วินาที`;}
 
-/* แชทใน War Room = แชทกับทีมที่ลงพื้นที่ของห้องนี้ (ทีมที่ออกเคส/มีเคสที่รับอยู่ขึ้นก่อน) */
 function chatScope(V){if(typeof CHAT==='undefined'||!CHAT.setScope)return;const r=V.r;
   const info=name=>{const t=W.roster.find(x=>x.name===name),cs=V.cases.filter(c=>c.status==='going'&&vol(c)===name),l=W.live.find(x=>x.team===name),on=l&&mins(l.updatedAt)<10;
     if(!t&&!cs.length)return null;const field=cs.length>0||(t&&t.status==='out');
@@ -550,13 +502,11 @@ function chatScope(V){if(typeof CHAT==='undefined'||!CHAT.setScope)return;const 
   CHAT.setScope({title:r?'แชททีมลงพื้นที่ · '+r.name:'แชททีมลงพื้นที่',teams:r?V.roster.map(t=>t.name):null,info,
     note:r?`ทีมของ ${r.name} · ${V.roster.filter(t=>(info(t.name)||{}).field).length} ทีมกำลังลงพื้นที่`:'ทุกทีม · ทีมที่กำลังลงพื้นที่ขึ้นก่อน'})}
 
-/* ---------- เวลา / เต็มจอ / รีเฟรช ---------- */
 function clock(){$('#clock').textContent=new Date().toLocaleString('th-TH',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
 $('#fs').onclick=()=>{const d=document.documentElement;if(document.fullscreenElement)document.exitFullscreen();else(d.requestFullscreen||d.webkitRequestFullscreen||(()=>{})).call(d)};
 document.addEventListener('fullscreenchange',()=>{document.body.classList.toggle('wr-fs',!!document.fullscreenElement);setTimeout(()=>W.map&&W.map.invalidateSize(),200)});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-fly]');if(!b||!W.map)return;const [a,o]=b.dataset.fly.split(',').map(Number);W.map.flyTo([a,o],16);$('#wmap').scrollIntoView({block:'nearest',behavior:'smooth'})});
 ['mt-done','mt-flood','mt-live'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>drawMap(view()))});
-/* แบบแผนที่ (เหมือนแดชบอร์ด): ถนน / ดาวเทียม / มืด · OpenFreeMap ป้ายไทยเมื่อโหลดได้ */
 const DESRI='https://server.arcgisonline.com/ArcGIS/rest/services/';
 function setBase(name){const m=W.map,t=(u,a,o={})=>L.tileLayer(u,{maxZoom:19,attribution:a,crossOrigin:true,...o});if(W.base)m.removeLayer(W.base);
   if(name==='sat')W.base=L.layerGroup([t(DESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(DESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(DESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
@@ -587,7 +537,7 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
   setInterval(async()=>{if(busy()||(typeof LIVE!=='undefined'&&LIVE.ok()))return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
-  setInterval(()=>{if(!(typeof LIVE!=='undefined'&&LIVE.ok()))pollLive()},2000); // สำรอง: ถามซ้ำเมื่อสายเรียลไทม์หลุด
+  setInterval(()=>{if(!(typeof LIVE!=='undefined'&&LIVE.ok()))pollLive()},2000);
   if(typeof LIVE!=='undefined')LIVE.start(rows=>{W.live=mergeLive(W.live,rows);if(!document.hidden&&W.tab==='over')moveTeams(view())});
   setInterval(async()=>{if(busy()||(typeof LIVE!=='undefined'&&LIVE.ok()))return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
   document.addEventListener('visibilitychange',async()=>{if(document.hidden||busy())return;await Promise.all([loadCases(),loadTeams(),loadRooms()]);render()});
@@ -596,7 +546,6 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
 $('#doc-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('0989406537');toast('คัดลอกเบอร์แล้ว',true)}catch(e){toast('คัดลอกไม่ได้ · 098-940-6537')}});
 $('#st-new').onclick=()=>roomForm(null);
 
-/* ถาม Hermes (Local AI) · หลังยืนยันการกระทำ โหลดข้อมูลใหม่ */
 $('#wr-ai').onclick=()=>{if(typeof HERMES!=='undefined')HERMES.open()};
 window.addEventListener('hermes:done',async()=>{await Promise.all([loadCases(),loadTeams()]);render()});
 

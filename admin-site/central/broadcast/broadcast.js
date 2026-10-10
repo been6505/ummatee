@@ -1,5 +1,3 @@
-/* CENTRAL: เขียน/ยกเลิกประกาศแจ้งเตือนรายพื้นที่ (API: broadcasts_all · broadcast_save · broadcast_cancel)
-   ประกาศขึ้นที่หน้าบ้าน helpme4u.com, หน้าทีม และทุกหน้า CENTRAL ผ่าน /bc.js */
 const B={list:[],scope:'all',flt:'live',map:null,mk:null,circ:null};
 const LVT={info:'ℹ️ ข่าวสาร',warn:'⚠️ เฝ้าระวัง',danger:'🚨 อันตราย · อพยพ'};
 const PROVS='กรุงเทพมหานคร กระบี่ กาญจนบุรี กาฬสินธุ์ กำแพงเพชร ขอนแก่น จันทบุรี ฉะเชิงเทรา ชลบุรี ชัยนาท ชัยภูมิ ชุมพร เชียงราย เชียงใหม่ ตรัง ตราด ตาก นครนายก นครปฐม นครพนม นครราชสีมา นครศรีธรรมราช นครสวรรค์ นนทบุรี นราธิวาส น่าน บึงกาฬ บุรีรัมย์ ปทุมธานี ประจวบคีรีขันธ์ ปราจีนบุรี ปัตตานี พระนครศรีอยุธยา พะเยา พังงา พัทลุง พิจิตร พิษณุโลก เพชรบุรี เพชรบูรณ์ แพร่ ภูเก็ต มหาสารคาม มุกดาหาร แม่ฮ่องสอน ยโสธร ยะลา ร้อยเอ็ด ระนอง ระยอง ราชบุรี ลพบุรี ลำปาง ลำพูน เลย ศรีสะเกษ สกลนคร สงขลา สตูล สมุทรปราการ สมุทรสงคราม สมุทรสาคร สระแก้ว สระบุรี สิงห์บุรี สุโขทัย สุพรรณบุรี สุราษฎร์ธานี สุรินทร์ หนองคาย หนองบัวลำภู อ่างทอง อำนาจเจริญ อุดรธานี อุตรดิตถ์ อุทัยธานี อุบลราชธานี'.split(' ');
@@ -9,7 +7,6 @@ const areaTxt=b=>b.scope==='all'?'ทุกพื้นที่':b.scope==='pro
 const live=b=>!b.cancelledAt&&b.expiresAt>Date.now();
 const fmt=t=>new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 
-/* ---------- ฟอร์ม ---------- */
 $('#scope').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;B.scope=b.dataset.s;
   $$('#scope [data-s]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$$('#sc [data-for]').forEach(d=>d.hidden=d.dataset.for!==B.scope);
   if(B.scope==='circle')initMap();preview()});
@@ -41,7 +38,6 @@ f.onsubmit=async e=>{e.preventDefault();const d=data();if(!d.title){f.title.focu
     else toast(r.error==='missing_area'?'ระบุพื้นที่ให้ครบ':'ส่งไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('ส่งไม่สำเร็จ')}finally{$('#send').disabled=false}};
 
-/* ---------- รายการ ---------- */
 $('#flt').addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(!b)return;B.flt=b.dataset.f;$$('#flt [data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));render()});
 function render(){const list=B.list.filter(b=>B.flt==='all'||live(b));
   $('#list').innerHTML=list.length?list.map(b=>{const st=b.cancelledAt?'ยกเลิกแล้ว':live(b)?'มีผลอยู่':'หมดเวลาแล้ว';
@@ -54,7 +50,6 @@ $('#list').addEventListener('click',async e=>{const b=e.target.closest('[data-ca
 async function load(){const r=await apiGet({action:'broadcasts_all'}).catch(()=>null);if(r&&r.ok){B.list=r.broadcasts||[];render()}}
 $('#refresh').onclick=load;
 adminBoot({action:'broadcasts_all'},'broadcasts',r=>{B.list=r.broadcasts||[];render();preview();setInterval(()=>{if(!document.hidden)load()},30000)});
-/* แท็บ: ประกาศ · ข่าวและเตือนภัย (รวมหน้าข่าวไว้ที่นี่ · ลิงก์เก่า /central/news/ → #news) */
 function pg(k){$$('.bc-tabs [data-pg]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.pg===k)));$('#pg-bc').hidden=k!=='bc';$('#pg-nw').hidden=k!=='nw';
   if(k==='nw'){const st=()=>window.NEWS_START?NEWS_START():setTimeout(st,150);st()}if(k==='bc'&&B.map)setTimeout(()=>B.map.invalidateSize(),50);
   try{history.replaceState(null,'',location.pathname+location.search+(k==='nw'?'#news':''))}catch(e){}}

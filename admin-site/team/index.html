@@ -12,7 +12,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* หน้ามือถือของทีมอาสา · เข้าด้วยลิงก์เฉพาะทีม (?id=) · สีและรูปทรงแบบ Help Me */
 :root{--primary:#2D45C8;--ink:#161B3D;--muted:#5B6386;--line:#E3E6EF;--bg:#F2F3F7;--tint:#E9ECFB;--ok:#2E9E57;--okt:#E3F4EA;--red:#E5383B;--redt:#FDE7E7;--amber:#C77A00;--ambert:#FFF3DC;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","IBM Plex Sans Thai",system-ui,sans-serif;--safe-b:var(--sab);--nav:62px}
 *{box-sizing:border-box}html,body{height:100%;margin:0}
@@ -20,7 +19,6 @@ body{font:16px/1.5 var(--font);background:var(--bg);color:var(--ink);display:fle
 button,input,select,textarea{font:inherit;color:inherit}a{color:var(--primary)}
 [hidden]{display:none!important}
 .ic{width:1.15em;height:1.15em;vertical-align:-.2em}
-/* เข้าระบบ / หน้าจอแจ้ง */
 .card{background:#fff;border-radius:24px;box-shadow:0 8px 28px rgba(22,27,61,.1);padding:24px 20px;margin:auto;width:min(420px,calc(100% - 28px));display:grid;gap:14px}
 .card img{width:200px;margin:0 auto}.card h1{margin:0;font-size:20px;text-align:center}.card p{margin:0;color:var(--muted);font-size:14px;text-align:center}
 .card .big{font-size:52px;text-align:center;line-height:1;color:var(--primary)}
@@ -30,7 +28,6 @@ input,select,textarea{border:1px solid var(--line);border-radius:14px;padding:12
 .linkbtn{border:0;background:none;color:var(--muted);font-size:14px;text-decoration:underline;cursor:pointer}
 .err{color:var(--red);font-size:14px;text-align:center;min-height:1.2em}
 .pw-wrap{position:relative;display:block}.pw-wrap input{padding-right:52px}.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;width:40px;height:40px;cursor:pointer;border-radius:50%}
-/* หัว + แถบตำแหน่ง */
 .top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 1px 0 var(--line);position:sticky;top:0;z-index:5}
 .top .who{flex:1;min-width:0}.top .who b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.top .who small{color:var(--muted);font-size:12px}
 .st{border:0;border-radius:999px;padding:7px 30px 7px 12px;font-weight:700;font-size:14px;width:auto;appearance:none;-webkit-appearance:none;background:var(--okt) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23161B3D' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 9px center/14px no-repeat;color:var(--ok)}
@@ -41,7 +38,6 @@ input,select,textarea{border:1px solid var(--line);border-radius:14px;padding:12
 .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none}.locbar:not(.off) .dot{animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
 .sosbar{background:var(--red);color:#fff;padding:10px 14px;font-weight:700;display:flex;gap:10px;align-items:center}.sosbar span{flex:1}.sosbar button{border:0;border-radius:999px;background:#fff;color:var(--red);font-weight:700;padding:6px 12px;cursor:pointer}
-/* เนื้อหา */
 #app{flex:1;min-height:0;display:flex;flex-direction:column}
 main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(--safe-b) + 84px)}
 .sec{margin:6px 2px 8px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -55,7 +51,6 @@ main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(-
 .empty{color:var(--muted);text-align:center;padding:26px 10px;font-size:14px;background:#fff;border-radius:18px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer}.chip[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:#fff}
 .box{background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;display:grid;gap:10px}
-/* แชท */
 #v-chat{display:flex;flex-direction:column;padding:0}
 #msgs{flex:1;overflow:auto;padding:12px 12px 8px;display:flex;flex-direction:column;gap:6px}
 .m{max-width:84%;padding:9px 13px;border-radius:18px;background:#fff;box-shadow:0 1px 2px rgba(22,27,61,.06);overflow-wrap:anywhere}
@@ -68,7 +63,6 @@ main{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--nav) + var(-
 form.send{display:flex;gap:8px;padding:8px 12px 10px;background:rgba(255,255,255,.95);box-shadow:0 -1px 0 var(--line)}
 form.send input{border-radius:999px;padding:11px 16px}
 .round{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--primary);color:#fff;cursor:pointer;display:grid;place-items:center}.round.soft{background:var(--tint);color:var(--primary)}
-/* โทร */
 .callgrid{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
 .cg{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;border-radius:16px;background:var(--tint);color:var(--primary);padding:12px 4px;font:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer}
 .cg .ic{width:24px;height:24px}.cg[hidden]{display:none}
@@ -105,13 +99,11 @@ button.db-tile{cursor:pointer}
 .bg-trk summary small{font-weight:500;color:var(--muted)}
 .gm-first{border-top:0;padding-top:0}
 .obar{margin:0;padding:10px 16px;background:#FFF4DE;color:#8A5A00;font-size:14px;font-weight:600;text-align:center}
-/* เว้นขอบบน (รอยบาก/แถบสถานะ) ในแอป iPhone และเว็บเต็มจอ */
 .top{padding-top:calc(var(--sat) + 10px)!important}body{padding-bottom:var(--sab)}
 .lk-box{display:flex;gap:8px}.lk-box input{flex:1;min-width:0;min-height:52px;border-radius:999px;border:1px solid var(--line,#e6e8ef);padding:10px 18px;font:inherit;font-size:16px;background:#f7f8fb}
 .lk-go{flex:none;min-height:52px;padding:0 22px;border-radius:999px;border:0;background:var(--primary,#3442C2);color:#fff;font:inherit;font-size:16px;font-weight:700;cursor:pointer}
 .lk-or{display:flex;align-items:center;gap:12px;color:var(--muted);margin:2px 0!important;font-size:13px!important}.lk-or::before,.lk-or::after{content:"";flex:1;height:1px;background:var(--line,#e6e8ef)}
 .lk-code{border-top:1px solid var(--line,#e6e8ef);padding-top:10px}.lk-code summary{cursor:pointer;text-align:center;color:var(--muted);font-weight:600;font-size:14px;list-style:none;padding:6px}.lk-code summary::-webkit-details-marker{display:none}.lk-code summary::after{content:" ▾"}.lk-code[open] summary::after{content:" ▴"}
-/* แอป Android: เว็บวิวบางรุ่นไม่ส่งค่า safe-area มา ใช้ค่าสำรองจาก --sat/--sab (ตั้งด้วยสคริปต์ด้านล่าง) */
 :root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
 .qr-btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:999px;border:0;background:#1F7A43;color:#fff;font:inherit;font-size:17px;font-weight:700;box-shadow:0 8px 20px rgba(31,122,67,.25);cursor:pointer}.qr-btn i,.qr-btn svg{width:24px;height:24px}
 body:has(> .card:not([hidden])){padding:calc(var(--sat) + 14px) 0 calc(var(--sab) + 14px)}
@@ -136,7 +128,6 @@ body:has(> .card:not([hidden])){padding:calc(var(--sat) + 14px) 0 calc(var(--sab
 .gm-later{justify-self:center;border:0;background:none;color:#3c6b50;font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer}
 .trk-gm{display:grid;grid-template-columns:1fr auto;gap:8px}.trk-gm input{min-height:44px;border-radius:12px;border:1px solid var(--line,#e6e8ef);padding:8px 12px;font:inherit;min-width:0}
 .trk-f span{grid-column:1/-1;font-size:12px;color:var(--muted)}.trk-f code{font-size:13.5px;overflow-wrap:anywhere;user-select:all}
-/* แถบล่าง + SOS */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 -1px 0 var(--line);padding-bottom:var(--safe-b)}
 nav.tabs button{border:0;background:none;height:var(--nav);display:grid;place-items:center;align-content:center;gap:2px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;position:relative}
 nav.tabs button .ic{width:24px;height:24px}nav.tabs button[aria-selected="true"]{color:var(--primary)}
@@ -144,7 +135,6 @@ nav.tabs button .ic{width:24px;height:24px}nav.tabs button[aria-selected="true"]
 .sos{position:fixed;right:14px;bottom:calc(var(--nav) + var(--safe-b) + 14px);z-index:7;width:68px;height:68px;border-radius:50%;border:0;background:var(--red);color:#fff;font-weight:800;font-size:17px;letter-spacing:.5px;box-shadow:0 8px 22px rgba(229,56,59,.45);cursor:pointer}
 body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;height:50px;font-size:13px}
 #v-chat{padding-bottom:calc(var(--nav) + var(--safe-b));overflow:hidden}body.chatting #msgs{padding-right:12px}
-/* แผ่นล่าง / สายเข้า */
 .bg{position:fixed;inset:0;background:rgba(22,27,61,.45);z-index:20}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:#fff;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + var(--safe-b));display:grid;gap:12px;max-height:88vh;overflow:auto}
 .sheet h2{margin:0;font-size:19px}
@@ -154,7 +144,6 @@ body.chatting .sos{bottom:calc(var(--nav) + var(--safe-b) + 128px);width:50px;he
 .ring .row{display:flex;gap:40px;justify-content:center}.ring .row button{width:72px;height:72px;border-radius:50%;border:0;color:#fff;cursor:pointer;display:grid;place-items:center}.ring .row .ic{width:30px;height:30px}
 .ring .no{background:var(--red)}.ring .yes{background:var(--ok)}.ring small{display:block;margin-top:6px;font-size:13px}
 .toast{position:fixed;left:50%;top:calc(var(--sat) + 72px);transform:translateX(-50%);z-index:900;box-shadow:0 8px 22px rgba(0,0,0,.2);background:var(--ink);color:#fff;border-radius:999px;padding:9px 16px;font-size:14px;max-width:calc(100% - 28px)}
-/* ---------- หน้าแรกแบบ helpme4u.com: แผนที่เต็มจอ · โลโก้แคปซูล · ปุ่มกลม · แผ่นล่าง · เมนูลอย ---------- */
 :root{--primary:#C8102E;--hm-red:#C8102E;--hm-red2:#A50D25}
 body{font-family:"IBM Plex Sans Thai",var(--font)}
 .top{background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;gap:8px!important;padding:calc(var(--sat) + 10px) 12px 8px!important}
@@ -184,7 +173,6 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 .hs-layers i .ic{width:24px;height:24px}
 .hs-layers button[aria-pressed=false] i{background:#E6E8EE!important;color:#9AA1B9}
 .hs-layers button[aria-pressed=false]{color:var(--muted)}
-/* จุดสถานะส่งตำแหน่งบนหัว (เขียว = ศูนย์เห็น) · แถบยาวแสดงเฉพาะตอนมีปัญหา */
 .locdot{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:#fff;display:grid;place-items:center;box-shadow:0 6px 18px rgba(22,27,61,.14);cursor:pointer;margin-left:auto}
 .locdot i{width:14px;height:14px;border-radius:50%;background:#9AA1B9;box-shadow:0 0 0 5px rgba(154,161,185,.2)}
 .locdot.ok i{background:#2E9E57;box-shadow:0 0 0 5px rgba(46,158,87,.22);animation:ldp 2s ease-in-out infinite}.locdot.wait i{background:#E08A00;box-shadow:0 0 0 5px rgba(224,138,0,.22)}.locdot.off i{background:#E5383B;box-shadow:0 0 0 5px rgba(229,56,59,.22)}
@@ -197,19 +185,15 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 .iss{display:flex;flex-wrap:wrap;gap:8px}.iss button{border:1.5px solid #F2B8BF;background:#FFF5F6;color:#B3121F;border-radius:999px;padding:10px 14px;font:inherit;font-weight:700;font-size:15px}
 #call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
 #call-pane .cp-back{position:absolute;left:12px;top:calc(var(--sat) + 10px);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:700;padding:8px 14px}
-/* หน้าโทร: ปุ่มอยู่กลางจอ (ระหว่างหัวกับเมนูล่าง) */
 main#v-call:not([hidden]){display:block;max-width:560px;margin:0 auto;width:100%;padding:12px 14px calc(var(--nav) + var(--safe-b) + 60px)}
 main#v-call .hint{text-align:center}
-/* เมนูเลือกสถานะทีม: เปิดเป็นรายการใต้ปุ่ม (แทนกล่องเลือกกลางจอของระบบ) */
 .st-pop{position:fixed;z-index:950;background:#fff;border-radius:18px;box-shadow:0 14px 34px rgba(22,27,61,.22);padding:6px;display:grid;gap:4px;min-width:170px}
 .st-pop button{display:flex;align-items:center;gap:10px;border:0;background:none;font:inherit;font-weight:700;font-size:16px;padding:12px 14px;border-radius:12px;text-align:left;cursor:pointer;color:var(--ink)}
 .st-pop button i{width:12px;height:12px;border-radius:50%}
 .st-pop button[aria-checked=true]{background:#F2F4F8}.st-pop button[aria-checked=true]::after{content:"✓";margin-left:auto;color:var(--ok)}
 .st-pop .ready i{background:#2E9E57}.st-pop .out i{background:#E08A00}.st-pop .rest i{background:#9AA1B9}
-/* เมนูล่างลอยแบบ helpme4u */
 nav.tabs{display:grid!important;grid-template-columns:1fr 1fr 76px 1fr 1fr!important;align-items:center;height:auto!important;overflow:visible!important}
 nav.tabs button{min-height:56px;font-size:12.5px!important;padding:4px 2px!important;min-width:0}
-/* SOS อยู่กลางเมนูล่าง (ปุ่มลอยเดิมซ่อน) */
 #sos{display:none!important}
 nav.tabs .nav-sos{border:0;background:none!important;padding:0!important;display:grid;place-items:center;cursor:pointer;min-height:56px}
 nav.tabs .nav-sos span{width:66px;height:66px;margin-top:-26px;border-radius:50%;background:linear-gradient(180deg,#E5383B,#B3121F);color:#fff;font:800 19px/1 inherit;font-family:inherit;letter-spacing:.02em;display:grid;place-items:center;border:4px solid #fff;box-shadow:0 8px 20px rgba(200,16,46,.4)}
@@ -224,7 +208,6 @@ body.on-home .locbar,body.on-home .obar,body.on-home .sosbar{position:fixed;left
 .me-dot{width:18px;height:18px;border-radius:50%;background:#2D6BFF;border:3px solid #fff;box-shadow:0 0 0 6px rgba(45,107,255,.22)}
 .cs-pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3)}
 .cs-pin.u3{background:#E5383B}.cs-pin.u2{background:#F08A00}.cs-pin.u1{background:#2D45C8}.cs-pin.done{background:#2E9E57}
-/* หน้าแชท: ปุ่มสถานะมุมขวาบนกลายเป็นปุ่มโทรหาศูนย์ */
 .top-call{display:none;margin-left:0;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 16px;font:inherit;font-weight:700;font-size:15px;background:#1F7A43;color:#fff;box-shadow:0 6px 18px rgba(31,122,67,.28);cursor:pointer}
 .top-call .ic{width:18px;height:18px}
 body.on-chat .top-call{display:inline-flex}
@@ -250,7 +233,6 @@ body.on-chat .top .st{display:none!important}
 .ac-b{padding:0 14px 14px}.ac-b dl{display:grid;grid-template-columns:84px 1fr;gap:7px 10px;margin:2px 0 14px;font-size:14px;background:#fff;border-radius:14px;padding:12px;box-shadow:inset 0 0 0 1px var(--line)}.ac-b dt{color:var(--muted)}.ac-b dd{margin:0;word-break:break-word}
 .ac-act{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}.ac-act .btn{min-height:46px;font-size:15px;border-radius:999px}
 .ac-more{width:100%}
-/* แชท: เว้นที่ให้แถบเมนูล่างแบบลอย (สูง ~74 + ลอย 10 + ปุ่ม SOS ยื่นขึ้น) ช่องพิมพ์ไม่โดนทับ */
 #v-chat{padding-bottom:calc(var(--sab) + 108px)!important}
 .ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
 .db-edit{flex:none;border:0;background:var(--tint);color:var(--primary);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;margin-left:6px}.db-edit .ic{width:18px;height:18px}
@@ -284,16 +266,13 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 <script src="../central/icons.js?v=21"></script>
 <script src="./native-track.js?v=6"></script>
 <script src="../central/ptt.js?v=3"></script>
-<script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
-(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
+<script>(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
-<script>/* แอป Android (Capacitor แบบเต็มจอ): ถ้าเว็บวิวไม่บอก safe-area ใช้ความสูงแถบสถานะ/แถบนำทางมาตรฐาน */
-(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
+<script>(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
   const probe=()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';document.documentElement.append(d);const h=d.getBoundingClientRect().height;d.remove();return h};
   const set=()=>{if(probe()<1){r.style.setProperty('--sat','36px');r.style.setProperty('--sab','24px')}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',set):set()})();</script>
 </head>
 <body>
-<!-- เข้าแบบเดิม (รหัสกลาง + ชื่อทีม) เมื่อไม่มีลิงก์เฉพาะทีม -->
 <div class="qrs" id="qrs" hidden><video id="qrs-v" playsinline muted autoplay></video><div class="qrs-frame"></div><p class="qrs-tip">ส่องกล้องไปที่ QR โค้ดลิงก์ทีม<br><small style="font-weight:400;opacity:.8">ขอจากศูนย์ (หน้าทีม → ลิงก์ทีม)</small></p><button type="button" class="qrs-x" id="qrs-x">ปิด</button></div>
 <section class="card" id="login" hidden>
   <img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="182" height="29">
@@ -311,9 +290,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
     <p class="err" id="err" role="alert"></p>
   </form></details>
 </section>
-<!-- ลิงก์ใช้ไม่ได้ -->
 <section class="card" id="bad" hidden><div class="big"><i data-ic="link"></i></div><h1>ลิงก์ใช้ไม่ได้</h1><p>ลิงก์ถูกเปลี่ยนหรือทีมถูกปิด · ขอลิงก์ใหม่จากศูนย์</p></section>
-<!-- ขอเปิดตำแหน่ง (ต้องเปิดก่อนเริ่มงาน) -->
 <section class="card" id="gate" hidden>
   <div class="big"><i data-ic="gps"></i></div>
   <h1 id="g-team">เปิดตำแหน่ง</h1>
@@ -430,12 +407,8 @@ S.name=st.get('uh_chat_name');
 const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
 const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'})).json();
 const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})})).json();
-/* ---------- ใช้งานได้แม้ไม่มีเน็ต ----------
-   - เก็บข้อมูลงานล่าสุด (team_me) ไว้ในเครื่อง เปิดหน้าตอนไม่มีเน็ตยังเห็นเคส/เบอร์/ที่อยู่
-   - กล่องขาออก: สิ่งที่กดตอนไม่มีเน็ต (สถานะ · ถึงแล้ว · ช่วยเหลือแล้ว · แชท · ขอของ) เก็บไว้แล้วส่งเองเมื่อมีเน็ต (ลองทุก 15 วิ) */
 const OB={k:'uh_tm_outbox',get(){try{return JSON.parse(localStorage.getItem(this.k)||'[]')}catch(e){return []}},set(a){try{localStorage.setItem(this.k,JSON.stringify(a.slice(-200)))}catch(e){}},busy:false};
 const isNet=e=>!e||e.name==='TypeError'||/fetch|network|load failed/i.test(String(e.message||e));
-/* ส่งคำขอ ถ้าไม่มีเน็ตเก็บเข้ากล่องขาออก คืน {ok:true,queued:true} */
 async function opost(b,label){try{const r=await post(b);return r}catch(e){if(!isNet(e))throw e;const a=OB.get();a.push({b,label:label||b.action,at:Date.now()});OB.set(a);obUI();return {ok:true,queued:true}}}
 async function obFlush(){if(OB.busy)return;let a=OB.get();if(!a.length){obUI();return}OB.busy=true;
   try{while(a.length){const it=a[0],b={...it.b};if(b.action==='chat_send'&&Date.now()-it.at>120000)b.text=(b.text||'')+` (ส่งตอนไม่มีเน็ต ${hhmm(it.at)})`;
@@ -457,24 +430,22 @@ function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 function tone(f=880,ms=180,v=.08){try{const a=S.ac||(S.ac=new (window.AudioContext||window.webkitAudioContext)()),o=a.createOscillator(),g=a.createGain();o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+ms/1000)}catch(e){}}
 function screen(id){['#login','#bad','#gate','#app'].forEach(s=>$(s).hidden=s!==id)}
 
-/* ---------- เข้าใช้งาน ---------- */
 async function boot(){
   if(!S.tk&&!(S.key&&S.team)){screen('#login');$('#team').value=S.team;$('#name').value=S.name;if(S.team)$('.lk-code').open=true;return}
-  if(NATIVE)nativeTrack(); // เริ่มติดตามก่อนติดต่อศูนย์ ไม่มีเน็ตก็เก็บตำแหน่งไว้ในคิว
+  if(NATIVE)nativeTrack();
   try{const r=await api({action:'team_me'});
     if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('.lk-code').open=true;$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
     obOverlay(r);S.me=r;S.offline=false;saveMe(r);S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
     if(!S.name&&r.team.leader)S.name=r.team.leader;
-    if(NATIVE){TR.skip=true;TR.want=false;start();return} // แอป: ใช้ตัวติดตามเบื้องหลังของแอปแทนตำแหน่งในเว็บ
+    if(NATIVE){TR.skip=true;TR.want=false;start();return}
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
-  }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return} // ไม่มีเน็ต: ใช้ข้อมูลล่าสุดที่เก็บไว้
+  }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return}
     if(S.me){S.offline=true;obUI();setTimeout(boot,15000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
 function pttWs(){const o=(()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com');return o+'/ptt/ws?'+new URLSearchParams(auth())}
 function pttInit(){if(typeof PTT==='undefined'||!S.me)return;const b=$('#nav-ptt');
   PTT.init({api,post,ws:pttWs,url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,...auth()}),me:()=>({sender:(S.me&&S.me.team&&S.me.team.name)||S.team||'ทีม',kind:'team'}),native:!!NATIVE,
     onState:s=>{if(!b)return;b.classList.toggle('ptt-off',!s.up);b.classList.toggle('ptt-busy',!!s.live);const l=b.querySelector('.ptt-chl');if(l)l.textContent=s.ch==='all'?'ช่องรวม':s.ch.startsWith('wr:')?'War Room':'ศูนย์'}});
   if(b&&!b._ptt){b._ptt=1;PTT.bind(b)}}
-/* แจ้งเตือนจากเซิร์ฟเวอร์แบบทันที (แชทใหม่ / งานเปลี่ยน) แทนการถามซ้ำ · หลุด = กลับไปถามซ้ำแบบเดิมอัตโนมัติ */
 const TS=(()=>{let es=null,refT=0;
   function open(){if(!window.EventSource||!S.tk&&!S.key)return;if(es&&es.readyState<2)return;es=new EventSource('/api?'+new URLSearchParams({action:'team_stream',...auth()}));
     es.addEventListener('chat',()=>pollChat());
@@ -488,24 +459,18 @@ function start(){screen('#app');setTimeout(pttInit,800);if(TR.want)track(true);g
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
   st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
 $('#code').addEventListener('change',async()=>{try{const r=await(await fetch('/api?'+new URLSearchParams({action:'roster',key:$('#code').value.trim()}))).json();if(r.ok)$('#teams').innerHTML=r.roster.map(t=>`<option value="${esc(t.name)}">`).join('')}catch(e){}});
-/* ติดตามเบื้องหลังด้วยแอป Traccar Client: ใช้รหัสลิงก์ทีมเป็น Device identifier */
-/* ลิงก์แชร์ตำแหน่งสด Google Maps ของทีม */
 function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location.origin+'/live/?v='+vw;$('#live-link').hidden=false;$('#live-link').innerHTML=`ลิงก์ติดตามตำแหน่งสดของทีม (ส่งให้คนอื่นดูได้): <a href="${esc(u)}" target="_blank" rel="noopener">เปิด ↗</a> · <button type="button" class="linkbtn" id="live-copy">คัดลอก</button>`;$('#live-copy').onclick=async()=>{try{await navigator.clipboard.writeText(u);toast('คัดลอกลิงก์ติดตามแล้ว')}catch(e){}}}
   const g=S.me&&S.me.team&&S.me.team.gmaps;if(document.activeElement!==$('#gm-in'))$('#gm-in').value=g||'';
   $('#gm-st').innerHTML=g?`ศูนย์เห็นลิงก์แล้ว · <a href="${esc(g)}" target="_blank" rel="noopener">เปิดดู ↗</a> · เลิกแชร์: ลบลิงก์แล้วกดบันทึก และหยุดแชร์ใน Google Maps`:'ยังไม่ได้แชร์ลิงก์';
   if(g&&!$('#gm-trk').dataset.seen){$('#gm-trk').dataset.seen=1}
   let later=false;try{later=Date.now()-(+localStorage.getItem('uh_gm_later')||0)<6*3600e3}catch(e){}
   $('#gm-hero').hidden=true;autoTrackUI()}
-/* ---------- แอป "Help Me ทีม" (native · Capacitor): ติดตามตำแหน่งเบื้องหลังในแอปเอง ----------
-   ปลั๊กอิน BackgroundGeolocation ส่งตำแหน่งต่อแม้ล็อกจอ → /api/track/<รหัสทีม> (รูปแบบเดียวกับ OwnTracks) · เข้าด้วยรหัสทีม = team_ping */
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 const NT={started:false,at:0,err:'',q:0};setInterval(()=>{if(NATIVE&&NT.err==='offline')locUI()},30000);
-/* ใช้ตัวติดตามกลาง native-track.js (คิวในเครื่อง · ตรวจคำตอบเซิร์ฟเวอร์ · ลองใหม่ทุก 15 วิ · เก็บจุดสุดท้าย) */
-async function nativeTrack(){if(!NATIVE||!window.NTRK)return; // เรียกซ้ำได้: อัปเดตค่าตั้ง (เบอร์ศูนย์/ชื่อทีม) โดยไม่เปิดตัวติดตามซ้ำ
+async function nativeTrack(){if(!NATIVE||!window.NTRK)return;
 const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
   const hq=String(S.me&&S.me.hqPhone||''),cfg=S.tk?{tk:S.tk,host,hq,team:S.team}:(S.key&&S.team?{key:S.key,team:S.team,name:S.name,host,hq}:null);if(!cfg)return;
   await NTRK.start(cfg,st=>{NT.at=st.at||NT.at;NT.err=st.err||'';NT.q=st.queued||0;autoTrackUI();locUI()});NT.started=true}
-/* ---------- สแกน QR ลิงก์ทีม: ใช้ตัวอ่าน QR ของเครื่อง (BarcodeDetector) ถ้ามี ไม่งั้นโหลด jsQR (ไฟล์ในเว็บเรา · ใช้ได้ตอนออฟไลน์) ---------- */
 const QS={on:false,stream:null,bad:''};
 async function qrScan(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('เครื่องนี้เปิดกล้องไม่ได้ · ใช้วางลิงก์แทน');return}
@@ -529,9 +494,6 @@ $('#qr-go').onclick=qrScan;$('#qrs-x').onclick=qrStop;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&QS.on)qrStop()});
 $('#lk-go').onclick=()=>{const m=String($('#lk-in').value).match(/[?&]id=([a-z0-9]{10,})/i)||String($('#lk-in').value).trim().match(/^([a-z0-9]{10,})$/i);
   if(!m){toast('ลิงก์ไม่ถูกต้อง · ใช้ลิงก์ทีมที่ศูนย์ส่งให้');return}S.tk=m[1].toLowerCase();st.set('uh_tm_tk',S.tk);boot()};
-/* ---------- ติดตามอัตโนมัติด้วยแอป OwnTracks (ฟรี · iOS/Android) ----------
-   ปุ่ม "ตั้งค่าอัตโนมัติ" = ลิงก์ owntracks:///config?inline=<base64> ใส่ที่อยู่ศูนย์ + รหัสทีมให้เอง (โหมด HTTP · Move mode ส่งทุก ~10 วิ เมื่อขยับ)
-   เซิร์ฟเวอร์รับที่ /api/track/<รหัสทีม> และบันทึกเวลาที่แอปส่งล่าสุด (live.appAt) */
 const IOS=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),AND=/Android/i.test(navigator.userAgent);
 function otConfig(){const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
   return {_type:'configuration',mode:3,url:host+'/api/track/'+S.tk,deviceId:S.tk.slice(0,12),tid:(S.team||'TM').replace(/[^A-Za-z0-9ก-๙]/g,'').slice(0,2)||'TM',username:'team',auth:false,
@@ -554,7 +516,6 @@ function autoTrackUI(){const h=$('#at-hero');if(!h)return;
 $('#at-later').onclick=()=>{try{localStorage.setItem('uh_at_later',String(Date.now()))}catch(e){}$('#at-hero').hidden=true};
 $('#at-file').onclick=e=>{e.preventDefault();const bl=new Blob([JSON.stringify(otConfig(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='helpme-team.otrc';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)};
 document.addEventListener('click',e=>{if(e.target.id==='nt-set'){e.preventDefault();NTRK.openSettings();return}if(e.target.id==='at-show'){e.preventDefault();try{localStorage.removeItem('uh_at_later')}catch(err){}const h=$('#at-hero');h.hidden=false;h.scrollIntoView({block:'start'})}});
-/* ปุ่ม "วางลิงก์": อ่านคลิปบอร์ด → ดึงลิงก์ Google Maps → บันทึกให้ศูนย์ทันที */
 $('#gm-paste').onclick=async()=>{let t='';try{t=await navigator.clipboard.readText()}catch(e){}
   if(!/https:\/\/\S*(maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|maps\.google)/.test(t)){toast('ยังไม่มีลิงก์ Google Maps ในคลิปบอร์ด · คัดลอกจาก Google Maps ก่อน หรือวางในช่องที่ "ตั้งค่า"');$('#gm-trk').open=true;$('#gm-in').focus();return}
   $('#gm-in').value=t;$('#gm-save').click()};
@@ -564,24 +525,19 @@ $('#gm-save').onclick=async()=>{const raw=$('#gm-in').value.trim(),m=raw.match(/
   $('#gm-save').disabled=true;try{const r=await post({action:'team_gmaps',gmaps:url});if(r.ok){toast(url?'ส่งลิงก์ตำแหน่งสดให้ศูนย์แล้ว':'ลบลิงก์แล้ว');refresh()}else toast(r.error==='not_in_roster'?'ทีมนี้ยังไม่อยู่ในรายชื่อทีมของศูนย์':'บันทึกไม่สำเร็จ')}catch(e){toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}finally{$('#gm-save').disabled=false}};
 $('#loc-now').onclick=()=>{if(TR.pos&&Date.now()-TR.pos.at<15000){ping().then(()=>toast('ส่งตำแหน่งแล้ว'));return}
   navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>{TR.pos={lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,speed:q.coords.speed,heading:q.coords.heading,alt:q.coords.altitude,at:Date.now()};ping().then(()=>toast(TR.fail?'ส่งไม่ได้ จะลองใหม่เมื่อมีเน็ต':'ส่งตำแหน่งแล้ว'))},()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
-/* เน็ตกลับมา / กลับมาเปิดหน้านี้: ส่งตำแหน่งล่าสุดทันที (แบบ Traccar) */
 addEventListener('online',()=>{if(TR.watch!=null&&TR.pos)ping()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>5000)ping()});
 function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
   if(!S.tk){d.querySelector('.trk-steps').hidden=true;$('#trk-last').textContent='ต้องเข้าหน้านี้จากลิงก์ทีม (ขอลิงก์ทีมจากศูนย์) จึงจะตั้งค่าแอปได้';return}
-  $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track'; // โดเมนหลักปัจจุบัน (โดเมนเก่ายังรับได้)
+  $('#trk-url').textContent=(/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin)+'/api/track';
   $('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
-/* คำตอบรวมพลที่ยังค้างในกล่องขาออก: ใช้ค่าที่ตอบไว้แทนค่าจากเซิร์ฟเวอร์ (กันเตือนซ้ำ) */
 function obOverlay(r){const q=OB.get().filter(x=>x.b&&x.b.action==='rally_resp');(r.rallies||[]).forEach(x=>{const m=q.filter(y=>y.b.id===x.id).pop();if(m)x.my=m.b.status})}
 async function refresh(){S.refAt=Date.now();try{const r=await api({action:'team_me'});if(r.ok){obOverlay(r);S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
 
-/* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
 const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
 const dist=(a,b)=>{const R=6371e3,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
-/* ข้อมูลเครื่อง (ส่งมากับตำแหน่ง): แบต · กำลังชาร์จ · สัญญาณมือถือ 0–4 · ชนิดเครือข่าย · ค่าย
-   แอป: ปลั๊กอิน DeviceSense (Android อ่านระดับสัญญาณจริงได้ · iPhone ไม่เปิดให้อ่านสัญญาณ) · เว็บ: Battery API + Network Information (ประมาณสัญญาณจากความเร็วเน็ต) */
 const TELE=window.TELE={batt:null,charging:null,sig:null,net:null,carrier:null};
 try{navigator.getBattery&&navigator.getBattery().then(b=>{const u=()=>{TR.batt=Math.round(b.level*100);if(TELE.batt==null||!TELE._native){TELE.batt=TR.batt;TELE.charging=b.charging}};u();b.onlevelchange=u;b.onchargingchange=u})}catch(e){}
 async function teleTick(){try{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.registerPlugin){const DS=TELE._ds||(TELE._ds=C.registerPlugin('DeviceSense'));const r=await DS.info();TELE._native=true;
@@ -593,14 +549,14 @@ function track(on){
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
   TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,alt:p.coords.altitude,at:Date.now()};
-      const now=Date.now();const slow=!(TR.pos.speed>0.6);if(!TR.sentPos||now-TR.sentAt>(slow?20000:15000)||(dist(TR.sentPos,TR.pos)>(slow?10:3)&&now-TR.sentAt>1000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
+      const now=Date.now();const slow=!(TR.pos.speed>0.6);if(!TR.sentPos||now-TR.sentAt>(slow?20000:15000)||(dist(TR.sentPos,TR.pos)>(slow?10:3)&&now-TR.sentAt>1000))ping();locUI()},
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
     {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
   const cur=(S.me&&S.me.cases||[]).find(c=>c.status==='going');
   try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TELE.batt??TR.batt,charging:TELE.charging,sig:TELE.sig,net:TELE.net||'',carrier:TELE.carrier||'',alt:p.alt!=null?Math.round(p.alt):'',speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});
     TR.fail=r.ok?0:TR.fail+1}catch(e){TR.fail++}locUI()}
-setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>20000)ping();locUI()},10000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
+setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>20000)ping();locUI()},10000);
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
   if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null,smsNow=NT.err==='offline'&&window.NTRK&&NTRK.offlineFor()>120000;btn.hidden=NT.err!=='denied'&&!smsNow;btn.textContent=smsNow?'ส่งทาง SMS':'อนุญาต';
     if(NT.err){b.className=NT.err==='offline'?'locbar wait':'locbar off';t.textContent=NT.err==='denied'?'ยังไม่ได้อนุญาตตำแหน่ง · ศูนย์มองไม่เห็นทีม':NT.err==='bad_link'||NT.err==='bad_key'?'ลิงก์ทีมใช้ไม่ได้ · ศูนย์ไม่ได้รับตำแหน่ง':NT.err==='offline'?`ไม่มีสัญญาณ · เก็บตำแหน่งไว้ ${NT.q} จุด จะส่งเมื่อมีสัญญาณ`:'ส่งตำแหน่งไม่ได้';return}
@@ -616,13 +572,10 @@ $('#g-on').onclick=()=>{if(!navigator.geolocation){$('#g-err').textContent='เ�
   navigator.geolocation.getCurrentPosition(()=>{start()},e=>{$('#g-err').textContent=e.code===1?'ถูกปฏิเสธ · เปิดสิทธิ์ตำแหน่งให้เบราว์เซอร์ในการตั้งค่าเครื่อง แล้วกดอีกครั้ง':'หาตำแหน่งไม่ได้ · ลองอีกครั้ง';$('#g-skip').hidden=false},{enableHighAccuracy:true,timeout:20000});TR.want=true;st.set('uh_tm_loc','1')};
 $('#g-skip').onclick=()=>{TR.skip=true;TR.want=false;start()};
 $('#g-gm').onclick=()=>{TR.skip=true;TR.want=false;try{localStorage.removeItem('uh_at_later')}catch(e){}start();setTimeout(()=>{const h=$('#at-hero');if(h){h.hidden=false;h.scrollIntoView({block:'start'})}},400)};
-/* จอไม่ดับ */
 async function wake(on){try{if(on&&'wakeLock' in navigator){TR.wl=await navigator.wakeLock.request('screen')}else if(TR.wl){await TR.wl.release();TR.wl=null}}catch(e){}}
 $('#wake').checked=st.get('uh_tm_wake')==='1';$('#wake').onchange=e=>{st.set('uh_tm_wake',e.target.checked?'1':'');wake(e.target.checked)};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wake').checked)wake(true);if(S.me){pollChat();refresh();if(TR.pos)ping()}}});
 
-/* ---------- หน้างาน ---------- */
-/* ระดับเคสคำนวณแบบเดียวกับ CENTRAL (ข้อมูลที่ผู้แจ้งกรอก + ฝน/ดาวเทียม/น้ำท่วม/กล้อง) */
 if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
 function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
   {const nr=(r.rallies||[]).find(x=>!x.my);if(nr&&S.rlSeen!==nr.id){S.rlSeen=nr.id;try{buzz([600,200,600,200,600]);tone(880,300,.15);setTimeout(()=>tone(660,300,.15),350)}catch(e){}if(S.view!=='home'&&S.view!=='call')go('call');toast('📣 ศูนย์เรียกรวมพล: '+nr.label)}}if(S.view==='home'||!S.view)HOME.draw();
@@ -671,8 +624,6 @@ function doneSheet(id){sheet(`<h2>ผลหน้างาน · เคส #${es
 $('#sup-send').onclick=async()=>{const items=[...S.sup],note=$('#sup-note').value.trim();if(!items.length&&!note){toast('เลือกของก่อน');return}
   await send('ขอของ: '+[items.join(', '),note].filter(Boolean).join(' · '));S.sup.clear();$('#sup-note').value='';render();toast(OB.get().length?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'ส่งคำขอแล้ว')};
 
-/* ---------- แท็บ ---------- */
-/* ---------- หน้าแรก: แผนที่เต็มจอ + เคสของทีม + ตำแหน่งฉัน + ชั้นข้อมูล (ถนนน้ำท่วม · เรดาร์ฝน · กล้อง CCTV) ---------- */
 const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:false,radar:false,cctv:false},fit:false};
   const LAY=[['cases','เคสของทีม','pin','#7C4DFF'],['roads','ถนนน้ำท่วม','drop','#E0533A'],['radar','เรดาร์ฝน','rain','#3B82F6'],['cctv','กล้อง CCTV','cam','#111827']];
   const leaf=()=>window.L?Promise.resolve():new Promise((res,rej)=>{const c=document.createElement('link');c.rel='stylesheet';c.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.append(c);const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=res;s.onerror=rej;document.head.append(s)});
@@ -708,7 +659,7 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
       <div class="hs-row">${p.length>=9?`<a class="hs-pill" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:`<button class="hs-pill" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`}
         ${rep?'<button class="hs-pill gray" type="button" disabled>รอศูนย์ปิดเคส</button>':`<button class="hs-pill gray" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}</div>`}
     else top=`<button class="hs-big idle" type="button" data-go="work"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>`;
-    el.innerHTML=top; // แผ่นล่างแสดงเฉพาะเคส (ชั้นข้อมูลแผนที่เอาออกตามที่ทีมใช้จริง)
+    el.innerHTML=top;
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});
     document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
   const kmTo=(a,b)=>{const R=6371,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
@@ -719,12 +670,10 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   });
   document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}
     const g=e.target.closest('#hsheet [data-go]');if(g)go(g.dataset.go)});
-  // ในแอป: ตำแหน่งมาจากตัวติดตามของแอป (NTRK) · อัปเดตจุดของฉันทุก 10 วิ
   setInterval(()=>{if(S.view!=='home'||!H.map)return;if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f){H.np={lat:f.lat,lng:f.lng};draw()}}).catch(()=>{});else if(TR.pos)draw()},10000);
   return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f)H.np={lat:f.lat,lng:f.lng};draw()}).catch(()=>draw());else draw()})},draw}})();
 $('#bell')&&($('#bell').onclick=()=>go('chat'));
 $('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
-// สถานะทีม: แตะปุ่ม → รายการใต้ปุ่ม (ไม่ใช้กล่องเลือกกลางจอ)
 {const sel=$('#status');if(sel){const close=()=>{const p=document.querySelector('.st-pop');if(p)p.remove()};
   const open=e=>{e.preventDefault();if(document.querySelector('.st-pop')){close();return}const r=sel.getBoundingClientRect(),p=document.createElement('div');p.className='st-pop';p.setAttribute('role','menu');
     p.innerHTML=[...sel.options].map(o=>`<button type="button" role="menuitemradio" class="${o.value}" data-st="${o.value}" aria-checked="${o.value===sel.value}"><i></i>${o.textContent}</button>`).join('');
@@ -732,7 +681,6 @@ $('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
     p.onclick=ev=>{const b=ev.target.closest('[data-st]');if(!b)return;close();if(b.dataset.st!==sel.value){sel.value=b.dataset.st;sel.dispatchEvent(new Event('change'))}}};
   sel.addEventListener('mousedown',open);sel.addEventListener('touchstart',open,{passive:false});sel.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')open(e)});
   document.addEventListener('click',e=>{if(!e.target.closest('.st-pop')&&e.target!==sel)close()})}}
-// ซิงก์จุดบนหัวกับแถบสถานะตำแหน่ง: ปกติ = จุดเขียว (ซ่อนแถบ) · มีปัญหา = จุดส้ม/แดง + แสดงแถบพร้อมปุ่มแก้
 {const lb=$('#locbar'),ld=$('#locdot');if(lb&&ld){let busy=false;let reveal=0;const sync=()=>{if(busy)return;busy=true;const off=lb.classList.contains('off'),wait=lb.classList.contains('wait'),ok=!off&&!wait;
   ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
@@ -740,7 +688,6 @@ $('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();if(v==='call')DASH();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
-/* ---------- แชท ---------- */
 function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
@@ -749,7 +696,7 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
     const voice=m.kind==='voice'&&m.link?`<button type="button" class="vmsg" data-vsrc="${esc(m.link)}"><span class="vplay">▶</span><span class="vbar"><i></i></span><span class="vlen">${esc((String(m.text).match(/(\d+) วิ/)||[])[1]||'')} วิ</span></button>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}${voice?' vm':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text&&!voice?`<p>${esc(m.text)}</p>`:voice?`<p class="vlab">${esc(String(m.text).replace(/ · \d+ วิ$/,''))}</p>${voice}`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
-async function pollChat(first){S.chatAt=Date.now();try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที
+async function pollChat(first){S.chatAt=Date.now();try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh();
 
     const fresh=msgs.filter(m=>m.sender==='hq'&&m.n>S.lastN);
     if(!first&&fresh.length){buzz([150,80,150]);tone()}
@@ -765,8 +712,6 @@ $('#send').addEventListener('submit',e=>{e.preventDefault();const i=$('#in'),t=i
 $('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',{lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)});return}
   navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>send('',{lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6)}),()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
 
-/* ---------- โทร: เบอร์ศูนย์ · โทรผ่านเน็ต (ห้องเสียง/วิดีโอ ศูนย์เห็นสายเข้า) ---------- */
-/* โทรในหน้าเดิม: เปิดหน้าจอโทรเป็นกรอบเต็มจอ (ไม่ออกจากแอป/ไม่เปิดแท็บใหม่) · จบสาย = ปิดกรอบกลับมาหน้าเดิมเอง */
 function callPane(link){const old=document.getElementById('call-pane');if(old)old.remove();
   const d=document.createElement('div');d.id='call-pane';d.innerHTML=`<iframe src="${esc(new URL(link,location.href).href)}" allow="microphone; camera; autoplay" title="หน้าจอโทร"></iframe><button type="button" class="cp-back" aria-label="กลับ">‹ กลับ</button>`;
   document.body.append(d);d.querySelector('.cp-back').onclick=()=>{d.remove();pollChat()}}
@@ -783,15 +728,13 @@ function ring(m){if(S.ringing===m.n)return;S.ringing=m.n;const lay=$('#layer'),v
   S.rt=setInterval(()=>{buzz([400,200,400]);tone(660,300,.12);setTimeout(()=>tone(880,300,.12),350);if(Date.now()-m.at>90000){stop();send('ไม่ได้รับสาย · โทรกลับได้')}},1800);
   $('#r-yes').onclick=()=>stop();$('#r-no').onclick=()=>{stop();send('ไม่สะดวกรับสายตอนนี้')}}
 
-/* ---------- เน็ตใช้ไม่ได้: ส่งพิกัด GPS ทาง SMS ถึงเบอร์ศูนย์ ----------
-   GPS ทำงานได้โดยไม่ต้องใช้เน็ต · SMS ใช้แค่สัญญาณโทรศัพท์ · ต้องให้ผู้ใช้กดส่งเอง (เบราว์เซอร์ไม่ให้ส่ง SMS อัตโนมัติ) */
 function gpsNow(cb){if(NATIVE&&window.NTRK){NTRK.lastFix().then(f=>{if(f){const p={lat:f.lat,lng:f.lng,acc:f.acc,at:f.t};cb(p,Date.now()-f.t>120000)}else cb(TR.pos,!!TR.pos)});return}
   const fresh=TR.pos&&Date.now()-TR.pos.at<60000;if(fresh){cb(TR.pos,false);return}
   if(!navigator.geolocation){cb(TR.pos,!!TR.pos);return}
   navigator.geolocation.getCurrentPosition(q=>cb({lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy,at:Date.now()},false),()=>cb(TR.pos,!!TR.pos),{enableHighAccuracy:true,timeout:20000,maximumAge:30000})}
 function smsBody(kind,why,p){const t=new Date(),hm=t.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const where=p?`พิกัด ${p.lat.toFixed(5)},${p.lng.toFixed(5)}${p.acc?` (±${Math.round(p.acc)} ม.)`:''} https://maps.google.com/?q=${p.lat.toFixed(5)},${p.lng.toFixed(5)}`:'หาพิกัดไม่ได้';
-  const code=p&&S.tk?` #HM:${S.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor((p.at||Date.now())/1000)}${kind==='SOS'?':SOS':''}`:''; // ระบบศูนย์อ่านรหัสนี้แล้วปักตำแหน่งให้อัตโนมัติ
+  const code=p&&S.tk?` #HM:${S.tk}:${p.lat.toFixed(5)},${p.lng.toFixed(5)}:${Math.floor((p.at||Date.now())/1000)}${kind==='SOS'?':SOS':''}`:'';
   return `Helpme+ ${kind} ทีม ${S.team||''}${why?' · '+why:''} · ${where} · เวลา ${hm}${TR.batt!=null?` · แบต ${TR.batt}%`:''}${p&&p.at&&Date.now()-p.at>120000?` (ตำแหน่งเมื่อ ${new Date(p.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})})`:''}${code}`}
 function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
   sheet(`<h2>${kind==='SOS'?'<span style="color:var(--red)">SOS</span> ทาง SMS':'ส่งพิกัดทาง SMS'}</h2><p class="hint">${esc(reason||'ไม่ต้องใช้เน็ต · ใช้แค่สัญญาณโทรศัพท์')}</p><p class="hint" id="sms-st">กำลังหาตำแหน่ง GPS…</p>`);
@@ -805,7 +748,6 @@ function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
       <button class="btn" type="button" id="sms-again">หาตำแหน่งใหม่</button><button class="btn" type="button" data-x>ปิด</button>`;
     $('#sms-again').onclick=()=>{TR.pos=null;smsSheet(kind,why,reason)}})}
 
-/* ---------- แดชบอร์ดทีม (แท็บล่างขวา): สถานะทีม · งานตอนนี้ · ยอดช่วยเหลือ · กราฟ 7 วัน · ตำแหน่ง · ของที่นำไป · รวมพล · ติดต่อศูนย์ ---------- */
 function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helped:0,people:0,week:[]};
   const going=r.cases.filter(c=>c.status==='going'),waitClose=going.filter(c=>c.teamDoneAt),act=going.filter(c=>!c.teamDoneAt);
   const day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()},today=day(Date.now());
@@ -832,7 +774,6 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
     </section>
     ${Object.keys(sup).length?`<section class="db-card"><h3>ของที่ศูนย์ส่งมากับงาน</h3><div class="db-chips">${Object.entries(sup).map(([k,v])=>`<span>${esc(k)} × ${v}</span>`).join('')}</div></section>`:''}`}
 
-/* แดชบอร์ด: สลับ ภาพรวม / รวมเคส (เคสที่ยังรอช่วยทั้งหมด · เรียงใกล้ฉันได้ · ขอรับเคสจากศูนย์ผ่านแชท) */
 const AC={list:null,at:0,open:'',sort:'near',lim:30,busy:false};
 async function loadAll(force){if(AC.busy||(!force&&AC.list&&Date.now()-AC.at<60000))return;AC.busy=true;try{const r=await api({action:'team_cases'});if(r&&r.ok){AC.list=r.cases;AC.at=Date.now();if(S.view==='call'&&S.dtab==='cases')DASH()}}catch(e){}finally{AC.busy=false}}
 function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const tab=S.dtab||'over';
@@ -867,7 +808,6 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
   if(t.dataset.areq){const c=(AC.list||[]).find(x=>String(x.id)===t.dataset.areq);if(!c)return;if(!confirm('ส่งข้อความขอรับเคสนี้ให้ศูนย์?'))return;
     send(`🙋 ขอรับเคส #${c.id} · ${(c.needs||[]).join(', ')||'เคส'} · ${c.people||1} คน · ${c.district||''}`,{caseId:c.id});toast('ส่งคำขอถึงศูนย์แล้ว · รอศูนย์มอบหมาย');t.disabled=true}});
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#dash [data-dgo]');if(b)go(b.dataset.dgo)});
-/* ทีมแก้โปรไฟล์เอง: หัวหน้า · เบอร์ · จำนวนคน · ยานพาหนะ · พื้นที่ (ชื่อทีมแก้ที่ศูนย์) */
 const PF_VEH=[['car','รถเก๋ง / รถตู้'],['pickup','รถกระบะ'],['truck','รถสูง / รถบรรทุก'],['boat','เรือ'],['motorbike','มอเตอร์ไซค์'],['foot','เดินเท้า'],['other','อื่น ๆ']];
 function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
   sheet(`<h2>แก้โปรไฟล์ทีม</h2><p class="hint">ชื่อทีม "${esc(t.name)}" แก้ได้ที่ศูนย์ (ผูกกับเคสและแชท)</p>
@@ -884,7 +824,6 @@ function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
     try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}
     catch(err){b.disabled=false;b.textContent='บันทึก';toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}}}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit]'))profileSheet()});
-/* แชท: เล่นเสียงวอที่เก็บไว้ (แตะ ▶) */
 const VM={a:null,btn:null};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#msgs [data-vsrc]');if(!b)return;
   if(VM.btn===b&&VM.a&&!VM.a.paused){VM.a.pause();return}
@@ -892,12 +831,10 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   a.ontimeupdate=()=>{const i=b.querySelector('.vbar i');if(i&&a.duration)i.style.width=(a.currentTime/a.duration*100)+'%'};a.onended=a.onpause=()=>{b.classList.remove('on')};a.play().catch(()=>{b.classList.remove('on');toast('เล่นเสียงไม่ได้')})});
 $('#c-sms').onclick=()=>smsSheet();
 
-/* ---------- SOS ---------- */
 const SOSWHY=['บาดเจ็บ','เรือ/รถเสีย','ติดน้ำ ออกไม่ได้','ถูกคุกคาม','หลงทาง'];
 $('#sos').onclick=()=>{sheet(`<h2 style="color:var(--red)">ส่ง SOS ถึงศูนย์</h2><p class="hint">ส่งตำแหน่งปัจจุบัน + แจ้งเตือนทุกหน้าจอของศูนย์</p><div class="chips" id="sos-why">${SOSWHY.map(w=>`<button type="button" class="chip" aria-pressed="false">${w}</button>`).join('')}</div>
   <button class="btn red sos-hold" id="sos-go" type="button" style="min-height:60px;font-size:18px"><span class="sh-fill"></span><span class="sh-t">กดค้าง 1 วิ เพื่อส่ง SOS</span></button><button class="btn" type="button" data-x>ยกเลิก</button>`);
   $('#sos-why').onclick=e=>{const c=e.target.closest('.chip');if(c)c.setAttribute('aria-pressed',String(c.getAttribute('aria-pressed')!=='true'))};
-  // กดค้าง 1 วินาทีถึงส่ง (กันเผลอกดในกระเป๋า/ตอนวุ่นวาย)
   {const g=$('#sos-go');let tm=null;const down=e=>{e.preventDefault();if(g.disabled)return;g.classList.add('holding');buzz&&buzz([30]);tm=setTimeout(()=>{g.classList.remove('holding');g.onhold()},1000)},up=()=>{clearTimeout(tm);g.classList.remove('holding')};
     g.addEventListener('pointerdown',down);['pointerup','pointerleave','pointercancel'].forEach(k=>g.addEventListener(k,up));g.addEventListener('contextmenu',e=>e.preventDefault())}
   $('#sos-go').onhold=async()=>{$('#sos-go').disabled=true;$('#sos-go .sh-t').textContent='กำลังส่ง SOS…';const why=$$('#sos-why [aria-pressed="true"]').map(c=>c.textContent).join(', ');
@@ -908,16 +845,14 @@ $('#sos').onclick=()=>{sheet(`<h2 style="color:var(--red)">ส่ง SOS ถึ�
     else if(navigator.geolocation)navigator.geolocation.getCurrentPosition(q=>fire({lat:q.coords.latitude,lng:q.coords.longitude,acc:q.coords.accuracy}),()=>fire(null),{enableHighAccuracy:true,timeout:8000});else fire(null)}};
 $('#sos-cancel').onclick=async()=>{const r=await post({action:'team_sos',cancel:true}).catch(()=>({}));toast(r.ok?'แจ้งศูนย์ว่าปลอดภัยแล้ว':'ส่งไม่ได้ ลองใหม่');refresh();pollChat()};
 
-/* ---------- แผ่นล่าง ---------- */
 function sheet(html){$('#layer').innerHTML=`<div class="bg" data-x></div><div class="sheet" role="dialog" aria-modal="true">${html}</div>`;$('#layer').onclick=e=>{if(e.target.closest('[data-x]'))closeSheet()}}
 function closeSheet(){$('#layer').innerHTML='';$('#layer').onclick=null}
-/* เพิ่มไปหน้าจอหลัก (Android) */
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();S.inst=e;$('#install').hidden=false});
 $('#install').onclick=()=>{if(S.inst){S.inst.prompt();S.inst=null;$('#install').hidden=true}};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pw-toggle]');if(!b)return;const i=b.parentElement.querySelector('input');i.type=i.type==='password'?'text':'password'});
 if($('#wake').checked)wake(true);
 boot();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}); // เก็บหน้าทีมไว้ในเครื่อง เปิดได้แม้ไม่มีเน็ต
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
 </script>
 <script src="../bc.js?v=2" data-mode="team" defer></script>
 </body>

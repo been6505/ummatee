@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<script>/* ธีม: ค่าเริ่มต้นสว่าง · ปุ่มมุมขวาบน (theme-toggle.js) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark';else document.documentElement.dataset.theme='light'}catch(e){}</script>
+<script>try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark';else document.documentElement.dataset.theme='light'}catch(e){}</script>
 <meta name="theme-color" content="#F2F3F7">
 <title>War Room · Helpme+ CENTRAL</title>
 <link rel="icon" href="../../assets/hm-icon-192.png">
@@ -149,7 +149,7 @@
 <script src="../localai.js?v=4"></script>
 <script src="../hermes.js?v=16"></script>
 <script src="../kbfit.js?v=2"></script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
+<script>document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
 </body>
 </html>

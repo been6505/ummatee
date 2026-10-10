@@ -1,8 +1,4 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-/* UM+ บน Cloudflare Workers — API แทน Google Apps Script + ฐานข้อมูล D1
-   ใช้ร่วมกัน: Worker ummatee-help (หน้าประชาชน + cron สำรอง) และ Pages admin-um-help (หลังบ้าน, ไฟล์นี้เป็น _worker.js) ผูก D1 ตัวเดียวกันชื่อ DB
-   Secret: VOLUNTEER_KEY (รหัสทีม), SHEET_BACKUP_URL + SHEET_BACKUP_KEY (สำรองลง Google Sheet ทุก 1 นาที)
-   รูปแบบคำขอเหมือน Code.gs เดิมทุกอย่าง: GET /api?action=... และ POST /api (JSON) */
 
 const STATUSES = ['open', 'going', 'done'];
 const LEVELS = ['ankle', 'knee', 'waist', 'chest', 'roof'];
@@ -31,33 +27,26 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS roster (id TEXT PRIMARY KEY, name TEXT, leader TEXT, phone TEXT, members INTEGER, vehicle TEXT, zone TEXT, status TEXT, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS stock (id TEXT PRIMARY KEY, name TEXT, unit TEXT, category TEXT, qty INTEGER, min INTEGER, needed INTEGER, note TEXT, updatedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS stock_log (n INTEGER PRIMARY KEY AUTOINCREMENT, time INTEGER, itemId TEXT, item TEXT, type TEXT, delta INTEGER, after INTEGER, note TEXT, caseId TEXT, by_ TEXT)`,
-  // คิวสำรองข้อมูล: ทุกแถวที่เพิ่ม/แก้จะถูกจดไว้ แล้ว cron ส่งไป Google Sheet ส่งไม่ผ่านก็ค้างคิวไว้ส่งรอบหน้า
   `CREATE TABLE IF NOT EXISTS zones (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, note TEXT, active INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS covered_extra (n INTEGER PRIMARY KEY AUTOINCREMENT, org TEXT, date TEXT, items TEXT, qty TEXT, place TEXT, location TEXT, by_ TEXT, createdAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS sync_queue (n INTEGER PRIMARY KEY AUTOINCREMENT, tbl TEXT, rid TEXT)`,
-  // เคสที่เจอจากโซเชียล/Traffy (Hermes agent หรือปุ่มดึง) รอแอดมินคัด: รับเป็นเคสจริง หรือตัดทิ้ง · ไม่สำรองลงชีตจนกว่าจะรับเป็นเคส
   `CREATE TABLE IF NOT EXISTS leads (id TEXT PRIMARY KEY, url TEXT UNIQUE, source TEXT, postedAt INTEGER, foundAt INTEGER, title TEXT, text TEXT,
     district TEXT, address TEXT, lat REAL, lng REAL, needs TEXT, urgency INTEGER, people TEXT, names TEXT, phone TEXT, flags TEXT,
     status TEXT, reason TEXT, caseId TEXT, by_ TEXT, updatedAt INTEGER)`,
   `CREATE INDEX IF NOT EXISTS leads_status ON leads(status, postedAt)`,
-  // แชทระหว่างศูนย์ (hq) กับทีม · อ่านแล้ว/ยังไม่อ่าน แยกฝั่ง
   `CREATE TABLE IF NOT EXISTS chat (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, sender TEXT, name TEXT, text TEXT, caseId TEXT, lat REAL, lng REAL, at INTEGER, readHq INTEGER DEFAULT 0, readTeam INTEGER DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`,
-  // เส้นทางของทีม (จุดที่ทีมผ่าน) ใช้ดูย้อนหลังในหน้าติดตามทีม · เก็บ 7 วัน
   `CREATE TABLE IF NOT EXISTS team_track (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, lat REAL, lng REAL, accuracy INTEGER, battery INTEGER, speed REAL, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS team_track_team ON team_track(team, n)`,
-  // โทรในระบบ (WebRTC): ห้องสาย 1 ต่อ 1 + ข้อความนัดเชื่อมต่อ (offer/answer/ice) · เก็บ 1 วัน
   `CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, secret TEXT, mode TEXT, team TEXT, caller TEXT, name TEXT, createdAt INTEGER, endedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
-  // War Room ย่อย: ศูนย์สั่งการแต่ละพื้นที่ (ขอบเขต = วงกลม และ/หรือรายชื่อเขต) + ทีมงานประจำห้อง
   `CREATE TABLE IF NOT EXISTS applications (id TEXT PRIMARY KEY, kind TEXT, status TEXT, name TEXT, phone TEXT, province TEXT, wrPref TEXT, username TEXT, salt TEXT, hash TEXT, data TEXT, result TEXT, fails INTEGER DEFAULT 0, lockUntil INTEGER, ip TEXT, createdAt INTEGER, decidedAt INTEGER, decidedBy TEXT, note TEXT)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS applications_u ON applications(kind, username)`,
   `CREATE TABLE IF NOT EXISTS wr_users (id TEXT PRIMARY KEY, warroom TEXT, username TEXT, name TEXT, role TEXT, salt TEXT, hash TEXT, active INTEGER, fails INTEGER DEFAULT 0, lockUntil INTEGER, lastLogin INTEGER, createdAt INTEGER, by_ TEXT)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS wr_users_u ON wr_users(warroom, username)`,
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
-  // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
   `CREATE TABLE IF NOT EXISTS team_route (team TEXT PRIMARY KEY, caseId TEXT, data TEXT, at INTEGER, by_ TEXT)`,
@@ -73,12 +62,11 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS cases_status_vol ON cases(status, volunteer)`,
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
-  // รายงานภัยที่ศูนย์ปักหมุดเอง (หลุมยุบ ดินถล่ม น้ำป่า ฯลฯ ที่ไม่มีแหล่งข้อมูลอัตโนมัติ)
   `CREATE TABLE IF NOT EXISTS hazard_reports (id TEXT PRIMARY KEY, type TEXT, lat REAL, lng REAL, radiusM INTEGER, note TEXT, level TEXT, createdAt INTEGER, expiresAt INTEGER, closedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
-const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] }; // ไม่ส่งรหัสติดตามเคสและข้อมูลกันสแปมไปที่ชีต
+const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] };
 for (const [t, k] of Object.entries(BACKUP_TABLES)) {
   SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_ins AFTER INSERT ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
   if (t !== 'stock_log') SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_upd AFTER UPDATE ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
@@ -90,19 +78,17 @@ async function init(db) {
     for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
     try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {}
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
-    // ระบบสนับสนุนทีม: ลิงก์เฉพาะทีม (token) · SOS · แบตเตอรี่/ความเร็ว · สายโทรในแอป
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
       ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
-    await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
+    await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run();
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
       const now = Date.now();
       await db.batch(STOCK_SEED.map((x, i) => db.prepare('INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt) VALUES (?,?,?,?,0,NULL,?,?,?)')
         .bind('S' + String(i + 1).padStart(2, '0'), x[0], x[1], x[2], x[0] === 'รองเท้าบูท' ? 1 : 0, '', now)));
     }
-    // ครั้งแรกที่เปิดระบบสำรอง: ใส่ทุกแถวที่มีอยู่แล้วเข้าคิว จะได้สำรองครบ
     if (!await getMeta(db, 'backup_seeded')) {
       await db.batch(Object.entries(BACKUP_TABLES).map(([t, k]) => db.prepare(`INSERT INTO sync_queue (tbl,rid) SELECT '${t}', ${k} FROM ${t}`)));
       await setMeta(db, 'backup_seeded', String(Date.now()));
@@ -111,7 +97,6 @@ async function init(db) {
   return ready;
 }
 
-/* ---------- helpers ---------- */
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
 const clampInt = (v, lo, hi, d) => { const n = parseInt(v, 10); return isNaN(n) ? d : Math.max(lo, Math.min(hi, n)); };
 const num = (v, lo, hi) => { const n = Number(v); return (v === '' || v == null || isNaN(n) || n < lo || n > hi) ? null : Math.round(n * 1e6) / 1e6; };
@@ -141,8 +126,6 @@ function caseId() {
 async function getMeta(db, k) { const r = await db.prepare('SELECT v FROM meta WHERE k=?').bind(k).first(); return r ? r.v : ''; }
 async function setMeta(db, k, v) { await db.prepare('INSERT INTO meta (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v').bind(k, String(v)).run(); }
 
-/* บอร์ดเคส (หน้าจัดการเคส): ลำดับการ์ดที่ศูนย์ลากจัดเอง · เก็บเป็น { id: ลำดับ } ใน meta ใช้ร่วมกันทุกเครื่อง
-   ส่ง ids = ลำดับใหม่ของการ์ดในคอลัมน์ที่ลาก → ตั้งลำดับเฉพาะเคสเหล่านั้น (ไม่ทับคอลัมน์อื่น) */
 async function kbOrderGet(db) { let m = {}; try { m = JSON.parse(await getMeta(db, 'kb_order') || '{}'); } catch (e) {} return { ok: true, order: m }; }
 async function kbOrderSave(db, b) {
   const ids = (Array.isArray(b.ids) ? b.ids : []).map(x => clean(x, 40)).filter(Boolean).slice(0, 400);
@@ -159,8 +142,6 @@ async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new Text
 
 const aiText = out => { if (!out) return ''; if (typeof out.response === 'string') return out.response; if (out.response && typeof out.response === 'object') return JSON.stringify(out.response); const m = out.choices && out.choices[0] && out.choices[0].message; return m && typeof m.content === 'string' ? m.content : ''; };
 const noPin = r => r.lat == null || r.lat === '' || !Number(r.lat);
-/* ข้อมูลส่งมอบ (เจ้าหน้าที่กรอก/ยืนยันกับผู้แจ้ง) เก็บแยกเป็น JSON · ซิงก์จาก Help Me ไม่ทับ
-   ชื่อ · เบอร์ · จุดที่รถเข้าถึงใกล้สุด · จุดส่งมอบ · ระดับน้ำ · ความเสี่ยง · เวลาดึกสุดที่รับได้ · ของที่ต้องการ+จำนวน (ระดับความเดือดร้อน = sevSet) */
 const INTAKE_KEYS = { name: 80, phone: 30, car: 300, handoff: 300, water: 60, risks: 400, latest: 20, items: 600 };
 function parseIntake(v) { if (!v) return null; try { const o = JSON.parse(v); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
 function cleanIntake(x) { const o = {}; if (!x || typeof x !== 'object') return o; for (const [k, m] of Object.entries(INTAKE_KEYS)) { const v = String(x[k] == null ? '' : x[k]).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, m); if (v) o[k] = v; } return o; }
@@ -175,7 +156,6 @@ function outCase(r, full) {
   return o;
 }
 
-/* ---------- actions ---------- */
 async function createCase(db, b, ip) {
   if (b.website) return { ok: true, id: 'ignored' };
   const c = {
@@ -199,9 +179,6 @@ async function createCase(db, b, ip) {
   await bumpRev(db);
   return { ok: true, id, urgency: u, token };
 }
-/* ---------- หาหมุดจากที่อยู่ ให้เคสที่ไม่มีพิกัด ----------
-   cron ทุกนาที ทำครั้งละ 4 เคส · Photon → Nominatim · จำกัดในประเทศไทย · ขยายคำย่อ ต./อ./จ.
-   เก็บใน glat/glng/glabel (ไม่ทับ lat/lng ที่ซิงจากชีต Help Me) · ค้นไม่เจอ = รอ 6 ชม. แล้วลองใหม่ */
 const TH_BOX = [97.3, 5.6, 105.7, 20.5];
 const inTH = (lat, lng) => lng >= TH_BOX[0] && lng <= TH_BOX[2] && lat >= TH_BOX[1] && lat <= TH_BOX[3];
 function geoQueries(c) {
@@ -218,7 +195,7 @@ function geoQueries(c) {
   if (tambon) { q.push([`${T}${tambon} ${amphoe ? A + amphoe : ''} ${prov}`.replace(/\s+/g, ' ').trim(), T]); q.push([`${tambon} ${prov}`.trim(), T]); }
   if (amphoe) q.push([`${A}${amphoe} ${prov}`.trim(), A]);
   const must = [tambon, amphoe].map(x => String(x || '').replace(/^เมือง/, '')).filter(x => /^[ก-๙]{2,}/.test(x));
-  return { q: must.length ? q.filter((x, i, arr) => x[0] && arr.findIndex(y => y[0] === x[0]) === i) : [], prov, must }; // ไม่มีตำบล/อำเภอ = ที่อยู่กว้างเกิน ไม่เดา
+  return { q: must.length ? q.filter((x, i, arr) => x[0] && arr.findIndex(y => y[0] === x[0]) === i) : [], prov, must };
 }
 async function geoLookup(q, prov, must = []) {
   const ok = label => !must.length || must.some(m => label.includes(m));
@@ -237,8 +214,6 @@ async function geoLookup(q, prov, must = []) {
   } catch (e) {}
   return null;
 }
-/* AI อ่านที่อยู่ที่กำกวม (ชื่อมัสยิด/หมู่บ้าน/ซอย/คลอง สะกดผิด เขียนติดกัน) → จังหวัด/อำเภอ/ตำบล + คำค้น แล้วค้นหมุด
-   ยอมรับเฉพาะผลที่อยู่ในจังหวัดที่ AI ระบุ (และอำเภอ/ตำบลตรงถ้ามี) · AI ไม่มั่นใจ = ไม่ปักหมุด */
 const AI_GEO = false;
 async function aiGeo(env, c) {
   if (!env.AI) return null;
@@ -251,15 +226,14 @@ async function aiGeo(env, c) {
   } catch (e) { return null; }
   if (!j || (Number(j.confidence) || 0) < 50 || !j.province) return null;
   const prov = String(j.province).replace(/^จังหวัด/, '').replace(/^กรุงเทพฯ?$|^กทม$/, 'กรุงเทพมหานคร').trim();
-  if (c.province && !String(c.province).includes(prov) && !prov.includes(String(c.province))) return null; // ขัดกับจังหวัดที่รู้อยู่แล้ว
+  if (c.province && !String(c.province).includes(prov) && !prov.includes(String(c.province))) return null;
   const am = String(j.amphoe || '').replace(/^(อำเภอ|เขต)/, '').trim(), tb = String(j.tambon || '').replace(/^(ตำบล|แขวง)/, '').trim();
   const must = [tb, am].map(x => x.replace(/^เมือง/, '')).filter(x => /^[ก-๙]{2,}/.test(x));
   const qs = [...(Array.isArray(j.queries) ? j.queries : []).map(String), [j.place, am, prov].filter(Boolean).join(' '), [j.road, am, prov].filter(Boolean).join(' '), tb && `${tb} ${am} ${prov}`, am && `${am} ${prov}`]
     .map(x => String(x || '').trim()).filter((x, i, a) => x.length > 3 && a.indexOf(x) === i).slice(0, 5);
-  // AI เดาภูมิศาสตร์ผิดได้: ยอมรับเฉพาะผลที่ชื่อสถานที่ (ตามโครงพยัญชนะ ทนคำสะกดผิด) ปรากฏในที่อยู่เดิม
   const sk = x => String(x || '').replace(/[ะ-ฺเ-๎\s.\-,()/]/g, '');
   const addrSk = sk(c.address), GEN = /^(คลอง|หมู่|บ้าน|ซอย|ถนน|มัสยิด|วัด|ตลาด|โรงเรียน|ชุมชน|จังหวัด|อำเภอ|ตำบล|แขวง|เขต|สถานี|ประเทศไทย|เมือง|บึง|หนอง|ทุ่ง|นา)/,
-    inAddr = label => String(label).split(/[·,\s]+/).map(w => w.replace(GEN, '')).filter(w => !/\d/.test(w)).map(sk).some(t => t.length >= 4 && addrSk.includes(t)); // ต้องตรงชื่อเฉพาะ ไม่ใช่คำทั่วไป
+    inAddr = label => String(label).split(/[·,\s]+/).map(w => w.replace(GEN, '')).filter(w => !/\d/.test(w)).map(sk).some(t => t.length >= 4 && addrSk.includes(t));
   for (const q of qs) { const hit = await geoLookup(q, prov, must.filter(m => addrSk.includes(sk(m)))); if (hit && inAddr(hit.label)) return { ...hit, level: 'AI อ่านที่อยู่' + (j.place && q.includes(j.place) ? '' : am ? ' (อำเภอ/ตำบล)' : '') }; }
   return null;
 }
@@ -273,7 +247,6 @@ async function geocodePass(env, db, n = 4) {
     if (hit) { found++; await db.prepare('UPDATE cases SET glat=?,glng=?,glabel=?,gtry=?,updatedAt=? WHERE id=?').bind(hit.lat, hit.lng, `ระดับ${hit.level} · ${hit.label}`.slice(0, 160), now, now, c.id).run(); }
     else await db.prepare('UPDATE cases SET gtry=? WHERE id=?').bind(now, c.id).run();
   }
-  // เคสที่วิธีปกติหาไม่เจอ: ให้ AI ช่วยอ่าน — ปิดไว้ (AI_GEO=false): ทดสอบแล้ว AI เดาภูมิศาสตร์ไทยผิดบ่อย หมุดผิดอันตรายกว่าไม่มีหมุด
   const { results: hard } = AI_GEO ? await db.prepare("SELECT id,address,district,province FROM cases WHERE (lat IS NULL OR lat='' OR lat=0) AND glat IS NULL AND status<>'done' AND COALESCE(dupOf,'')='' AND COALESCE(address,'')<>'' AND gtry IS NOT NULL AND COALESCE(gai,0)<? ORDER BY createdAt DESC LIMIT 2").bind(now - 864e5).all() : { results: [] };
   let ai = 0;
   for (const c of hard) {
@@ -284,13 +257,12 @@ async function geocodePass(env, db, n = 4) {
   if (found) await bumpRev(db);
   return { tried: results.length, found, ai, aiTried: hard.length };
 }
-/* Hermes บนคลาวด์ (Cloudflare Workers AI) สำหรับเครื่องที่ไม่มี Local AI เช่น มือถือ · ใช้ได้เฉพาะผู้มีรหัสอาสา/ลิงก์ War Room */
-const HERMES_MODELS = ['@cf/aisingapore/gemma-sea-lion-v4-27b-it', '@cf/meta/llama-3.3-70b-instruct-fp8-fast']; // ภาษาไทยดี · สำรอง (Hermes ถูกถอดจาก Workers AI แล้ว)
+const HERMES_MODELS = ['@cf/aisingapore/gemma-sea-lion-v4-27b-it', '@cf/meta/llama-3.3-70b-instruct-fp8-fast'];
 async function aiChat(db, b) {
   if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
   const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
   if (!msgs.length) return { ok: false, error: 'empty' };
-  if (!WRC) await withIntel(db, msgs); // War Room ย่อย: ไม่ใส่ข้อมูลภาพรวมทั้งประเทศ (เห็นเฉพาะพื้นที่ตัวเอง)
+  if (!WRC) await withIntel(db, msgs);
   trimMsgs(msgs);
   let err = '';
   for (const model of HERMES_MODELS) {
@@ -305,7 +277,6 @@ async function aiChat(db, b) {
 function aiMsgs(b) {
   return (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
 }
-/* จำกัดขนาดคำถามรวม ~22k ตัวอักษร: ตัดประวัติสนทนาเก่าก่อน · ไม่ตัดข้อมูลเคส (ข้อความผู้ใช้ข้อแรก) และคำถามล่าสุด · เหลือเกินค่อยย่อข้อมูลภาพรวม */
 function trimMsgs(msgs, max = 22000) {
   let total = msgs.reduce((a, m) => a + m.content.length, 0);
   const first = msgs.findIndex(m => m.role === 'user');
@@ -327,10 +298,6 @@ async function aiStream(b, db) {
   }
   return null;
 }
-/* ---------- คลังข้อมูลสถานการณ์ (intel) · เก็บในฐานข้อมูลของเรา ให้ AI HELP ใช้คิด ----------
-   ทุก 15 นาที (ตอน cron เรียก hm_sync): ประกาศเตือนภัยกรมอุตุฯ · แผ่นดินไหว · ข่าวภัยพิบัติ · น้ำบนถนน กทม. (เซ็นเซอร์ สนน.) ·
-   ระดับน้ำคลอง/แม่น้ำ (ThaiWater) · ดาวเทียม GISTDA (น้ำท่วม 7 วัน) รายเคสที่ยังไม่เสร็จ + สรุปรายจังหวัด · เก็บย้อนหลัง 14 วัน
-   AI HELP ได้สรุปสั้น (intelBrief) ต่อท้ายคำสั่งระบบทุกครั้งที่ถาม */
 async function intelUpsert(db, rows) {
   const now = Date.now(), st = rows.map(r => db.prepare(`INSERT INTO intel (kind,k,at,seen,title,body,level,src,province,lat,lng,val,data) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(kind,k) DO UPDATE SET seen=excluded.seen, at=excluded.at, title=excluded.title, body=excluded.body, level=excluded.level, val=excluded.val, data=excluded.data, src=excluded.src, province=excluded.province, lat=excluded.lat, lng=excluded.lng`)
@@ -343,22 +310,18 @@ async function intelTick(env, db, force) {
   if (!force && Date.now() - last < 15 * 60e3) return { skipped: true };
   await setMeta(db, 'intel_at', String(Date.now()));
   const res = {}, now = Date.now();
-  // 1) ข่าว + ประกาศกรมอุตุฯ + แผ่นดินไหว
   try { const n = await newsData();
     res.news = await intelUpsert(db, [
       ...n.warnings.map(w => ({ kind: 'warning', k: (w.title + '|' + (w.announced || '')).slice(0, 200), at: w.announced || now, title: w.title, body: w.text, level: (!w.end || w.end > now) && (!w.start || w.start <= now) ? 'live' : '', src: 'กรมอุตุนิยมวิทยา', data: { start: w.start, end: w.end, url: w.url } })),
       ...n.quakes.map(q => ({ kind: 'quake', k: q.time + '|' + q.place, at: q.time, title: `แผ่นดินไหว ${q.mag} · ${q.place}`, val: q.mag, lat: q.lat, lng: q.lng, src: 'กรมอุตุนิยมวิทยา' })),
       ...n.news.map(x => ({ kind: 'news', k: x.link, at: x.time || now, title: x.title, src: x.source, level: (x.tags || []).join(','), data: { link: x.link } }))]); } catch (e) { res.newsErr = String(e.message || e).slice(0, 80); }
-  // 2) น้ำ: เซ็นเซอร์บนถนน กทม. (เฉพาะที่มีน้ำ) + ระดับน้ำคลองที่สูง (สถานการณ์ ≥ 3)
   try { const w = await waterData();
     res.water = await intelUpsert(db, [
       ...w.sensors.filter(x => x.now != null && x.now >= 5 && x.status !== 'malfunction').map(x => ({ kind: 'road_water', k: x.code || x.name, at: x.t || now, title: `${x.name}${x.road ? ' · ' + x.road : ''}`, val: x.now, province: 'กรุงเทพมหานคร', lat: x.lat, lng: x.lng, src: 'สำนักการระบายน้ำ กทม.', data: { district: x.district, max: x.max } })),
       ...w.stations.filter(x => x.situation >= 3).map(x => ({ kind: 'river', k: String(x.id), at: x.t || now, title: x.name, val: x.diff, level: String(x.situation), lat: x.lat, lng: x.lng, src: 'ThaiWater ' + (x.agency || ''), data: { level: x.level, bank: x.bank } })),
       { kind: 'water_sum', k: 'bkk', at: now, title: 'สรุปน้ำ กทม.', val: w.sensors.filter(x => x.now >= 5).length, data: { sensors: w.sensors.length, wet: w.sensors.filter(x => x.now >= 5).length, deep: w.sensors.filter(x => x.now >= 20).length, stationsHigh: w.stations.filter(x => x.situation >= 4).length } }]); } catch (e) { res.waterErr = String(e.message || e).slice(0, 80); }
-  // 2.5) เขื่อน: เขื่อนใหญ่ทุกแห่ง + อ่างขนาดกลางที่เกิน 100%
   try { const dm = await damData(), lv = p => p >= 100 ? 'over' : p >= 80 ? 'high' : '';
     res.dam = await intelUpsert(db, [...dm.large, ...dm.medium.filter(x => x.pct >= 100)].map(x => ({ kind: 'dam', k: x.size + ':' + x.id, at: x.t, title: (x.size === 'large' ? 'เขื่อน' : '') + x.name, val: x.pct, level: lv(x.pct || 0) + (x.size === 'large' ? ',large' : ''), lat: x.lat, lng: x.lng, src: 'ThaiWater/' + (x.agency || 'ชป.'), data: { inflow: x.inflow, released: x.released, spilled: x.spilled, storage: x.storage, date: x.date } }))); } catch (e) { res.damErr = String(e.message || e).slice(0, 80); }
-  // 3) ดาวเทียม GISTDA: เคส Help Me + เคสในระบบที่ยังไม่เสร็จ · ทุก 30 นาที ครั้งละไม่เกิน 20 ช่อง (วนช่องถัดไปรอบหน้า) กันเกินโควตาคำขอย่อยต่อครั้ง
   const satLast = Number(await getMeta(db, 'intel_sat_at')) || 0;
   if (env.GISTDA_KEY && (force || Date.now() - satLast >= 30 * 60e3)) try {
     await setMeta(db, 'intel_sat_at', String(Date.now()));
@@ -376,7 +339,6 @@ async function intelTick(env, db, force) {
   await db.prepare('DELETE FROM intel WHERE seen<?').bind(now - 14 * 864e5).run();
   return res;
 }
-/* สรุปสั้นสำหรับ AI (และหน้าเว็บ) · แคช 2 นาที */
 async function intelBrief(db) {
   return cached('intel-brief-v2', 120, async () => {
     const now = Date.now(), q = (sql, ...v) => db.prepare(sql).bind(...v).all().then(r => r.results);
@@ -417,10 +379,6 @@ async function withIntel(db, msgs) {
     const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
   } catch (e) {}
 }
-/* ---------- Discord: AI HELP ส่งแจ้งเตือนเข้าห้อง (Webhook · ทางเดียว) ----------
-   ตั้งค่าที่หน้า ตั้งค่า (CENTRAL เท่านั้น) · cron ทุกนาที (hm_sync) เรียก discordTick
-   ส่ง: เคสด่วนมากใหม่ · SOS จากทีม · เคสด่วนมากรอเกิน 30 นาทีไม่มีทีม · สรุปสถานการณ์ทุก N ชม. (AI เขียน)
-   ไม่ส่งชื่อ/เบอร์ผู้แจ้ง · มีลิงก์เข้า CENTRAL (ต้องใช้รหัส) */
 const DC_DEF = { url: '', newCrit: true, sos: true, critWait: true, summaryH: 3, lastSum: 0, since: 0 };
 const DC_RE = /^https:\/\/(?:canary\.|ptb\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/;
 async function dcCfg(db) { try { return { ...DC_DEF, ...JSON.parse(await getMeta(db, 'dc_cfg') || '{}') }; } catch (e) { return { ...DC_DEF }; } }
@@ -459,7 +417,7 @@ async function discordTick(env, db, force) {
     embeds.push({ color: 0xC62828, title: '🆘 SOS จากทีม ' + t.name, description: `กด SOS เมื่อ ${dcAgo(t.sosAt)}ก่อน${t.lat != null ? ` · [ตำแหน่งทีม](https://maps.google.com/?q=${(+t.lat).toFixed(5)},${(+t.lng).toFixed(5)})` : ''}\n[เปิด CENTRAL](https://central.helpme4u.com/central/warroom/)` }); } }
   let posted = 0;
   for (let i = 0; i < embeds.length && i < 30; i += 10) { if (await dcPost(c.url, { embeds: embeds.slice(i, i + 10) })) posted++; }
-  if (embeds.length && posted) await setMeta(db, 'dc_sent', JSON.stringify(sent.slice(-800))); // ส่งไม่ผ่าน = ลองใหม่รอบหน้า
+  if (embeds.length && posted) await setMeta(db, 'dc_sent', JSON.stringify(sent.slice(-800)));
   if (force === 'summary' || (c.summaryH > 0 && now - (c.lastSum || 0) >= c.summaryH * 3600e3 && c.lastSum)) {
     const s = await dcSummary(env, db);
     await dcPost(c.url, { embeds: [{ color: 0x2D45C8, title: '📊 สรุปสถานการณ์ · ' + new Date(now).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }), description: (s.text ? s.text + '\n\n' : '') + '`' + s.facts + '`\n[เปิดแดชบอร์ด](https://central.helpme4u.com/central/dashboard/)' }] });
@@ -483,7 +441,6 @@ async function discordTest(db, b) {
   const ok = await dcPost(c.url, { embeds: [{ color: 0x2E9E57, title: '✅ AI HELP เชื่อมต่อกับห้องนี้แล้ว', description: 'จะแจ้งเตือน: ' + [c.newCrit && 'เคสด่วนมากใหม่', c.sos && 'SOS จากทีม', c.critWait && 'เคสด่วนมากรอเกิน 30 นาที', c.summaryH && `สรุปทุก ${c.summaryH} ชม.`].filter(Boolean).join(' · ') }] });
   return ok ? { ok: true } : { ok: false, error: 'discord_rejected' };
 }
-/* ข้อเสนอแนะ/แจ้งปัญหาจากทีมงาน (ปุ่มในทุกหน้า) · CENTRAL ดูและปิดได้ที่แดชบอร์ด */
 async function saveFeedback(db, b) {
   const text = clean(b.text, 1000);
   if (!text) return { ok: false, error: 'empty' };
@@ -500,9 +457,7 @@ async function updateCase(db, b) {
   if (!STATUSES.includes(b.status)) return { ok: false, error: 'bad_status' };
   const r = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first();
   if (!r) return { ok: false, error: 'not_found' };
-  // ใช้กับงานกลุ่ม (เช่น มอบทั้งเส้นทาง): ถ้าสถานะเปลี่ยนไปแล้ว ไม่ทับ
   if (b.expectStatus && r.status !== b.expectStatus) return { ok: false, error: 'status_changed', status: r.status };
-  // แก้เฉพาะข้อมูลประกอบ (หมายเหตุ/ถุง/ระดับ/จำนวนคน): ไม่แตะสถานะ/ทีม แม้ข้อมูลในเครื่องผู้ใช้จะเก่า (กันเปิดเคสที่ปิดแล้วกลับมา)
   const meta = !!(b.bagsOnly || b.metaOnly);
   const sets = [], vals = [];
   let bags = null;
@@ -511,25 +466,19 @@ async function updateCase(db, b) {
     const t = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' }).format(new Date());
     sets.push('cctv=?'); vals.push(b.cctv ? b.cctv + '|' + t : '');
   }
-  // รวมเคสซ้ำ: ชี้ไปเคสหลัก (ไม่นับเป็นเคสที่ช่วยแล้ว) · ส่ง '' เพื่อยกเลิก
   if (b.dupOf !== undefined) { sets.push('dupOf=?'); vals.push(clean(b.dupOf, 40)); }
-  // เจ้าหน้าที่กำหนดระดับความเร่งด่วนเอง (1–3) ทับที่ระบบคัดกรอง · '' = กลับไปใช้ของระบบ
   if (b.sevSet !== undefined) { const v = b.sevSet === '' || b.sevSet === null ? null : clampInt(b.sevSet, 1, 3, null); sets.push('sevSet=?', 'sevBy=?'); vals.push(v, v ? clean(b.by, 60) : null); }
-  // เจ้าหน้าที่แก้จำนวนคน / ครัวเรือน
   if (b.people !== undefined && b.people !== '') { sets.push('people=?'); vals.push(clampInt(b.people, 1, 9999, 1)); }
   if (b.households !== undefined) { sets.push('households=?'); vals.push(b.households === '' ? null : clampInt(b.households, 1, 9999, 1)); }
   if (b.intake !== undefined && b.intake !== null) { const o = cleanIntake(b.intake); o.by = clean(b.by, 60); o.at = Date.now(); sets.push('intake=?'); vals.push(JSON.stringify(o)); }
-  // หมายเหตุจากศูนย์ (ทีมเห็นในหน้าทีม)
   if (b.hqNote !== undefined && b.hqNote !== null) { sets.push('hqNote=?'); vals.push(clean(b.hqNote, 500)); }
   if (!meta) {
-    sets.push('status=?', 'updatedAt=?', 'localAt=?'); vals.push(b.status, Date.now(), Date.now()); // localAt: ศูนย์แก้เอง (ใช้ตัดสินกับข้อมูลที่ซิงก์จาก Help Me)
-    // เวลามีทีมรับ / ช่วยเสร็จ (ใช้วัดตัวชี้วัด) · บันทึกครั้งแรกที่เปลี่ยนสถานะ
+    sets.push('status=?', 'updatedAt=?', 'localAt=?'); vals.push(b.status, Date.now(), Date.now());
     if (b.status === 'going' && r.status !== 'going' && !r.pickedAt) { sets.push('pickedAt=?'); vals.push(Date.now()); }
     if (b.status === 'done' && r.status !== 'done') { sets.push('doneAt=?'); vals.push(Date.now()); if (!r.pickedAt) { sets.push('pickedAt=?'); vals.push(Date.now()); } }
-    // มอบใหม่ (เปลี่ยนทีม/คืนเป็นรอ) = ล้างที่ทีมเคยแจ้งว่าช่วยแล้ว
     const vol = clean(b.volunteer, MAX.volunteer), prevVol = String(r.volunteer || '').replace(/^'/, '').trim();
     const reset = b.status === 'open' || (b.status === 'going' && vol && vol !== prevVol);
-    if (reset || b.status === 'done') sets.push('teamIssue=NULL', 'teamIssueAt=NULL'); // มอบใหม่/ปิดเคส = ล้างปัญหาที่ทีมเคยแจ้ง
+    if (reset || b.status === 'done') sets.push('teamIssue=NULL', 'teamIssueAt=NULL');
     if (b.status === 'going' && b.helped === true) { sets.push('teamDoneAt=?'); vals.push(r.teamDoneAt && !reset ? r.teamDoneAt : Date.now()); if (reset) sets.push("teamNote=''"); }
     else if (reset) sets.push('teamDoneAt=NULL', "teamNote=''");
     else if (b.status === 'going' && b.helped === false) sets.push('teamDoneAt=NULL');
@@ -537,15 +486,12 @@ async function updateCase(db, b) {
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }
   if (sets.length) await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, r.id).run();
-  // มอบเคสให้ทีม (ใหม่ หรือเปลี่ยนทีม): ส่งการ์ดเคสเข้าแชทของทีมนั้นอัตโนมัติ
   if (!meta && b.status === 'going') { const nv = clean(b.volunteer, MAX.volunteer).replace(/^'/, ''), pv = String(r.volunteer || '').replace(/^'/, '').trim();
     if (nv && (nv !== pv || r.status !== 'going')) { const needs = String(r.needs || '').split(/\s*,\s*/).filter(Boolean).join(', ') || 'ขอความช่วยเหลือ';
       try { await chatSend(db, { team: nv, from: 'hq', name: clean(b.by, 60), text: `ศูนย์มอบเคส #${r.id} · ${needs} · ${r.people || 1} คน${r.district ? ' · ' + r.district : ''}`, kind: 'case', caseId: r.id }); } catch (e) {} } }
   await bumpRev(db);
   return { ok: true, bags, bagsSupported: true };
 }
-/* ตำแหน่งทีมแบบเรียลไทม์ (Server-Sent Events): ส่งเฉพาะทีมที่ขยับทันทีที่มีจุดใหม่ (ตรวจทุก 1 วิ)
-   ต่อครั้งเปิดไว้ ~40 วิ แล้วปิด · เบราว์เซอร์ต่อใหม่เองใน 0.8 วิ (ไม่เกินโควตาคำสั่งฐานข้อมูลต่อคำขอ) · War Room เห็นเฉพาะทีมของห้อง */
 async function liveStream(db, p) {
   const sc = WRC ? await wrScope(db) : null, enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
   let last = Number(p.since) || 0;
@@ -553,7 +499,6 @@ async function liveStream(db, p) {
     await w.write(enc.encode('retry: 800\n\n'));
     let rv = '', cr = '';
     for (let i = 0; i < 30; i++) {
-      // ทุก 2 วิ: ข้อมูลเคส/แชทเปลี่ยน → แจ้งทุกหน้า CENTRAL ให้โหลดใหม่ทันที (ไม่ต้องรอรอบถามซ้ำ)
       if (i % 2 === 0) { const { results: mm } = await db.prepare("SELECT k,v FROM meta WHERE k IN ('rev','chat_rev')").all(); const m = Object.fromEntries(mm.map(x => [x.k, x.v]));
         if (i === 0 || (m.rev || '') !== rv || (m.chat_rev || '') !== cr) { rv = m.rev || ''; cr = m.chat_rev || ''; await w.write(enc.encode('event: rev\ndata: ' + JSON.stringify({ rev: rv, chat: cr }) + '\n\n')); } }
       const { results } = await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt FROM teams_live WHERE updatedAt>?').bind(last || Date.now() - TEAM_FRESH_MS).all();
@@ -567,8 +512,6 @@ async function liveStream(db, p) {
   })().catch(() => { try { w.abort(); } catch (e) {} });
   return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
 }
-/* เส้นทางแนะนำจากศูนย์: ศูนย์คำนวณ/ปรับเส้นทาง (เลี่ยงน้ำท่วม · จุดผ่าน · จุดอุปสรรค) แล้วส่งให้ทีม · ทีมละ 1 เส้น (ไปเคสที่กำลังไป) */
-/* หน้าทีม/แอปทีม: แจ้งทันทีเมื่อมีแชทใหม่ของทีมนี้ หรือข้อมูลงานเปลี่ยน (แทนการถามซ้ำทุก 5 วิ · ประหยัดแบต/เน็ต) */
 function teamStream(db, team) {
   const enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
   (async () => {
@@ -604,8 +547,6 @@ async function routeList(db) {
   let rows = results; if (WRC) { const sc = await wrScope(db); rows = rows.filter(r => sc.teams.has(r.team)); }
   return { ok: true, routes: rows.map(r => { let d = {}; try { d = JSON.parse(r.data); } catch (e) {} return { team: r.team, caseId: r.caseId, at: r.at, by: r.by_, ...d }; }) };
 }
-/* วอเสียงสด: ตัวกลาง (router) ถามว่าใครเชื่อมต่อ ใช้ช่องไหนได้บ้าง
-   ทีม: รวม · War Room ของทีม · ส่วนตัวกับศูนย์ | ศูนย์: ทุกช่อง | War Room ย่อย: ช่องห้องตัวเอง + ส่วนตัวกับทีมในห้อง */
 async function pttAuth(env, db, p, vol) {
   const rooms = (await db.prepare('SELECT id,name FROM warrooms WHERE active=1 ORDER BY name').all()).results;
   const roomName = id => (rooms.find(r => r.id === id) || {}).name || id, wrl = id => { const n = roomName(id); return /^war\s*room/i.test(n) ? n : 'War Room ' + n; };
@@ -617,8 +558,6 @@ async function pttAuth(env, db, p, vol) {
   ch.push({ id: 'tm:' + t.name, label: 'ส่วนตัวกับศูนย์' });
   return { ok: true, kind: 'team', name: t.name, chans: ch };
 }
-/* วอ (กดค้างพูดแบบ Zello): คลิปเสียงสั้น WAV 8 kHz ไม่เกิน 30 วิ · ช่องรวมทุกทีม + ศูนย์ · เก็บ 24 ชม.
-   ส่ง: ทีม (ลิงก์ทีม) หรือศูนย์ (รหัสอาสา) · ฟัง: ดึงรายการใหม่ (ptt_list since) แล้วโหลดเสียง (ptt_audio n) เล่นต่อกันอัตโนมัติ */
 const PTT_MAX = 700e3;
 function b64bytes(s) { const bin = atob(String(s || '').replace(/^data:[^,]*,/, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 async function pttSend(db, who, b) {
@@ -631,7 +570,6 @@ async function pttSend(db, who, b) {
   const n = r.meta && r.meta.last_row_id; await pttToChat(db, who, ch, n, Number(b.dur) || 0).catch(() => {});
   return { ok: true, n, at: now };
 }
-/* เก็บเสียงวอไว้ในแชทด้วย: ทีมพูด = แชทของทีมนั้น · ศูนย์พูดในช่องส่วนตัว = แชททีมนั้น · ศูนย์พูดในช่องรวม/War Room = แชทของทุกทีมในช่อง */
 async function pttToChat(db, who, ch, n, dur) {
   if (!n) return;
   const chName = ch === 'all' ? 'ช่องรวม' : ch.startsWith('wr:') ? 'War Room' : 'ส่วนตัว', text = `🎙️ วอ · ${chName} · ${Math.max(1, Math.round(dur))} วิ`, link = '/api?action=ptt_audio&n=' + n;
@@ -658,15 +596,6 @@ async function readTeams(db) {
     battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading,
     alt: t.alt ?? null, charging: t.charging ?? null, sig: t.sig ?? null, net: t.net || null, carrier: t.carrier || null, temp: t.temp ?? null, hum: t.hum ?? null, devAt: t.devAt || null }));
 }
-/* ---------- ติดตามตำแหน่งทีมแม้ไม่ได้เปิดหน้าเว็บ: แอปติดตามฟรีที่ทำงานเบื้องหลัง ----------
-   Traccar Client (iOS/Android): Server URL = https://<โดเมน>/api/track · Device identifier = รหัสลิงก์ทีม (?id=… ในลิงก์ทีม)
-   รองรับทั้งแบบเก่า (OsmAnd: ?id=&lat=&lon=&timestamp=&speed=นอต&batt=) และแบบใหม่ (JSON {device_id, location:{coords,battery,timestamp}})
-   OwnTracks (โหมด HTTP): URL = https://<โดเมน>/api/track/<รหัสลิงก์ทีม> · JSON {_type:'location',lat,lon,acc,vel(กม./ชม.),batt,tst}
-   จุดที่แอปเก็บไว้ตอนไม่มีเน็ตแล้วส่งย้อนหลัง: เก็บเข้าเส้นทางตามเวลาจริง และอัปเดตตำแหน่งล่าสุดเฉพาะจุดที่ใหม่กว่า */
-/* ---------- รับตำแหน่งทีมทาง SMS (ไม่ต้องใช้เน็ตฝั่งทีม) ----------
-   ทีมกดส่ง SMS ถึงเบอร์ศูนย์ ในข้อความมีรหัส  #HM:<รหัสลิงก์ทีม>:<lat>,<lng>[:<เวลา unix>][:SOS]
-   มือถือ Android เบอร์ศูนย์ติดแอปส่งต่อ SMS → POST/GET /api/sms-in?k=<รหัสลับ> พร้อมข้อความ (รองรับหลายชื่อฟิลด์)
-   ตำแหน่งขึ้นแผนที่ทันที (teams_live + เส้นทาง) · แจ้งในแชทของทีม · มี SOS = ตั้ง SOS */
 async function smsIn(db, request, url) {
   const q = Object.fromEntries(url.searchParams); let b = {};
   if (request.method === 'POST') { const txt = await request.text(); try { b = JSON.parse(txt || '{}'); } catch (e) { for (const [k, v] of new URLSearchParams(txt)) b[k] = v; } }
@@ -719,7 +648,7 @@ async function trackApp(db, request, url, pathTk) {
   } else if (body._type === 'location') {
     p = { lat: body.lat, lng: body.lon, acc: body.acc, speed: body.vel, heading: body.cog, batt: body.batt, t: Number(body.tst) * 1000, alt: body.alt };
   } else if (body._type) {
-    return json([]); // OwnTracks ข้อความอื่น (waypoint, transition ฯลฯ) ไม่ใช้
+    return json([]);
   } else {
     const ts = q.timestamp;
     p = { lat: q.lat, lng: q.lon ?? q.lng, acc: q.accuracy ?? q.hdop, speed: q.speed != null && q.speed !== '' ? Number(q.speed) * 1.852 : null, heading: q.bearing ?? q.heading,
@@ -733,14 +662,12 @@ async function trackApp(db, request, url, pathTk) {
     db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading WHERE excluded.updatedAt>=teams_live.updatedAt')
       .bind(row.name, lat, lng, acc, '', t, batt, speed, heading),
     db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(row.name, lat, lng, acc, batt, speed, t),
-    db.prepare('UPDATE teams_live SET appAt=? WHERE team=?').bind(now, row.name), // แอปเบื้องหลัง (OwnTracks/Traccar) ส่งมาล่าสุดเมื่อไร
+    db.prepare('UPDATE teams_live SET appAt=? WHERE team=?').bind(now, row.name),
   ]);
   await saveTele(db, row.name, { alt: p.alt, sig: body.sig, net: body.net, carrier: body.carrier, charging: body.chg }, lat, lng).catch(() => {});
   if (Math.random() < 0.01) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 864e5).run();
   return body._type ? json([]) : out({ ok: true });
 }
-/* ข้อมูลเครื่องของทีม (ส่งมากับตำแหน่ง): ความสูง · กำลังชาร์จ · สัญญาณมือถือ (0–4) · ชนิดเครือข่าย · ค่ายมือถือ
-   อุณหภูมิ/ความชื้น: มือถือไม่มีเซนเซอร์ → ใช้อากาศปัจจุบัน ณ ตำแหน่งทีม (Open-Meteo) ทุก 10 นาที/ทีม */
 async function saveTele(db, team, b, lat, lng) {
   const alt = num(b.alt ?? b.altitude, -500, 9000), chg = b.charging === true || b.charging === 1 || b.charging === '1' || b.chg === 1 ? 1 : b.charging === false || b.charging === 0 || b.charging === '0' || b.chg === 0 ? 0 : null;
   const sig = clampInt(b.sig, 0, 4, null), net = clean(b.net, 20) || null, carrier = clean(b.carrier, 40) || null;
@@ -764,7 +691,6 @@ async function pingTeam(db, b) {
   await db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,caseId=excluded.caseId,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading')
     .bind(team, lat, lng, acc, clean(b.caseId, 30), now, batt, speed, heading).run();
   await saveTele(db, team, b, lat, lng).catch(() => {});
-  // จุดเส้นทาง: เก็บเมื่อขยับเกิน 20 ม. หรือห่างจุดก่อน 2 นาที
   const last = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? ORDER BY n DESC LIMIT 1').bind(team).first();
   if (!last || km(last.lat, last.lng, lat, lng) > 0.02 || now - last.at > 120e3) {
     await db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(team, lat, lng, acc, batt, speed, now).run();
@@ -833,7 +759,6 @@ async function saveRoster(db, b) {
 }
 async function listRoster(db) {
   const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck,warroom,gmaps FROM roster WHERE active=1 ORDER BY name').all();
-  // ทีมที่ยังไม่มีลิงก์เฉพาะทีม: สร้างให้
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
   for (const r of results) r.view = r.token ? await viewId(r.token) : '';
@@ -848,8 +773,6 @@ async function renewTeamLink(db, b) {
 async function setHqPhone(db, b) { const p = clean(b.phone, 20).replace(/[^\d+\-\s]/g, ''); await setMeta(db, 'hq_phone', p); return { ok: true, hqPhone: p }; }
 async function ackSos(db, b) { await db.prepare('UPDATE roster SET sosAck=? WHERE id=?').bind(Date.now(), clean(b.id, 20)).run(); await chatSend(db, { team: b.team, from: 'hq', name: b.by, text: 'ศูนย์รับทราบ SOS แล้ว กำลังประสานความช่วยเหลือ' }); return { ok: true }; }
 
-/* ---------- ระบบสนับสนุนทีม: หน้ามือถือของทีมเข้าด้วยลิงก์เฉพาะทีม (?id=token) ไม่ต้องใช้รหัสกลาง
-   ทีมทำได้เฉพาะเรื่องของทีมตัวเอง: ตำแหน่ง สถานะ เคสที่ได้รับ แชท SOS โทร */
 const MEET = 'https://meet.ffmuc.net/';
 async function teamFrom(env, db, p) {
   const tk = String(p.tk || '').replace(/[^a-z0-9]/g, '').slice(0, 40);
@@ -864,7 +787,6 @@ async function teamMe(db, t) {
     .bind(t.name, "'" + t.name, now - 86400e3).all();
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt,appAt FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: stock } = await db.prepare('SELECT name FROM stock ORDER BY category, name').all();
-  // ของจากสต็อกที่ศูนย์ส่งมากับเคส (แสดงในการ์ดเคสของทีม)
   const stk = {};
   if (results.length) { const { results: sl } = await db.prepare("SELECT caseId,item,delta FROM stock_log WHERE type='out' AND caseId<>'' AND caseId IN (SELECT id FROM cases WHERE volunteer IN (?,?) AND (status='going' OR (status='done' AND updatedAt>?)))").bind(t.name, "'" + t.name, now - 86400e3).all();
     sl.forEach(l => { (stk[l.caseId] = stk[l.caseId] || []).push({ item: l.item, qty: Math.abs(l.delta) }); }); }
@@ -874,12 +796,10 @@ async function teamMe(db, t) {
     hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now,
     rallies: await teamRallies(db, t.name), stats: await teamStats(db, t.name, now), route: await teamRoute(db, t.name) };
 }
-/* แดชบอร์ดทีม · รวมเคส: เคสที่ยังรอความช่วยเหลือทั้งหมด (ทีมเห็นเพื่อวางแผน/ขอรับเคสจากศูนย์) */
 async function teamCases(db) {
   const { results } = await db.prepare("SELECT * FROM cases WHERE status='open' AND COALESCE(dupOf,'')='' ORDER BY urgency DESC, createdAt DESC LIMIT 400").all();
   return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).length; return { ...outCase(c, true), photos: ph }; }), now: Date.now() };
 }
-/* แดชบอร์ดทีม: ยอดรวมของทีม (ช่วยแล้ว = ปิดเคส หรือทีมแจ้งช่วยแล้ว) + เวลาที่ช่วยใน 7 วันล่าสุด (ไว้วาดกราฟรายวัน) */
 async function teamRoute(db, name) { const r = await db.prepare('SELECT caseId,data,at,by_ FROM team_route WHERE team=? AND at>?').bind(name, Date.now() - 24 * 3600e3).first(); if (!r) return null; try { return { ...JSON.parse(r.data), at: r.at, by: r.by_ }; } catch (e) { return null; } }
 async function teamStats(db, name, now) {
   const DONE = "(status='done' OR COALESCE(teamDoneAt,0)>0)", AT = 'COALESCE(teamDoneAt,doneAt,updatedAt)';
@@ -894,10 +814,6 @@ async function callStart(db, team, from, b) {
   await chatSend(db, { team, from, name: b.name, text: mode === 'voice' ? 'โทรด้วยเสียง' : 'วิดีโอคอล', kind: 'call', link, caseId: b.caseId });
   return { ok: true, link, mode };
 }
-/* ---------- โทรในระบบ (WebRTC ตรงระหว่างเครื่อง) ----------
-   ห้องสาย = id + รหัสลับในลิงก์ (/call/#id.secret) · ใครมีลิงก์เข้าได้ (แบบเดียวกับลิงก์ห้องประชุม) · สายละ 2 คน
-   Worker ทำหน้าที่ส่งต่อข้อความนัดเชื่อมต่อ (offer/answer/ice) ผ่าน D1 · เสียง/ภาพวิ่งตรงระหว่างเครื่อง
-   ต่อผ่านเครือข่ายที่ปิดกั้น (4G บางเครือข่าย) ต้องมี TURN: ตั้ง TURN_KEY_ID + TURN_KEY_API_TOKEN (Cloudflare Realtime TURN) */
 const CALL_KINDS = ['hello', 'offer', 'answer', 'ice', 'bye'];
 async function callCreate(db, { team, from, mode, name }) {
   const id = rand(6), secret = rand(12), now = Date.now();
@@ -928,7 +844,6 @@ async function iceServers(env) {
   return { servers: stun, turn: false };
 }
 const CALL_POST = {
-  // เข้าห้อง/ดึงข้อความใหม่: ส่ง since=0 ครั้งแรกจะได้ข้อมูลห้อง + ICE servers
   call_poll: async (db, c, b, env) => {
     const since = Math.max(0, Number(b.since) || 0), peer = clean(b.peer, 20);
     const { results } = await db.prepare('SELECT n,peer,dest,kind,data,at FROM call_sig WHERE call=? AND n>? AND peer<>? AND (dest=? OR dest=\'\') ORDER BY n LIMIT 200').bind(c.id, since, peer, peer).all();
@@ -945,10 +860,7 @@ const CALL_POST = {
     return { ok: true, n: r.meta.last_row_id };
   },
 };
-/* ---------- รวมพล: ศูนย์เรียกทีมไปจุดเดียวกัน (ทีมขาดการติดต่อ · ทีมที่หน้างานกำลังไม่พอ) ----------
-   teams = '*' (ทุกทีมที่พร้อม/ออกงาน) หรือรายชื่อทีมคั่นด้วย \n · ทีมตอบ: going (กำลังไป) · arrived (ถึงแล้ว) · declined (ไม่สะดวก) */
 const RALLY_ST = ['going', 'arrived', 'declined'];
-// ทีมเป้าหมายเก็บเป็นรายชื่อตายตัวตอนเรียก (แม้เลือก "ทุกทีม") · ทีมที่เปลี่ยนสถานะทีหลังยังอยู่ในรายการ
 const rallyTargets = r => String(r.teams || '').split('\n').filter(Boolean);
 async function rallyAllTeams(db) {
   const { results } = await db.prepare("SELECT name FROM roster WHERE active=1 AND COALESCE(status,'ready')<>'rest'" + (WRC ? ' AND warroom=?' : '')).bind(...(WRC ? [WRC.id] : [])).all();
@@ -962,7 +874,6 @@ async function rallySave(db, b) {
   const targets = b.all === true ? await rallyAllTeams(db) : list;
   if (!targets.length) return { ok: false, error: 'no_teams' };
   const id = 'R' + rand(5), now = Date.now(), r = { id, lat, lng, label: clean(b.label, 120) || 'จุดรวมพล', note: clean(b.note, 300), teams: targets.join('\n'), caseId: clean(b.caseId, 40), warroom: WRC ? WRC.id : '' };
-  // ส่งแจ้งทุกทีมในชุดเดียว (ไม่เกินโควตาคำขอย่อย · สำเร็จทั้งหมดหรือไม่สำเร็จเลย)
   const by = clean(b.by, 60) || 'ศูนย์', text = clean(`📣 เรียกรวมพล: ${r.label}${r.note ? ' · ' + r.note : ''}`, 1000);
   const st = [db.prepare('INSERT INTO rallies (id,lat,lng,label,note,teams,caseId,warroom,createdAt,by_,isAll) VALUES (?,?,?,?,?,?,?,?,?,?,?)').bind(id, lat, lng, r.label, r.note, r.teams, r.caseId, r.warroom, now, clean(b.by, 60), b.all === true ? 1 : 0),
     ...targets.map(t => db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,1,0,?,?)').bind(clean(t, MAX.volunteer), 'hq', by, text, r.caseId, lat, lng, now, '', ''))];
@@ -980,14 +891,10 @@ async function rallyList(db) {
   return { ok: true, rallies: results.map(r => ({ id: r.id, lat: r.lat, lng: r.lng, label: r.label, note: r.note || '', all: r.isAll === 1 || r.teams === '*', teams: rallyTargets(r), caseId: r.caseId || '', createdAt: r.createdAt, by: r.by_ || '', resp: resp.filter(x => x.rallyId === r.id) })) };
 }
 async function teamRallies(db, name) {
-  // กรองทีมเป้าหมายใน SQL ก่อนจำกัดจำนวน · 2 คิวรีต่อครั้ง
   const { results } = await db.prepare("SELECT r.id,r.lat,r.lng,r.label,r.note,r.caseId,r.createdAt,x.status my FROM rallies r LEFT JOIN rally_resp x ON x.rallyId=r.id AND x.team=? WHERE r.closedAt IS NULL AND r.createdAt>? AND instr(char(10)||r.teams||char(10), char(10)||?||char(10))>0 ORDER BY r.createdAt DESC LIMIT 10")
     .bind(name, Date.now() - 3 * 864e5, name).all();
   return results.map(r => ({ id: r.id, lat: r.lat, lng: r.lng, label: r.label, note: r.note || '', caseId: r.caseId || '', createdAt: r.createdAt, my: r.my || '' }));
 }
-/* ---------- บอร์ดงาน (วางแผนงานของทีมงานศูนย์) · แยกตาม War Room (room = รหัสห้อง · 'central' = บอร์ดของ CENTRAL) ----------
-   การ์ด: หัวข้อ · รายละเอียด · สถานะ (todo/doing/done) · วัน-เวลา (เริ่ม/สิ้นสุด) · ผู้รับผิดชอบ · หมุดตำแหน่ง · เคสที่เกี่ยวข้อง · รูป (เก็บแยกตาราง)
-   War Room ย่อยเห็น/แก้ได้เฉพาะบอร์ดห้องตัวเอง */
 const BOARD_ST = ['todo', 'doing', 'done'], BOARD_COLORS = ['', 'red', 'orange', 'green', 'blue', 'purple'];
 const boardRoom = v => WRC ? WRC.id : (clean(v, 30).replace(/[^\w-]/g, '') || 'central');
 const boardOut = c => ({ id: c.id, room: c.room, title: c.title, body: c.body || '', status: c.status, lat: c.lat, lng: c.lng, place: c.place || '', cases: String(c.cases || '').split(',').filter(Boolean),
@@ -1024,7 +931,6 @@ async function boardDelete(db, b) {
   await db.prepare('UPDATE board SET deleted=1, updatedAt=? WHERE id=?').bind(Date.now(), clean(b.id, 20)).run();
   await setMeta(db, 'board_rev:' + c.room, String(Date.now())); return { ok: true };
 }
-/* รูปในการ์ด: รับเป็น data URL (หน้าเว็บย่อเหลือ ≤1600px ก่อนส่ง) ไม่เกิน ~900KB ต่อรูป · ไม่เกิน 12 รูปต่อการ์ด */
 async function boardImgAdd(db, b) {
   const c = await db.prepare('SELECT room,imgs FROM board WHERE id=? AND deleted=0').bind(clean(b.cardId, 20)).first();
   if (!c || c.room !== boardRoom(c.room)) return { ok: false, error: 'not_found' };
@@ -1052,7 +958,6 @@ const TEAM_POST = {
     await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `รวมพล "${r.label}": ${{ going: 'กำลังไป', arrived: 'ถึงจุดรวมพลแล้ว', declined: 'ไม่สะดวกไป' }[b.status]}${b.note ? ' · ' + clean(b.note, 200) : ''}`, lat: b.lat, lng: b.lng });
     await bumpRev(db); return { ok: true };
   },
-  // ทีมแก้โปรไฟล์ตัวเอง (หัวหน้า เบอร์ จำนวนคน ยานพาหนะ พื้นที่) · ชื่อทีมแก้ไม่ได้ (ผูกกับเคส/แชท) ต้องให้ศูนย์แก้
   team_profile: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
     const p = b.profile || {}, sets = [], vals = [];
@@ -1078,12 +983,10 @@ const TEAM_POST = {
     const c = await db.prepare('SELECT id,volunteer,status FROM cases WHERE id=?').bind(clean(b.id, 30)).first();
     if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== t.name) return { ok: false, error: 'not_your_case' };
     if (b.step === 'arrived') { await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ถึงจุดเคส #${c.id} แล้ว`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
-    // ทีมแจ้งปัญหาหน้างาน (เข้าไม่ถึง/ไม่เจอบ้าน/อพยพแล้ว/ติดต่อไม่ได้) → ศูนย์ตัดสินใจต่อ (ส่งทีมอื่น/ปิดเคส)
     if (b.step === 'issue') { if (c.status !== 'going') return { ok: false, error: 'bad_step' }; const ISS = { blocked: 'เข้าไม่ถึง', notfound: 'ไม่เจอบ้าน', evacuated: 'อพยพไปแล้ว', noanswer: 'ติดต่อผู้แจ้งไม่ได้', need: 'ต้องการกำลังเสริม' }, why = ISS[b.issue] || 'ปัญหาอื่น';
       await db.prepare('UPDATE cases SET teamIssue=?, teamIssueAt=?, updatedAt=? WHERE id=?').bind(why + (b.note ? ' · ' + clean(b.note, 200) : ''), Date.now(), Date.now(), c.id).run(); await bumpRev(db);
       await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `แจ้งปัญหาเคส #${c.id}: ${why}${b.note ? ' · ' + clean(b.note, 200) : ''}`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
     if (b.step !== 'done' || c.status !== 'going') return { ok: false, error: 'bad_step' };
-    // ทีมแจ้ง "ช่วยเหลือแล้ว" → รอศูนย์กดปิดเคส (สถานะยังเป็นทีมกำลังไป)
     const sets = ['teamDoneAt=?', 'teamNote=?', 'updatedAt=?', 'teamIssue=NULL', 'teamIssueAt=NULL'], vals = [Date.now(), clean(b.note, 300), Date.now()];
     if (b.bags !== undefined && b.bags !== '' && b.bags !== null) { sets.push('bags=?'); vals.push(clampInt(b.bags, 0, 9999, 0)); }
     await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, c.id).run();
@@ -1101,18 +1004,15 @@ const TEAM_POST = {
   call_start: (db, t, b) => callStart(db, t.name, 'team', b),
   chat_send: (db, t, b) => chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }),
   team_gmaps: (db, t, b) => setTeamGmaps(db, t.name, b.gmaps),
-  env_check: (db, t, b) => envCheck(ENV, b),   // หน้าทีมใช้ข้อมูลฝน/ดาวเทียมคำนวณระดับเคสแบบเดียวกับ CENTRAL
+  env_check: (db, t, b) => envCheck(ENV, b),
   chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
 };
-/* SOS ที่ยังไม่มีใครรับทราบ + สายที่ทีมโทรเข้ามาภายใน 2 นาที (แสดงทุกหน้าหลังบ้าน) */
 async function alertsList(db) {
   const now = Date.now();
   const { results: sos } = await db.prepare('SELECT r.id,r.name,r.phone,r.sosAt,r.sosAck,l.lat,l.lng FROM roster r LEFT JOIN teams_live l ON l.team=r.name WHERE r.active=1 AND r.sosAt>? AND (r.sosAck IS NULL OR r.sosAck<r.sosAt)').bind(now - 12 * 3600e3).all();
   const { results: calls } = await db.prepare("SELECT n,team,name,text,link,at FROM chat WHERE kind='call' AND sender='team' AND at>? ORDER BY n DESC LIMIT 5").bind(now - 120e3).all();
   return { sos, calls, silent: await silentTeams(db) };
 }
-/* ทีมขาดการติดต่อ: ถือเคสที่กำลังไป แต่ไม่ส่งตำแหน่ง/ไม่แชท/ไม่ได้รับเคสใหม่เกิน 30 นาที · คำนวณใหม่ไม่เกินนาทีละครั้ง
-   ทีมที่แชร์ตำแหน่งผ่านลิงก์ Google Maps อย่างเดียว (ไม่ส่งพิกัดเข้าระบบ) ไม่นับ · ศูนย์กดรับทราบ = เงียบไว้ 30 นาที (เก็บแยกต่อทีม) */
 async function silentTeams(db) {
   const now = Date.now();
   let list = null; try { const c = JSON.parse(await getMeta(db, 'silent_cache') || 'null'); if (c && now - c.at < 60e3) list = c.list; } catch (e) {}
@@ -1130,7 +1030,6 @@ async function silentTeams(db) {
   const ack = new Map(acks.map(a => [a.k.slice(11), Number(a.v)]));
   return list.filter(t => !(ack.get(t.name) > now - 30 * 60e3));
 }
-/* โซน: วงกลม (จุดศูนย์กลาง + รัศมี) ใช้จัดกลุ่มเคสและมอบหมายทีมรับผิดชอบ (roster.zone = ชื่อโซน) */
 async function listZones(db) {
   const { results } = await db.prepare('SELECT id,name,color,lat,lng,radius,note,updatedAt FROM zones WHERE active=1 ORDER BY name').all();
   return { ok: true, zones: results };
@@ -1146,9 +1045,6 @@ async function saveZone(db, b) {
     .bind(id, name, color, lat, lng, clampInt(z.radius, 100, 30000, 1500), clean(z.note, 200), Date.now(), clean(b.by, 60)).run();
   return { ok: true, id };
 }
-/* ---------- ตรวจความวิกฤตด้วยข้อมูลภายนอก (เทียบกับที่ผู้แจ้งบอก) ----------
-   ต่อจุดเคส: ฝน (Open-Meteo: ฝนสะสม 3/24 ชม. ที่ผ่านมา + คาด 3 ชม.ข้างหน้า) · น้ำท่วมจากดาวเทียม (GISTDA 7 วัน: จุดอยู่ในพื้นที่น้ำท่วม/ระยะ/วันที่ภาพ)
-   GISTDA แบ่งค้นเป็นช่อง 0.04° (~4 กม.) แคช 30 นาที · ทีละไม่เกิน 10 ช่องต่อคำขอ (จุดที่เหลือเบราว์เซอร์จะถามรอบถัดไป) */
 const satDate = s => { const d = [...String(s || '').matchAll(/_(20\d{6})_/g)].map(m => m[1]).sort().pop(); return d ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : ''; };
 function inRing(lat, lng, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; }
 function inGeom(lat, lng, g) { const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : []; return polys.some(p => p.length && inRing(lat, lng, p[0]) && !p.slice(1).some(h => inRing(lat, lng, h))); }
@@ -1169,7 +1065,6 @@ async function envCheck(env, b) {
     .map(([a, o]) => [a.toFixed(3) + ',' + o.toFixed(3), { k: a.toFixed(3) + ',' + o.toFixed(3), lat: +a.toFixed(3), lng: +o.toFixed(3) }])).values()].slice(0, 300);
   const out = {};
   pts.forEach(p => { out[p.k] = {}; });
-  // ฝน: Open-Meteo รวมจุดใกล้กันเป็นช่อง 0.02° แล้วถามทีละ 100 ช่อง
   const cells = new Map(); pts.forEach(p => { const c = (Math.round(p.lat / 0.02) * 0.02).toFixed(2) + ',' + (Math.round(p.lng / 0.02) * 0.02).toFixed(2); if (!cells.has(c)) cells.set(c, []); cells.get(c).push(p); });
   const ck = [...cells.keys()];
   for (let i = 0; i < ck.length; i += 100) {
@@ -1182,10 +1077,8 @@ async function envCheck(env, b) {
         (cells.get(part[k]) || []).forEach(p => { out[p.k].rain = rain; }); });
     } catch (e) {}
   }
-  // ดาวเทียม GISTDA
   if (env.GISTDA_KEY) {
     const S = 0.04, gc = new Map(); pts.forEach(p => { const c = Math.floor(p.lng / S) + ',' + Math.floor(p.lat / S); if (!gc.has(c)) gc.set(c, []); gc.get(c).push(p); });
-    // ทีละไม่เกิน 40 ช่อง (ถามพร้อมกันครั้งละ 8) · ช่องที่เกินบอกว่า "รอตรวจ" ให้เบราว์เซอร์ถามซ้ำ
     const cellsAll = [...gc], doCells = cellsAll.slice(0, 40);
     cellsAll.slice(40).forEach(([, list]) => list.forEach(p => { out[p.k].sat = { pending: true }; }));
     for (let i = 0; i < doCells.length; i += 8) await Promise.all(doCells.slice(i, i + 8).map(async ([c, list]) => {
@@ -1202,13 +1095,7 @@ async function envCheck(env, b) {
   return { ok: true, time: Date.now(), gistda: !!env.GISTDA_KEY, points: out };
 }
 
-/* ---------- ภัยพิบัติหลายชนิด (แสดงเป็นชั้นบนแผนที่) ----------
-   แผ่นดินไหว + สึนามิ: USGS (ไทยและประเทศรอบ ๆ, 7 วัน, ≥2.5) + กรมอุตุฯ · ไฟป่า: จุดความร้อน VIIRS จาก GISTDA (24 ชม.)
-   พายุ/น้ำท่วม/ภูเขาไฟ/ไฟป่าใหญ่: GDACS · ฝนตกรุนแรง/ลูกเห็บ/พายุฝนฟ้าคะนอง/ลมกระโชก: Open-Meteo ที่ตัวเมืองทุกจังหวัด (24 ชม.ที่ผ่านมา + 6 ชม.ข้างหน้า)
-   ดินโคลนถล่ม/น้ำป่าไหลหลาก: ประเมินความเสี่ยงจากฝนในจังหวัดที่มีภูเขา (ไม่ใช่การตรวจพบจริง) · หลุมยุบ ฯลฯ: ศูนย์ปักหมุดรายงานเอง + ข่าว
-   แคช 10 นาที (ข้อมูลสาธารณะ) */
 const PROV_LL = {'กรุงเทพมหานคร':[13.756,100.502],'กระบี่':[8.086,98.906],'กาญจนบุรี':[14.023,99.533],'กาฬสินธุ์':[16.432,103.506],'กำแพงเพชร':[16.483,99.522],'ขอนแก่น':[16.441,102.836],'จันทบุรี':[12.611,102.104],'ฉะเชิงเทรา':[13.69,101.077],'ชลบุรี':[13.361,100.985],'ชัยนาท':[15.186,100.125],'ชัยภูมิ':[15.807,102.032],'ชุมพร':[10.493,99.18],'เชียงราย':[19.91,99.841],'เชียงใหม่':[18.788,98.985],'ตรัง':[7.558,99.611],'ตราด':[12.243,102.515],'ตาก':[16.884,99.126],'นครนายก':[14.206,101.213],'นครปฐม':[13.82,100.062],'นครพนม':[17.392,104.769],'นครราชสีมา':[14.979,102.098],'นครศรีธรรมราช':[8.432,99.963],'นครสวรรค์':[15.704,100.137],'นนทบุรี':[13.862,100.514],'นราธิวาส':[6.426,101.823],'น่าน':[18.783,100.779],'บึงกาฬ':[18.36,103.646],'บุรีรัมย์':[14.993,103.103],'ปทุมธานี':[14.02,100.525],'ประจวบคีรีขันธ์':[11.812,99.797],'ปราจีนบุรี':[14.05,101.372],'ปัตตานี':[6.869,101.25],'พระนครศรีอยุธยา':[14.353,100.568],'พะเยา':[19.166,99.902],'พังงา':[8.451,98.525],'พัทลุง':[7.617,100.078],'พิจิตร':[16.442,100.349],'พิษณุโลก':[16.821,100.265],'เพชรบุรี':[13.112,99.94],'เพชรบูรณ์':[16.419,101.16],'แพร่':[18.145,100.141],'ภูเก็ต':[7.89,98.398],'มหาสารคาม':[16.184,103.301],'มุกดาหาร':[16.545,104.723],'แม่ฮ่องสอน':[19.301,97.969],'ยโสธร':[15.794,104.145],'ยะลา':[6.541,101.281],'ร้อยเอ็ด':[16.053,103.652],'ระนอง':[9.966,98.635],'ระยอง':[12.682,101.278],'ราชบุรี':[13.536,99.817],'ลพบุรี':[14.8,100.653],'ลำปาง':[18.289,99.49],'ลำพูน':[18.574,99.008],'เลย':[17.486,101.722],'ศรีสะเกษ':[15.118,104.322],'สกลนคร':[17.155,104.148],'สงขลา':[7.189,100.595],'สตูล':[6.623,100.067],'สมุทรปราการ':[13.599,100.597],'สมุทรสงคราม':[13.409,100.002],'สมุทรสาคร':[13.547,100.274],'สระแก้ว':[13.824,102.065],'สระบุรี':[14.529,100.911],'สิงห์บุรี':[14.888,100.401],'สุโขทัย':[17.007,99.823],'สุพรรณบุรี':[14.474,100.117],'สุราษฎร์ธานี':[9.14,99.333],'สุรินทร์':[14.882,103.493],'หนองคาย':[17.878,102.742],'หนองบัวลำภู':[17.204,102.44],'อ่างทอง':[14.589,100.455],'อำนาจเจริญ':[15.866,104.626],'อุดรธานี':[17.415,102.787],'อุตรดิตถ์':[17.62,100.099],'อุทัยธานี':[15.383,100.025],'อุบลราชธานี':[15.244,104.847]};
-// จังหวัดที่มีพื้นที่ภูเขา/ลาดชัน (เสี่ยงดินโคลนถล่ม น้ำป่าไหลหลาก เมื่อฝนหนัก)
 const HILLY = new Set('เชียงราย เชียงใหม่ แม่ฮ่องสอน น่าน พะเยา แพร่ ลำปาง ลำพูน อุตรดิตถ์ ตาก สุโขทัย พิษณุโลก เพชรบูรณ์ เลย กาญจนบุรี ราชบุรี เพชรบุรี ประจวบคีรีขันธ์ ชุมพร ระนอง สุราษฎร์ธานี นครศรีธรรมราช กระบี่ พังงา ภูเก็ต ตรัง สตูล ยะลา นราธิวาส จันทบุรี ตราด นครนายก ปราจีนบุรี สระบุรี ชัยภูมิ กำแพงเพชร อุทัยธานี'.split(' '));
 const HZ_TYPES = ['sinkhole', 'landslide', 'flashflood', 'quake', 'tsunami', 'fire', 'storm', 'hail', 'heavyrain', 'flood', 'other'];
 async function hazardsData(env) {
@@ -1242,7 +1129,7 @@ async function hazardsData(env) {
         hail: wNext.some(c => c === 96 || c === 99), thunder: wNext.some(c => c >= 95) };
       w.heavy = w.maxHour >= 20 || w.rain24 >= 90 || w.next6 >= 50; w.storm = w.thunder || w.gust >= 60;
       const hill = HILLY.has(n), wet = Math.max(w.rain24, w.rain24 - w.rain3 + w.next6);
-      w.slide = hill && wet >= 150 ? 'high' : hill && wet >= 90 ? 'mid' : '';   // ดินโคลนถล่ม / น้ำป่าไหลหลาก (ประเมินจากฝน)
+      w.slide = hill && wet >= 150 ? 'high' : hill && wet >= 90 ? 'mid' : '';
       if (w.heavy || w.storm || w.hail || w.slide || w.rain24 >= 35) out.weather.push(w); });
     else out.errors.push('weather');
     out.quakes.sort((a, b) => b.time - a.time);
@@ -1264,9 +1151,6 @@ async function saveHazard(db, b) {
 }
 async function closeHazard(db, b) { const r = await db.prepare('UPDATE hazard_reports SET closedAt=? WHERE id=? AND closedAt IS NULL').bind(Date.now(), clean(b.id, 20)).run(); return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' }; }
 
-/* ---------- ประกาศแจ้งเตือนรายพื้นที่ ----------
-   scope: all (ทุกพื้นที่) · province (จังหวัด) · district (เขต/อำเภอ) · circle (รัศมีจากจุด)
-   level: info ข่าวสาร · warn เฝ้าระวัง · danger อันตราย/อพยพ · อ่านได้ทุกคน (ข้อมูลสาธารณะ) เขียนได้เฉพาะ CENTRAL */
 const BC_LEVELS = ['info', 'warn', 'danger'], BC_SCOPES = ['all', 'province', 'district', 'circle'];
 const bcOut = b => ({ id: b.id, level: b.level, title: b.title, body: b.body || '', link: b.link || '', scope: b.scope,
   provinces: String(b.provinces || '').split(',').filter(Boolean), districts: String(b.districts || '').split(',').filter(Boolean),
@@ -1298,8 +1182,6 @@ async function cancelBroadcast(db, b) {
   await setMeta(db, 'bc_rev', String(Date.now()));
   return r.meta.changes ? { ok: true } : { ok: false, error: 'not_found' };
 }
-/* ลิงก์ติดตามตำแหน่งสดของทีม (สร้างอัตโนมัติ · ดูอย่างเดียว ไม่ต้องเข้าระบบ) : /live/?v=<รหัสดู>
-   รหัสดู = SHA-256(รหัสลิงก์ทีม + ':view') 16 ตัวแรก → ส่งต่อได้โดยไม่เปิดเผยรหัสลิงก์ทีม (ซึ่งใช้ส่งข้อมูลแทนทีมได้) · สร้างลิงก์ทีมใหม่ = ลิงก์ติดตามเดิมใช้ไม่ได้ด้วย */
 async function viewId(token) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token + ':view')); return [...new Uint8Array(d)].slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join(''); }
 async function liveView(db, v) {
   v = String(v || '').toLowerCase();
@@ -1311,7 +1193,6 @@ async function liveView(db, v) {
   const { results: pts } = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? AND at>? ORDER BY at, n LIMIT 1500').bind(t.name, Date.now() - 6 * 3600e3).all();
   return { ok: true, team: t.name, status: t.status || '', vehicle: t.vehicle || '', live: live || null, track: pts, now: Date.now() };
 }
-/* ลิงก์แชร์ตำแหน่งสดจาก Google Maps (ทำงานต่อแม้ล็อกจอ ไม่ต้องลงแอปเพิ่ม) · ว่าง = ลบ */
 const GMAPS_RE = /^https:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|(?:www\.)?google\.(?:com|co\.th)\/maps|maps\.google\.(?:com|co\.th))\/[^\s<>"']{0,300}$/i;
 async function setTeamGmaps(db, team, link) {
   const m = String(link || '').match(/https:\/\/[^\s<>"']+/), url = m ? m[0] : '';
@@ -1321,11 +1202,9 @@ async function setTeamGmaps(db, team, link) {
   return r.meta.changes ? { ok: true, gmaps: url } : { ok: false, error: 'not_in_roster' };
 }
 
-/* ---------- War Room ย่อย ---------- */
 const WR_ROLES = ['lead', 'ops', 'dispatch', 'stock', 'comms', 'medic', 'staff'];
 async function listWarrooms(db) {
   const { results: rooms } = await db.prepare('SELECT * FROM warrooms WHERE active=1 ORDER BY createdAt').all();
-  // ทุกห้องมีลิงก์เข้าระบบเสมอ (ห้องเก่าที่ยังไม่มี → สร้างให้)
   const miss = rooms.filter(r => !r.token); if (miss.length) { miss.forEach(r => { r.token = rand(12); }); await db.batch(miss.map(r => db.prepare('UPDATE warrooms SET token=? WHERE id=?').bind(r.token, r.id))); }
   const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
   const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
@@ -1361,17 +1240,9 @@ async function saveWarroomStaff(db, b) {
     .bind(id, wr, name, WR_ROLES.includes(m.role) ? m.role : 'staff', clean(m.phone, 20).replace(/[^\d+\-\s]/g, ''), clean(m.shift, 40), clean(m.note, 200), Date.now()).run();
   return { ok: true, id };
 }
-/* ---------- ลิงก์ประจำ War Room: ทีมของห้องเข้าระบบได้โดยไม่ต้องใช้รหัสกลาง ----------
-   ลิงก์ = /central/warroom/?wr=<id>&k=<token> · หน้าเว็บส่งรหัสเป็น key="wr_<token>" · ใช้ API ได้แบบอาสา แต่ห้ามงานระดับศูนย์กลาง
-   (สร้าง/แก้ War Room อื่น · ดูลิงก์ · สำรองข้อมูล · ตั้งเบอร์ศูนย์ · นำเข้าเคส · ตั้งค่าเคสจากโซเชียล) · สร้างลิงก์ใหม่ = ลิงก์เดิมใช้ไม่ได้ทันที */
-/* สิทธิ์ War Room ของ "คำขอนี้" (ห้อง/บทบาท) เก็บแยกต่อคำขอด้วย AsyncLocalStorage
-   ห้ามใช้ตัวแปรร่วม: Worker รันหลายคำขอพร้อมกันในเครื่องเดียว ค่าจะปนกันหลัง await (ช่องโหว่ยกระดับสิทธิ์) */
 const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
-/* ---------- ขอบเขตข้อมูลของ War Room (ตรวจที่เซิร์ฟเวอร์) ----------
-   ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
-   ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
   'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
@@ -1402,7 +1273,6 @@ function inScope(c, sc) {
   if (sc.d.length && c.district && sc.d.includes(normDist(c.district))) return true;
   return !!(r.radius && r.lat != null && pin && kmDist(r.lat, r.lng, lat, lng) * 1000 <= r.radius);
 }
-/* GET ของ War Room: กรองผลให้เหลือเฉพาะพื้นที่/ทีมของห้อง · คืน null = ใช้ตัวจัดการปกติ */
 async function wrGet(env, db, p) {
   const sc = await wrScope(db);
   switch (p.action) {
@@ -1418,7 +1288,6 @@ async function wrGet(env, db, p) {
   }
   return null;
 }
-/* POST ของ War Room: ตรวจว่าเคส/ทีม/คลัง/ทีมงาน อยู่ในห้องนี้ก่อนแก้ */
 async function wrPostCheck(db, b) {
   const sc = await wrScope(db); if (sc.none) return 'no_room';
   const teamOk = async name => sc.teams.has(clean(name, MAX.volunteer));
@@ -1440,9 +1309,6 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-/* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
-   ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
-   ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
 const AUDIT_SKIP = new Set(['ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
@@ -1466,7 +1332,7 @@ async function auditLog(env, st, res) {
   let j = null; try { j = await res.json(); } catch (e) {}
   if (!j || !j.ok || j.skipped) return;
   const b = st.body, a = String(b.action || ''), db = env.DB;
-  if (a === 'sms_cfg' && !b.renew) return; // แค่เปิดดูลิงก์ ไม่ได้เปลี่ยน
+  if (a === 'sms_cfg' && !b.renew) return;
   let actor = '', role = '';
   if (st.wrc) { role = 'warroom'; actor = `War Room ${st.wrc.name || st.wrc.id}` + (st.wrc.user ? ` · ${st.wrc.user.name || st.wrc.user.username}` : ' · ลิงก์หัวหน้า'); }
   else if (b.tk || (['team_status', 'team_case', 'team_sos', 'team_ping'].includes(a) && !(st.k0 && isVol(env, st.k0)))) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
@@ -1493,9 +1359,6 @@ async function auditLog(env, st, res) {
     .bind(Date.now(), a, AUDIT_CAT(a), role, clean(actor, 120), clean(String(tg), 120), clean(summary, 400), JSON.stringify(auditClean(b)).slice(0, 3000), clean(st.ip, 60), undo ? JSON.stringify(undo) : null).run();
   if (Math.random() < 0.01) await db.prepare('DELETE FROM audit WHERE at<?').bind(Date.now() - 180 * 864e5).run();
 }
-/* ---------- ย้อนกลับการแก้ไข ----------
-   ก่อนทำคำสั่งที่ย้อนได้: เก็บแถวเดิม (before) · หลังทำ: เก็บแถวใหม่ (after) + คอลัมน์ที่เปลี่ยน
-   ย้อนกลับ = คืนเฉพาะคอลัมน์ที่คำสั่งนั้นเปลี่ยน · ถ้ามีคนแก้คอลัมน์เดียวกันต่อแล้ว ต้องยืนยัน (force) · แถวที่สร้างใหม่ = ปิดใช้งาน/ลบ */
 const UNDO_SPEC = {
   update: { t: 'cases', k: b => b.id }, team_case: { t: 'cases', k: b => b.id },
   roster_save: { t: 'roster', k: b => (b.team || {}).id, kr: j => j.id }, sos_ack: { t: 'roster', k: b => b.id },
@@ -1528,20 +1391,19 @@ async function auditUndo(db, b) {
   const changed = u.cols.filter(c => !(isStock && (c === 'qty' || c === 'updatedAt')) && !same((cur || {})[c], (u.after || {})[c]));
   if (changed.length && !b.force) return { ok: false, error: 'changed_since', cols: changed };
   const now = Date.now(), cols0 = u.cols.filter(c => c !== u.pk);
-  if (!u.before) {   // แถวที่คำสั่งนี้สร้างใหม่: ปิดใช้งาน (ถ้ามีคอลัมน์ active) ไม่งั้นลบ
+  if (!u.before) {
     if (cur && 'active' in cur) await db.prepare(`UPDATE ${u.t} SET active=0 WHERE ${u.pk}=?`).bind(u.key).run();
     else await db.prepare(`DELETE FROM ${u.t} WHERE ${u.pk}=?`).bind(u.key).run();
-  } else if (!cur) {   // แถวถูกลบไปแล้ว: ใส่แถวเดิมกลับ
+  } else if (!cur) {
     const ks = Object.keys(u.before); await db.prepare(`INSERT INTO ${u.t} (${ks.join(',')}) VALUES (${ks.map(() => '?').join(',')})`).bind(...ks.map(k => u.before[k])).run();
-  } else if (isStock) {   // สต็อก: คืนด้วยผลต่าง (ไม่ทับยอดที่คนอื่นรับ/จ่ายหลังจากนั้น) · ตรวจยอดตอนเขียน
+  } else if (isStock) {
     const delta = (Number(u.before.qty) || 0) - (Number(u.after.qty) || 0), nq = (Number(cur.qty) || 0) + delta;
     if (nq < 0) return { ok: false, error: 'not_enough', qty: cur.qty };
     const rest = cols0.filter(c => c !== 'qty' && c !== 'updatedAt'), sets = ['qty=?', 'updatedAt=?', ...rest.map(c => `${c}=?`)], vals = [nq, now, ...rest.map(c => u.before[c] ?? null)];
     const w = await db.prepare(`UPDATE stock SET ${sets.join(',')} WHERE id=? AND qty=?`).bind(...vals, u.key, cur.qty).run();
     if (!w.meta.changes) return { ok: false, error: 'conflict_retry' };
-    // รายการรับ/จ่ายเดิม: ไม่นับเป็นของที่ส่งไปกับเคสอีก
     await db.prepare("UPDATE stock_log SET caseId='', note=COALESCE(note,'') || ' (ย้อนกลับแล้ว)' WHERE n=(SELECT n FROM stock_log WHERE itemId=? AND after=? AND type IN ('in','out','set') ORDER BY n DESC LIMIT 1)").bind(u.key, u.after.qty).run();
-    u.before.qty = nq; // บันทึกรายการ "ย้อนกลับ" ด้านล่าง: จาก cur.qty → nq
+    u.before.qty = nq;
   } else if (cols0.length) {
     const sets = cols0.map(c => `${c}=?`), vals = cols0.map(c => u.before[c] ?? null);
     if ('updatedAt' in cur) { sets.push('updatedAt=?'); vals.push(now); }
@@ -1568,7 +1430,6 @@ async function auditList(db, p) {
 async function wrAuth(db, key) {
   const k = String(key || '');
   if (/^wr_[a-z0-9]{16,40}$/.test(k)) { const r = await db.prepare('SELECT id,name FROM warrooms WHERE active=1 AND token=?').bind(k.slice(3)).first(); return r ? { ...r, role: 'lead', via: 'link' } : null; }
-  // บัญชีผู้ใช้ของ War Room ย่อย (ชื่อผู้ใช้ + รหัสผ่าน) → session
   if (/^wru_[a-f0-9]{48}$/.test(k)) {
     const s = await db.prepare('SELECT s.userId,s.warroom,s.expires,u.username,u.name AS uname,u.role,u.active,w.name FROM wr_sessions s JOIN wr_users u ON u.id=s.userId JOIN warrooms w ON w.id=s.warroom WHERE s.token=? AND w.active=1').bind(k.slice(4)).first();
     if (!s || !s.active || s.expires < Date.now()) return null;
@@ -1576,10 +1437,6 @@ async function wrAuth(db, key) {
   }
   return null;
 }
-/* ---------- สมัครเป็น War Room / จิตอาสา (หน้า /join) ----------
-   สมัคร = เก็บคำตอบแบบสอบถามความสามารถ + ชื่อผู้ใช้/รหัสผ่าน (สถานะ pending)
-   War Room: CENTRAL อนุมัติ → สร้างห้อง (warrooms) + บัญชีหัวหน้า (wr_users ด้วยรหัสผ่านเดิม) → เข้าระบบที่ /join ได้เลย
-   จิตอาสา: CENTRAL หรือหัวหน้า War Room ที่ผู้สมัครเลือก อนุมัติ → สร้างทีม (roster) สังกัดห้อง → เข้าระบบแล้วไปหน้าทีม */
 const APP_KIND = ['warroom', 'volunteer'];
 const appClean = d => { const o = {}; for (const [k, v] of Object.entries(d || {}).slice(0, 60)) { const kk = String(k).replace(/[^\w]/g, '').slice(0, 30); if (!kk) continue;
   o[kk] = Array.isArray(v) ? v.slice(0, 30).map(x => clean(x, 60)) : typeof v === 'number' ? v : typeof v === 'boolean' ? v : clean(v, 500); } return o; };
@@ -1600,7 +1457,6 @@ async function appApply(db, b, ip) {
   await bumpRev(db);
   return { ok: true, id, status: 'pending' };
 }
-/* เข้าระบบที่หน้า /join: War Room ที่อนุมัติแล้ว → ใช้บัญชีห้อง (wr_login) · จิตอาสา → สถานะ + ลิงก์หน้าทีม */
 async function appLogin(db, b) {
   const kind = APP_KIND.includes(b.kind) ? b.kind : '', un = WR_USER(b.username), pw = String(b.password || ''), now = Date.now();
   const a = kind && un && await db.prepare('SELECT * FROM applications WHERE kind=? AND username=?').bind(kind, un).first();
@@ -1651,18 +1507,13 @@ async function appDecide(db, b) {
   await bumpRev(db);
   return { ok: true, status: 'approved', ...result };
 }
-/* ---------- บัญชีผู้ใช้ War Room ย่อย ----------
-   หัวหน้าห้อง (ผู้ถือลิงก์ห้อง หรือบัญชี role=lead) สร้างบัญชีให้ตัวเองและทีมงานได้ · เข้าระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (เฉพาะห้องนั้น)
-   รหัสผ่านเก็บแบบ PBKDF2-SHA256 + salt · ผิด 5 ครั้งล็อก 10 นาที · session 30 วัน · บัญชี War Room เข้าหน้า CENTRAL ไม่ได้ */
 async function pwHash(pw, salt) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(String(pw)), 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 100000 }, k, 256);
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 const WR_USER = u => String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 32);
-// ตอนสร้างบัญชี: ชื่อผู้ใช้ต้องถูกรูปแบบตั้งแต่แรก (ไม่ตัด/แก้ให้เอง จะได้ไม่สับสนกับชื่อจริง)
 const UN_OK = u => /^[a-z0-9._-]{3,32}$/.test(String(u || '').trim().toLowerCase());
-/* จำกัดการลองเข้าระบบต่อ IP: 30 ครั้ง / 10 นาที (กันเดารหัสหลายบัญชี) */
 async function ipLimit(db, ip, kind, max = 30, win = 600e3) {
   if (!ip) return true; const k = 'rl:' + kind + ':' + ip, now = Date.now(); let o = {}; try { o = JSON.parse(await getMeta(db, k) || '{}'); } catch (e) {}
   if (!o.t || now - o.t > win) o = { t: now, n: 0 }; o.n++; await setMeta(db, k, JSON.stringify(o)); return o.n <= max;
@@ -1705,7 +1556,7 @@ async function wrUserSave(db, b) {
     if (wrLead() && b.active !== undefined && !self) { sets.push('active=?'); vals.push(b.active ? 1 : 0); }
     if (pw) { if (pw.length < 6) return { ok: false, error: 'short_password' }; const salt = rand(8); sets.push('salt=?', 'hash=?', 'fails=0', 'lockUntil=NULL'); vals.push(salt, await pwHash(pw, salt)); }
     if (sets.length) await db.prepare(`UPDATE wr_users SET ${sets.join(',')} WHERE id=?`).bind(...vals, u.id).run();
-    if (pw || b.active === false) await db.prepare('DELETE FROM wr_sessions WHERE userId=?').bind(u.id).run(); // เปลี่ยนรหัส/ปิดบัญชี = ออกจากระบบทุกเครื่อง
+    if (pw || b.active === false) await db.prepare('DELETE FROM wr_sessions WHERE userId=?').bind(u.id).run();
     return { ok: true };
   }
   if (!UN_OK(b.username)) return { ok: false, error: 'bad_username' };
@@ -1723,7 +1574,7 @@ async function warroomLink(db, b) {
   if (!r) return { ok: false, error: 'no_warroom' };
   let token = r.token;
   if (!token || b.renew) { token = rand(12); await db.prepare('UPDATE warrooms SET token=?, updatedAt=? WHERE id=?').bind(token, Date.now(), id).run();
-    if (b.renew) await db.prepare('DELETE FROM wr_sessions WHERE warroom=?').bind(id).run(); } // สร้างลิงก์ใหม่ = ทุกคนในห้องต้องเข้าระบบใหม่
+    if (b.renew) await db.prepare('DELETE FROM wr_sessions WHERE warroom=?').bind(id).run(); }
   return { ok: true, id, token };
 }
 async function setTeamWarroom(db, b) {
@@ -1745,9 +1596,7 @@ async function saveStockItem(db, b) {
   const id = t.id && await db.prepare('SELECT id FROM stock WHERE id=?').bind(String(t.id)).first() ? String(t.id) : 'S' + rand(3);
   const min = t.min === '' || t.min == null ? null : clampInt(t.min, 0, 1e7, null);
   const expiry = /^\d{4}-\d{2}-\d{2}$/.test(String(t.expiry || '')) ? t.expiry : '';
-  // ไม่ส่ง kit มา (เช่นแก้ชื่อ/หน่วยจากฟอร์มทั่วไป) = คงรายการในถุงเดิมไว้
   const kit = t.kit === undefined ? ((await db.prepare('SELECT kit FROM stock WHERE id=?').bind(id).first()) || {}).kit || '[]' : JSON.stringify(parseKit(t.kit).filter(x => x.id !== id));
-  // warroom: คลังของ War Room ไหน ('' = คลังกลาง) · ไม่ส่งมา = คงค่าเดิม
   const wr = t.warroom === undefined ? ((await db.prepare('SELECT warroom FROM stock WHERE id=?').bind(id).first()) || {}).warroom || '' : clean(t.warroom, 20).replace(/[^\w-]/g, '');
   await db.prepare(`INSERT INTO stock (id,name,unit,category,qty,min,needed,note,updatedAt,expiry,location,kit,warroom) VALUES (?,?,?,?,0,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET name=excluded.name,unit=excluded.unit,category=excluded.category,min=excluded.min,needed=excluded.needed,note=excluded.note,updatedAt=excluded.updatedAt,expiry=excluded.expiry,location=excluded.location,kit=excluded.kit,warroom=excluded.warroom`)
@@ -1761,14 +1610,12 @@ async function moveStock(db, b) {
   if (!it) return { ok: false, error: 'not_found' };
   const before = Number(it.qty) || 0, after = type === 'in' ? before + amount : type === 'out' ? before - amount : amount;
   if (after < 0) return { ok: false, error: 'not_enough', qty: before };
-  // ตรวจยอดเดิมอีกครั้งตอนเขียน กันสองคนจ่ายของพร้อมกัน
   const u = await db.prepare('UPDATE stock SET qty=?, updatedAt=? WHERE id=? AND qty=?').bind(after, Date.now(), it.id, before).run();
   if (!u.meta.changes) return { ok: false, error: 'conflict_retry' };
   await db.prepare('INSERT INTO stock_log (time,itemId,item,type,delta,after,note,caseId,by_,team) VALUES (?,?,?,?,?,?,?,?,?,?)')
     .bind(Date.now(), it.id, it.name, type, after - before, after, clean(b.note, 200), clean(b.caseId, 30), clean(b.by, 60), clean(b.team, MAX.volunteer)).run();
   return { ok: true, qty: after };
 }
-/* แพ็คถุงยังชีพ: ตัดของในคลังตามรายการในถุง × จำนวนถุง แล้วรับถุงเข้า (ทำใน batch เดียว = สำเร็จหรือไม่สำเร็จทั้งหมด) */
 async function packBags(db, b) {
   const n = clampInt(b.amount, 1, 100000, 0);
   const bag = await db.prepare('SELECT * FROM stock WHERE id=?').bind(String(b.itemId)).first();
@@ -1802,13 +1649,12 @@ async function importCases(db, b) {
       clean(c.address, MAX.address), num(c.lat, -90, 90), num(c.lng, -180, 180), LEVELS.includes(c.level) ? c.level : '', list(c.needs).join(', '), list(c.vulnerable).join(', '),
       clean(c.notes, MAX.notes), clean(String(c.volunteer || '').replace(/^'/, ''), MAX.volunteer), Number(c.updatedAt) || Date.now(), rand(16),
       c.households === '' || c.households == null ? null : clampInt(c.households, 1, 999, null), c.bags === '' || c.bags == null ? null : clampInt(c.bags, 0, 9999, null), clean(c.cctv, 40)).run();
-    if (r.meta.changes) added++; // changes นับรวมแถวที่ trigger ใส่คิวสำรอง จึงนับแค่ว่ามีเพิ่มหรือไม่
+    if (r.meta.changes) added++;
   }
   if (added) await bumpRev(db);
   return { ok: true, added, total: rows.length };
 }
 
-/* ---------- สำรองลง Google Sheet ---------- */
 async function backupToSheet(env) {
   const db = env.DB;
   if (!db) return { ok: false, error: 'no_database' };
@@ -1848,7 +1694,6 @@ async function backupStatus(env) {
     lastBackupAt: Number(await getMeta(db, 'backup_at')) || null, lastError: await getMeta(db, 'backup_error') };
 }
 
-/* ---------- ข้อมูลภายนอก (สาธารณะ ไม่มีข้อมูลส่วนตัว) : ดึงผ่าน Worker แล้วเก็บแคช ลดภาระต้นทาง ---------- */
 async function cached(key, ttl, load) {
   const cache = caches.default, req = new Request('https://umplus.cache/' + key);
   const hit = await cache.match(req);
@@ -1859,16 +1704,13 @@ async function cached(key, ttl, load) {
 }
 const UA = { 'user-agent': 'UMplus-flood-help/1.0 (+https://admin-um-help.pages.dev)' };
 
-/* ---------- ข่าว & เตือนภัย: ประกาศกรมอุตุฯ + แผ่นดินไหวใกล้ไทย (TMD Data API) + หัวข้อข่าว (RSS สำนักข่าว) ----------
-   เก็บแค่หัวข้อ แหล่งข่าว เวลา และลิงก์ไปต้นทาง (ไม่คัดลอกเนื้อข่าว) · แคช 10 นาที */
-const TMD_KEY = 'uid=api&ukey=api12345'; // คีย์สาธารณะที่ TMD เปิดให้ทดลองใช้
+const TMD_KEY = 'uid=api&ukey=api12345';
 const xmlDec = s => String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
   .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
 const xmlAll = (s, tag) => [...String(s).matchAll(new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)</${tag}>`, 'g'))].map(m => m[1]);
 const xmlOne = (s, tag) => xmlDec(xmlAll(s, tag)[0] || '');
-const tmdTime = t => { const m = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(t || ''); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], m[4] - 7, +m[5]) : null; }; // เวลาไทย → ms
-// ฟีดของสำนักข่าวโดยตรง (Google News ตอบ 503 กับ Worker) แล้วคัดเฉพาะข่าวที่เกี่ยวกับภัยธรรมชาติ/เตือนภัย
+const tmdTime = t => { const m = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(t || ''); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], m[4] - 7, +m[5]) : null; };
 const NEWS_FEEDS = [['ไทยรัฐ', 'https://www.thairath.co.th/rss/news'], ['มติชน', 'https://www.matichon.co.th/feed'], ['ข่าวสด', 'https://www.khaosod.co.th/feed'], ['ประชาชาติธุรกิจ', 'https://www.prachachat.net/feed']];
 const NEWS_TAGS = [['flood', /น้ำท่วม|น้ำป่า|ล้นตลิ่ง|น้ำหลาก|ระบายน้ำ|เขื่อน|อพยพ|ท่วมขัง|ท่วมสูง|ระดับน้ำ/], ['storm', /พายุ|ฝนตก|ฝนหนัก|ฝนถล่ม|ลูกเห็บ|ลมกระโชก|มรสุม|ดีเปรสชัน|กรมอุตุ|อุตุฯ|คลื่นลมแรง|พยากรณ์อากาศ|สภาพอากาศ/], ['quake', /แผ่นดินไหว|สึนามิ|ดินถล่ม|โคลนถล่ม/], ['alert', /เตือนภัย|ประกาศเตือน|เฝ้าระวัง|ภัยพิบัติ|ปภ\.|บรรเทาสาธารณภัย|ฉุกเฉิน/]];
 async function newsData() {
@@ -1889,7 +1731,7 @@ async function newsData() {
     if (q.status === 'fulfilled') out.quakes = xmlAll(q.value, 'DailyEarthquakes').map(x => ({
       place: xmlOne(x, 'OriginThai'), time: tmdTime(xmlOne(x, 'DateTimeThai')), mag: +xmlOne(x, 'Magnitude'), depth: +xmlOne(x, 'Depth'),
       lat: +xmlOne(x, 'Latitude'), lng: +xmlOne(x, 'Longitude'),
-    })).filter(x => x.time && Date.now() - x.time < 3 * 864e5 && x.lat > -2 && x.lat < 28 && x.lng > 88 && x.lng < 112 /* ไทยและประเทศรอบ ๆ */)
+    })).filter(x => x.time && Date.now() - x.time < 3 * 864e5 && x.lat > -2 && x.lat < 28 && x.lng > 88 && x.lng < 112)
       .sort((a, b) => b.time - a.time).slice(0, 20);
     else out.errors.push('tmd_quake: ' + String(q.reason && q.reason.message || q.reason).slice(0, 120));
     const seen = new Set(), names = NEWS_FEEDS.map(f => f[0]);
@@ -1899,7 +1741,7 @@ async function newsData() {
         const source = names[i];
         let title = xmlOne(it, 'title').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ');
         const tags = NEWS_TAGS.filter(([, re]) => re.test(title)).map(([k]) => k);
-        if (!title || !(tags.some(t => t !== 'alert') || /ภัยพิบัติ|ปภ\.|บรรเทาสาธารณภัย|เตือนภัย/.test(title))) return; // ฟีดสำนักข่าวมีทุกหมวด: เก็บเฉพาะข่าวภัยธรรมชาติ/เตือนภัย
+        if (!title || !(tags.some(t => t !== 'alert') || /ภัยพิบัติ|ปภ\.|บรรเทาสาธารณภัย|เตือนภัย/.test(title))) return;
         const key = title.replace(/[\s"'“”‘’]/g, '').slice(0, 40);
         if (seen.has(key)) return;
         const link = xmlOne(it, 'link').trim(), t = Date.parse(xmlOne(it, 'pubDate'));
@@ -1912,8 +1754,6 @@ async function newsData() {
     return out;
   });
 }
-/* เขื่อน/อ่างเก็บน้ำ: ThaiWater (สสน.) รวมข้อมูลกรมชลประทาน · เขื่อนใหญ่ (รายวัน) + อ่างขนาดกลาง · แคช 1 ชม.
-   % ความจุ = น้ำในอ่างเทียบความจุที่ระดับเก็บกักปกติ (เกิน 100% = เกินระดับปกติ เสี่ยงต้องระบายเพิ่ม) */
 async function damData() {
   return cached('dams-v1', 3600, async () => {
     const j = await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/analyst/dam', { headers: UA, signal: AbortSignal.timeout(25000) }).then(r => r.json());
@@ -1927,7 +1767,6 @@ async function damData() {
     return { ok: true, time: Date.now(), large, medium };
   });
 }
-// ระดับน้ำบนถนน: เซ็นเซอร์สำนักการระบายน้ำ กทม. + ระดับน้ำคลอง: ThaiWater (สสน.)
 async function waterData() {
   return cached('water-v1', 300, async () => {
     const out = { ok: true, time: Date.now(), sensors: [], stations: [], errors: [] };
@@ -1948,20 +1787,17 @@ async function waterData() {
     return out;
   });
 }
-// กล้อง CCTV: iTIC Foundation (ผ่าน Longdo Traffic) เฉพาะกรุงเทพฯ
 async function cctvData() {
   return cached('cctv-v3', 3600, async () => {
     const j = await fetch('https://traffic.longdo.com/camera.json', { headers: UA }).then(r => r.json());
-    const cams = (j.item || []).filter(c => String(c.geocode || '').startsWith('10') || c.hls_url).map(c => { // กรุงเทพฯ ทุกตัว + กล้องภาพสดทั้งประเทศ
+    const cams = (j.item || []).filter(c => String(c.geocode || '').startsWith('10') || c.hls_url).map(c => {
       const img = /X\.X\.X\.X/.test(c.imgurl || '') ? '' : (c.imgurl || '');
-      const https = u => /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : ''; // ส่งต่อเฉพาะลิงก์ https
+      const https = u => /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '';
       return { id: c.camid, title: String(c.title || '').replace(/^\(กรุงเทพมหานคร\)\s*/, '').trim(), lat: Number(c.latitude), lng: Number(c.longitude), img: https(img), hls: https(c.hls_url), org: c.organization || '' };
     }).filter(c => isFinite(c.lat) && isFinite(c.lng));
     return { ok: true, time: Date.now(), cams };
   });
 }
-/* พื้นที่ที่องค์กรอื่นรับแล้ว: อ่านจาก Google Sheet ที่แชร์แบบ "ทุกคนที่มีลิงก์" แล้วแปลงลิงก์ Google Maps (maps.app.goo.gl) เป็นพิกัด
-   แคชผลรวม 5 นาที และแคชพิกัดของแต่ละลิงก์ถาวรใน meta (ลิงก์เดิมไม่ต้อง resolve ซ้ำ) */
 const COVERED_SHEET = '1QwVsFfWqNBP8qJMBBk_PrvbSm6gNFOF0CGwJl5BNaFc';
 function parseCSV(t) { const rows = []; let row = [], cur = '', q = false; for (let i = 0; i < t.length; i++) { const ch = t[i];
   if (q) { if (ch === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; } else if (ch === '"') q = true; else if (ch === ',') { row.push(cur); cur = ''; }
@@ -1990,7 +1826,6 @@ async function listCovered(db) {
   const items = [];
   for (const x of rows) { const [org, area, date, link, district, sets, note, coord, what] = x.map(v => String(v || '').trim()); const ll = coordsFromUrl('@' + coord.replace(/\s+/g, '')) || coordsFromUrl('@' + link.replace(/\s+/g, '')) || (link ? await resolveMapLink(db, link) : null);
     items.push({ org, area, date, link, district, sets, note, items: what, lat: ll ? ll[0] : null, lng: ll ? ll[1] : null }); }
-  // แถวที่กรอกผ่านฟอร์มบนเว็บนี้ (เก็บใน D1) — ข้ามถ้าชีตมีแถวเดียวกันแล้ว
   const seen = new Set(items.map(i => [i.org, i.area, i.date].join('|')));
   const { results: extra } = await db.prepare('SELECT * FROM covered_extra ORDER BY n').all();
   for (const e of extra || []) { if (seen.has([e.org, e.place, e.date].join('|'))) continue;
@@ -2010,9 +1845,6 @@ async function addCovered(db, b) {
   return { ok: true };
 }
 
-/* ---------- เคสจากโซเชียล (leads) ----------
-   แหล่ง: Hermes agent ส่งเข้ามา (lead_add) หรือปุ่ม "ดึงเคสใหม่" อ่านคำร้อง Traffy Fondue ผ่านไฟล์ส่งออกสาธารณะของ Floodboard (lead_pull)
-   ตัวกรอง: ตัดโพสต์เก่า (ก่อนเกิดเหตุ / เก่ากว่า N วัน / ปีก่อน) และโพสต์ขอเงินที่ไม่บอกสถานที่ · ติดธงบัญชีที่ซ้ำกับเคสอื่นต่างพื้นที่ */
 const LEAD_STATUS = ['new', 'accepted', 'rejected'];
 const BANK_WORDS = /(บัญชี|บช\.?|ธนาคาร|พร้อมเพย์|promptpay|โอน|บริจาค|กสิกร|ไทยพาณิชย์|กรุงไทย|กรุงเทพ|กรุงศรี|ออมสิน|ธ\.?ก\.?ส|ทีทีบี|ttb|kbank|scb|ktb|bbl|gsb)/i;
 const ACCOUNT_RE = /(?<!\d)(\d{3}[- ]?\d[- ]?\d{5}[- ]?\d|\d{3}[- ]?\d{3}[- ]?\d{4}|\d{10,15})(?!\d)/g;
@@ -2025,7 +1857,6 @@ async function leadSettings(db) {
   return { eventStart: await getMeta(db, 'leads_event_start') || '2026-09-24', maxAgeDays: Number(await getMeta(db, 'leads_max_age')) || 14 };
 }
 const bkkDate = s => Date.parse(s + 'T00:00:00+07:00');
-/* คืน [เหตุผลที่ตัดทิ้ง หรือ '', ธง[]] — เหตุผลที่เป็นความผิดของคนกรอกวันที่ (ไม่มีวันที่/วันที่อนาคต) จะไม่ถูกจำ ส่งใหม่ได้ */
 async function checkLead(db, l, st) {
   const flags = [], now = Date.now();
   if (!l.postedAt) return ['no_post_date', flags];
@@ -2072,8 +1903,6 @@ async function addLeads(db, b) {
   for (const x of rows) results.push(await insertLead(db, readLead(x), st));
   return { ok: true, results, added: results.filter(r => r.ok && !r.duplicate && r.status === 'new').length, rejected: results.filter(r => r.status === 'rejected' && !r.duplicate).length };
 }
-/* คำร้อง Traffy Fondue (ผ่าน Floodboard export) ที่เป็นคนขอความช่วยเหลือจริง ไม่ใช่เรื่องขยะ ท่อ ถนน ทรัพย์สิน */
-// คำไทยสั้นชนกับคำอื่นง่าย: "ยา" อยู่ใน ยาว/ยาย, "เรือ" อยู่ใน บ้านเรือน, "อาหาร" อยู่ใน เศษอาหาร/ร้านอาหาร, "จมน้ำ" ใช้กับรถ/ประตูด้วย
 const RX = { food: /(?<!เศษ|ร้าน|ขยะเศษ)อาหาร(?!เสริม)|ข้าวกล่อง/, boat: /เรือ(?!น)/, meds: /ยารักษา|ยาทา|ยาแก้|ยาสามัญ|น้ำกัดเท้า|ยาน้ำกัดเท้า/ };
 const NEED_STRONG = new RegExp([/ถุงยังชีพ|น้ำดื่ม|ติดเตียง|ผู้ป่วย|ออกไม่ได้|ออกจากบ้านไม่ได้|ติดอยู่ใน|อพยพ|ช่วยด้วย|ไฟช็อต|ไฟดูด|ฟอกไต|ออกซิเจน|พลัดตก|คนพิการ|ตั้งครรภ์/.source, RX.food.source, RX.boat.source, RX.meds.source].join('|'));
 const NEED_SOFT = /ขอความช่วยเหลือ|ช่วยเหลือด่วน|ผู้สูงอายุ|คนแก่|เด็กเล็ก/;
@@ -2091,7 +1920,7 @@ async function pullLeads(db) {
   if (!r.ok) return { ok: false, error: 'floodboard_' + r.status };
   const rows = parseCSV((await r.text()).replace(/^﻿/, '')), h = rows[0] || [], ix = k => h.indexOf(k);
   const st = await leadSettings(db), out = { ok: true, scanned: 0, matched: 0, added: 0, rejected: 0, duplicate: 0 };
-  let named = 0; // ชื่อพื้นที่ (Photon) สูงสุด 25 ครั้งต่อรอบ กันเกินโควตา subrequest
+  let named = 0;
   for (const x of rows.slice(1)) {
     if (x[ix('source')] !== 'traffy') continue;
     out.scanned++;
@@ -2112,35 +1941,27 @@ async function pullLeads(db) {
   await setMeta(db, 'leads_pulled_at', Date.now());
   return out;
 }
-/* Help Me ช่วยด้วย (helpme-th.pages.dev · มูลนิธิอุมมะตี) — Apps Script แบบเดียวกับ Code.gs เดิม
-   ไม่มีรหัส: ได้รายการสาธารณะ (ไม่มีชื่อ/เบอร์ พิกัดโดยประมาณ) · ตั้ง secret HELPME_KEY = รหัสทีมของ Help Me เพื่อได้ข้อมูลเต็ม
-   เคสที่ Help Me ปิดแล้ว (done) จะถูกเอาออกจากคิวรอคัดเอง */
 const HELPME_API = 'https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
-/* ระบบ Help Me ตัวปัจจุบัน (helpme4u.com ใช้ตัวนี้ตั้งแต่ ต.ค. 2569) — มีเคสใหม่กว่าชีตเดิม · ตั้ง HELPME_API2 เพื่อเปลี่ยนได้ */
 const HELPME_API2 = 'https://script.google.com/macros/s/AKfycbwxY1eDJnkqCInUCv9bye2WLd2HXuGUyVH9mElVCl5I04UFVI3VfoUr2yxMMFHEIvhW9A/exec';
-/* รายการเคสจากระบบ Help Me ตัวปัจจุบัน → รูปแบบเดียวกับ sheetCases · มี HELPME_KEY = ได้ชื่อ/เบอร์/ที่อยู่/พิกัดจริง · ไม่มี = ข้อมูลสาธารณะ (พิกัดโดยประมาณ) */
 async function apiCases(env) {
   const q = new URLSearchParams({ action: 'list', t: String(Math.floor(Date.now() / 60000)) }); if (env.HELPME_KEY) q.set('key', env.HELPME_KEY);
-  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 55000); // Apps Script แบบมีรหัสตอบช้า 15–40 วิ
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 55000);
   try {
     const r = await fetch((env.HELPME_API2 || HELPME_API2) + '?' + q, { headers: UA, redirect: 'follow', signal: ctl.signal });
     if (!r.ok) throw new Error('hm_api_' + r.status);
     const j = await r.json(); if (!j || !Array.isArray(j.cases)) throw new Error('hm_api_bad');
     const ST = { open: 'open', going: 'going', done: 'done', skip: 'skip' };
     return j.cases.filter(c => c && c.id).map(c => { const address = String(c.address || '').trim(), photos = Array.isArray(c.photos) ? c.photos : String(c.photos || '').match(/[-\w]{25,}/g) || [];
-      // ค่าที่ไม่มี = null (ตอนรวมกับชีตจะไม่ทับค่าดี) · ความเร่งด่วนเป็นข้อความไทยก็ได้
       const u = Number(c.urgency) || HM_URG[String(c.urgency || '').trim()] || null;
       return { id: String(c.id), createdAt: Number(c.createdAt) || 0, updatedAt: Number(c.updatedAt) || Number(c.createdAt) || 0, status: ST[c.status] || HM_STATUS[c.status] || null,
         urgency: u ? Math.min(3, Math.max(1, u)) : null, name: String(c.name || ''), phone: String(c.phone || '').replace(/^'/, ''), notes: String(c.notes || c.details || ''),
         people: Number(c.people) || null, address, district: /^หมู่/.test(String(c.district || '')) ? '' : String(c.district || ''), addrDistrict: bkkDistrictOf(address),
-        lat: c.approx ? null : num(c.lat, -90, 90), lng: c.approx ? null : num(c.lng, -180, 180), approx: !!c.approx, // พิกัดโดยประมาณ (ข้อมูลสาธารณะ) ไม่ใช้เป็นหมุดจริง level: HELPME_LEVEL[c.level] || String(c.level || ''),
+        lat: c.approx ? null : num(c.lat, -90, 90), lng: c.approx ? null : num(c.lng, -180, 180), approx: !!c.approx,
         needs: Array.isArray(c.needs) ? c.needs : String(c.needs || '').split(/\s*,\s*/).filter(Boolean), volunteer: String(c.volunteer || ''), org: String(c.org || ''), pinSrc: '',
         pickedAt: Number(c.pickedAt) || 0, doneAt: Number(c.doneAt) || 0, photos }; });
   } finally { clearTimeout(tm); }
 }
-/* รวมสองแหล่ง: ระบบปัจจุบัน (สถานะ/เคสใหม่ล่าสุด) + ชีตเดิม (ชื่อ เบอร์ ที่อยู่ รูป พิกัดจริง ของเคสเก่า) · ไม่เข้าเกณฑ์ (skip) ไม่นำเข้า */
 async function helpmeAllCases(env) {
-  // ต้องได้ทั้งสองแหล่ง: แหล่งใดล่ม = ยกเลิกรอบนี้ (ไม่เขียนข้อมูลครึ่งเดียวทับของดี)
   const [sh, api] = await Promise.all([sheetCases(env), apiCases(env)]);
   if (!api.length) throw new Error('hm_api_empty');
   const byId = new Map(sh.map(c => [String(c.id), c])), out = [], skip = [];
@@ -2155,12 +1976,9 @@ async function helpmeAllCases(env) {
     if ((m.lat == null || m.lng == null) && a.lat != null && !a.approx) { m.lat = a.lat; m.lng = a.lng; }
     out.push(m);
   }
-  for (const o of byId.values()) if (o.status !== 'skip') out.push(o); else skip.push(String(o.id)); // เคสที่มีเฉพาะในชีตเดิม
+  for (const o of byId.values()) if (o.status !== 'skip') out.push(o); else skip.push(String(o.id));
   out.skipIds = skip; return out;
 }
-/* Google Sheet ของ Help Me = แหล่งข้อมูลหลัก (เร็วและนิ่งกว่า Apps Script)
-   แท็บ: เคส · ลงพื้นที่ · ทีม · ศูนย์พักพิง · เครือข่าย — อ่านทาง export CSV ฝั่งเซิร์ฟเวอร์ แคช 1 นาที
-   ชีตนี้มีชื่อและเบอร์ผู้แจ้ง: ส่งต่อให้หน้าเว็บเฉพาะคนที่มีรหัสทีม · ตัวเลขสถิติไม่มีข้อมูลส่วนตัว */
 const HM_SHEET = '1GkGL0PrjuADwMmuSSj0KjW9WLH180eATD1RkmzEqGMs';
 const HM_TABS = { cases: '689944118', outreach: '1011033103', teams: '1249688184', shelters: '1258451052', network: '1402005274' };
 async function sheetTab(env, tab) {
@@ -2172,13 +1990,11 @@ async function sheetTab(env, tab) {
     return { header: rows[0].map(x => String(x || '').trim()), rows: rows.slice(1).filter(r => r.some(v => String(v || '').trim())) };
   });
 }
-/* "27/9/2026, 19:10:13" หรือ "4/10/2026 15:43" (เวลาไทย) → ms · ปี พ.ศ. แปลงให้ */
 function sheetTime(v) {
   const m = String(v || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (!m) return 0; let y = +m[3]; if (y > 2400) y -= 543;
   return Date.UTC(y, +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)) - 7 * 3600e3;
 }
-/* 50 เขตของกรุงเทพฯ — ใช้หาเขตจากที่อยู่ที่ไม่ได้เขียนคำว่า "เขต" (ชื่อยาวก่อน กัน "บางกะปิ" ไปจับ "บาง") */
 const BKK_DISTRICTS = ['พระนคร','ดุสิต','หนองจอก','บางรัก','บางเขน','บางกะปิ','ปทุมวัน','ป้อมปราบศัตรูพ่าย','พระโขนง','มีนบุรี','ลาดกระบัง','ยานนาวา','สัมพันธวงศ์','พญาไท','ธนบุรี','บางกอกใหญ่','ห้วยขวาง','คลองสาน','ตลิ่งชัน','บางกอกน้อย','บางขุนเทียน','ภาษีเจริญ','หนองแขม','ราษฎร์บูรณะ','บางพลัด','ดินแดง','บึงกุ่ม','สาทร','บางซื่อ','จตุจักร','บางคอแหลม','ประเวศ','คลองเตย','สวนหลวง','จอมทอง','ดอนเมือง','ราชเทวี','ลาดพร้าว','วัฒนา','บางแค','หลักสี่','สายไหม','คันนายาว','สะพานสูง','วังทองหลาง','คลองสามวา','บางนา','ทวีวัฒนา','ทุ่งครุ','บางบอน'].sort((a, b) => b.length - a.length);
 const HM_STATUS = { 'ไม่เข้าเกณฑ์': 'skip', 'รอช่วย': 'open', 'รอความช่วยเหลือ': 'open', 'ทีมกำลังไป': 'going', 'กำลังไป': 'going', 'กำลังช่วย': 'going', 'ช่วยแล้ว': 'done', 'เสร็จแล้ว': 'done' };
 const HM_URG = { 'ด่วนมาก': 3, 'วิกฤต': 3, 'เร่งด่วน': 2, 'ทั่วไป': 1 };
@@ -2186,18 +2002,16 @@ async function sheetCases(env) {
   const t = await sheetTab(env, 'cases'), h = t.header, col = n => h.indexOf(n), all = n => h.map((x, i) => x === n ? i : -1).filter(i => i >= 0);
   const v = (r, n) => { const i = col(n); return i < 0 ? '' : String(r[i] || '').trim(); };
   return t.rows.map(r => {
-    const address = v(r, 'ที่อยู่'), dm = address.match(/เขต\s*([ก-๙]+)/) || [null, BKK_DISTRICTS.find(d => address.replace(/พระนครศรีอยุธยา/g, '').includes(d)) || '']; // "พระนคร" ไม่ใช่ อยุธยา
+    const address = v(r, 'ที่อยู่'), dm = address.match(/เขต\s*([ก-๙]+)/) || [null, BKK_DISTRICTS.find(d => address.replace(/พระนครศรีอยุธยา/g, '').includes(d)) || ''];
     return { id: v(r, 'รหัสเคส'), createdAt: sheetTime(v(r, 'เวลาแจ้ง')), updatedAt: sheetTime(v(r, 'อัปเดตล่าสุด')),
       status: HM_STATUS[v(r, 'สถานะ')] || 'open', urgency: HM_URG[v(r, 'ความเร่งด่วน')] || 1, name: v(r, 'ชื่อ'), phone: v(r, 'เบอร์โทร').replace(/^'/, ''),
       notes: all('รายละเอียด').map(i => String(r[i] || '').trim()).filter(Boolean).join(' · '), people: Number(v(r, 'จำนวนคน')) || 1, address,
       district: dm ? dm[1] : '', addrDistrict: bkkDistrictOf(address), lat: num(v(r, 'ละติจูด'), -90, 90), lng: num(v(r, 'ลองจิจูด'), -180, 180), level: v(r, 'ระดับน้ำ'),
       needs: v(r, 'ต้องการ').split(/\s*,\s*/).filter(Boolean), volunteer: v(r, 'ทีมอาสา'), org: v(r, 'หน่วยงาน'), pinSrc: v(r, 'ที่มาของหมุด'),
       pickedAt: sheetTime(v(r, 'เวลารับเคส')), doneAt: sheetTime(v(r, 'เวลาช่วยเสร็จ')),
-      // รูปจากผู้แจ้ง: ลิงก์ Google Drive (คั่นบรรทัด) → เก็บแค่รหัสไฟล์ แบบเดียวกับแอป Help Me
       photos: v(r, 'รูปภาพ').match(/[-\w]{25,}/g) || [] };
   }).filter(c => c.id);
 }
-/* แท็บที่มีคอลัมน์พิกัด (ลิงก์ Google Maps หรือ "lat, lng") และ "แสดงบนแผนที่" */
 async function sheetPoints(env, db, tab) {
   const t = await sheetTab(env, tab), h = t.header, pc = h.findIndex(x => x.startsWith('พิกัด')), show = h.indexOf('แสดงบนแผนที่');
   const out = [];
@@ -2231,7 +2045,6 @@ async function pullHelpme(db, env) {
         await db.prepare("UPDATE leads SET status='rejected', reason='resolved_at_source', by_='Help Me', updatedAt=? WHERE id=?").bind(Date.now(), old.id).run();
         out.closed++;
       } else if (old.status === 'new' && j.volunteer && !c.approx) {
-        // ได้รายการเต็ม (HELPME_KEY): เติมชื่อ เบอร์ ที่อยู่ พิกัดจริง ให้เคสที่ยังรอคัด และเอาป้าย "ตำแหน่งโดยประมาณ" ออก
         const flags = String(old.flags || '').split(',').filter(f => f && f !== 'approx_location').join(',');
         const r2 = await db.prepare(`UPDATE leads SET names=?, phone=?, address=CASE WHEN ?<>'' THEN ? ELSE address END, lat=COALESCE(?,lat), lng=COALESCE(?,lng),
           text=CASE WHEN ?<>'' THEN ? ELSE text END, flags=?, updatedAt=? WHERE id=? AND (IFNULL(names,'')<>? OR IFNULL(phone,'')<>? OR flags<>? OR IFNULL(lat,0)<>IFNULL(?,IFNULL(lat,0)))`)
@@ -2258,8 +2071,6 @@ async function pullHelpme(db, env) {
   }
   return out;
 }
-/* จุดที่องค์กรลงพื้นที่ (outreach) ของ Help Me — ข้อมูลสาธารณะ (ชื่อองค์กร วันที่ พิกัด ลิงก์ข่าว)
-   Apps Script ช้า (บางครั้ง 30 วิ) และบางทีตอบเป็นหน้า HTML: แคช 5 นาทีที่ edge และเก็บชุดล่าสุดที่ดีไว้ใน meta ใช้แทนเมื่อดึงไม่ได้ */
 async function helpmeOutreach(db, env) {
   try {
     const pts = await sheetPoints(env, db, 'outreach');
@@ -2270,7 +2081,6 @@ async function helpmeOutreach(db, env) {
   return helpmeOutreachApps(db, env);
 }
 async function helpmeOutreachApps(db, env) {
-  // ดึงไม่สำเร็จล่าสุดไม่ถึง 10 นาที: ไม่รอ Apps Script ซ้ำ ส่งชุดล่าสุดที่ดีไปเลย (หน้าเว็บจะดึงตรงจาก Help Me เองถ้าไม่มี)
   const failAt = Number(await getMeta(db, 'helpme_outreach_fail_at')) || 0;
   if (Date.now() - failAt < 10 * 60e3) { const last = await getMeta(db, 'helpme_outreach_last'); return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] }; }
   try {
@@ -2293,8 +2103,6 @@ async function helpmeOutreachApps(db, env) {
     return last ? { ...JSON.parse(last), stale: true } : { ok: false, error: 'helpme_unavailable', points: [] };
   }
 }
-/* กล้อง CCTV จาก POPNIX Flood (ผ่าน helpme-th.pages.dev/api/cctv ของมูลนิธิ) ~1,400 ตัว: กล้องจราจร กทม. · สำนักการระบายน้ำ · iTIC · นนทบุรี
-   ภาพนิ่งล่าสุดของแต่ละตัวอยู่ที่ flood.pop.in.th · รวมกับกล้อง iTIC ที่มีภาพสด (HLS) จาก Longdo · แคช 2 นาที */
 async function popnixCams() {
   return cached('popnix-cctv-v1', 120, async () => {
     const r = await fetch('https://helpme-th.pages.dev/api/cctv', { headers: UA });
@@ -2307,12 +2115,7 @@ async function popnixCams() {
     return { ok: true, time: Date.now(), cams };
   });
 }
-/* ---------- ตรวจกล้อง CCTV อัตโนมัติด้วย Workers AI (โมเดลดูภาพ) ----------
-   เลือกกล้องที่มีภาพนิ่งล่าสุด (ไม่เกิน 3 ชม.) ใกล้จุดเคสไม่เกิน 2 กม. สูงสุด 2 ตัว แล้วให้โมเดลดูว่ามีน้ำท่วมบนถนนไหม
-   ผลจำไว้ต่อ "ภาพ" (กล้อง + เวลาภาพ) 30 นาที เคสใกล้กันใช้ผลร่วมกัน ไม่เรียกโมเดลซ้ำ
-   กล้องถนนเห็นแค่ถนน: "ไม่เห็นน้ำ" ไม่ได้แปลว่าบ้านในซอยไม่ท่วม หน้าเว็บจึงใช้ผลนี้เป็นหลักฐานเฉพาะตอน "เห็นน้ำ" */
 const CCTV_AI_MODEL = '@cf/mistralai/mistral-small-3.1-24b-instruct';
-// เลือกกล้องที่มีภาพนิ่ง: POPNIX (มีเวลาภาพ ใช้เฉพาะภาพไม่เกิน 3 ชม.) และ iTIC (ภาพสด ไม่มีเวลาภาพ)
 const CCTV_AI_PROMPT = 'This is a traffic CCTV snapshot in Thailand. Decide if there is FLOOD WATER on the road. ' +
   'Answer "yes" ONLY if you clearly see standing or flowing water covering part of the road surface (water over lane markings, ' +
   'cars or people moving through water, water reaching kerbs or wheels). Dry asphalt, shadows, glare, or a wet sheen after rain are "no". ' +
@@ -2324,7 +2127,6 @@ function camDistM(lat, lng, lat2, lng2) {
 }
 function b64(buf) { let s = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
 async function cctvAiOne(env, cam) {
-  // กล้องภาพสด (iTIC) ไม่มีเวลาภาพ → จำผลเป็นช่วงละ 10 นาที
   const stamp = cam.at || 'live' + Math.floor(Date.now() / 600000);
   return cached('cctv-ai-v4:' + cam.id + ':' + stamp, cam.at ? 1800 : 600, async () => {
     const r = await fetch(cam.img, { headers: UA, cf: { cacheTtl: 60 } });
@@ -2334,13 +2136,11 @@ async function cctvAiOne(env, cam) {
     const out = await env.AI.run(CCTV_AI_MODEL, {
       messages: [{ role: 'user', content: [{ type: 'text', text: CCTV_AI_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64(buf) } }] }],
       max_tokens: 120, temperature: 0 });
-    // Workers AI ส่ง response เป็น object ที่แปลง JSON ให้แล้ว หรือเป็นข้อความ (ขึ้นกับรุ่น) → รองรับทั้งสองแบบ
     const raw = out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content));
     let j = raw && typeof raw === 'object' ? raw : {};
     if (typeof raw === 'string') { const m = raw.match(/\{[\s\S]*\}/); try { j = m ? JSON.parse(m[0]) : {}; } catch (e) {} }
     let flood = ['yes', 'no', 'unclear'].includes(j.flood) ? j.flood : 'unclear';
     const depth = Number(j.depth_cm);
-    // กันผลบวกลวง: "เห็นน้ำ" แต่ประเมินลึกไม่ถึง 10 ซม. (มักเป็นถนนเปียก/แสงสะท้อน) → ไม่ชัด
     if (flood === 'yes' && isFinite(depth) && depth > 0 && depth < 10) flood = 'unclear';
     return { flood, depth: flood === 'yes' && isFinite(depth) && depth > 0 ? Math.min(300, Math.round(depth)) : null, note: clean(j.note, 80) };
   });
@@ -2350,15 +2150,14 @@ async function cctvAiCheck(env, p) {
   const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180);
   if (lat == null || lng == null) return { ok: false, error: 'missing' };
   const now = Date.now() / 1000, all = (await allCams()).cams;
-  const near = all.filter(c => c.img && (c.hls || (c.at > 0 && now - c.at < 3 * 3600))) // ภาพสด iTIC หรือภาพนิ่งที่รู้เวลาและไม่เกิน 3 ชม.
+  const near = all.filter(c => c.img && (c.hls || (c.at > 0 && now - c.at < 3 * 3600)))
     .map(c => ({ ...c, d: Math.round(camDistM(lat, lng, c.lat, c.lng)) })).sort((a, b) => a.d - b.d);
   const nearest = near[0] ? { d: near[0].d, title: near[0].title } : null;
-  near.splice(0, near.length, ...near.filter(c => c.d <= 5000).slice(0, 3)); // กล้องที่ยังส่งภาพ ใกล้สุด 3 ตัวใน 5 กม.
+  near.splice(0, near.length, ...near.filter(c => c.d <= 5000).slice(0, 3));
   const checks = await Promise.all(near.map(async c => {
     try { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, ...(await cctvAiOne(env, c)) }; }
     catch (e) { return { id: c.id, title: c.title, d: c.d, at: c.at, img: c.img, flood: 'unclear', note: 'ตรวจไม่สำเร็จ' }; }
   }));
-  // สรุป: เห็นน้ำจากกล้องไหนก็ได้ = flood · มีกล้องที่เห็นชัดว่าไม่มีน้ำ (และไม่มีตัวไหนเห็นน้ำ) = clear · อื่น ๆ = unclear · ไม่มีกล้อง = none
   const verdict = !checks.length ? 'none' : checks.some(c => c.flood === 'yes') ? 'flood' : checks.some(c => c.flood === 'no') ? 'clear' : 'unclear';
   return { ok: true, time: Date.now(), model: CCTV_AI_MODEL, verdict, checks, nearest };
 }
@@ -2368,17 +2167,13 @@ async function allCams() {
   if (!cams.length) throw new Error('no_cams');
   return { ok: true, time: Date.now(), cams, sources: { popnix: p.status === 'fulfilled', itic: l.status === 'fulfilled' } };
 }
-/* สถิติแบบหน้า #stats ของ Help Me — คำนวณจากรายการเคสเต็ม (HELPME_KEY) ส่งกลับเฉพาะตัวเลขรวม ไม่มีชื่อ/เบอร์ · แคช 2 นาที
-   ตัดเคสทดสอบ (test / ทดสอบ / เทส) · เวลาช่วยเสร็จใช้ updatedAt ของเคสที่ปิดแล้ว (ค่าประมาณ แบบเดียวกับ Help Me) */
 async function helpmeStats(env, db) {
-  // ตอบทันทีจากชุดล่าสุดที่เก็บไว้ (เร็ว) · เก่ากว่า 60 วิ = ดึงใหม่เบื้องหลังให้ครั้งถัดไป · ยังไม่เคยมี = ดึงสดแล้วรอ
   if (db) { const last = await getMeta(db, 'helpme_stats_last'), at = Number(await getMeta(db, 'helpme_stats_at')) || 0;
     if (last) {
-      if (Date.now() - at > 60e3 && CTX && CTX.waitUntil) { await setMeta(db, 'helpme_stats_at', String(Date.now())); // กันหลายคนดึงซ้อน
+      if (Date.now() - at > 60e3 && CTX && CTX.waitUntil) { await setMeta(db, 'helpme_stats_at', String(Date.now()));
         CTX.waitUntil(helpmeStatsLive(env, db).then(f => setMeta(db, 'helpme_stats_last', JSON.stringify(f))).catch(() => {})); }
       return { ...JSON.parse(last), cachedAt: at || null };
     } }
-  // Apps Script ของ Help Me บางช่วงตอบช้าเกิน 25 วิ: เก็บชุดล่าสุดที่ดีไว้ใน meta แล้วส่งชุดนั้น (บอกว่าเก่า) แทนการว่างเปล่า
   try {
     const fresh = await helpmeStatsLive(env, db);
     if (db) { await setMeta(db, 'helpme_stats_last', JSON.stringify(fresh)); await setMeta(db, 'helpme_stats_at', String(Date.now())); }
@@ -2389,7 +2184,6 @@ async function helpmeStats(env, db) {
     throw e;
   }
 }
-/* เขตจากหมุด (ที่อยู่ใน Help Me เขียนอิสระ ส่วนใหญ่ไม่มีคำว่า "เขต"): ถาม Photon แล้วจำไว้ใน meta ทีละพิกัด (~100 ม.) · สูงสุด 25 จุดต่อรอบ */
 async function fillDistricts(db, cases) {
   if (!db) return;
   const need = cases.filter(c => !c.district && c.lat != null && c.lng != null);
@@ -2412,12 +2206,7 @@ async function fillDistricts(db, cases) {
   }
   need.forEach(c => { const d = known.get(key(c)); if (d && d !== '-') c.district = d; });
 }
-/* ตรวจหมุดเทียบที่อยู่ (เคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต):
-   หมุดตกคนละเขตกับที่อยู่ → ค้นที่อยู่ด้วย Photon ในกรุงเทพฯ แล้วใช้ผลที่ตกในเขตเดียวกับที่อยู่เท่านั้น
-   เจอ → ใช้หมุดใหม่ (เก็บหมุดเดิมไว้ใน pinCheck) · ไม่เจอ → คงหมุดเดิม แต่ติดป้ายว่าหมุดอาจผิด
-   ผลค้นทั้งสองทางจำไว้ใน meta (หมุด→เขต: hmd:, ที่อยู่→พิกัด: hmg:) จึงเรียก Photon เฉพาะครั้งแรก */
 const normD = d => String(d || '').replace(/^เขต\s*/, '').replace(/\s+/g, '').trim();
-// เขตที่ "เขียนชัด" ในที่อยู่ (ต้องมีคำว่า เขต) · รับชื่อที่ติดคำต่อท้าย เช่น "เขตบางกะปิกรุงเทพ" · ชื่อถนนอย่าง "ลาดพร้าว 130" ไม่นับ
 function bkkDistrictOf(address) {
   for (const m of String(address || '').matchAll(/เขต\s*([ก-๙]+)/g)) {
     const d = [...BKK_DISTRICTS].sort((a, b) => b.length - a.length).find(x => m[1].startsWith(x));
@@ -2425,7 +2214,6 @@ function bkkDistrictOf(address) {
   }
   return '';
 }
-// หมุดอยู่ที่ไหน (จาก Photon reverse): เขตใน กทม. → ชื่อเขต · จังหวัดอื่น → "จังหวัด…" (ผิดแน่) · ไม่รู้เขต (มีแค่ "กรุงเทพมหานคร") → '-' ไม่ตัดสิน
 function pinPlace(p) {
   const d = String(p.district || '').replace(/^เขต\s*/, '').trim();
   if (d && BKK_DISTRICTS.includes(d)) return d;
@@ -2437,7 +2225,6 @@ async function checkPins(db, cases) {
   if (!db) return;
   const pinned = cases.filter(c => c.addrDistrict && c.lat != null && c.lng != null);
   if (!pinned.length) return;
-  // ค้นด้วยพิกัดจริง (ทศนิยม 5 ≈ 1 ม.) แยก cache จาก fillDistricts ที่ปัดพิกัดและใช้ชื่อเมืองแทนได้
   const rkey = c => 'hmp:' + c.lat.toFixed(5) + ',' + c.lng.toFixed(5), known = new Map();
   const keys = [...new Set(pinned.map(rkey))];
   for (let i = 0; i < keys.length; i += 90) {
@@ -2455,7 +2242,6 @@ async function checkPins(db, cases) {
     } catch (e) {}
   }
   let searched = 0;
-  // ค้นจากละเอียดไปหยาบ: ที่อยู่เต็ม → ส่วนถนน/ซอย → ซอยหลัก (ตัด /2, แยก) → แขวง → เขต · รับเฉพาะผลที่อยู่ในเขตตามที่อยู่
   const variants = c => {
     const full = String(c.address).split(' · ')[0].replace(/\(.*?\)/g, ' ').replace(/([ก-๙])(\d)/g, '$1 $2').replace(/\s+/g, ' ').trim().slice(0, 160);
     const street = full.split(/\s*แขวง/)[0].replace(/^(บ้านเลขที่|เลขที่)?\s*[\d/-]+\s*/, '').trim();
@@ -2489,11 +2275,9 @@ async function checkPins(db, cases) {
       c.pinCheck = { status: 'fixed', from, addrDistrict: c.addrDistrict, level, label };
       c.lat = Number(la); c.lng = Number(ln);
     } else if (hit === '-') c.pinCheck = { status: 'mismatch', from, addrDistrict: c.addrDistrict };
-    else c.pinCheck = { status: 'pending', from, addrDistrict: c.addrDistrict }; // ยังค้นไม่ถึงในรอบนี้
+    else c.pinCheck = { status: 'pending', from, addrDistrict: c.addrDistrict };
   }
 }
-/* เคสในระบบของเราเอง: ตรวจหมุดเทียบที่อยู่แบบเดียวกับเคส Help Me แต่ "บันทึก" หมุดที่ถูกลงฐานข้อมูลเลย (ทำครั้งเดียวต่อเคส)
-   หมุดเดิมจดไว้ในบันทึกของเคส เพื่อย้อนดูได้ · เคสที่ปรับแล้วหมุดตรงเขตแล้ว รอบถัดไปจึงไม่ทำซ้ำ */
 async function fixOwnPins(db, rows) {
   const cand = rows.filter(r => r.status !== 'done' && r.lat != null && r.lng != null && r.lat !== '' && /เขต/.test(r.address || ''));
   if (!cand.length) return;
@@ -2507,18 +2291,14 @@ async function fixOwnPins(db, rows) {
     if (!o.pinCheck || o.pinCheck.status !== 'fixed') continue;
     const f = o.pinCheck.from, now = Date.now();
     const note = `[ปรับหมุดตามที่อยู่ ${new Date(now).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}] หมุดเดิม ${f.lat},${f.lng} (เขต${f.district}) ไม่ตรงกับ เขต${o.addrDistrict} ในที่อยู่ · หมุดใหม่ระดับ${o.pinCheck.level}`;
-    const notes = clean([note, o.row.notes || ''].filter(Boolean).join('\n'), MAX.notes); // ไว้หน้าสุด ไม่ให้ถูกตัดเมื่อบันทึกยาว
+    const notes = clean([note, o.row.notes || ''].filter(Boolean).join('\n'), MAX.notes);
     await db.prepare('UPDATE cases SET lat=?, lng=?, notes=?, updatedAt=? WHERE id=?').bind(o.lat, o.lng, notes, now, o.row.id).run();
     Object.assign(o.row, { lat: o.lat, lng: o.lng, notes, updatedAt: now }); changed++;
   }
   if (changed) await bumpRev(db);
 }
-const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i; // เคสทดสอบในชีต ไม่นับในสถิติ
-/* เคส Help Me รายเคสสำหรับการ์ดตัวเลขของแดชบอร์ด (เฉพาะรหัสทีม) · ไม่ส่งชื่อ/เบอร์ */
-// ระดับน้ำในชีต Help Me → รหัสของ Helpme+ (ช่วงใช้ค่าบน) ให้ผลตรวจพื้นที่คิดคะแนนได้ · "แห้ง" ไม่มีรหัส
+const HM_TEST = /\btest|ทดสอบ|เทส(?!โก้)/i;
 const HM_LEVEL_CODE = { 'ข้อเท้า': 'ankle', 'ข้อเท้า–เข่า': 'knee', 'เข่า': 'knee', 'เข่า–เอว': 'waist', 'เอว': 'waist', 'เอว–อก': 'chest', 'อก': 'chest', 'อกขึ้นไป': 'chest', 'มิดหัว': 'roof' };
-// ป้ายระดับน้ำในชีตเปลี่ยนรูปแบบได้ (เช่น "มิดหัว / ท่วมหลังคา (> 180 ซม.)", ขีดสั้น/ยาว, เว้นวรรค)
-// ตรงตัวไม่เจอ → เทียบคำสำคัญ ไล่จากระดับรุนแรงสุดก่อน เพื่อไม่ให้เคสหนักสุดหลุดเป็น "ไม่ระบุ"
 const HM_LEVEL_KEYWORDS = [[/มิดหัว|หลังคา/, 'roof'], [/อกขึ้นไป|เอว.อก|^อก/, 'chest'], [/เข่า.เอว|^เอว/, 'waist'], [/ข้อเท้า.เข่า|^เข่า/, 'knee'], [/^ข้อเท้า/, 'ankle']];
 function hmLevelCode(text) {
   const t = String(text || '').split('(')[0].replace(/\s+/g, ' ').trim();
@@ -2526,10 +2306,8 @@ function hmLevelCode(text) {
   const n = t.replace(/[-‐-―−]/g, '–').replace(/\s/g, '');
   if (HM_LEVEL_CODE[n]) return HM_LEVEL_CODE[n];
   for (const [re, code] of HM_LEVEL_KEYWORDS) if (re.test(n)) return code;
-  return ''; // รวม "แห้ง / ต่ำกว่าข้อเท้า"
+  return '';
 }
-/* จังหวัดของเคส (ใช้แบ่งงานตามโครงสร้าง CENTRAL → จังหวัด → War Room โซน → ทีม)
-   ที่อยู่ระบุ "จ./จังหวัด" → ชื่อนั้น · ระบุกรุงเทพ/เขตใน กทม. → กรุงเทพมหานคร · ไม่งั้นถามจากหมุด (Photon) แล้วจำไว้ใน meta (hmv:) */
 const provName = s => { s = String(s || '').replace(/^จังหวัด\s*/, '').replace(/^จ\.\s*/, '').trim(); return /^(กรุงเทพ|กทม)/.test(s) ? 'กรุงเทพมหานคร' : s; };
 async function fillProvinces(db, cases) {
   cases.forEach(c => {
@@ -2558,14 +2336,8 @@ async function fillProvinces(db, cases) {
   }
   need.forEach(c => { const v = known.get(key(c)); if (v && v !== '-') c.province = v; });
 }
-/* ---------- ซิงก์เคส Help Me (Google Sheet) → ฐานข้อมูลของเรา (ตาราง cases, src='helpme') ----------
-   ทุก 1 นาที (cron ของตัวกลางโดเมนเรียก hm_sync) + ทุกครั้งที่ CENTRAL ขอเคส Help Me (ถ้าซิงก์ล่าสุดเกิน 45 วินาที)
-   เขียนเฉพาะแถวที่ข้อมูลเปลี่ยน (เทียบ hmHash) · สถานะ/ทีม: ฝั่งที่แก้ทีหลังชนะ
-   (Help Me เปลี่ยนสถานะ/ทีมหลังจากที่ศูนย์แก้ → ใช้ของ Help Me · ศูนย์แก้หลังจากนั้น → คงของศูนย์ · ไม่ส่งกลับไปที่ชีต Help Me) */
 const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 let hmSyncP = null;
-/* เรียลไทม์จาก helpme4u.com: หน้าบ้านแจ้งว่ามีคนส่ง/แก้เคส → ซิงก์ทันที (รอ 2 วิให้ Apps Script บันทึกเสร็จ)
-   กันถี่: ซิงก์ห่างกันอย่างน้อย 8 วิ · ระหว่างซิงก์อยู่มีคำขอใหม่ = ทำซ้ำอีกรอบเมื่อเสร็จ (ไม่ตกหล่นเคสที่เข้ามาระหว่างนั้น) */
 async function hmNudge(env, db) {
   const now = Date.now(), last = Number(await getMeta(db, 'hm_nudge_at')) || 0;
   if (now - last < 8e3) { await setMeta(db, 'hm_nudge_pending', '1'); return { ok: true, queued: true }; }
@@ -2588,9 +2360,8 @@ async function syncHelpme(env, db, force) {
   hmSyncP = (async () => {
     await setMeta(db, 'hm_sync_at', String(Date.now()));
     const src = await helpmeAllCases(env);
-    // Help Me ตัดสินว่า "ไม่เข้าเกณฑ์": ซ่อนจากรายการของเรา (ไม่ลบ · ทำเครื่องหมาย hmStatus='skip')
     const skipIds = src.skipIds || [];
-    let skipped = 0; // ไม่ซ่อนเคสที่ศูนย์กำลังทำอยู่ (มีทีมรับไปแล้ว) · ล้าง hmHash ให้เคสกลับมาได้เมื่อ Help Me เปลี่ยนใจ
+    let skipped = 0;
     for (let i = 0; i < skipIds.length; i += 90) { const part = skipIds.slice(i, i + 90); const w = await db.prepare(`UPDATE cases SET hmStatus='skip', hmHash=NULL WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' AND NOT (status='going' AND localAt IS NOT NULL) AND id IN (${part.map(() => '?').join(',')})`).bind(...part).run(); skipped += w.meta.changes || 0; }
     if (skipped) await bumpRev(db);
     const cases = src.filter(c => !HM_TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
@@ -2614,7 +2385,6 @@ async function syncHelpme(env, db, force) {
         stmts.push(db.prepare(`INSERT INTO cases (id,status,volunteer,updatedAt,token,${fields.replace(/=\?/g, '')}) VALUES (?,?,?,?,?,${fv.map(() => '?').join(',')})`)
           .bind(String(c.id), c.status, clean(vol, MAX.volunteer), c.updatedAt || now, rand(16), ...fv)); inserted++;
       } else {
-        // Help Me เปลี่ยนสถานะ/ทีมเอง และเปลี่ยนหลังจากที่ศูนย์แก้ล่าสุด → ใช้ค่าของ Help Me
         const hmMoved = c.status !== row.hmStatus || clean(vol, MAX.volunteer) !== (row.hmVolunteer || '');
         const takeHm = hmMoved && (!row.localAt || (c.updatedAt || now) >= row.localAt);
         stmts.push(db.prepare(`UPDATE cases SET ${fields},status=?,volunteer=?,updatedAt=? WHERE id=?`)
@@ -2629,8 +2399,6 @@ async function syncHelpme(env, db, force) {
   })().finally(() => { hmSyncP = null; });
   return hmSyncP;
 }
-/* ---------- AI ดูรูปที่ผู้แจ้งส่งมา (Workers AI vision) → น้ำท่วมจริงไหม ลึกเท่าไร มีคนเสี่ยงอันตรายไหม ----------
-   ทำตอนซิงก์จาก cron (ไม่ทำระหว่างที่คนเปิดหน้า) ทีละ 4 เคสต่อรอบ เคสที่ยังไม่เสร็จก่อน · เก็บผลใน cases.photoAi (ตรวจใหม่เมื่อรูปเปลี่ยน) */
 const PHOTO_AI_PROMPT = 'This photo was sent by a person asking for flood rescue in Thailand. Look only at what is visible. ' +
   'Answer ONLY JSON: {"flood":"yes|no|unclear","depth_cm":number|null,"inside_house":true|false,"danger":"high|medium|low","note":"<=12 words, Thai"}. ' +
   'flood=yes only if standing flood water is clearly visible (not a wet road, puddle, river in its banks or reflection). depth_cm = water depth where people/houses are, estimated from legs, doors, cars, steps; null if unsure. ' +
@@ -2670,8 +2438,6 @@ async function photoAiPass(env, db, max = 4) {
   return n;
 }
 async function helpmeCases(env, db) {
-  // ตอบจากฐานข้อมูลของเราทันที (ซิงก์ใช้เวลา ~20 วินาที จึงไม่ให้คนรอ) · cron ซิงก์ทุก 1 นาทีอยู่แล้ว
-  // ยังไม่เคยซิงก์ → ซิงก์ก่อนตอบ · ซิงก์ล่าสุดเกิน 3 นาที (cron มีปัญหา) → ซิงก์เบื้องหลังแล้วตอบเลย
   let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
   if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all()); }
@@ -2679,21 +2445,19 @@ async function helpmeCases(env, db) {
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
-    // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
     name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {
   return cached('helpme-stats-v4', 60, async () => {
     const cases = await helpmeAllCases(env); await fillDistricts(db, cases);
-    const j = { ok: true, volunteer: true, cases }; // จาก Google Sheet ของ Help Me (ข้อมูลเต็ม)
+    const j = { ok: true, volunteer: true, cases };
     const TEST = HM_TEST, now = Date.now(), H = 3600e3;
     const all = (j.cases || []).filter(c => !TEST.test([c.name, c.notes, c.address, (c.needs || []).join(' '), c.volunteer].join(' ')));
     const P = c => Math.max(1, Number(c.people) || 1), sev = c => Math.min(3, Math.max(1, Number(c.urgency) || 1));
     const open = all.filter(c => c.status === 'open'), going = all.filter(c => c.status === 'going'), done = all.filter(c => c.status === 'done'), act = all.filter(c => c.status !== 'done');
     const med = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
     const p90 = a => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(.9 * s.length) - 1)]; };
-    // เวลาจริงจากคอลัมน์ "เวลารับเคส / เวลาช่วยเสร็จ" ถ้ามี ไม่มีใช้ "อัปเดตล่าสุด" (ค่าประมาณ)
     const doneT = done.map(c => (c.doneAt || Number(c.updatedAt)) - Number(c.createdAt)).filter(x => x > 0 && x < 60 * 24 * H);
     const pickT = all.filter(c => c.pickedAt).map(c => c.pickedAt - c.createdAt).filter(x => x > 0 && x < 60 * 24 * H);
     const day0 = Math.floor((now + 7 * H) / 864e5) * 864e5 - 7 * H;
@@ -2714,7 +2478,6 @@ async function helpmeStatsLive(env, db) {
       times: { doneN: doneT.length, doneMed: med(doneT), doneP90: p90(doneT), pickupN: pickT.length, pickupMed: med(pickT) }, source: 'sheet',
       waits: { over6: open.filter(c => now - c.createdAt > 6 * H).length, over24: open.filter(c => now - c.createdAt > 24 * H).length, over72: open.filter(c => now - c.createdAt > 72 * H).length },
       districts: rows(districts, 40), needs: rows(needs, 15), levels: rows(levels, 8), orgs: rows(orgs, 20), teams: rows(teams, 20), days,
-      // เวลาแจ้ง / เวลาช่วยเสร็จรายเคส (ตัวเลขเวลาอย่างเดียว) ให้กราฟเคสใหม่ต่อวันของแดชบอร์ดแบ่งตามช่วงเวลาที่เลือกได้
       created: all.map(c => c.createdAt).filter(Boolean), finished: done.map(c => c.doneAt || c.updatedAt).filter(Boolean) };
   });
 }
@@ -2724,7 +2487,6 @@ async function pullAll(db, b, env) {
   return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, filled: helpme.filled || 0, traffy, helpme };
 }
 
-/* ---------- แชทกับทีม ---------- */
 async function chatSend(db, b) {
   const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
@@ -2732,7 +2494,7 @@ async function chatSend(db, b) {
   const kind = ['call', 'sos', 'case', 'voice'].includes(b.kind) ? b.kind : '';
   const link = kind === 'call' && (String(b.link || '').startsWith(MEET) || /^\/call\/#[0-9a-f]{12}\.[0-9a-f]{24}$/.test(String(b.link || ''))) ? String(b.link).slice(0, 300)
     : kind === 'voice' && /^\/api\?action=ptt_audio&n=\d+$/.test(String(b.link || '')) ? String(b.link) : '';
-  const read = kind === 'voice' || !!b.read; // เสียงวอ: ได้ยินสดไปแล้ว ไม่นับเป็นข้อความค้างอ่าน
+  const read = kind === 'voice' || !!b.read;
   const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' || read ? 1 : 0, from === 'team' || read ? 1 : 0, kind, link).run();
   await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
@@ -2793,8 +2555,6 @@ async function saveLeadSettings(db, b) {
   return { ok: true, settings: await leadSettings(db) };
 }
 
-/* พื้นที่น้ำท่วมจากดาวเทียม GISTDA (api-gateway.gistda.or.th) — ภาพแผนที่ (TMS ลำดับแบบ XYZ) ผ่านเซิร์ฟเวอร์นี้ ไม่เปิดเผย key
-   ตั้ง secret GISTDA_KEY (สมัครฟรีที่ api-gateway.gistda.or.th) · แคชที่ edge 30 นาที */
 const GISTDA_LAYERS = { '1day': 'flood/1day', '3days': 'flood/3days', '7days': 'flood/7days', '30days': 'flood/30days', freq: 'flood-freq' };
 async function gistdaTile(env, layer, z, x, y) {
   if (!env.GISTDA_KEY) return new Response(null, { status: 404, headers: { 'x-gistda': 'no-key' } });
@@ -2810,7 +2570,6 @@ async function api(request, env) {
   const db = env.DB;
   const gm = new URL(request.url).pathname.match(/^\/api\/gistda\/(1day|3days|7days|30days|freq)\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})(?:\.png)?$/);
   if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
-  // ข่าว/เตือนภัยเป็นข้อมูลสาธารณะ ไม่ต้องใช้ฐานข้อมูล
   if (request.method === 'GET' && new URL(request.url).searchParams.get('action') === 'news') { try { return json(await newsData()); } catch (e) { return json({ ok: false, error: 'news_unavailable' }); } }
   const trk = new URL(request.url).pathname.match(/^\/api\/track(?:\/([A-Za-z0-9]{10,40}))?\/?$/);
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -2820,14 +2579,13 @@ async function api(request, env) {
   if (url.pathname.replace(/\/$/, '') === '/api/sms-in' && ['GET', 'POST'].includes(request.method)) return smsIn(db, request, url);
   if (request.method === 'GET') {
     const p = Object.fromEntries(url.searchParams);
-    WRC = await wrAuth(db, p.key); if (WRC) p.key = env.VOLUNTEER_KEY;   // ลิงก์ประจำ War Room
+    WRC = await wrAuth(db, p.key); if (WRC) p.key = env.VOLUNTEER_KEY;
     if (WRC) { if (!WR_GET_OK.has(p.action)) return json({ ok: false, error: 'central_only' }); const fr = await wrGet(env, db, p); if (fr) return json(fr); }
     const vol = isVol(env, p.key);
     switch (p.action) {
       case 'list': {
         const since = Number(p.since) || 0;
-        const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme' ORDER BY createdAt").bind(since).all(); // เคส Help Me ส่งผ่าน helpme_cases
-        // ตรวจหมุดกับที่อยู่ (อาจเรียกบริการแผนที่ภายนอก) ทำเบื้องหลัง ไม่ให้ผู้ใช้รอ · รอบหน้าได้ผลที่แก้แล้ว
+        const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme' ORDER BY createdAt").bind(since).all();
         if (vol) { const fx = fixOwnPins(db, results.map(r => ({ ...r }))).catch(() => {}); if (CTX && CTX.waitUntil) CTX.waitUntil(fx); }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
@@ -2849,15 +2607,14 @@ async function api(request, env) {
       case 'dams': try { return json(await damData()); } catch (e) { return json({ ok: false, error: 'dams_unavailable' }); }
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
       case 'outreach': return json(await helpmeOutreach(db, env));
-      // ศูนย์พักพิง / เครือข่าย จากชีตของ Help Me (ข้อมูลสาธารณะของจุด ไม่ใช่ผู้ประสบภัย)
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
       case 'hm_nudge': return json(await hmNudge(env, db));
-      case 'hm_sync': if (!vol && Date.now() - (Number(await getMeta(db, 'hm_tick_at')) || 0) < 25e3) return json({ ok: true, skipped: true }); // จำกัดความถี่ (คนนอกเรียกถี่ ๆ ไม่ได้)
+      case 'hm_sync': if (!vol && Date.now() - (Number(await getMeta(db, 'hm_tick_at')) || 0) < 25e3) return json({ ok: true, skipped: true });
         await setMeta(db, 'hm_tick_at', String(Date.now()));
-        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null, intel = null, geo = null; const ex = Date.now() - (Number(await getMeta(db, 'hm_extra_at')) || 0) > 50e3; // งานเสริม (AI รูป ข่าว Discord พิกัด) คงเดิมนาทีละครั้ง
-        if (ex) { await setMeta(db, 'hm_extra_at', String(Date.now())); try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} try { geo = await geocodePass(env, db, 4); } catch (e) {} } return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { let intel = null; try { intel = await intelTick(env, db); } catch (e2) {} return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120), intel }); } // ข้อมูลสถานการณ์เก็บต่อแม้ซิงก์ Help Me ล้ม
+        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null, intel = null, geo = null; const ex = Date.now() - (Number(await getMeta(db, 'hm_extra_at')) || 0) > 50e3;
+        if (ex) { await setMeta(db, 'hm_extra_at', String(Date.now())); try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} try { geo = await geocodePass(env, db, 4); } catch (e) {} } return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { let intel = null; try { intel = await intelTick(env, db); } catch (e2) {} return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120), intel }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
@@ -2865,7 +2622,6 @@ async function api(request, env) {
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
       case 'zones': return json(vol ? await listZones(db) : { ok: false, error: 'not_volunteer' });
       case 'warrooms': return json(vol ? await listWarrooms(db) : { ok: false, error: 'not_volunteer' });
-      // ประกาศที่ยังมีผล: สาธารณะ (หน้าบ้าน Help Me / หน้าทีม) · ทั้งหมด 30 วัน: เฉพาะ CENTRAL
       case 'broadcasts': return json(await listBroadcasts(db, false));
       case 'live_view': return json(await liveView(db, p.v));
       case 'hazards': try { return json(await hazardList(db, env)); } catch (e) { return json({ ok: false, error: 'hazards_unavailable' }); }
@@ -2880,7 +2636,6 @@ async function api(request, env) {
         const { results } = await db.prepare('SELECT * FROM feedback ORDER BY done, at DESC LIMIT 200').all();
         return json({ ok: true, feedback: results.map(f => ({ n: f.n, at: f.at, page: f.page || '', by: f.by_ || '', room: f.room || '', text: f.text || '', done: !!f.done })) });
       }
-      // ข้อมูลจากชีตสาธารณะ (ไม่มีข้อมูลผู้ประสบภัย) จึงไม่ต้องใช้รหัส · แคช 5 นาที
       case 'covered': return json(await listCovered(db));
       case 'backup_status': return json(vol ? await backupStatus(env) : { ok: false, error: 'not_volunteer' });
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
@@ -2916,7 +2671,7 @@ async function api(request, env) {
       b.key = env.VOLUNTEER_KEY;
     }
     if (UNDO_SPEC[b.action]) { const st = RQ.getStore(); if (st) st.before = await undoSnap(db, b).catch(() => null); }
-    if (b.action === 'ai_chat' && b.stream) {   // ตอบแบบทยอยส่งทีละคำ (SSE) ให้ผู้ใช้เห็นคำตอบทันที
+    if (b.action === 'ai_chat' && b.stream) {
       if (!isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' });
       const r = await aiStream(b, db);
       return r || json({ ok: false, error: 'ai_failed' });
@@ -2927,7 +2682,6 @@ async function api(request, env) {
     const needKey = { route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
-    // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'ptt_send'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
@@ -2948,7 +2702,6 @@ async function handle(request, env, ctx) {
   {
     const url = new URL(request.url);
     if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
-      // อนุญาตเว็บสำรองบน GitHub Pages เรียก API นี้ได้ (ใช้ฐานข้อมูลเดียวกัน)
       const origin = request.headers.get('origin') || '';
       const cors = /^https:\/\/(been6505\.github\.io|[a-z0-9-]+\.ummatee-help\.pages\.dev|admin-um-help\.pages\.dev|admin-helpme\.pages\.dev|admin\.um\.help|(www\.|admin\.|center\.|central\.)?helpme4u\.com)$/.test(origin) ? { 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,POST,OPTIONS', 'access-control-allow-headers': 'content-type', vary: 'origin' } : {};
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -2956,19 +2709,16 @@ async function handle(request, env, ctx) {
       try { res = await api(request, env); }
       catch (e) { res = json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
       { const st = RQ.getStore(); if (request.method === 'POST' && st && st.body && !AUDIT_SKIP.has(st.body.action)) {
-        if (st.before) await undoAfter(env, st, res.clone()).catch(() => {}); // แถวหลังแก้: อ่านทันที ก่อนคนอื่นแก้ต่อ
+        if (st.before) await undoAfter(env, st, res.clone()).catch(() => {});
         const p = auditLog(env, st, res.clone()).catch(() => {}); if (ctx && ctx.waitUntil) ctx.waitUntil(p); } }
       for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
       return res;
     }
-    // ลิงก์ประจำ War Room ย่อย: /wr/<id>?k=<รหัส> → หน้า War Room ของห้องนั้น (เว็บย่อยของ CENTRAL)
     const wr = url.pathname.match(/^\/wr\/([A-Za-z0-9]{3,20})\/?$/);
     if (wr) { const to = new URL('/central/warroom/', url); to.searchParams.set('wr', wr[1]); const k = url.searchParams.get('k'); if (k) to.searchParams.set('k', k); return Response.redirect(to.toString(), 302); }
-    // ลิงก์เก่า (/admin… และ /center…) → ชื่อใหม่ /central
     const old = url.pathname.match(/^\/(?:admin|center)(\.html|\/.*)?$/);
     if (old) { url.pathname = old[1] && old[1] !== '.html' ? '/central' + old[1] : '/central'; return Response.redirect(url.toString(), 301); }
     const res = await env.ASSETS.fetch(request);
-    // ประหยัดเน็ต: ไฟล์ที่มีเลขเวอร์ชัน (?v=) ไม่เปลี่ยนเนื้อหา → เก็บในเครื่องได้นาน ไม่ต้องถามซ้ำทุกครั้ง · รูปในโฟลเดอร์ assets เก็บ 7 วัน
     if (res.ok && request.method === 'GET') {
       const ver = url.searchParams.has('v') && /\.(js|css|png|jpe?g|svg|webp|woff2?|ico)$/.test(url.pathname), img = !ver && /^\/assets\/.+\.(png|jpe?g|svg|webp)$/.test(url.pathname);
       if (ver || img) { const h = new Headers(res.headers); h.set('cache-control', ver ? 'public, max-age=31536000, immutable' : 'public, max-age=604800'); return new Response(res.body, { status: res.status, headers: h }); }
@@ -2978,7 +2728,6 @@ async function handle(request, env, ctx) {
 }
 export default {
   fetch(request, env, ctx) { return RQ.run({ wrc: null, ctx }, () => handle(request, env, ctx)); },
-  // cron (ตั้งใน wrangler config): ส่งแถวที่เปลี่ยนไป Google Sheet ส่งต่อจนคิวหมด สูงสุด 5 รอบต่อครั้ง
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       for (let i = 0; i < 5; i++) { const r = await backupToSheet(env); if (!r.ok || !r.more) break; }

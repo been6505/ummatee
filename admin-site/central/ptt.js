@@ -1,10 +1,3 @@
-/* วอ · กดค้างพูดแบบ Zello · เสียงสด (ใช้ร่วม: แอปทีม + CENTRAL)
-   - เชื่อมต่อ WebSocket กับห้องกลาง (wss://central.helpme4u.com/ptt/ws) · กดค้าง = ขอพูดในช่องที่เลือก → ได้ไมค์ = ส่งเสียงสดทุก ~40 มิลลิวินาที
-   - เสียงสด: μ-law 8 kHz (64 kbps) · ฝั่งฟังเล่นต่อเนื่องด้วยบัฟเฟอร์สั้น ~0.15 วิ · ช่องเดียวกันพูดได้ทีละคน (ไม่ว่าง = เสียงตื๊ด ๆ)
-   - ช่อง: ช่องรวม · War Room · ส่วนตัวศูนย์↔ทีม (ได้รายชื่อจากเซิร์ฟเวอร์) · ปิดเสียงรายช่องได้ · ฟังทุกช่องพร้อมกัน พูดในช่องที่เลือก
-   - ทุกครั้งที่พูดจบ อัปโหลดคลิป WAV ไว้ฟังย้อนหลัง · หลุดการเชื่อมต่อระหว่างนั้น = เล่นคลิปที่พลาดอัตโนมัติเมื่อกลับมา (ภายใน 2 นาที)
-   - แอปบนมือถือ: เล่นเสียงผ่านตัวเล่นสื่อของเครื่อง (ฟังได้แม้ล็อกจอ · คู่กับโหมดเสียงเบื้องหลังของแอป)
-   ใช้: PTT.init({ api, post, ws:()=>URL, url:n=>URL, me:()=>({sender,kind}), native, onState }) แล้ว PTT.bind(ปุ่ม) */
 const PTT=(()=>{
   const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){}};
   const P={cfg:null,ws:null,up:false,retry:1000,chans:[],ch:LS('ptt_ch')||'all',muted:new Set(JSON.parse(LS('ptt_muted')||'[]')),live:new Map(),rx:new Map(),
@@ -41,7 +34,6 @@ const PTT=(()=>{
   const hhmm=t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const lab=id=>(P.chans.find(c=>c.id===id)||{}).label||(id==='all'?'ช่องรวม':id);
   const toast=m=>{if(typeof window.toast==='function')window.toast(m);else{const d=document.createElement('div');d.className='ptt-toast';d.textContent=m;document.body.append(d);setTimeout(()=>d.remove(),2600)}};
-  /* ---------- เสียง: μ-law ---------- */
   function mulaw(x){const s=x<0?0x80:0;let v=Math.min(32635,Math.abs(Math.round(x*32767)))+132;let e=7;for(let m=0x4000;!(v&m)&&e>0;e--,m>>=1);return ~(s|(e<<4)|((v>>(e+3))&0x0F))&0xFF}
   const ULAW=new Float32Array(256);for(let i=0;i<256;i++){const u=~i&0xFF,s=u&0x80,e=(u>>4)&7,m=u&0x0F;let v=((m<<3)+132)<<e;v-=132;ULAW[i]=(s?-v:v)/32768}
   function ctxGet(){if(!P.ctx){P.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -51,7 +43,6 @@ const PTT=(()=>{
   const canPlay=()=>P.ctx&&P.ctx.state==='running';
   function lockUI(){const u=$('.ptt-unlock');if(u)u.hidden=!P.cfg||canPlay()}
   function unlock(){ctxGet();setTimeout(lockUI,150);if(!P.clip){P.clip=new Audio();P.clip.preload='auto';P.clip.onended=clipDone;P.clip.onerror=clipDone}}
-  /* ---------- เชื่อมต่อ ---------- */
   function connect(){if(!P.cfg||P.ws&&P.ws.readyState<2)return;let ws;try{ws=new WebSocket(P.cfg.ws())}catch(e){return later()}P.ws=ws;ws.binaryType='arraybuffer';
     ws.onopen=()=>{P.retry=1000;clearInterval(P.ping);P.ping=setInterval(()=>{try{ws.readyState===1&&ws.send('{"t":"ping"}')}catch(e){}},25000)};
     ws.onmessage=e=>typeof e.data==='string'?onMsg(JSON.parse(e.data)):onAudio(e.data);
@@ -69,7 +60,6 @@ const PTT=(()=>{
   function onAudio(buf){const u=new Uint8Array(buf),i=u.indexOf(124);if(i<0)return;const id=new TextDecoder().decode(u.subarray(0,i)),r=P.rx.get(id);if(!r||P.muted.has(r.ch))return;
     const c=ctxGet(),n=u.length-i-1;if(n<=0)return;const ab=c.createBuffer(1,n,8000),d=ab.getChannelData(0);for(let k=0;k<n;k++)d[k]=ULAW[u[i+1+k]];
     const s=c.createBufferSource();s.buffer=ab;s.connect(P.out);const now=c.currentTime;if(r.next<now+0.05)r.next=now+0.15;s.start(r.next);r.next+=ab.duration}
-  /* ---------- พูด ---------- */
   async function startTx(){if(P.tx)return;unlock();if(!P.up){toast('วอยังไม่เชื่อมต่อ · รอสักครู่');connect();return}
     if(P.live.has(P.ch)){const f=P.live.get(P.ch);beep(420,90);beep(420,90,.15);toast(`ช่องไม่ว่าง · ${f.kind==='hq'?'ศูนย์':f.name} กำลังพูด`);return}
     const t=P.tx={ch:P.ch,granted:false,pending:[],pcm:[],t0:Date.now(),ended:false};
@@ -100,7 +90,6 @@ const PTT=(()=>{
     const it={n:'l'+t.id,ch:t.ch,talk:t.id,sender:P.cfg.me().sender,kind:P.cfg.me().kind,dur,at:Date.now(),local:true,blob:URL.createObjectURL(new Blob([b],{type:'audio/wav'}))};P.list.push(it);draw();
     for(let k=0;k<3;k++){try{const r=await P.cfg.post({action:'ptt_send',audio:btoa(bin),dur:Math.round(dur*10)/10,ch:t.ch,talk:t.id});if(r&&r.ok){it.n=r.n;it.local=false;P.mine.add(r.n);draw();return}}catch(e){}await new Promise(r=>setTimeout(r,1500))}
     it.fail=true;draw()}
-  /* ---------- คลิปย้อนหลัง ---------- */
   async function loadChans(){try{const r=await P.cfg.api({action:'ptt_auth'});if(r&&r.ok){P.chans=r.chans;if(!P.chans.some(c=>c.id===P.ch))P.ch='all';state()}}catch(e){}}
   async function poll(missed){if(!P.cfg)return;try{const r=await P.cfg.api({action:'ptt_list',since:Math.max(0,P.since)});if(!r||!r.ok)return;const first=P.since<0;
     (r.items||[]).forEach(it=>{if(P.list.some(x=>x.n===it.n||x.talk&&x.talk===it.talk))return;P.list.push(it);
@@ -111,7 +100,6 @@ const PTT=(()=>{
   function pauseClip(){if(P.playing){P.clip.pause();P.queue.unshift(P.playing);P.playing=null}}
   function show(it,live){const n=$('.ptt-now');n.classList.toggle('live',!!live);n.style.background=live?'':col(it);n.style.borderLeft=live?`8px solid ${col(it)}`:'';$('.ptt-who').textContent=`${live?'🔴 สด · ':''}${it.kind==='hq'?(it.name&&it.name!=='ศูนย์'?it.name:'ศูนย์'):(it.name||it.sender)} · ${lab(it.ch||'all')}${live?'':' · '+hhmm(it.at)}`;n.hidden=false;n.onclick=null}
   function hideNow(){if(!P.rx.size&&!P.playing)$('.ptt-now').hidden=true}
-  /* ---------- หน้าตา ---------- */
   function state(){$('.ptt-conn').classList.toggle('on',P.up);LS('ptt_ch',P.ch);if(P.cfg&&P.cfg.onState)P.cfg.onState({up:P.up,ch:P.ch,label:lab(P.ch),live:P.live.has(P.ch)});draw()}
   function draw(){if($('.ptt-panel').hidden)return;
     $('.ptt-chs').innerHTML=P.chans.map(c=>{const lv=P.live.get(c.id);return `<div class="ptt-ch" role="button" tabindex="0" data-ch="${esc(c.id)}" aria-pressed="${c.id===P.ch}"><b>${esc(c.label)}</b>${lv?`<span class="lv">สด · ${esc(lv.kind==='hq'?'ศูนย์':lv.name)}</span>`:''}<button type="button" class="mu" data-mu="${esc(c.id)}" aria-label="${P.muted.has(c.id)?'เปิดเสียงช่อง':'ปิดเสียงช่อง'}">${P.muted.has(c.id)?'🔕':'🔔'}</button></div>`}).join('')||'<p class="ptt-hint">กำลังเชื่อมต่อ…</p>';
@@ -123,7 +111,6 @@ const PTT=(()=>{
     const mu=t.closest('[data-mu]');if(mu){e.stopPropagation();const id=mu.dataset.mu;P.muted.has(id)?P.muted.delete(id):P.muted.add(id);LS('ptt_muted',JSON.stringify([...P.muted]));draw();return}
     const ch=t.closest('[data-ch]');if(ch){P.ch=ch.dataset.ch;state();return}
     const b=t.closest('[data-pn]');if(b){const it=P.list.find(x=>String(x.n)===b.dataset.pn);if(it){unlock();if(P.playing){P.clip.pause();P.playing=null}P.queue.unshift(it);nextClip()}}});
-  /* ปุ่ม: กดค้าง = พูด · แตะ = เปิดแผงช่อง/ย้อนหลัง */
   function bind(btn){let downAt=0,pid=null,holdT=null,talking=false;
     btn.addEventListener('contextmenu',e=>e.preventDefault());
     btn.addEventListener('pointerdown',e=>{e.preventDefault();unlock();downAt=Date.now();pid=e.pointerId;try{btn.setPointerCapture(pid)}catch(x){}btn.classList.add('ptt-press');holdT=setTimeout(()=>{talking=true;startTx()},220)});

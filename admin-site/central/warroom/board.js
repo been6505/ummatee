@@ -1,5 +1,3 @@
-/* บอร์ดงาน: ทีมงานศูนย์วางแผนงาน · แยกตาม War Room (CENTRAL = บอร์ดกลาง)
-   มุมมอง: บอร์ด (ต้องทำ · กำลังทำ · เสร็จ) และปฏิทินรายเดือน · การ์ดมีข้อความ รูป หมุดตำแหน่ง เคส วัน-เวลา ผู้รับผิดชอบ */
 const BOARD=(()=>{
   const B={room:null,cards:[],rev:'',view:'board',month:null,img:new Map(),edit:null,map:null,mk:null,timer:null,drag:null};
   const COLS=[['todo','ต้องทำ'],['doing','กำลังทำ'],['done','เสร็จ']];
@@ -36,7 +34,6 @@ const BOARD=(()=>{
       <div class="bd-tools"><div class="seg" role="tablist"><button type="button" data-bv="board" aria-selected="${B.view==='board'}" aria-label="บอร์ด" title="บอร์ด"><i data-ic="board"></i></button><button type="button" data-bv="cal" aria-selected="${B.view==='cal'}" aria-label="ปฏิทิน" title="ปฏิทิน"><i data-ic="calendar"></i></button></div><button type="button" class="btn primary" data-new="">+ งานใหม่</button></div></div>
       ${B.view==='cal'?calView():boardView()}`;
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});loadImgs(el)}
-  /* ---------- ตัวแก้การ์ด ---------- */
   function editor(c){B.edit=c;const d=document.getElementById('bd-dlg')||Object.assign(document.createElement('dialog'),{id:'bd-dlg',className:'bd-dlg'});if(!d.isConnected)document.body.append(d);
     const cases=(typeof view==='function'?view().cases:W.cases).filter(x=>x.status!=='done').slice(0,400);
     d.innerHTML=`<form method="dialog" class="bd-f">
@@ -71,7 +68,6 @@ const BOARD=(()=>{
       let q=.8,u=cv.toDataURL('image/jpeg',q);while(u.length>1100000&&q>.35){q-=.1;u=cv.toDataURL('image/jpeg',q)}res(u)};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
   async function upload(files){const c=B.edit;let ok=0;for(const f of files){try{const data=await shrink(f),r=await apiPost({action:'board_img_add',cardId:c.id,data});if(r&&r.ok){ok++;c.imgs=[...(c.imgs||[]),r.id];B.img.set(r.id,data)}else toast(r&&r.error==='too_many'?'รูปครบ 12 รูปแล้ว':'อัปโหลดรูปไม่สำเร็จ')}catch(e){toast('อ่านรูปไม่ได้')}}
     if(ok)toast(`เพิ่มรูป ${ok} รูป`,true);return ok}
-  /* ---------- เหตุการณ์ ---------- */
   document.addEventListener('click',async e=>{const t=e.target;
     if(t.closest('#p-board')){
       const bv=t.closest('[data-bv]');if(bv){B.view=bv.dataset.bv;draw();return}
@@ -93,7 +89,6 @@ const BOARD=(()=>{
     const box=$('#bd-dlg .bd-imgs');box.classList.add('busy');await upload(files);box.classList.remove('busy');
     box.querySelectorAll('figure').forEach(x=>x.remove());box.insertAdjacentHTML('afterbegin',B.edit.imgs.map(i=>`<figure><img data-img="${esc(i)}" alt=""><button type="button" data-delimg="${esc(i)}" aria-label="ลบรูป">×</button></figure>`).join(''));loadImgs(box);load(true)});
   document.addEventListener('close',e=>{if(e.target&&e.target.id==='bd-dlg'){B.edit=null;B.pendingFiles=null;draw()}},true);
-  // ลากการ์ดระหว่างคอลัมน์ (คอม)
   document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('#p-board .bd-card');if(c){B.drag=c.dataset.card;e.dataTransfer.effectAllowed='move'}});
   document.addEventListener('dragover',e=>{const col=e.target.closest&&e.target.closest('#p-board [data-col]');if(col&&B.drag){e.preventDefault();col.classList.add('over')}});
   document.addEventListener('dragleave',e=>{const col=e.target.closest&&e.target.closest('#p-board [data-col]');if(col)col.classList.remove('over')});

@@ -1,5 +1,4 @@
 (()=>{
-/* ข่าวและเตือนภัย: ประกาศกรมอุตุฯ + แผ่นดินไหวใกล้ไทย + หัวข้อข่าวล่าสุด (API action=news ดึงและแคชที่ Worker) */
 const N={data:null,tag:'',q:'',timer:null};
 const TAGS=[['','ทั้งหมด'],['flood','น้ำท่วม'],['storm','พายุ / ฝน'],['alert','ประกาศ / เตือนภัย'],['quake','แผ่นดินไหว']];
 const fmtD=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
@@ -32,10 +31,8 @@ async function load(){
 $('#tags').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;N.tag=b.dataset.t;render()});
 $('#nw-q').addEventListener('input',e=>{N.q=e.target.value;render()});
 $('#refresh').addEventListener('click',()=>{if(N.started)load()});
-/* อยู่ในหน้าประกาศ (แท็บ "ข่าวและเตือนภัย"): เริ่มโหลดเมื่อเปิดแท็บครั้งแรก */
 window.NEWS_START=()=>{if(N.started)return;N.started=true;load();clearInterval(N.timer);N.timer=setInterval(()=>{if(!document.hidden)load()},10*60000);hzInit()};
 
-/* ---------- ภัยพิบัติตอนนี้ + รายงานภัยจากศูนย์ ---------- */
 let hzMap=null,hzPick=null;
 function hzLoadLeaflet(){if(window.L)return Promise.resolve();return new Promise((res,rej)=>{const c=document.createElement('link');c.rel='stylesheet';c.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';c.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';c.crossOrigin='';document.head.append(c);
   const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';s.crossOrigin='';s.onload=res;s.onerror=rej;document.head.append(s)})}

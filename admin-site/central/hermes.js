@@ -1,9 +1,3 @@
-/* Hermes Agent ในระบบ CENTRAL (ใช้ Local AI จาก localai.js · ตั้งค่าที่หน้า "ตั้งค่า")
-   1) อ่าน: สรุปข้อมูลที่จำเป็นให้ Hermes — เคสค้าง (รวมชื่อ/เบอร์ผู้แจ้ง) ทีม ตำแหน่ง ตัวชี้วัด
-   2) คำนวณ: ตัวจัดเคส (planner) — เลือกเคสสำคัญสุดให้ทีมที่ว่างและใกล้สุด แล้ว "บรรจุ" เคสใกล้เคียงเข้าชุดเดียวกัน
-   3) ลงมือ: Hermes เสนอ (มอบเคส / มอบชุดเคส / ส่งข้อความถึงทีม) → คนกด "ยืนยัน" ทุกครั้ง ระบบจึงทำจริง
-   จุดใช้งาน: ปุ่ม AI ลอยบนจอ · HERMES.open() (ปุ่ม "ถาม Hermes" ใน War Room) · ปุ่มสรุปในรายละเอียดเคส · HERMES.draft() (ปุ่มร่างคำตอบในแชท)
-   หน้า War Room ส่งขอบเขตของห้องมาให้ด้วย HERMES.setScope({title,cases,roster,live}) */
 const HERMES=(()=>{
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const me=()=>{try{return localStorage.getItem('uh_staff')||'ศูนย์'}catch(e){return 'ศูนย์'}};
@@ -20,16 +14,14 @@ const HERMES=(()=>{
   const vol=c=>String(c.volunteer||'').replace(/^'/,'').trim();
   const S={scope:null,data:null,at:0,log:[],busy:false,el:null,focus:null};
 
-  /* ---------- ข้อมูล ---------- */
   async function data(){
     if(S.scope&&S.scope.cases)return {cases:S.scope.cases.filter(c=>!c.dupOf),roster:S.scope.roster||[],live:S.scope.live||[],title:S.scope.title||'War Room'};
     if(S.data&&Date.now()-S.at<30000)return S.data;
-    if(S.loading)return S.loading; // โหลดอยู่แล้ว: ใช้ผลเดียวกัน ไม่ดึงซ้ำ
+    if(S.loading)return S.loading;
     return S.loading=(async()=>{try{
     const [h,o,r,t]=await Promise.all([get({action:'helpme_cases'}).catch(()=>null),get({action:'list'}).catch(()=>null),get({action:'roster'}).catch(()=>null),get({action:'teams'}).catch(()=>null)]);
     const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
     S.data={cases:hm.concat(own.filter(c=>!ids.has(String(c.id)))).filter(c=>!c.dupOf),roster:r&&r.ok?r.roster||[]:[],live:t&&t.ok?t.teams||[]:[],title:'ภาพรวมทั้งหมด'};S.at=Date.now();return S.data}finally{S.loading=null}})()}
-  /* สต็อก/ถุงยังชีพ (แคช 60 วิ) · War Room เห็นคลังของห้อง + คลังกลาง */
   async function stock(){if(S.stk&&Date.now()-S.stkAt<60000)return S.stk;const r=await get({action:'stock'}).catch(()=>null);S.stk=r&&r.ok?r.items||[]:[];S.stkAt=Date.now();return S.stk}
   function stockText(items,d){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);if(!its.length)return 'สต็อก: ไม่มีข้อมูล';
     const byId=new Map(items.map(i=>[i.id,i]));
@@ -41,7 +33,6 @@ const HERMES=(()=>{
   const teamPos=(d,name)=>{const l=d.live.find(x=>x.team===name&&Date.now()-x.updatedAt<30*60e3);if(l)return {lat:+l.lat,lng:+l.lng,src:'สด '+mins(l.updatedAt)+' นาทีก่อน'};
     const g=d.cases.filter(c=>c.status==='going'&&vol(c)===name&&pin(c));if(g.length)return {lat:g.reduce((a,c)=>a+ +c.lat,0)/g.length,lng:g.reduce((a,c)=>a+ +c.lng,0)/g.length,src:'จากเคสที่รับอยู่'};return null};
 
-  /* ---------- ตัวจัดเคส: ทีมว่าง × เคสสำคัญสุด + บรรจุเคสใกล้เคียง (≤ 3 เคส/ชุด ห่างกัน ≤ 2.5 กม.) ---------- */
   function plan(d,opt={}){const MAXB=opt.max||3,NEAR=opt.near||2.5;
     const open=d.cases.filter(c=>c.status!=='done'&&c.status!=='going'&&!vol(c)).map(c=>({c,s:sevOf(c),w:mins(c.createdAt)})).sort((a,b)=>b.s-a.s||b.w-a.w);
     const busy=new Set(d.cases.filter(c=>c.status==='going').map(vol));
@@ -57,15 +48,12 @@ const HERMES=(()=>{
       out.push({team:T.t.name,vehicle:T.t.vehicle||'',cases:bundle.map(x=>x.c),why})}
     return {plan:out,left:open.filter(x=>!used.has(x.c.id)).length,teams:teams.length}}
 
-  /* ---------- จับคู่เคส ---------- */
   const bagsOf=c=>c.bags!==''&&c.bags!=null&&!isNaN(+c.bags)?+c.bags:Math.max(1,Number(c.households)||Math.ceil((Number(c.people)||1)/4));
-  // ทีมที่เหมาะกับเคสเดียว (เรียงคะแนน: ใกล้ · ว่าง · พาหนะตรงความต้องการ)
   function teamsFor(d,c){const busy=new Map();d.cases.forEach(x=>{if(x.status==='going'&&vol(x))busy.set(vol(x),(busy.get(vol(x))||0)+1)});
     const needBoat=/เรือ|อพยพ/.test((c.needs||[]).join(' '))||/อก|คอ|หลังคา|ท่วมมิด/.test(c.levelText||c.level||'');
     return d.roster.filter(t=>t.status!=='rest').map(t=>{const p=teamPos(d,t.name),dist=p&&pin(c)?km(p.lat,p.lng,+c.lat,+c.lng):null,boat=/boat|truck/.test(t.vehicle||''),b=busy.get(t.name)||0;
       const score=100-(dist==null?20:dist*5)-b*15+(t.status==='ready'?10:0)+(needBoat?(boat?20:-40):0);
       return {t,dist,b,score,why:[dist!=null?`~${dist.toFixed(1)} กม.`:'ไม่ทราบตำแหน่ง',b?`รับอยู่ ${b} เคส`:'ว่าง',needBoat?(boat?'มีเรือ/รถสูง':'ไม่มีเรือ'):''].filter(Boolean).join(' · ')}}).sort((a,b)=>b.score-a.score)}
-  // เคสซ้ำ: เบอร์เดียวกัน หรือ ห่างกัน ≤150 ม. แจ้งภายใน 3 วัน และความต้องการคล้ายกัน
   function dups(d){const L=d.cases.filter(c=>c.status!=='done'),P=L.map((_,i)=>i),f=i=>P[i]===i?i:(P[i]=f(P[i])),why=new Map();
     const u=(i,j,w)=>{const a=f(i),b=f(j);if(a!==b)P[b]=a;why.set(i+'-'+j,w)};
     const ph=c=>String(c.phone||'').replace(/\D/g,'').slice(-9);
@@ -76,13 +64,11 @@ const HERMES=(()=>{
     const g=new Map();L.forEach((c,i)=>{const r=f(i);if(!g.has(r))g.set(r,[]);g.get(r).push(i)});
     return [...g.values()].filter(x=>x.length>1).map(ix=>{const cs=ix.map(i=>L[i]).sort((a,b)=>(vol(b)?1:0)-(vol(a)?1:0)||(a.createdAt||0)-(b.createdAt||0));
       const w=new Set();for(const i of ix)for(const j of ix){const x=why.get(i+'-'+j);if(x)w.add(x)}return {keep:cs[0],dup:cs.slice(1),why:[...w].join(' · ')}})}
-  // กลุ่มเคสใกล้กัน (≤1 กม. ต่อเนื่องกัน) ให้ทีมเดียวไปทีเดียว
   function clusters(d,R=1){const L=d.cases.filter(c=>c.status!=='done'&&c.status!=='going'&&!vol(c)&&pin(c)),seen=new Set(),out=[];
     for(let i=0;i<L.length;i++){if(seen.has(i))continue;const q=[i],g=[];seen.add(i);
       while(q.length){const k=q.pop();g.push(L[k]);for(let j=0;j<L.length;j++)if(!seen.has(j)&&km(+L[k].lat,+L[k].lng,+L[j].lat,+L[j].lng)<=R){seen.add(j);q.push(j)}}
       if(g.length>1){const lat=g.reduce((a,c)=>a+ +c.lat,0)/g.length,lng=g.reduce((a,c)=>a+ +c.lng,0)/g.length;out.push({cases:g.sort((a,b)=>sevOf(b)-sevOf(a)),lat,lng,people:g.reduce((a,c)=>a+(Number(c.people)||1),0),top:Math.max(...g.map(sevOf))})}}
     return out.sort((a,b)=>b.top-a.top||b.cases.length-a.cases.length)}
-  // เคส ↔ สต็อก: ความต้องการเทียบของในคลัง และเคสไหนจัดของได้ครบ (เรียงตามความสำคัญจนของหมด)
   const NEED_MAP=[[/อาหาร/,i=>Array.isArray(i.kit)&&i.kit.length||/ถุงยังชีพ/.test(i.name+i.category),c=>bagsOf(c),'ถุงยังชีพ'],[/น้ำ/,i=>/น้ำดื่ม|น้ำเปล่า/.test(i.name),c=>Math.max(1,Number(c.people)||1),'น้ำดื่ม (ขวด · 1 ขวด/คน)'],
     [/ยา/,i=>/ยา/.test(i.category+i.name)&&!/ยาง/.test(i.name),c=>1,'ชุดยา'],[/นม/,i=>/นม/.test(i.name),c=>1,'นม'],[/ผ้าอ้อม|แพมเพิส/,i=>/ผ้าอ้อม|แพมเพิส/.test(i.name),c=>1,'ผ้าอ้อม'],[/แมว|สัตว์|หมา/,i=>/สัตว์|แมว|หมา/.test(i.name),c=>1,'อาหารสัตว์']];
   function stockMatch(d,items){const room=S.scope&&S.scope.roomId,its=items.filter(i=>!room||!i.warroom||i.warroom===room);
@@ -99,11 +85,10 @@ const HERMES=(()=>{
       add(R.map(r=>`<b>${E(r.label)}</b> · มี ${E(r.have)} ${E(r.unit)} · ต้องใช้ ~${E(r.need)} (${E(r.cases)} เคส) · จัดได้ครบ ${E(r.ok)} เคส${r.short.length?` · <span style="color:#C62828">ขาด ${E(r.short.length)} เคส</span>`:' ✓'}${r.short.length?`<br><small>เคสที่ของไม่พอ: ${r.short.slice(0,6).map(c=>'#'+E(c.id)+' '+E(c.district||'')).join(', ')}${r.short.length>6?'…':''}</small>`:''}`).join('<br>'),'hz-m a');
       if(typeof LOCALAI!=='undefined'&&LOCALAI.on()){const go=()=>S.busy?setTimeout(go,600):ask('ดูผลจับคู่เคสกับสต็อก (ข้อมูลสต็อกอยู่ท้ายข้อมูล) แล้วแนะนำว่าควรเบิก/เติมอะไรก่อน และเคสไหนควรได้ของก่อน สั้น ๆ',{label:'ให้ AI HELP แนะนำการเบิกของ'});go()}return}
     if(k==='team')return quick('plan')}
-  /* ---------- สรุปข้อมูลให้ Hermes (เฉพาะที่จำเป็น) ---------- */
   function caseLine(c){return `#${c.id} | ${URG[sevOf(c)]} | ${STS[c.status]||c.status} | ต้องการ: ${(c.needs||[]).join(', ')||'-'} | ${c.people||1} คน | ระดับน้ำ: ${c.levelText||c.level||'-'} | ${[c.district,c.province].filter(Boolean).join(' ')||'-'} | ที่อยู่: ${String(c.address||'').slice(0,80)||'-'} | ผู้แจ้ง: ${c.name||'-'} ${String(c.phone||'').replace(/^'/,'')} | ถุงยังชีพ ${c.bags===''||c.bags==null?'ยังไม่ระบุ':c.bags+' ถุง'} | รอ ${wait(c.createdAt)} | ทีม: ${vol(c)||'-'}${pin(c)?` | พิกัด ${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}`:''}`}
   function context(d,P,stk){const open=d.cases.filter(c=>c.status!=='done'),crit=open.filter(c=>sevOf(c)===3&&c.status!=='going');
     const done7=d.cases.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>Date.now()-7*864e5).length;
-    const top=open.slice().sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,typeof LOCALAI!=='undefined'&&LOCALAI.isCloud&&LOCALAI.isCloud(LOCALAI.cfg())?18:35); // คลาวด์รุ่นเล็ก: ส่งข้อมูลน้อยลง
+    const top=open.slice().sort((a,b)=>sevOf(b)-sevOf(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,typeof LOCALAI!=='undefined'&&LOCALAI.isCloud&&LOCALAI.isCloud(LOCALAI.cfg())?18:35);
     const teams=d.roster.map(t=>{const p=teamPos(d,t.name),g=d.cases.filter(c=>c.status==='going'&&vol(c)===t.name);
       return `${t.name} | ${TST[t.status]||t.status||'-'} | พาหนะ ${t.vehicle||'-'} | ${t.members||'?'} คน | ${p?`ตำแหน่ง ${p.lat.toFixed(4)},${p.lng.toFixed(4)} (${p.src})`:'ไม่ทราบตำแหน่ง'} | รับอยู่ ${g.length} เคส${g.length?' ('+g.map(c=>'#'+c.id).join(', ')+')':''}`});
     let s=`ขอบเขต: ${d.title}\nเวลา: ${new Date().toLocaleString('th-TH')}\nตัวชี้วัด: เคสค้าง ${open.length} · วิกฤตยังไม่มีทีม ${crit.length} · กำลังไป ${open.filter(c=>c.status==='going').length} · ช่วยแล้ว 7 วัน ${done7} · รอเกิน 24 ชม. ${open.filter(c=>c.status!=='going'&&mins(c.createdAt)>1440).length}\n\nทีม (${d.roster.length}):\n${teams.join('\n')||'-'}\n\nเคสค้างที่สำคัญ (${top.length} จาก ${open.length}):\n${top.map(caseLine).join('\n')}`;
@@ -113,7 +98,6 @@ const HERMES=(()=>{
     return s}
   const SYS=`\n\nกติกา:\n- ใช้เฉพาะข้อมูลที่ให้ ห้ามแต่งรหัสเคสหรือชื่อทีม ถ้าข้อมูลไม่พอให้บอกตรง ๆ\n- ตอบภาษาไทย สั้น เป็นข้อ ๆ\n- ถ้าจะเสนอการกระทำ ให้ใส่บล็อกนี้ท้ายคำตอบ (คนจะกดยืนยันเองทีละรายการ):\n\`\`\`actions\n[{"type":"assign","case":"<รหัสเคส>","team":"<ชื่อทีม>","reason":"<เหตุผลสั้น>"},{"type":"message","team":"<ชื่อทีม>","text":"<ข้อความถึงทีม>"}]\n\`\`\``;
 
-  /* ---------- การกระทำ (ต้องกดยืนยัน) ---------- */
   function parseActions(t,d){const m=String(t).match(/```actions\s*([\s\S]*?)```/)||String(t).match(/<actions>([\s\S]*?)<\/actions>/);if(!m)return {text:t,acts:[]};
     let a=[];try{a=JSON.parse(m[1])}catch(e){}const names=new Set(d.roster.map(x=>x.name)),ids=new Set(d.cases.map(c=>String(c.id)));
     const acts=(Array.isArray(a)?a:[]).filter(x=>x&&((x.type==='assign'&&ids.has(String(x.case).replace(/^#/,''))&&names.has(x.team))||(x.type==='message'&&names.has(x.team)&&x.text)))
@@ -121,13 +105,11 @@ const HERMES=(()=>{
     return {text:t.replace(m[0],'').trim(),acts}}
   async function run(a,d){
     if(a.type==='assign'){for(const id of a.cases){const r=await post({action:'update',id,status:'going',volunteer:a.team});if(!r.ok)throw new Error(r.error||'update')}
-      // แจ้งทีม: เซิร์ฟเวอร์ส่งการ์ดเคสเข้าแชทของทีมให้อัตโนมัติเมื่อมอบเคส (ไม่ส่งข้อความซ้ำ)
       d.cases.forEach(c=>{if(a.cases.includes(String(c.id))){c.status='going';c.volunteer=a.team}});S.at=0}
     if(a.type==='merge'){for(const c of a.dup){const r=await post({action:'update',id:c.id,status:'done',volunteer:vol(a.keep)||vol(c)||'',dupOf:String(a.keep.id)});if(!r.ok)throw new Error(r.error||'update')}
       d.cases=d.cases.filter(c=>!a.dup.includes(c));S.at=0}
     if(a.type==='message'){const r=await post({action:'chat_send',team:a.team,from:'hq',name:me(),text:a.text});if(!r.ok)throw new Error(r.error||'chat')}}
 
-  /* ---------- หน้าต่าง Hermes ---------- */
   const CSS=`.hz-fab{position:fixed;right:18px;bottom:86px;z-index:2490;width:52px;height:52px;padding:0;justify-content:center;border-radius:50%;border:0;cursor:pointer;display:flex;align-items:center;gap:6px;
       font:700 14px/1 inherit;color:#fff;background:linear-gradient(135deg,#17181C,#3a2c6e);box-shadow:0 8px 22px rgba(22,27,61,.3)}.hz-fab svg{width:24px;height:24px}
     .hz-win{position:fixed;right:18px;bottom:18px;z-index:2600;width:min(440px,calc(100vw - 24px));height:min(640px,calc(100vh - 110px));background:var(--surface,#fff);color:var(--ink);border-radius:24px;box-shadow:0 18px 48px rgba(22,27,61,.28);display:flex;flex-direction:column;overflow:hidden}
@@ -189,7 +171,6 @@ const HERMES=(()=>{
       window.dispatchEvent(new CustomEvent('hermes:done',{detail:a}))}
     catch(err){b.disabled=false;b.textContent='ลองอีกครั้ง';note('ทำไม่สำเร็จ: '+(err.message||''))}}
 
-  /* ---------- ถาม / ปุ่มลัด ---------- */
   const hist=[];
   async function ask(q,o={}){if(S.busy){note('รอคำตอบก่อนหน้าให้เสร็จก่อน');return}S.busy=true;add(E(o.label||q),'hz-m u');
     const t0=Date.now(),wait1=note('AI HELP กำลังคิด…'),tick=setInterval(()=>{wait1.textContent=`AI HELP กำลังคิด… ${Math.round((Date.now()-t0)/1000)} วิ`},1000);
@@ -216,14 +197,12 @@ const HERMES=(()=>{
       note(`ระบบคำนวณ: ${P.teams} ทีมว่าง · จัดได้ ${P.plan.reduce((a,x)=>a+x.cases.length,0)} เคส · ยังเหลือ ${P.left} เคส`);
       P.plan.forEach(x=>actCard({type:'assign',team:x.team,cases:x.cases.map(c=>String(c.id)),why:x.why},d));
       if(typeof LOCALAI!=='undefined'&&LOCALAI.on()){const go=()=>S.busy?setTimeout(go,600):ask('ตรวจแผนจัดเคสที่ระบบคำนวณ (อยู่ท้ายข้อมูล) ว่าเหมาะไหม มีจุดเสี่ยงอะไร ถ้าควรปรับให้เสนอ actions ใหม่ ถ้าดีแล้วตอบสั้น ๆ',{label:'ให้ AI HELP ตรวจแผน',plan:P});go()}}}
-  /* ปุ่มสรุปในรายละเอียดเคส (หน้าจัดการเคส) */
   function drawerHook(){const dr=document.getElementById('drawer');if(!dr)return;
     new MutationObserver(()=>{const sm=dr.querySelector('.d-head small');if(!sm||dr.querySelector('.hz-sum'))return;const b=document.createElement('button');b.type='button';b.className='hz-sum hz-ic';b.title='สรุปด้วย AI';b.setAttribute('aria-label','สรุปด้วย AI');b.innerHTML='<span aria-hidden="true">✦</span>';
       b.onclick=()=>{S.focus=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);ask('สรุปเคสที่กำลังดู: สถานการณ์ ความเสี่ยง สิ่งที่ต้องเตรียม และเสนอทีมที่เหมาะ (ใส่ actions ถ้ามีทีมเหมาะ)',{label:'สรุปเคสนี้'})};const row=document.createElement('div');row.className='hz-row';row.append(b);sm.after(row);
       const t=document.createElement('button');t.type='button';t.className='hz-sum hz-ic';t.title='หาทีมให้เคสนี้';t.setAttribute('aria-label','หาทีมให้เคสนี้');t.innerHTML=(typeof ic==='function'?ic('users'):'👥')+'<span class="hz-spark" aria-hidden="true">✦</span>';t.onclick=async()=>{const id=String(dr.dataset.case||'').replace(/^hm-/,'');toggle(true);add('หาทีมให้เคสนี้','hz-m u');
         const d=await data(),c=d.cases.find(x=>String(x.id)===id);if(!c){note('ไม่พบเคสในข้อมูล');return}const T=teamsFor(d,c);if(!T.length){note('ไม่มีทีมที่ว่าง');return}
         note('ทีมที่เหมาะ (เลือกแล้วกดยืนยัน)');actCard({type:'assign',team:T[0].t.name,choices:T.slice(0,6).map(x=>({name:x.t.name,why:x.why})),cases:[id],why:'เรียงจากใกล้ · ว่าง · พาหนะเหมาะ'},d)};row.append(t)}).observe(dr,{childList:true,subtree:true})}
-  /* ร่างคำตอบในแชท: คืนข้อความให้คนแก้แล้วกดส่งเอง */
   async function draft(team,msgs){if(typeof LOCALAI==='undefined'||!LOCALAI.on())throw new Error('ยังไม่ได้เปิด Local AI (หน้า ตั้งค่า)');
     const d=await data().catch(()=>null),t=d&&d.roster.find(x=>x.name===team),g=d?d.cases.filter(c=>c.status==='going'&&vol(c)===team):[];
     const conv=(msgs||[]).slice(-12).map(m=>`${m.sender==='hq'?'ศูนย์':team}: ${m.kind==='sos'?'[SOS] ':''}${m.text||(m.lat!=null?'[ส่งตำแหน่ง]':'')}`).join('\n');

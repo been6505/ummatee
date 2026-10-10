@@ -1,6 +1,3 @@
-/* ชั้นภัยพิบัติบนแผนที่ (ใช้ร่วมทุกแผนที่ของ CENTRAL): HZ.attach(map) → ปุ่ม "ภัยพิบัติ" มุมขวาบน เปิด/ปิดได้ทีละชนิด
-   ข้อมูลจาก /api?action=hazards (แผ่นดินไหว+สึนามิ, ไฟป่า, GDACS, ฝนตกรุนแรง/ลูกเห็บ/พายุ/ลมกระโชกรายจังหวัด, เสี่ยงดินถล่ม/น้ำป่า, รายงานจากศูนย์)
-   อัปเดตเองทุก 10 นาที · HZ.data = ข้อมูลล่าสุด · HZ.onData(fn) รับแจ้งเมื่อข้อมูลมาใหม่ */
 const HZ=(()=>{
   const T={
     quake:{t:'แผ่นดินไหว',i:'🌐',c:'#b45309'},tsunami:{t:'สึนามิ',i:'🌊',c:'#0e7490'},fire:{t:'ไฟป่า / จุดความร้อน',i:'🔥',c:'#dc2626'},
@@ -16,7 +13,6 @@ const HZ=(()=>{
   const S={data:null,maps:[],subs:[],timer:null,loading:null};
   const api=()=>(typeof API_URL!=='undefined'?API_URL:'/api');
   async function load(){if(S.loading)return S.loading;S.loading=fetch(api()+'?action=hazards&t='+Math.floor(Date.now()/60000)).then(r=>r.json()).then(d=>{if(d&&d.ok){S.data=d;S.maps.forEach(draw);S.subs.forEach(f=>{try{f(d)}catch(e){}})}}).catch(()=>{}).finally(()=>{S.loading=null});return S.loading}
-  /* รายการจุดทั้งหมดแยกตามชนิด */
   function items(d){if(!d)return [];const out=[];
     (d.quakes||[]).forEach(q=>{out.push({k:'quake',lat:q.lat,lng:q.lng,r:Math.max(6,(q.mag||3)*3.2),html:`<b>🌐 แผ่นดินไหว ขนาด ${E(q.mag)}</b><br>${E(q.place)}<br>${E(when(q.time))} · ลึก ${E(q.depth)} กม. · ${E(q.src)}${/^https:\/\//.test(q.url||'')?` · <a href="${E(q.url)}" target="_blank" rel="noopener">USGS ↗</a>`:''}`,lv:q.mag>=6?3:q.mag>=5?2:1});
       if(q.tsunami)out.push({k:'tsunami',lat:q.lat,lng:q.lng,html:`<b>🌊 เฝ้าระวังสึนามิ</b><br>จากแผ่นดินไหวขนาด ${E(q.mag)} ${E(q.place)}<br>${E(when(q.time))}`,lv:3})});
@@ -50,7 +46,6 @@ const HZ=(()=>{
     new Ctl({position:opt.position||'topright'}).addTo(map);S.maps.push(m);
     if(S.data)draw(m);else load();
     if(!S.timer)S.timer=setInterval(()=>{if(!document.hidden)load()},10*60000)}
-  /* CSS ของชั้นภัย */
   const st=document.createElement('style');st.textContent=`.hz-ic{background:none!important;border:0!important}.hz-ic span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 0 0 2.5px var(--c),0 3px 8px rgba(0,0,0,.3);font-size:16px;line-height:1}
 .hz-ic.lv3 span{animation:hzp 1.4s ease-in-out infinite}@keyframes hzp{50%{box-shadow:0 0 0 2.5px var(--c),0 0 0 9px rgba(220,38,38,.18)}}@media(prefers-reduced-motion:reduce){.hz-ic.lv3 span{animation:none}}
 .hz-ctl{background:#fff;border-radius:12px!important;overflow:hidden;font:13px/1.4 "IBM Plex Sans Thai",system-ui,sans-serif;color:#1b1f3b;max-width:280px}

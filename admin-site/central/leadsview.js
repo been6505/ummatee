@@ -1,7 +1,3 @@
-/* แท็บ "จัดการเคส": สลับระหว่าง เคสในระบบ กับ เคสจากโซเชียลรอคัด (หน้า admin/leads ฝังในกรอบ)
-   - admin.html#leads เปิดมุมมองรอคัดทันที (ลิงก์จากแดชบอร์ด)
-   - กรอบส่งข้อความกลับมา: count = จำนวนรอคัด, accepted = รับเป็นเคสแล้ว (โหลดเคสใหม่), openCase = เปิดเคสในหน้านี้
-   ใช้ตัวแปรจาก admin.js: A, api, load, openDrawer */
 (()=>{
   const sw=document.querySelector('.view-sw'),box=document.getElementById('leads-view'),badge=document.getElementById('leads-n');
   if(!sw||!box)return;
@@ -25,7 +21,6 @@
     if(m.type==='accepted'&&typeof load==='function')load();
     if(m.type==='openCase'){show('cases');const has=()=>typeof findCase==='function'?!!findCase(m.id):A.cases.some(c=>c.id===m.id),go=()=>{if(has())openDrawer(m.id)};
       if(has())go();else Promise.resolve(load()).then(()=>setTimeout(go,300))}});
-  // จำนวนรอคัดบนปุ่ม (ไม่ต้องเปิดมุมมองก่อน)
   async function count(){if(!A.key)return;try{const r=await api({action:'leads',key:A.key,days:30});if(r&&r.ok)setBadge(r.leads.filter(l=>l.status==='new').length)}catch(e){}}
   count();setInterval(()=>{if(!document.hidden&&box.hidden)count()},120000);
   if(location.hash==='#leads')show('leads');else if(location.hash==='#board')show('board');else if(location.hash==='#days')show('days');

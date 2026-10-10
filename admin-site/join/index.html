@@ -54,14 +54,12 @@ textarea{min-height:80px;resize:vertical}
   <p class="lead">หน่วยงาน ทีม เพจ และจิตอาสา ร่วมช่วยผู้ประสบภัยไปด้วยกัน</p>
   <div class="seg" role="tablist"><button type="button" data-m="login" aria-pressed="true">เข้าสู่ระบบ</button><button type="button" data-m="apply" aria-pressed="false">สมัครใหม่</button></div>
 
-  <!-- ===== เลือกประเภท ===== -->
   <div class="kind" id="kind">
     <button type="button" data-k="warroom" aria-pressed="true"><span class="ki"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"/><path d="M15 9h4a1 1 0 0 1 1 1v11"/><path d="M3 21h18"/><path d="M8 8h3M8 12h3M8 16h3"/><path d="M17 13h0M17 17h0"/></svg></span><span class="kt"><b>หน่วยงาน</b><small>องค์กร · ทีม · เพจ · มูลนิธิ</small></span><span class="kc"></span></button>
     <button type="button" data-k="volunteer" aria-pressed="false"><span class="ki"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/><path d="M12 5 9 8a2.2 2.2 0 0 0 0 3c.8.8 2.1.9 3 .1l2.1-1.9a2.8 2.8 0 0 1 3.8 0l3 2.7"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg></span><span class="kt"><b>จิตอาสา</b><small>บุคคล/กลุ่มที่พร้อมลงพื้นที่</small></span><span class="kc"></span></button>
   </div>
   <div style="height:14px"></div>
 
-  <!-- ===== เข้าสู่ระบบ ===== -->
   <form class="card" id="f-login" autocomplete="on">
     <h2 id="lg-h">เข้าสู่ระบบหน่วยงาน</h2>
     <label id="lg-room-w">หน่วยงานของคุณ<select id="lg-room"><option value="">กำลังโหลดรายชื่อ…</option></select></label>
@@ -73,7 +71,6 @@ textarea{min-height:80px;resize:vertical}
     <p class="muted small">ลืมรหัสผ่าน: หน่วยงานติดต่อผู้ดูแลหน่วยงาน/ศูนย์ · จิตอาสาติดต่อหน่วยงานที่สังกัด</p>
   </form>
 
-  <!-- ===== สมัคร War Room ===== -->
   <form class="card-stack" id="f-wr" hidden>
     <div class="card"><h2>ข้อมูลหน่วยงาน<small>องค์กร มูลนิธิ ทีมกู้ภัย เพจ กลุ่มชุมชน ฯลฯ · ศูนย์จะติดต่อกลับ</small></h2>
       <div class="q"><b>ประเภทหน่วยงาน</b><div class="chips" data-name="orgType" data-one="1">มูลนิธิ/องค์กร|ทีมกู้ภัย/อาสา|เพจ/สื่อออนไลน์|ศาสนสถาน|หน่วยงานรัฐ/ท้องถิ่น|บริษัท/ร้านค้า|กลุ่มชุมชน|อื่น ๆ</div></div>
@@ -105,7 +102,6 @@ textarea{min-height:80px;resize:vertical}
     </div>
   </form>
 
-  <!-- ===== สมัครจิตอาสา ===== -->
   <form class="card-stack" id="f-vol" hidden>
     <div class="card"><h2>ข้อมูลจิตอาสา</h2>
       <div class="row2"><label>ชื่อจริง-นามสกุล *<small>ภาษาไทยได้ · ใช้แสดงให้ศูนย์เห็น</small><input name="fullName" required maxlength="80" autocomplete="name"></label><label>ชื่อเล่น<input name="nickname" maxlength="30"></label></div>
@@ -134,14 +130,13 @@ textarea{min-height:80px;resize:vertical}
   </form>
 </div>
 <script>
-/* หน้าเข้าร่วม: เข้าสู่ระบบ / สมัคร War Room หรือจิตอาสา · คำตอบแบบสอบถามส่งให้ CENTRAL พิจารณา */
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const post=b=>fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(b)}).then(r=>r.json());
 const PROVS='กรุงเทพมหานคร กระบี่ กาญจนบุรี กาฬสินธุ์ กำแพงเพชร ขอนแก่น จันทบุรี ฉะเชิงเทรา ชลบุรี ชัยนาท ชัยภูมิ ชุมพร เชียงราย เชียงใหม่ ตรัง ตราด ตาก นครนายก นครปฐม นครพนม นครราชสีมา นครศรีธรรมราช นครสวรรค์ นนทบุรี นราธิวาส น่าน บึงกาฬ บุรีรัมย์ ปทุมธานี ประจวบคีรีขันธ์ ปราจีนบุรี ปัตตานี พระนครศรีอยุธยา พะเยา พังงา พัทลุง พิจิตร พิษณุโลก เพชรบุรี เพชรบูรณ์ แพร่ ภูเก็ต มหาสารคาม มุกดาหาร แม่ฮ่องสอน ยโสธร ยะลา ร้อยเอ็ด ระนอง ระยอง ราชบุรี ลพบุรี ลำปาง ลำพูน เลย ศรีสะเกษ สกลนคร สงขลา สตูล สมุทรปราการ สมุทรสงคราม สมุทรสาคร สระแก้ว สระบุรี สิงห์บุรี สุโขทัย สุพรรณบุรี สุราษฎร์ธานี สุรินทร์ หนองคาย หนองบัวลำภู อ่างทอง อำนาจเจริญ อุดรธานี อุตรดิตถ์ อุทัยธานี อุบลราชธานี'.split(' ');
 $$('select.prov').forEach(s=>s.innerHTML='<option value="">เลือกจังหวัด</option>'+PROVS.map(p=>`<option>${p}</option>`).join(''));
 $$('.chips[data-name]').forEach(c=>{const n=c.dataset.name;c.innerHTML=c.textContent.split('|').map(v=>`<label><input type="checkbox" name="${n}" value="${esc(v.trim())}"><span>${esc(v.trim())}</span></label>`).join('')});
-document.addEventListener('change',e=>{const c=e.target.closest('.chips[data-one]');if(c&&e.target.checked)c.querySelectorAll('input').forEach(i=>{if(i!==e.target)i.checked=false})}); // เลือกได้ข้อเดียว
+document.addEventListener('change',e=>{const c=e.target.closest('.chips[data-one]');if(c&&e.target.checked)c.querySelectorAll('input').forEach(i=>{if(i!==e.target)i.checked=false})});
 const S={m:new URLSearchParams(location.search).get('m')==='apply'?'apply':'login',k:new URLSearchParams(location.search).get('k')==='volunteer'?'volunteer':'warroom',rooms:[]};
 function view(){$$('.seg [data-m]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===S.m)));$$('#kind [data-k]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===S.k)));
   $('#f-login').hidden=S.m!=='login';$('#f-wr').hidden=!(S.m==='apply'&&S.k==='warroom');$('#f-vol').hidden=!(S.m==='apply'&&S.k==='volunteer');
@@ -152,7 +147,6 @@ $('#kind').onclick=e=>{const b=e.target.closest('[data-k]');if(b){S.k=b.dataset.
 document.addEventListener('click',e=>{const b=e.target.closest('[data-eye]');if(b){const i=document.getElementById(b.dataset.eye);i.type=i.type==='password'?'text':'password'}});
 fetch('/api?action=warrooms_public').then(r=>r.json()).then(r=>{S.rooms=r.ok?r.warrooms:[];const o=S.rooms.map(w=>`<option value="${esc(w.id)}">${esc(w.name)}${w.province?' · '+esc(w.province):''}</option>`).join('');
   $('#lg-room').innerHTML='<option value="">เลือกหน่วยงาน</option>'+o;$$('select.rooms').forEach(s=>s.innerHTML='<option value="">ให้ศูนย์จัดให้</option>'+o)}).catch(()=>{$('#lg-room').innerHTML='<option value="">โหลดรายชื่อไม่ได้</option>'});
-/* ตำแหน่งศูนย์ */
 document.addEventListener('click',e=>{const b=e.target.closest('[data-loc]');if(!b)return;const out=$('#loc-'+b.dataset.loc);out.textContent='กำลังหาตำแหน่ง…';
   navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{b.form.dataset.lat=p.coords.latitude.toFixed(6);b.form.dataset.lng=p.coords.longitude.toFixed(6);out.textContent=`✓ ${b.form.dataset.lat}, ${b.form.dataset.lng}`},()=>{out.textContent='หาตำแหน่งไม่ได้ · ข้ามได้'},{enableHighAccuracy:true,timeout:15000}):out.textContent='อุปกรณ์นี้หาตำแหน่งไม่ได้'});
 const ERR={missing:'กรอกชื่อและเบอร์โทรให้ครบ',bad_username:'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ/ตัวเลข ไม่เว้นวรรค (ไม่ใช่ชื่อจริง) เช่น somchai01',short_password:'รหัสผ่านอย่างน้อย 6 ตัว',username_taken:'ชื่อผู้ใช้นี้มีคนใช้แล้ว',too_many:'ส่งใบสมัครบ่อยเกินไป ลองใหม่ภายหลัง',bad_login:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',locked:'ใส่รหัสผิดหลายครั้ง · ลองใหม่ใน 10 นาที'};
@@ -165,7 +159,6 @@ async function apply(e,kind){e.preventDefault();const f=e.target,err=f.querySele
     if(r.ok){f.innerHTML=`<div class="card"><div class="status pending"><b class="ok">✓ ส่งใบสมัครแล้ว</b><span>สถานะ: รอ ${kind==='warroom'?'CENTRAL':'CENTRAL / หน่วยงาน'} พิจารณา · จะติดต่อกลับทางเบอร์ที่ให้ไว้</span><span>ตรวจสถานะได้ที่ "เข้าสู่ระบบ" ด้วยชื่อผู้ใช้ <b>${esc(un)}</b></span></div><a class="btn ghost" href="?m=login&k=${kind}">ไปหน้าเข้าสู่ระบบ</a></div>`;scrollTo(0,0);return}
     err.textContent=ERR[r.error]||'ส่งไม่สำเร็จ ลองใหม่'}catch(x){err.textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{btn.disabled=false}}
 $('#f-wr').onsubmit=e=>apply(e,'warroom');$('#f-vol').onsubmit=e=>apply(e,'volunteer');
-/* เข้าสู่ระบบ: War Room → บัญชีห้อง (ถ้ายังไม่อนุมัติ แสดงสถานะใบสมัคร) · จิตอาสา → สถานะ/หน้าทีม */
 function statusCard(r){const st={pending:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่ผ่านการอนุมัติ'}[r.status]||r.status;const box=$('#lg-status');box.hidden=false;
   box.innerHTML=`<div class="status ${esc(r.status)}"><b>${esc(r.name)} · ${esc(st)}</b>${r.note?`<span>หมายเหตุจากศูนย์: ${esc(r.note)}</span>`:''}${r.status==='pending'?'<span>ศูนย์จะติดต่อกลับทางเบอร์ที่ให้ไว้</span>':''}
     ${r.team?`<a class="btn red" href="${esc(r.team.link)}">เข้าหน้าทีม ${esc(r.team.name)}</a><span class="small muted">บันทึกลิงก์หน้าทีมไว้ หรือเพิ่มลงหน้าจอหลัก</span>`:r.status==='approved'&&r.kind==='volunteer'?'<span>รอศูนย์จัดเข้าทีม</span>':''}</div>`}
@@ -179,7 +172,6 @@ $('#f-login').onsubmit=async e=>{e.preventDefault();const u=$('#lg-user').value,
       if(a.ok){$('#lg-err').textContent='';statusCard(a);return}$('#lg-err').textContent=room?ERR[a.error]||ERR.bad_login:'เลือกหน่วยงานก่อน (ถ้าสมัครแล้วรออนุมัติ ไม่ต้องเลือกก็ตรวจสถานะได้)'}
     else{const a=await post({action:'app_login',kind:'volunteer',username:u,password:p});if(a.ok){$('#lg-err').textContent='';statusCard(a);if(a.team)localStorage.setItem('uh_join_team',a.team.link);return}$('#lg-err').textContent=ERR[a.error]||'เข้าสู่ระบบไม่ได้'}}
   catch(x){$('#lg-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่'}finally{$('#lg-go').disabled=false}};
-/* ชื่อผู้ใช้แยกจากชื่อจริง: เตือนทันทีถ้ามีภาษาไทย/เว้นวรรค · เสนอชื่อผู้ใช้จากเบอร์/LINE */
 const UNRE=/^[a-z0-9._-]{3,32}$/;
 document.addEventListener('input',e=>{const i=e.target.closest('[data-un]');if(!i)return;const v=i.value,h=i.closest('label').parentElement.querySelector('[data-unhint]')||i.closest('form').querySelector('[data-unhint]');
   const low=v.toLowerCase();if(v!==low&&UNRE.test(low)){const p=i.selectionStart;i.value=low;i.setSelectionRange(p,p)}

@@ -1,11 +1,5 @@
-/* ชั้นข้อมูลแผนที่แบบ Help Me ช่วยด้วย (ใช้ในแดชบอร์ด)
-   - เรดาร์ฝน: RainViewer ภาพย้อนหลัง 2 ชม. ทุก 10 นาที (ซูมจริงสูงสุด 7) · ปุ่ม <i data-ic="play"></i> เล่นทิศทางฝน
-   - ทีมกู้ภัยและเครือข่าย: จุดที่องค์กรลงพื้นที่ (outreach ของ Help Me + ชีตพื้นที่มอบแล้วของ UM+) เป็นป้ายสีตามองค์กร
-   - กล้อง CCTV: /api?action=cctv (iTIC ผ่าน Longdo · เฉพาะกรุงเทพฯ)
-   ใช้: MAPL.attach(map) แล้ว MAPL.sync() ทุกครั้งที่สวิตช์ใน #dlayer เปลี่ยน */
 const MAPL=(()=>{
   const HELPME_API='https://script.google.com/macros/s/AKfycbyWeVDhToFJntjTGHprDEByEfRFdSbOidlR7QhJ6xG1bz7co2gCRkTGIoKDI9tJqGkWTw/exec';
-  /* สีองค์กรชุดเดียวกับ Help Me */
   const ORGS=[{name:'สภาเครือข่ายฯ สำนักจุฬาราชมนตรี',short:'สภาฯ',color:'#7C3AED'},{name:'มูลนิธิป่อเต็กตึ๊ง',short:'ป่อเต็กตึ๊ง',color:'#C2410C'},
     {name:'มูลนิธิร่วมกตัญญู',short:'ร่วมกตัญญู',color:'#B45309'},{name:'มุสลิมสงเคราะห์ผู้ประสบภัย',short:'มุสลิมสงเคราะห์',color:'#0E7490'},
     {name:'ทีมกู้ภัย',short:'กู้ภัย',color:'#E8590C'},{name:'มูลนิธิอุมมะตี',short:'อุมมะตี',color:'#2E9E57'}];
@@ -16,7 +10,6 @@ const MAPL=(()=>{
   const save=()=>{try{localStorage.setItem('uh_dlay',JSON.stringify(['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-places','mt-flood','mt-done','mt-leads','mt-live'].reduce((o,k)=>{const e=document.getElementById(k);if(e)o[k]=e.checked;return o},{})))}catch(e){}};
   function restore(){try{const o=JSON.parse(localStorage.getItem('uh_dlay')||'{}');for(const k in o){const e=document.getElementById(k);if(e)e.checked=!!o[k]}}catch(e){}}
 
-  /* ---------- เรดาร์ฝน ---------- */
   const RAIN_OP=.62,RAIN_ATTR='Weather data by <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>';
   const frames=()=>(S.rain&&S.rain.radar&&S.rain.radar.past)||[];
   const tm=f=>new Date(f.time*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
@@ -40,11 +33,8 @@ const MAPL=(()=>{
     S.ctl=new C({position:'bottomleft'}).addTo(S.map);rainShow(fr.length-1);
     setSub('mt-rain',`ภาพล่าสุด ${tm(fr[fr.length-1])} น. · อัปเดตทุก 10 นาที`)}
 
-  /* ---------- ทีมกู้ภัยและเครือข่ายช่วยเหลือ ---------- */
-  /* outreach ของ Help Me ผ่าน /api (แคชที่ edge) · โหลดช้า/พังก็ยังวาดจุดจากชีต UM+ ไปก่อน แล้วเติมทีหลัง */
   async function outreach(){if(S.outreach&&Date.now()-S.outAt<5*60e3)return S.outreach;
     try{const r=await fetch('/api?action=outreach',{cache:'no-store'}).then(r=>r.json());if(r&&Array.isArray(r.points)&&r.points.length){S.outreach=r.points;S.outAt=Date.now()}}catch(e){}
-    // เซิร์ฟเวอร์ดึงจาก Help Me ไม่ได้ (Apps Script ตอบ Cloudflare ช้า): ดึงตรงจากเบราว์เซอร์
     if(!S.outreach){try{const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),40000);
       const r=await fetch(HELPME_API+'?action=outreach&t='+Math.floor(Date.now()/300000),{signal:ctl.signal}).then(r=>r.json());clearTimeout(tm);
       if(r&&Array.isArray(r.points)){S.outreach=r.points.filter(p=>p.lat&&p.lng);S.outAt=Date.now()}}catch(e){}}
@@ -66,7 +56,6 @@ const MAPL=(()=>{
     const chips=[...used.values()].sort((a,b)=>b.n-a.n).slice(0,7).map(({o,n})=>`<span class="lchip"><i style="background:${o.color}"></i>${esc(o.short)} ${n}</span>`).join('');
     const box=document.getElementById('net-chips');if(box)box.innerHTML=chips||'<span class="lchip">ยังไม่มีจุด</span>'}
 
-  /* ---------- กล้อง CCTV ---------- */
   async function drawCams(){if(S.camL){S.camL.remove();S.camL=null}if(!on('mt-cctv')){S.map.attributionControl.removeAttribution(CAM_ATTR);return}
     if(!S.cams){try{const r=await fetch('/api?action=cctv').then(r=>r.json());S.cams=r&&r.ok?r.cams:[]}catch(e){S.cams=[]}}
     if(!on('mt-cctv'))return;
@@ -75,7 +64,6 @@ const MAPL=(()=>{
     S.camL=CAMLIVE.layer(S.map,S.cams,show=>setSub('mt-cctv',show?`${n} ตัว · กล้องสีแดง = ภาพสด (${live}) · ที่เหลือภาพนิ่งล่าสุด`:`${n} ตัว · ซูมเข้าถึงจะแสดงกล้อง`))}
   const CAM_ATTR='กล้อง CCTV © <a href="https://flood.pop.in.th/" target="_blank" rel="noopener">POPNIX Flood</a> · iTIC';
 
-  /* ---------- พื้นที่น้ำท่วมจากดาวเทียม (GISTDA) ---------- */
   const GIS_ATTR='น้ำท่วมจากดาวเทียม © <a href="https://disaster.gistda.or.th/" target="_blank" rel="noopener">GISTDA</a>';
   const GIS_TXT={'1day':'ย้อนหลัง 1 วัน','3days':'3 วันล่าสุด','7days':'7 วันล่าสุด','30days':'30 วันล่าสุด',freq:'พื้นที่น้ำท่วมซ้ำซาก'};
   let gisRange='7days';try{gisRange=localStorage.getItem('uh_gistda')||'7days'}catch(e){}
@@ -89,7 +77,6 @@ const MAPL=(()=>{
     S.map.attributionControl.addAttribution(GIS_ATTR);setSub('mt-gistda','GISTDA · '+GIS_TXT[gisRange]+' (สีฟ้า = น้ำท่วม)')}
   document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gr]');if(!b)return;e.preventDefault();gisRange=b.dataset.gr;try{localStorage.setItem('uh_gistda',gisRange)}catch(err){}
     const sw=document.getElementById('mt-gistda');if(sw&&!sw.checked){sw.checked=true;save()}drawGistda()});
-  /* ---------- ศูนย์พักพิง / จุดเครือข่าย (Google Sheet ของ Help Me) ---------- */
   async function drawPlaces(){if(S.places){S.places.remove();S.places=null}if(!on('mt-places'))return;
     let r=null;try{r=await fetch('/api?action=sheet_places').then(r=>r.json())}catch(e){}
     if(!on('mt-places')||!r||!r.ok)return;
@@ -106,7 +93,6 @@ const MAPL=(()=>{
     ['mt-rain','mt-cov','mt-cctv','mt-gistda','mt-places'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',()=>{save();({'mt-rain':drawRain,'mt-cov':drawNet,'mt-cctv':drawCams,'mt-gistda':drawGistda,'mt-places':drawPlaces})[id]()})});
     ['mt-flood','mt-done','mt-leads','mt-live'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener('change',save)});
     sync();setInterval(()=>{if(!document.hidden&&on('mt-rain')&&!S.anim){S.rainAt=0;drawRain()}},10*60e3)}
-  /* ข้อมูลพื้นที่มอบแล้วโหลดเสร็จทีหลัง: วาดชั้นเครือข่ายใหม่ */
   function refreshNet(){S.netRows=null;if(S.map)drawNet()}
   return {attach,sync,refreshNet,orgOf,ORGS}
 })();

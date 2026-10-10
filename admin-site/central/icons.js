@@ -1,5 +1,3 @@
-/* ไอคอนเส้น (outline) ของหลังบ้าน Helpme+ · ชุดเดียวกับ Help Me ช่วยด้วย (helpme-th.pages.dev/icons.js) + ไอคอนที่หลังบ้านใช้เพิ่ม
-   ใช้ใน JS: ic('phone') · ใน HTML: <i data-ic="phone"></i> */
 const ICONS={
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/>',
   map:'<path d="m9 4-6 2v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
@@ -57,7 +55,6 @@ const ICONS={
   chart:'<path d="M4 20h16"/><path d="M7 16v-5M12 16V6M17 16v-8"/>'
 };
 
-/* เพิ่มสำหรับหลังบ้าน Helpme+ (เส้นแบบเดียวกัน 24×24 stroke 1.8) */
 Object.assign(ICONS,{
   chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/>',
   video:'<rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="m15.5 10.5 6-3.5v10l-6-3.5"/>',
@@ -98,9 +95,7 @@ Object.assign(ICONS,{
 });
 
 function ic(name,cls){return `<svg class="ic${cls?' '+cls:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`}
-/* ใน HTML: <i data-ic="phone"></i> → แทนที่ด้วยไอคอนเส้น (ทั้งตอนโหลดและเมื่อมีเนื้อหาใหม่เข้ามา) */
 (()=>{const fill=root=>root.querySelectorAll&&root.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic,i.className)});
-  /* อีโมจิที่ใช้เป็นไอคอนในข้อความ → ไอคอนเส้นสีเดียวกับตัวอักษร (ทั้งข้อความในโค้ดและข้อความจากเซิร์ฟเวอร์/แชท) */
   const EMO={'↗':'ext','⚠':'alert','🌊':'wave','📣':'megaphone','📢':'megaphone','✓':'check','✔':'check','✅':'check','📍':'pin','↔':'arrows','🌐':'globe','🔥':'flame','⛈':'storm','🌀':'storm','🧊':'snow','🌧':'rain','⛰':'mountain','🚨':'siren','▶':'play','⚙':'settings','✦':'sparkle','🕳':'hole','📴':'wifioff','✕':'close','✖':'close','❌':'close','🔔':'bell','🔕':'belloff','📱':'mobile','👁':'eye','👥':'users','📻':'radio','🔴':'dot','📋':'clipboard','🎉':'check','📡':'sat','🚗':'car','🚙':'car','🚤':'boat','⛵':'boat','📦':'box','🕘':'clock','⏰':'clock','🧾':'note','📝':'note','📞':'phone','☎':'phone','🙋':'hand','🎙':'mic','🎤':'mic','🗺':'map','🏠':'home','💬':'chat','🔍':'search','📷':'cam','📸':'cam','🎥':'video','💧':'drop','🛟':'shield','🛡':'shield','📊':'chart','📅':'calendar','🔗':'link','⬇':'down','⬆':'up','🧭':'nav','🔄':'refresh','🔁':'refresh','⏱':'clock','🌡':'alert','ℹ':'info','🆘':'siren','⚡':'storm','🌪':'storm','💡':'sparkle','⭐':'sparkle','✨':'sparkle','✋':'hand','🗓':'calendar','📆':'calendar','📌':'pin','🏥':'heart','🚑':'ambulance','🛶':'boat','🔇':'belloff','🔊':'bell','⏳':'clock','❗':'alert','❓':'info','➕':'plus','➖':'minus','👤':'user','🧑':'user','📄':'note','🗒':'note','🔒':'key','🔑':'key','📲':'mobile','🛰':'sat','📹':'video','🚚':'car','🏍':'car','🚶':'user'};
   const RE=new RegExp('('+Object.keys(EMO).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\uFE0F?','g'),SKIP=/^(SCRIPT|STYLE|TEXTAREA|INPUT|OPTION|SELECT|TITLE|NOSCRIPT|SVG|svg|CODE|PRE)$/;
   const emo=n=>{if(!n)return;if(n.nodeType===3){const p=n.parentNode,v=n.nodeValue;if(!p||!v||SKIP.test(p.nodeName)||p.closest&&p.closest('svg,[contenteditable],[data-noemo]'))return;RE.lastIndex=0;if(!RE.test(v))return;RE.lastIndex=0;
@@ -110,8 +105,6 @@ function ic(name,cls){return `<svg class="ic${cls?' '+cls:''}" viewBox="0 0 24 2
     const st=document.createElement('style');st.textContent='.ic.emo{width:1.15em;height:1.15em;vertical-align:-.2em;display:inline-block;flex:none;margin:0 .08em}.ic.emo-live{color:#E5383B}';document.head.append(st)};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go):go()})();
 
-/* หมุดหยดน้ำบนแผนที่ (SVG คมทุกขนาดจอ · ปลายหมุดตรงตำแหน่งจริงพอดี)
-   umPin('danger'|'urgent'|'open'|'going'|'done'|'cov', {extra, cls, approx}) → L.divIcon */
 function umPin(k,o={}){
   const mark=k==='cov'?'<path class="pm" d="M11 15.6l3.4 3.4 6.6-6.8"/>':'<circle class="pd" cx="16" cy="15" r="5.2"/>';
   return L.divIcon({className:'um-pin2 pin-'+k+(o.approx?' approx':'')+(o.cls?' '+o.cls:''),
@@ -119,29 +112,21 @@ function umPin(k,o={}){
     iconSize:[32,42],iconAnchor:[16,41],popupAnchor:[0,-38],tooltipAnchor:[0,-34]});
 }
 
-/* แถบเมนูล่างบนมือถือเลื่อนข้างได้: เลื่อนให้เห็นเมนูของหน้าปัจจุบัน */
 {const fit=()=>{const t=document.querySelector('.tabs'),a=t&&t.querySelector('[aria-current=page]');if(!t)return;const max=Math.max(0,t.scrollWidth-t.clientWidth);t.scrollLeft=a&&max?Math.min(max,Math.max(0,a.offsetLeft-(t.clientWidth-a.offsetWidth)/2)):0};
   addEventListener('load',fit);addEventListener('resize',fit);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);setTimeout(fit,1500)}
 
-/* หมุดทีมขยับลื่นแบบเรียลไทม์: เลื่อนจากตำแหน่งเดิมไปตำแหน่งใหม่ตลอดช่วงเวลารอข้อมูลรอบถัดไป (ไม่กระโดด)
-   ระยะไกลเกิน 3 กม. หรือแท็บซ่อนอยู่ = ย้ายทันที */
 function glideTo(m,ll,ms=900,mv){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
   const sp=mv&&Number(mv.speed)>=3&&mv.heading!=null&&isFinite(mv.heading)?Number(mv.speed)/3.6:0,hd=sp?Number(mv.heading)*Math.PI/180:0;
-  // ขยับต่อเนื่องตามความเร็ว/ทิศล่าสุด ระหว่างรอจุดถัดไป (สูงสุด 4 วิ / 50 ม.) · จุดจริงมาถึงค่อยเลื่อนเข้าหา
   const drift=(p,t0)=>{if(!sp)return;const step=t=>{const s=Math.min(4,(t-t0)/1000),d=Math.min(50,sp*s),dy=d*Math.cos(hd)/111320,dx=d*Math.sin(hd)/(111320*Math.cos(p.lat*Math.PI/180));m.setLatLng([p.lat+dy,p.lng+dx]);if(s<4&&d<50)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)};
   if(!a||document.hidden||a.distanceTo(b)>3000){m.setLatLng(b);return}
   if(a.distanceTo(b)<0.3){drift(b,performance.now());return}
   const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;m.setLatLng([a.lat+(b.lat-a.lat)*e,a.lng+(b.lng-a.lng)*e]);if(k<1)m._glide=requestAnimationFrame(step);else drift(b,t)};m._glide=requestAnimationFrame(step)}
-/* ลูกศรทิศทางเมื่อทีมกำลังเคลื่อนที่ (ความเร็ว ≥ 3 กม./ชม. และรู้ทิศ) */
-/* หมุดทีมบนแผนที่: ยานพาหนะ 3D ตามที่ทีมเลือก (Fluent Emoji 3D · MIT) · หันหน้าไปทางที่วิ่ง (ซ้าย/ขวา) · วิ่งอยู่ = เด้งเบา ๆ
-   ใช้: headArrow(ตำแหน่งทีม, ชนิดยานพาหนะของทีม) */
 const VEH_IMG={boat:'boat',truck:'truck',pickup:'pickup',car:'car',motorbike:'motorbike',foot:'foot',other:'other'};
-const VEH_FACE={boat:1,truck:-1,pickup:-1,car:-1,motorbike:-1,foot:1,other:1}; // 1 = รูปหันขวา · -1 = หันซ้าย
+const VEH_FACE={boat:1,truck:-1,pickup:-1,car:-1,motorbike:-1,foot:1,other:1};
 const headArrow=(t,veh)=>{const v=VEH_IMG[veh]||'car',mv=t&&t.speed!=null&&t.speed>=3,h=mv&&t.heading!=null?((+t.heading%360)+360)%360:null;
   const east=h==null?null:(h>0&&h<180),flip=east==null?1:((east?1:-1)*VEH_FACE[v]);
   return `<s class="veh${mv?' run':''}" aria-hidden="true"><img src="/assets/veh/${v}.png" alt="" draggable="false" style="transform:scaleX(${flip})"></s>`};
 
-/* เมนูหลัก: ใส่ไอคอนหน้าชื่อเมนู (แสดงบนมือถือเป็นแถบล่างแบบ helpme4u.com) */
 addEventListener('DOMContentLoaded',()=>{const M=[['/board/','calendar'],['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];
   document.querySelectorAll('.tabs a').forEach(a=>{if(a.querySelector('.tab-ic'))return;const h=a.getAttribute('href')||'',m=M.find(([k])=>h.includes(k));if(!m||typeof ic!=='function')return;
     a.insertAdjacentHTML('afterbegin',ic(m[1],'tab-ic'))})});

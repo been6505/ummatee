@@ -5,7 +5,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .btn.primary{background:var(--teal);color:#fff}.btn.primary:hover{background:var(--teal-2)}
 .btn.ghost{background:#fff;color:var(--teal);box-shadow:inset 0 0 0 1px #bfd7d8}.btn.ghost:hover{background:var(--tint)}
 .btn.sm{min-height:38px;padding:6px 12px;font-size:14px}
-/* login */
 .login{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(160deg,#102f42,#166d75)}
 .login-card{width:min(400px,100%);background:#fff;border-radius:20px;padding:28px 24px;display:grid;gap:14px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
 .login-card img{width:110px;height:auto}.login-card h1{margin:0;font-size:24px}.login-card p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
@@ -13,7 +12,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .fld input:focus,.bar select:focus,.search input:focus,#d-team:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px #d7eeea}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
 .err{color:var(--red)!important;min-height:1.2em}.back{color:var(--teal);font-size:14px;font-weight:600;text-decoration:none}
-/* layout */
 .top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--navy);color:#fff;padding:10px clamp(14px,3vw,32px)}
 .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:18px;font-weight:600}.brand img{background:#fff;border-radius:8px;padding:3px 6px;height:36px;width:auto}.brand b{color:#9fe0d3}
 .top-r{display:flex;align-items:center;gap:8px}.top .btn.ghost{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px #ffffff55}.top .btn.ghost:hover{background:#ffffff1a}
@@ -29,7 +27,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .bar select{border:1px solid var(--line);border-radius:10px;min-height:42px;padding:6px 10px;background:#fff;color:var(--ink);font-size:14px}
 .seg{display:inline-flex;background:#fff;border-radius:10px;padding:3px;box-shadow:inset 0 0 0 1px var(--line)}.seg button{border:0;background:none;border-radius:8px;padding:6px 14px;font-weight:600;color:var(--muted);min-height:36px}.seg button[aria-selected=true]{background:var(--teal);color:#fff}
 .count{margin:0;font-size:13px;color:var(--muted)}
-/* table */
 .tbl{width:100%;border-collapse:separate;border-spacing:0 6px}
 .tbl th{text-align:left;font-size:12.5px;color:var(--muted);font-weight:600;padding:4px 10px}
 .tbl td{background:#fff;padding:10px;font-size:14px;vertical-align:top;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -45,7 +42,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .st-sel{border:0;border-radius:8px;padding:6px 8px;font-weight:600;font-size:13px;min-height:36px}.st-sel.st-open{background:#fee9e6;color:#bd383a}.st-sel.st-going{background:#e7f1fc;color:#28639a}.st-sel.st-done{background:#e4f4e9;color:#277343}
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 .map-wrap{margin-top:6px}#map{height:calc(100vh - 290px);min-height:420px;border-radius:14px;overflow:hidden;background:#e8eef0}
-/* drawer */
 .drawer-bg{position:fixed;inset:0;background:rgba(16,47,66,.35);z-index:40}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(480px,100%);background:#fff;z-index:41;overflow:auto;padding:20px 20px 40px;box-shadow:-10px 0 40px rgba(0,0,0,.15)}
 .d-head{display:flex;justify-content:space-between;gap:10px}.d-head h2{margin:10px 0 2px;font-size:20px;line-height:1.4}.d-head small{color:var(--muted)}
@@ -58,7 +54,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .d-st-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.d-st-btns .btn{white-space:normal;font-size:13.5px;padding:8px}
 .toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;display:grid;gap:8px;width:min(420px,calc(100% - 32px))}
 .toast{background:#173746;color:#fff;border-radius:12px;padding:12px 16px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}.toast.ok{background:var(--teal)}
-/* mobile */
 @media(max-width:900px){
   .stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat{padding:10px}.stat b{font-size:22px}
   .bar{top:56px}.bar-row select{flex:1 1 140px}
@@ -78,7 +73,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 @media(max-width:600px){.top-r #refresh{display:none}.stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.stat{padding:8px;border-radius:10px}.stat b{font-size:19px}.stat span{font-size:11px;line-height:1.3;display:block}.tbl td.act .btn{min-height:34px}}
 .tabs{display:flex;gap:4px;margin-right:auto;margin-left:8px}.tabs a{color:#bad0d9;text-decoration:none;padding:8px 12px;border-radius:9px;font-weight:600;font-size:15px}.tabs a[aria-current=page]{background:#ffffff1f;color:#fff}
 @media(max-width:600px){.tabs a{padding:6px 8px;font-size:14px}.brand span{display:none}}
-/* แถบค้นหา/กรอง: คอมแสดงครบ · มือถือย่อเหลือช่องค้นหา + ปุ่มตัวกรอง */
 .bar-top{display:flex;gap:8px;align-items:center}.bar-top .search{flex:1;min-width:0}
 .f-toggle{display:none}.f-toggle b{background:var(--teal);color:#fff;border-radius:999px;font-size:12px;padding:1px 7px;margin-left:2px}
 .filters-box{display:contents}
@@ -96,7 +90,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 }
 .tabs a{white-space:nowrap}
 @media(max-width:600px){.top{gap:6px;padding:8px 10px}.tabs{margin-left:2px}.tabs a{padding:6px 7px;font-size:13.5px}#logout{padding:6px 8px;font-size:13px}.brand img{height:32px}}
-/* ถุงยังชีพ */
 .stats{grid-template-columns:repeat(8,minmax(0,1fr))}
 .tbl td.bag{white-space:nowrap}
 .bag-in{width:68px;border:1px solid var(--line);border-radius:8px;min-height:36px;padding:4px 8px;font-size:15px;font-weight:600;text-align:right;background:#fff;color:var(--ink)}
@@ -104,7 +97,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .bag-in:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px #d7eeea}
 .tbl td.bag small{display:inline;margin-left:4px}
 @media(max-width:900px){.stats{grid-template-columns:repeat(4,minmax(0,1fr))}.tbl td.bag{grid-column:1/-1}.tbl td.bag::before{content:"ถุงยังชีพ ";color:var(--muted);margin-right:6px}}
-/* ตรวจสอบพื้นที่ */
 .vr{display:inline-block;border-radius:6px;padding:3px 8px;font-size:12.5px;font-weight:700;white-space:nowrap}
 .vr-confirmed{background:#c62828;color:#fff}.vr-likely{background:#fde3e3;color:#a32121}.vr-conflict{background:#fff0dc;color:#9a4d00;box-shadow:inset 0 0 0 1.5px #e8a33d}
 .vr-unverified{background:#eef2f4;color:#4f6670}.vr-notcrit{background:#e4f4e9;color:#277343}.vr-nopin{background:#f3f3f3;color:#888}
@@ -124,14 +116,12 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .vr-note{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.5}
 .tbl td.vr-cell{white-space:nowrap}
 @media(max-width:900px){.tbl td.vr-cell{grid-column:2/3;text-align:right}.tbl td.vr-cell .vr-score{display:inline;margin-left:4px}.vr-bars div{grid-template-columns:110px 1fr 44px}}
-/* แท็บหลังบ้าน 4 หน้า: มือถือเลื่อนด้านข้างได้ */
 .tabs{overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 auto}.tabs::-webkit-scrollbar{display:none}.tabs a{flex:none}
 .vr-cams{margin:10px 0 4px}.vr-cams>span{font-size:13px;color:var(--muted);font-weight:600}
 .vr-cam-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:6px}
 .vr-cam-grid figure{margin:0;background:#f6f9fa;border-radius:10px;overflow:hidden}.vr-cam-grid img{display:block;width:100%;aspect-ratio:5/4;object-fit:cover;background:#dde5e8}
 .vr-cam-grid figcaption{font-size:12px;padding:4px 6px;color:var(--ink)}.vr-cam-live{display:grid;place-items:center;aspect-ratio:5/4;background:#102f42;color:#fff;font-weight:600;font-size:13px;text-decoration:none}
 @media(max-width:600px){.vr-cam-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* ===== แผนที่: ชั้นข้อมูล / โซน / เส้นทาง ===== */
 .map-wrap{margin:6px 0 14px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px}
 .map-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.mt-sp{flex:1}
 .lyr{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:5px 12px;font:inherit;font-size:13.5px;font-weight:600;min-height:34px;cursor:pointer}
@@ -176,12 +166,10 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .list{overflow-x:auto}
 .map-wrap{position:relative;z-index:0}.map-body{isolation:isolate}
 
-/* องค์กรอื่นรับแล้ว */
 .cov{display:inline-block;background:#efe7fb;color:#5b2d91;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;margin:0 4px 4px 0;white-space:nowrap}
 .cov-box{background:#f6f0fd;border:1px solid #dccbf3;border-radius:14px;padding:12px 14px;margin-top:14px;color:#3d1f63}
 .cov-box p{margin:4px 0}.cov-box a{color:#5b2d91;font-weight:600}.cov-box ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px;font-size:14px}.cov-box small{display:block;color:#6d5a86;font-size:12.5px}
 @media(max-width:900px){.tbl td.vr-cell{white-space:normal;min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:4px}.tbl td.vr-cell .cov{margin:0}}
-/* แผนที่เต็มจอ: อยู่เหนือแถบเมนู แต่ใต้หน้ารายละเอียดเคส (drawer z-index 40+) */
 .fs-btn{width:34px;height:34px;border:0;border-radius:4px;background:#fff;font-size:18px;line-height:1;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.35)}.fs-btn:hover{background:#f4f4f4}
 .map-wrap.fs{position:fixed;inset:0;z-index:30;margin:0;border-radius:0;border:0;display:flex;flex-direction:column;padding:8px 10px}
 .map-wrap.fs .map-body{flex:1;min-height:0}
@@ -189,7 +177,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 .map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{height:100%;max-height:none;min-height:0}
 @media(max-width:1000px){.map-wrap.fs .map-body{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.map-wrap.fs #map{min-height:55vh}.map-wrap.fs .map-side{max-height:35vh}}
 .fs-btn.wide{width:auto;padding:0 10px;font:700 13.5px Prompt,sans-serif;white-space:nowrap}
-/* ===== แผนที่หน้าตาแบบหน้าเว็บหลัก (umplus-help): แผนที่เต็มพื้นที่ + ปุ่มลอย + คำอธิบายสี + หมุดหยดน้ำ ===== */
 .map-wrap{padding:0;overflow:hidden;background:#fff}
 .map-body{gap:0;grid-template-columns:minmax(0,1fr) 380px}
 .map-cell{position:relative;min-width:0}
@@ -234,7 +221,6 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
   .map-wrap.compact #map{height:420px}.map-wrap #map{height:62vh;min-height:360px}
   .mx-legend{font-size:11.5px;padding:6px 10px;left:10px;top:10px}.mx-legend .lg-sep,.mx-legend .lg-sep~span{display:none}
   .mx-fabs{right:10px;top:10px;gap:8px}.fab{width:42px;height:42px;border-radius:12px}.layer-menu{right:60px;top:10px;width:230px}
-  /* เต็มจอบนมือถือ: แผงโซน/เส้นทางเป็นแผ่นเลื่อนขึ้นจากล่าง */
   .map-wrap.fs .map-body{display:block;position:relative;height:100%}
   .map-wrap.fs #map,.map-wrap.fs.compact #map{height:100%;min-height:0}
   .map-wrap.fs .map-side,.map-wrap.fs.compact .map-side{position:absolute;z-index:700;left:0;right:0;bottom:0;height:auto;max-height:96px;border:0;border-radius:24px 24px 0 0;box-shadow:0 -8px 30px rgba(15,33,136,.18);overflow:hidden;transition:max-height .25s;padding:0 12px 12px;background:#fff}
@@ -244,14 +230,12 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
   .map-wrap.fs .leaflet-bottom{bottom:96px}
 }
 
-/* สลับมุมมอง: เคสในระบบ / เคสจากโซเชียลรอคัด (admin/leadsview.js) */
 .view-sw{margin:0 0 12px}.view-sw button{font-size:15px;padding:8px 16px}
 .vbadge{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:99px;background:var(--red,#E5383B);color:#fff;font-size:12px;line-height:20px;text-align:center}
 .view-sw button[aria-selected=true] .vbadge{background:#fff;color:var(--red,#E5383B)}
 .leads-view{margin:0 calc(-1 * clamp(0px,1vw,8px))}
 .leads-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:16px;background:transparent}
 @media(max-width:900px){.leads-frame{height:calc(100vh - 130px)}}
-/* มอบหมายทีม · ปิดเคส · หมายเหตุ */
 .d-status .d-now{margin:0;font-size:14px}
 .d-lbl{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--muted,#64748b)}
 .d-lbl select,.d-lbl textarea{font:inherit;font-size:15px;font-weight:400;color:inherit;background:var(--card,#fff);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;box-sizing:border-box}

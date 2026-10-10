@@ -1,6 +1,3 @@
-/* ปุ่มขยายแผนที่เต็มจอ ใช้ได้กับทุกแผนที่ Leaflet: MAPFS.add(map)
-   ทำแบบ CSS (ตัวแผนที่เต็มหน้าต่าง) ใช้ได้ทั้งมือถือและคอม · ออกด้วยปุ่ม <i data-ic="close"></i>, Esc หรือปุ่มย้อนกลับของมือถือ
-   MAPFS.add(map,{history:false}) สำหรับหน้าที่ใช้ปุ่มย้อนกลับเปลี่ยนหน้าเอง (ไม่ยุ่งกับประวัติเบราว์เซอร์) */
 const MAPFS=(()=>{
   const IC={full:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',close:'<path d="M6 6l12 12M18 6 6 18"/>'};
   const svg=k=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
@@ -13,7 +10,6 @@ const MAPFS=(()=>{
     document.head.append(s)}
   function set(st,on){const el=st.map.getContainer();if(on===el.classList.contains('mapfs-on'))return;
     el.classList.toggle('mapfs-on',on);document.body.classList.toggle('mapfs-lock',on);
-    // ย้ายแผนที่ไปไว้ใต้ body ชั่วคราว เพื่อไม่ให้กรอบด้านนอก (transform / z-index) บังการเต็มจอ
     if(on){st.home={parent:el.parentNode,next:el.nextSibling};document.body.append(el)}
     else if(st.home){st.home.parent.insertBefore(el,st.home.next);st.home=null}
     st.btn.innerHTML=svg(on?'close':'full');st.btn.title=on?'ออกจากเต็มจอ (Esc)':'ขยายแผนที่เต็มจอ';st.btn.setAttribute('aria-label',st.btn.title);
@@ -30,6 +26,6 @@ const MAPFS=(()=>{
     map.on('unload',()=>{if(active===st)set(st,false)})}
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active)set(active,false)});
   addEventListener('popstate',()=>{if(active&&active.hist){active.fromPop=true;set(active,false)}});
-  addEventListener('hashchange',()=>{if(active&&!active.hist)set(active,false)}); // หน้าที่เปลี่ยนหน้าด้วย # : ออกจากเต็มจอเมื่อเปลี่ยนหน้า
+  addEventListener('hashchange',()=>{if(active&&!active.hist)set(active,false)});
   return {add};
 })();

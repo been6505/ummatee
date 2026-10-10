@@ -25,7 +25,6 @@
 .bl .t{display:flex;gap:8px;align-items:center}.bl .st{font-size:12px;color:var(--muted,#5e7279)}
 .bl p{margin:0;white-space:pre-line;font-size:14px}.bl small{color:var(--muted,#5e7279)}
 @media(max-width:600px){#bf .row{grid-template-columns:1fr}}
-/* แท็บ ประกาศ · ข่าวและเตือนภัย */
 .bc-tabs{display:flex;gap:6px;margin:4px 0 14px;background:var(--surface,#fff);padding:5px;border-radius:999px;box-shadow:var(--shadow-soft,0 2px 10px rgba(22,27,61,.06));width:max-content;max-width:100%}
 .bc-tabs button{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;font:inherit;font-weight:700;font-size:15px;padding:9px 18px;border-radius:999px;color:var(--muted);cursor:pointer}
 .bc-tabs button svg{width:18px;height:18px}

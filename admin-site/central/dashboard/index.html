@@ -2,10 +2,10 @@
 <html lang="th" class="dash">
 <head>
 <meta charset="utf-8">
-<script>/* บัญชี/ลิงก์ War Room ย่อย เข้าหน้า CENTRAL ไม่ได้ → กลับไปหน้า War Room ของตัวเอง */try{if(/^wru?_/.test(localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''))location.replace('/central/warroom/')}catch(e){}</script>
+<script>try{if(/^wru?_/.test(localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''))location.replace('/central/warroom/')}catch(e){}</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<script>/* ธีม: ค่าเริ่มต้นสว่าง · เลือกมืดได้ที่ปุ่มมุมขวาบน (จำไว้ในเครื่อง) */try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark';else document.documentElement.dataset.theme='light'}catch(e){}</script>
+<script>try{if(localStorage.getItem('uh_theme')==='dark')document.documentElement.dataset.theme='dark';else document.documentElement.dataset.theme='light'}catch(e){}</script>
 <meta name="theme-color" content="#F2F3F7">
 <title>แดชบอร์ด · Helpme+ CENTRAL</title>
 <link rel="icon" href="../../assets/hm-icon-192.png">
@@ -82,7 +82,6 @@
     <article class="card fbk-card" id="fbk-card" hidden aria-label="ข้อเสนอแนะจากทีมงาน"><h2><i data-ic="chat"></i> ข้อเสนอแนะ <b class="fbk-n" id="fbk-n"></b></h2><div id="fbk-list"></div></article>
     <p class="hm-src hm-part" hidden><span id="hm-upd"></span> <a href="https://helpme-th.pages.dev/#stats" target="_blank" rel="noopener">เปิดหน้าสถิติ Help Me <i data-ic="ext"></i></a></p>
     <section class="kpis" id="kpis" aria-label="ตัวเลขสำคัญ"></section>
-    <!-- การ์ดตัวเลขจาก Help Me แบบสรุปจากเซิร์ฟเวอร์: ใช้แทนเฉพาะตอนโหลดรายการเคส Help Me ไม่ได้ -->
     <section class="kpis hm-part" id="hm-kpis" hidden aria-label="ตัวเลขจาก Help Me"></section>
 
     <div class="grid">
@@ -115,7 +114,6 @@
       <article class="card span2" id="leads-card" hidden><h2><i data-ic="megaphone"></i> เคสจากโซเชียลรอคัด</h2><p class="sub" id="leads-sub"></p><div id="leads"></div></article>
       <article class="card span2 hm-auto"><h2>เคสวิกฤตที่ยังรอนานที่สุด</h2><p class="sub">ยังไม่มีทีมรับ เรียงจากรอนานสุด</p><div id="waiting"></div></article>
     </div>
-    <!-- พื้นที่มอบแล้ว (ย้ายมาจากเมนู) · หน้า covered ฝังในกรอบ โหลดเมื่อเลื่อนมาถึง -->
     <section class="cov-sec" id="covered" aria-label="พื้นที่มอบแล้ว">
       <h2 class="sec-h"><i data-ic="hand"></i> พื้นที่มอบแล้ว <small>พื้นที่ที่องค์กร/ทีมรับดูแลแล้ว · ใช้วางแผนไม่ให้ซ้ำพื้นที่</small></h2>
       <iframe id="cov-frame" title="พื้นที่มอบแล้ว" loading="lazy" data-src="../covered/?embed=1"></iframe>
@@ -139,10 +137,9 @@
 <script src="../localai.js?v=4"></script>
 <script src="../hermes.js?v=16"></script>
 <script src="../kbfit.js?v=2"></script>
-<script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
+<script>document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>
-<script>/* กรอบพื้นที่มอบแล้ว: โหลดเมื่อใกล้ถึง · สูงเกือบเต็มจอ เลื่อนดูในกรอบ · #covered เลื่อนมาที่ส่วนนี้ */
-(()=>{const f=document.getElementById('cov-frame');if(!f)return;const go=()=>{if(!f.src)f.src=f.dataset.src};
+<script>(()=>{const f=document.getElementById('cov-frame');if(!f)return;const go=()=>{if(!f.src)f.src=f.dataset.src};
   if(location.hash==='#covered'){go();setTimeout(()=>document.getElementById('covered').scrollIntoView(),400)}
   else if('IntersectionObserver' in window)new IntersectionObserver((es,o)=>{if(es.some(e=>e.isIntersecting)){go();o.disconnect()}},{rootMargin:'600px'}).observe(f);else go();})()</script>
 </body>

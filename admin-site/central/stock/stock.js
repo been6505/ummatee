@@ -1,4 +1,3 @@
-/* สต็อก: คงเหลือ / รับเข้า / จ่ายออก / ต้องการ — แทนกระดานในศูนย์ */
 const S={items:[],log:[],roster:[],cat:'all',loaded:0,view:location.hash==='#bags'?'bags':'stock'};
 const BAG='ถุงยังชีพ',isBag=i=>i&&i.category===BAG;
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
@@ -14,7 +13,6 @@ setInterval(()=>{if(ADM.key&&!document.hidden&&$('#drawer').hidden)loadAll()},20
 
 function expTag(i){if(!i.expiry)return '';const d=Math.ceil((Date.parse(i.expiry)-Date.now())/864e5);if(isNaN(d))return '';const t=new Date(i.expiry).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});return d<0?` · <span class="needtag">หมดอายุแล้ว (${t})</span>`:d<=30?` · <span class="warn">หมดอายุใน ${d} วัน</span>`:` · หมดอายุ ${t}`}
 const received=i=>S.log.filter(l=>l.itemId===i.id).reduce((s,l)=>s+Math.max(0,Number(l.delta)||0),0);
-// ใกล้หมด: ถ้าตั้งขั้นต่ำไว้ใช้ขั้นต่ำ ไม่งั้นเหลือไม่เกิน 20% ของที่เคยรับเข้า
 const low=i=>{const q=Number(i.qty)||0;if(q<=0)return false;if(i.min!==''&&i.min!=null)return q<=Number(i.min);const b=Math.max(received(i),q);return b>0&&q/b<=.2};
 const kitOf=b=>(Array.isArray(b&&b.kit)?b.kit:[]).map(k=>({...k,it:S.items.find(i=>i.id===k.id)})).filter(k=>k.it);
 const canPack=b=>{const K=kitOf(b);return K.length?Math.min(...K.map(k=>Math.floor((Number(k.it.qty)||0)/k.qty))):null};
@@ -41,7 +39,6 @@ function render(){
   const cats=[['all','ทั้งหมด'],...CATS.filter(c=>c!==BAG).map(c=>[c,c]),...[...new Set(I.map(i=>i.category).filter(c=>c&&!CATS.includes(c)&&c!==BAG))].map(c=>[c,c]),['low','หมด / ใกล้หมด'],['need','ต้องการ']];
   $('#cat').innerHTML=cats.map(([k,t])=>`<button data-cat="${esc(k)}" aria-selected="${S.cat===k}">${esc(t)}</button>`).join('');
   const L=filtered();
-  // แบบกระดาน: สต็อก (ยอดตั้งต้นของช่วง) + เพิ่ม − ลด = เหลือ · การตั้งยอด/ปรับยอดรวมไว้ในช่องสต็อก
   const t0=new Date();t0.setHours(0,0,0,0);const from=S.period==='today'?t0.getTime():0;
   const mv=i=>{let add=0,sub=0;S.log.forEach(l=>{if(l.itemId!==i.id||Number(l.time)<from)return;const d=Number(l.delta)||0;if(l.type==='in')add+=d;else if(l.type==='out')sub-=d});return {add,sub,start:(Number(i.qty)||0)-add+sub}};
   $('#items').innerHTML=L.length?`<div class="gt-top"><div class="seg sm" role="tablist" aria-label="ช่วงเวลา"><button data-period="all" aria-selected="${S.period!=='today'}">ทั้งหมด</button><button data-period="today" aria-selected="${S.period==='today'}">วันนี้</button></div><small class="muted">${S.period==='today'?'สต็อก = ยอดเมื่อเริ่มวัน':'สต็อก = ยอดตั้งต้น (รวมการปรับยอด)'} · สต็อก + เพิ่ม − ลด = เหลือ</small></div>
@@ -71,12 +68,11 @@ $('#add-bag').addEventListener('click',()=>openItem({category:BAG,unit:'ถุ�
 addEventListener('hashchange',()=>{const v=location.hash==='#bags'?'bags':'stock';if(v!==S.view){S.view=v;render()}});
 $('#add-team').addEventListener('click',openTeam);
 
-/* ---------- แท็บถุงยังชีพ: ส่งถุงขึ้นรถของแต่ละทีม ---------- */
 const VEH_ORDER=['truck','pickup','boat','car','motorbike','other','foot',''];
 function bagLoads(){const ids=new Set(S.items.filter(isBag).map(i=>i.id));return S.log.filter(l=>ids.has(l.itemId)&&l.team)}
 function renderBags(){
   const B=S.items.filter(isBag),total=B.reduce((a,i)=>a+(Number(i.qty)||0),0),L=bagLoads(),t0=new Date();t0.setHours(0,0,0,0);
-  const sent=l=>l.type==='out'?-(Number(l.delta)||0):l.type==='in'?-(Number(l.delta)||0):0; // ขึ้นรถ = +, คืน = −
+  const sent=l=>l.type==='out'?-(Number(l.delta)||0):l.type==='in'?-(Number(l.delta)||0):0;
   const today=L.filter(l=>Number(l.time)>=t0.getTime()),sum=a=>a.reduce((s,l)=>s+sent(l),0);
   $('#bag-stats').innerHTML=[['ถุงคงเหลือในคลัง',nf(total)+' ถุง',total<=0?'red':''],['ส่งขึ้นรถวันนี้',nf(sum(today))+' ถุง','go'],['ส่งขึ้นรถทั้งหมด',nf(sum(L))+' ถุง','done'],['ทีมรถ',nf(S.roster.length)+' ทีม','']]
     .map(([t,v,k])=>`<div class="stat ${k}"><b>${esc(v)}</b><span>${t}</span></div>`).join('');
@@ -104,7 +100,7 @@ function openLoad(t,mode){if(!t)return;const B=S.items.filter(isBag);if(!B.lengt
     <label class="fld"><span>หมายเหตุ</span><input name="note" maxlength="200" placeholder="${out?'เช่น รอบเช้า ไปชุมชน…':'เช่น เหลือจากรอบบ่าย'}"></label>
     <div class="form-act"><button class="btn primary" type="submit" id="l-go">${out?'ส่งขึ้นรถ':'คืนเข้าคลัง'}</button></div>
   </form>`);
-  const f=$('#lform'),amt=f.elements.amount,sel=f.elements.bag; // ไม่ใช้ชื่อ item: ชนกับ elements.item()
+  const f=$('#lform'),amt=f.elements.amount,sel=f.elements.bag;
   const upd=()=>{const it=B.find(i=>i.id===sel.value),a=Number(amt.value)||0,q=Number(it.qty)||0,after=out?q-a:q+a;$('#preview').textContent=amt.value===''?'':`${it.name} ในคลังหลังบันทึก: ${nf(after)} ถุง${after<0?' — ถุงไม่พอ':''}`;$('#preview').className='small '+(after<0?'warn':'muted')};
   $$('#lform [data-q]').forEach(b=>b.onclick=()=>{amt.value=(Number(amt.value)||0)+Number(b.dataset.q);upd()});amt.oninput=upd;sel.onchange=upd;
   f.onsubmit=async e=>{e.preventDefault();const it=B.find(i=>i.id===sel.value),a=Math.round(Number(amt.value));if(!(a>0)){amt.focus();return}
@@ -151,7 +147,6 @@ function openTeam(){
       toast('เพิ่มทีม '+v('name')+' แล้ว',true);closeD();loadAll()}catch(err){if(err.message!=='auth')toast('เพิ่มไม่สำเร็จ ลองใหม่')}finally{const b=$('#t-go');if(b)b.disabled=false}};
 }
 
-/* ---------- รับเข้า / จ่ายออก ---------- */
 function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeD;$('#drawer-bg').onclick=closeD;setTimeout(()=>{const f=d.querySelector('input');if(f)f.focus()},50)}
 function closeD(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
@@ -187,7 +182,6 @@ function openMove(it,type){if(!it)return;
       it.qty=r.qty;toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);closeD();render();loadAll()}
     catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const b=$('#m-go');if(b)b.disabled=false}};
 }
-/* ---------- เพิ่ม / แก้ไขรายการ ---------- */
 function openItem(it){it=it||{};const isNew=!it.id;
   drawer(`<div class="d-head"><div><h2>${isNew?'เพิ่มรายการใหม่':'แก้ไขรายการ'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="iform" class="form-grid">
@@ -212,7 +206,6 @@ function openItem(it){it=it||{};const isNew=!it.id;
       else toast('บันทึกรายการแล้ว',true);
       closeD();loadAll()}catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const b=$('#i-go');if(b)b.disabled=false}};
 }
-/* ---------- คัดลอก / ส่งออก ---------- */
 $('#copy-need').addEventListener('click',()=>{const need=S.items.filter(i=>i.needed||Number(i.qty)<=0||low(i));
   const txt='<i data-ic="box"></i> ศูนย์ UMMATEE ต้องการรับบริจาค\n'+need.map((i,n)=>`${n+1}. ${i.name}${Number(i.qty)<=0?' (หมด)':low(i)?` (เหลือ ${nf(i.qty)} ${i.unit||''})`:''}`).join('\n');
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ / เพจได้เลย',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))});
@@ -222,5 +215,4 @@ $('#export').addEventListener('click',()=>{const cell=v=>{let s=String(v==null?'
 
 adminBoot({action:'stock'},'items',r=>{S.items=r.items||[];S.log=r.log||[];S.loaded=Date.now();render();loadAll()});
 
-/* เปิดจากช่องค้นหา (?q=ชื่อของ): ใส่คำค้นให้เลย */
 {const q=new URLSearchParams(location.search).get('q');if(q){$('#q').value=q;setTimeout(()=>$('#q').dispatchEvent(new Event('input')),1500)}}

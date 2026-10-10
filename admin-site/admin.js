@@ -1,9 +1,7 @@
-/* หลังบ้าน UM+: ดู/ค้นหา/เปลี่ยนสถานะเคส ใช้รหัสทีมอาสา (ไม่เก็บข้อมูลเคสไว้ในเครื่อง) */
 const API_URL='/api';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',helped:'ช่วยเหลือแล้ว',done:'ปิดเคส'};
-/* "ช่วยเหลือแล้ว" = ทีมกำลังไป + ทีม/ศูนย์แจ้งว่าช่วยแล้ว (รอศูนย์ปิดเคส) · "ปิดเคส" = status done */
 const stOf=c=>c.status==='going'&&c.teamDoneAt?'helped':c.status;
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน / เครื่องช่วยหายใจ',dialysis:'ผู้ป่วยฟอกไต',chronic:'ผู้ป่วยโรคเรื้อรัง'};
@@ -12,9 +10,9 @@ const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k
   set(k,v,remember){try{if(!v){localStorage.removeItem(k);sessionStorage.removeItem(k);return}(remember?localStorage:sessionStorage).setItem(k,v)}catch(e){}}};
 const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:['both','list','map'].includes(store.get('uh_view'))?store.get('uh_view'):'both',map:null,layer:null,openId:null,rev:null};
 
-const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);
-const bagSuggest=c=>hh(c)||1; // แนะนำ: ครัวเรือนละ 1 ถุง
+const bagSuggest=c=>hh(c)||1;
 const hh=c=>{const n=Number(c.households);if(n>0)return n;const m=String(c.notes||'').match(/\[ครัวเรือน (\d+)\]/);return m?+m[1]:0};
 const vul=c=>(Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean).map(v=>VUL[v]||v);
 const notesOf=c=>String(c.notes||'').replace(/^\[ครัวเรือน \d+\]\s*/,'');
@@ -25,12 +23,10 @@ function ago(t){t=Number(t);if(!t)return '';const m=Math.round((Date.now()-t)/60
 function fullTime(t){t=Number(t);return t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):''}
 function toast(msg,ok){const t=document.createElement('div');t.className='toast'+(ok?' ok':'');t.textContent=msg;$('#toasts').append(t);setTimeout(()=>t.remove(),4000)}
 
-/* ---------- API ---------- */
 async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(API_URL+'?'+new URLSearchParams({...params,t:Date.now()}),{signal:ctl.signal,cache:'no-store'});return await r.json()}finally{clearTimeout(tm)}}
 async function post(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({by:store.get('uh_staff')||undefined,...body})});return r.json()}
 
-/* ---------- เข้าสู่ระบบ ---------- */
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}
 function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;
@@ -42,31 +38,24 @@ $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=
   finally{$('#login-go').disabled=false}});
 $('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';A.cases=[];closeDrawer();$('#list').replaceChildren();showLogin('ออกจากระบบแล้ว')});
 
-/* ---------- โหลดข้อมูล ---------- */
 function setCases(r){A.own=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.loaded=Date.now();mergeCases()}
-/* ---------- เคสจาก Help Me (Google Sheet) = ข้อมูลหลัก · ชุดเดียวกับหน้าแดชบอร์ด ----------
-   เคส Help Me แก้สถานะที่นี่ไม่ได้ (ต้นทางอยู่ที่ชีตของ Help Me) → แสดงแบบอ่านอย่างเดียว + ปุ่มเปิดใน Help Me
-   เคสขององค์กรที่รับมาจาก Help Me (ในบันทึกมีลิงก์ ?case=) ไม่แสดงซ้ำ ใช้ข้อมูลจาก Help Me แทน */
 const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
-const apiId=id=>isHM(id)?String(id).slice(3):id; // เคส Help Me อยู่ในฐานข้อมูลเราด้วยรหัสเดิม (ซิงก์ทุก 1 นาที) จึงแก้สถานะ/ทีม/ถุงได้
+const apiId=id=>isHM(id)?String(id).slice(3):id;
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
     if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render()}
   }catch(e){}}
 function mergeCases(){const own=A.own||[];if(!A.hm){A.cases=own;return}
-  // เคสของเราที่เป็นสำเนาเคส Help Me: รหัสเดียวกัน (ยกมาตรง ๆ) หรือบันทึกมีลิงก์ ?case= (รับมาจากคิวโซเชียล)
   const hmIds=new Set(A.hm.map(h=>h.hmId)),hmOf=c=>hmIds.has(String(c.id))?String(c.id):((String(c.notes||'').match(HM_LINK)||[])[1]||'');
   const link=new Map();own.forEach(c=>{const h=hmOf(c);if(h&&hmIds.has(h))link.set(h,c)});
-  // แสดงเคส Help Me ใบเดียว แต่ยังใช้ข้อมูลที่ทีมเราบันทึกในสำเนา (จำนวนถุงยังชีพ ผลดูกล้อง ครัวเรือน)
   A.cases=[...A.hm.map(c=>{const o=link.get(c.hmId);return o?{...c,local:o.id,bags:o.bags,cctv:o.cctv||c.cctv,households:o.households}:c}),...own.filter(c=>!hmIds.has(hmOf(c)))]}
 async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').textContent='กำลังโหลด…';
   try{const r=await api({action:'list',key:A.key});
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);render();loadHM();
-    // ลิงก์ admin.html#<รหัสเคส> (เช่นจากหน้าเคสจากโซเชียล) เปิดเคสนั้นทันที ครั้งเดียว
     const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);openDrawer(h)}
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
@@ -77,13 +66,10 @@ function startPolling(){clearInterval(pollT);pollT=setInterval(async()=>{if(docu
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A.key&&Date.now()-A.loaded>30000)load()});
 $('#refresh').addEventListener('click',load);
 
-/* ---------- กรอง / เรียง ---------- */
 const norm=s=>{s=String(s==null?'':s);try{s=s.normalize('NFC')}catch(e){}return s.replace(/[​-‍﻿]/g,'').replace(/ํ([่-๋]?)า/g,'$1ำ').toLowerCase()};
 const digits=x=>{let d=String(x||'').replace(/\D/g,'');if(d.startsWith('66')&&d.length>=11)d=d.slice(2);return d.replace(/^0+/,'')};
 function hay(c){return norm([c.id,(c.needs||[]).join(' '),c.district,c.district?'เขต'+c.district:'',c.address,c.name,c.phone,c.notes,c.volunteer,ST[c.status],URG[sev(c)],LEVEL[c.level]||'',(c.people||1)+' คน',hh(c)?hh(c)+' ครัวเรือน':'',vul(c).join(' ')].join(' '))}
-// ผลตรวจพื้นที่ที่ถือว่า "ลำบาก + ยืนยันแล้ว"
 const VR_OK=new Set(['confirmed','likely']);
-// ใช้ VR_ORDER เดิม (มาก = วิกฤต/ยืนยันได้มากกว่า) → กลับด้านเพื่อให้เรียงขึ้นก่อน
 const vrRank=c=>-(VR_ORDER[vr(c).result.k]??2);
 function filtered(){
   const q=norm($('#q').value.trim()),st=$('#f-status').value,u=$('#f-urg').value,nd=$('#f-need').value,so=$('#f-sort').value;
@@ -99,20 +85,15 @@ function filtered(){
       if(so==='team'){const ta=String(a.volunteer||'').replace(/^'/,''),tb=String(b.volunteer||'').replace(/^'/,'');if(ta!==tb)return !ta?1:!tb?-1:ta.localeCompare(tb,'th');return sev(b)-sev(a)||ca-cb}
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
       if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
-      // วิกฤตก่อน: ในระดับความรุนแรงเดียวกัน เคสที่ตรวจพื้นที่แล้วยืนยันได้ขึ้นก่อน เคสที่ยืนยันไม่ได้ลงท้าย
       return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||(vrRank(a)-vrRank(b))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(vr(b).score-vr(a).score)||(ca-cb)});
 }
 ['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
 function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
 $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classList.contains('open');$('#filters-box').classList.toggle('open',o);$('#f-toggle').setAttribute('aria-expanded',String(o))});
 
-/* ---------- ตรวจสอบพื้นที่ (Floodboard + CCTV) ---------- */
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};
 let vrCache=new Map();
 function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+c.sevSet+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
-/* ---------- ตรวจกล้อง CCTV อัตโนมัติ (Workers AI ดูภาพกล้องใกล้จุด ≤ 2 กม.) ----------
-   เรียกเมื่อเปิดดูเคส · จำผลต่อเคส 10 นาที · ใช้เป็นหลักฐานเฉพาะตอน "เห็นน้ำ" จากกล้องไม่เกิน 1 กม.
-   (กล้องถนน "ไม่เห็นน้ำ" ไม่ได้แปลว่าบ้านในซอยไม่ท่วม จึงไม่หักคะแนน) */
 const AI=new Map();
 const camDist=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.';
 function aiCctvOf(c){const a=AI.get(String(c.id));if(!a||!a.data||a.data.verdict!=='flood')return '';
@@ -138,25 +119,21 @@ const cov=c=>typeof COVERED!=='undefined'?COVERED.match(c):null;
 function covBadge(c){const m=cov(c);if(!m)return '';const r=m.best.r;return `<span class="cov" title="${esc(r.org+' · '+r.area+' · '+r.date+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(r.org)} เคยมอบใกล้เคียง</span>`}
 function covSection(c){const m=cov(c);if(!m)return '';return `<section class="cov-box"><b><i data-ic="hand"></i> มีองค์กรอื่นเคยมอบใกล้เคียง</b><p class="small">ตรวจสอบก่อนส่งทีม เพื่อไม่ให้ซ้ำซ้อน · ข้อมูลจาก<a href="${COVERED.SHEET_URL}" target="_blank" rel="noopener"> ชีตพื้นที่ที่มอบแล้ว ↗</a></p><ul>${m.all.slice(0,4).map(h=>`<li><b>${esc(h.r.org)}</b> · ${esc(h.r.area)} · ${esc(h.r.date)}<small>${esc(h.how)}${h.d!=null?' · ห่าง '+Math.round(h.d)+' ม.':''}${h.r.link?` · <a href="${esc(h.r.link)}" target="_blank" rel="noopener">แผนที่ ↗</a>`:''}</small></li>`).join('')}</ul></section>`}
 setInterval(()=>{if(A.key&&!document.hidden)loadFlood()},10*60e3);
-VERIFY.onUpdate=()=>render(); // ฝน/ดาวเทียมรายจุดมาถึงทีหลัง → วาดผลตรวจใหม่
+VERIFY.onUpdate=()=>render();
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
   return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
-/* ---------- แสดงผล ---------- */
 const SF={all:{st:'all',u:''},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},done:{st:'done',u:''},active:{st:'active',u:''}};
 function statKey(){const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
 $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
  const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
   $('#f-status').value=f.st;$('#f-urg').value=f.u;$('#f-need').value='';$('#f-vr').value='';
-  // ทีมกำลังไป = เคสที่ทีมกำลังไป เรียงตามทีม (เห็นว่าแต่ละทีมถือเคสอะไร)
   if(f.sort)$('#f-sort').value=f.sort;else if($('#f-sort').value==='team')$('#f-sort').value='urg';
   const sw=document.querySelector('.view-sw [data-view="cases"]');if(sw&&sw.getAttribute('aria-selected')!=='true')sw.click();
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
 function render(){
-  // การ์ดสรุปนับจากเคส Help Me (ชุดเดียวกับแดชบอร์ด) ถ้ายังโหลดไม่ได้ใช้เคสในระบบไปก่อน
   const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>c.status===s).length,act=base.filter(c=>c.status!=='done');
   const ppl=act.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=act.reduce((s,c)=>s+hh(c),0),crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
-  // การ์ดตัวเลขกดได้: ตั้งตัวกรองรายการเคสตามการ์ดนั้น (กดซ้ำ = กลับเป็นค่าเริ่มต้น)
   const cur=statKey();
   $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done'],['คนที่ยังรอ',ppl,'','active'],['ครัวเรือนที่ยังรอ',hhs||'–','','active'],['ถุงยังชีพที่ระบุแล้ว',all.reduce((s,c)=>s+(bagsOf(c)||0),0),'','active']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f&&f!=='active'}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
@@ -191,7 +168,6 @@ $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-open]');
 $('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}const s=e.target.closest('[data-st]');if(s)changeStatus(s.dataset.st,s.value,s)});
 $('#list').addEventListener('focusout',e=>{if(e.target.matches('.bag-in')&&A.pendingList){A.pendingList=false;setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('.bag-in'))render()},0)}});
 $('#list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.bag-in'))e.target.blur()});
-/* ---------- ถุงยังชีพ ---------- */
 async function saveBags(id,val,inp){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   const v=String(val).trim()===''?'':Math.max(0,Math.min(9999,Math.round(Number(val)||0)));
@@ -204,11 +180,9 @@ async function saveBags(id,val,inp){
   catch(e){c.bags=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
   finally{if(inp)inp.disabled=false}}
 
-/* ---------- เปลี่ยนสถานะ ---------- */
 async function changeStatus(id,status,sel,team){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   if(status===stOf(c)&&!team)return;
-  // ช่วยเหลือแล้ว = ยังเป็นทีมกำลังไป + ทำเครื่องหมายช่วยแล้ว (รอปิดเคส) · กลับเป็นทีมกำลังไป = ล้างเครื่องหมาย
   const helped=status==='helped'?true:(status==='going'&&c.teamDoneAt?false:undefined);
   if(status==='helped'){status='going';if(!team&&c.volunteer)team=String(c.volunteer).replace(/^'/,'')}
   if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
@@ -220,7 +194,6 @@ async function changeStatus(id,status,sel,team){
   catch(e){Object.assign(c,prev);render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
 }
 
-/* ---------- ส่วนตรวจสอบพื้นที่ในรายละเอียดเคส ---------- */
 function agoT(t){return t?ago(t):''}
 function vrSection(c){
   const v=vr(c),cc=v.cctv,ll=hasPin(c)?`${(+c.lat).toFixed(5)},${(+c.lng).toFixed(5)}`:'';
@@ -236,7 +209,7 @@ function vrSection(c){
       <figcaption><span><i class="lg lg-case"></i>จุดเคส</span>${v.road?'<span><i class="lg lg-road"></i>ถนนที่รายงาน</span>':''}<span><i class="lg lg-sat"></i>น้ำท่วมจากดาวเทียม (7 วัน)</span>${v.sensor?'<span><i class="lg lg-sen"></i>เซ็นเซอร์น้ำ</span>':''}${v.reports.length?'<span><i class="lg lg-rep"></i>รายงานน้ำท่วม</span>':''}<span><i class="lg lg-cam"></i>กล้อง</span><span class="muted">วงประ = 1 กม.</span></figcaption></figure>`:''}
     ${hasPin(c)?vrPics(c,v):''}
     ${aiBlock(c)}
-    ${hasPin(c)&&VERIFY.F.cams.length?(()=>{ /* ตรวจจากกล้องได้เลยในหน้านี้: กล้องภาพสดใกล้สุด (8 กม.) + กล้องที่ยังส่งภาพอยู่ 2 ตัวใกล้สุด (ข้ามกล้องที่ไม่อัปเดตเกิน 3 ชม.) */
+    ${hasPin(c)&&VERIFY.F.cams.length?(()=>{
       const fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600,near=VERIFY.nearCams(+c.lat,+c.lng,40,8000).filter(fresh);
       const live=near.find(k=>k.hls),still=near.filter(k=>!k.hls).slice(0,live?2:3),cams=[...(live?[live]:[]),...still].sort((a,b)=>a.d-b.d);
       const dist=k=>k.d<1000?Math.round(k.d)+' ม.':(k.d/1000).toFixed(1)+' กม.';
@@ -263,29 +236,21 @@ async function saveCctv(id,val){
     toast(val?`บันทึกผลกล้องแล้ว · ${vr(c).result.t}`:'ล้างผลกล้องแล้ว',true)}
   catch(e){c.cctv=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}}
 
-/* ---------- รายละเอียด ---------- */
-// รหัสเคสในระบบที่ถูกรวมเข้ากับเคส Help Me → เปิดเคส Help Me ที่ตรงกันแทน
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
 function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
 function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').dataset.case='';$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
-/* เล่นภาพสด/รีเฟรชภาพนิ่งของกล้องในลิ้นชักเคส · ปิดลิ้นชักแล้วหยุด */
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
-// ผลตรวจหมุดเทียบที่อยู่ (หลังบ้านตรวจให้ เฉพาะเคส Help Me ในกรุงเทพฯ ที่ที่อยู่ระบุเขต)
-/* ช่องแก้ตัวเลขในรายละเอียดเคส (จำนวนคน · ถุงยังชีพ · ครัวเรือน) · บันทึกด้วยปุ่ม "บันทึก" */
 const edNum=(id,v,unit,ph,min)=>`<span class="d-ed"><input type="number" inputmode="numeric" id="${id}" min="${min}" max="9999" value="${esc(v)}" placeholder="${esc(ph)}" data-orig="${esc(v)}"><span>${unit}</span></span>`;
 function pinNote(c){const p=c.pinCheck;if(!p)return '';if(p.status==='geocoded')return `<br><small class="muted">📍 หมุดหาจากที่อยู่อัตโนมัติ (${esc(p.label||'ประมาณ')}) · ตรวจตำแหน่งก่อนส่งทีม</small>`;const km=p.from?(VERIFY.dist(+c.lat,+c.lng,p.from.lat,p.from.lng)/1000).toFixed(1):'';
   if(p.status==='fixed')return ` · หมุดปรับจากที่อยู่${p.level?' (ระดับ'+esc(p.level)+')':''} · หมุดเดิมใน Help Me อยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${esc(p.from.district)} ห่าง ${km} กม.`;
   return ` · ⚠️ หมุดอยู่${/^(จังหวัด|อำเภอ|ตำบล|บ้าน)/.test(p.from.district)?'':'เขต'}${esc(p.from.district)} แต่ที่อยู่ระบุเขต${esc(p.addrDistrict)} · โทรยืนยันตำแหน่ง`}
 const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed'&&c.pinCheck.status!=='geocoded';
-// รูปจากผู้แจ้ง (เคส Help Me): รหัสไฟล์ Google Drive ที่ Help Me แชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
-// โหลดรูปจาก lh3 ตรง ๆ (ไม่ต้องผ่าน redirect ของ drive.google.com) ถ้าไม่ขึ้นค่อยลองลิงก์ thumbnail ของ Drive
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.altSrc&&i.src!==i.dataset.altSrc){i.src=i.dataset.altSrc;delete i.dataset.altSrc}},true);
 const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
-  // วาดใหม่โดยไม่ทิ้งสิ่งที่ผู้ใช้กำลังทำ: ชื่อทีมที่พิมพ์ค้าง ส่วนที่กางไว้ ตำแหน่งเลื่อน และช่องที่โฟกัสอยู่
   const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
   d.dataset.case=String(c.id);
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
@@ -314,20 +279,16 @@ function renderDrawer(){
   if(keep){(keep.ed||[]).forEach(([id,v])=>{const i=d.querySelector('#'+id);if(i)i.value=v});const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
-  // ปุ่มบันทึก: ขึ้นเมื่อแก้หมายเหตุ หรือเพิ่มของจากสต็อกไว้ในเคส
   {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const busy=!!(A.stkBusy&&A.stkBusy[c.id]),dirty=!busy&&(nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig));sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
 }
-/* ---------- มอบหมายทีม · ปิดเคส · หมายเหตุ ----------
-   ศูนย์เลือกทีม → มอบหมาย (เคสขึ้นที่หน้าทีมทันที) → ทีมกด "ช่วยเหลือแล้ว" → ศูนย์กด "ปิดเคส" */
 const RST={ready:'ว่าง',out:'ทีมกำลังไป',rest:'พัก'};
 async function loadRoster(){if(A.rosterLoading)return;A.rosterLoading=true;
   try{const r=await api({action:'roster',key:A.key});if(r&&r.ok){A.roster=(r.roster||[]).filter(t=>t.active!==0);if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.rosterLoading=false}}
 function teamOpts(c){const cur=String(c.volunteer||'').replace(/^'/,'').trim(),load={};A.cases.forEach(x=>{if(x.status==='going'&&x.volunteer){const v=String(x.volunteer).replace(/^'/,'').trim();load[v]=(load[v]||0)+1}});
   const names=(A.roster||[]).map(t=>({n:t.name,st:t.status}));if(cur&&!names.some(t=>t.n===cur))names.unshift({n:cur,st:''});
   return `<option value="">${A.roster?'— เลือกทีม —':'กำลังโหลดรายชื่อทีม…'}</option>`+names.map(t=>`<option value="${esc(t.n)}" ${t.n===cur?'selected':''}>${esc(t.n)}${t.st?' · '+(RST[t.st]||t.st):''}${load[t.n]?' · มีงาน '+load[t.n]+' เคส':''}</option>`).join('')}
-/* ข้อมูลส่งมอบ (กรอก/ยืนยันกับผู้แจ้ง) · ลำดับตามแบบฟอร์มของศูนย์ · เก็บแยก ไม่ถูกซิงก์ Help Me ทับ */
 const IK_RISK=['ผู้สูงอายุ','เด็กเล็ก','ผู้ป่วยติดเตียง','คนพิการ','หญิงตั้งครรภ์','สัตว์เลี้ยง','ไฟฟ้ารั่ว','กระแสน้ำแรง','ถนนขาด','กลางคืนมืด'];
 function intakeOf(c){const k=c.intake||{};return {name:k.name??(c.name||''),phone:k.phone??String(c.phone||'').replace(/^'/,''),car:k.car||'',handoff:k.handoff||'',water:k.water??(LEVEL[c.level]||''),risks:k.risks??vul(c).join(', '),latest:k.latest||'',items:k.items??(c.needs||[]).join(', '),by:k.by||'',at:k.at||0}}
 function intakeBox(c){const k=intakeOf(c),s=sev(c),f=(n,id,lab,inp)=>`<label class="ik-f"><span><i>${n}</i>${lab}</span>${inp}</label>`;
@@ -376,7 +337,6 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
         <button class="btn ${rep?'primary':'ghost'} d-close" data-dact="close" ${going?'':'disabled title="มอบหมายทีมก่อน"'}>ปิดเคส</button>
 `}
     </div></fieldset>`}
-/* ของจากสต็อกที่ส่งไปกับทีม: เลือกของ + จำนวน → ตัดสต็อกเมื่อกดมอบหมาย (หรือกด "ตัดสต็อก" ถ้ามอบแล้ว) · บันทึกในประวัติสต็อกพร้อมรหัสเคสและทีม */
 async function loadStock(){if(A.stockLoading)return;A.stockLoading=true;
   try{const r=await api({action:'stock',key:A.key});if(r&&r.ok){A.stock=r;if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.stockLoading=false}}
 const stkPend=c=>(A.stkPend||(A.stkPend={}))[c.id]||(A.stkPend[c.id]=[]);
@@ -394,7 +354,6 @@ async function stkCut(c,team){const L=stkPend(c);if(!L.length)return 0;A.stkBusy
     if(r&&r.ok){ok++;L.splice(L.indexOf(x),1)}else fail.push(x.name+(r&&r.error==='not_enough'?` (เหลือ ${r.qty})`:''))}
   if(fail.length)toast('ตัดสต็อกไม่สำเร็จ: '+fail.join(', '))}finally{A.stkBusy[c.id]=false}
   A.stock=null;loadStock();return ok}
-/* เจ้าหน้าที่เปลี่ยนระดับเอง (ทับระดับที่ระบบคัดกรอง) · ว่าง = กลับไปใช้ระดับของระบบ */
 async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=store.get('uh_staff')||'';
   if(String(c.sevSet||'')===String(val))return;c.sevSet=val===''?null:+val;c.sevBy=by;vrCache.delete(c.id);render();renderDrawer();
   try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',sevSet:val,metaOnly:true});if(!r||!r.ok)throw 0;
@@ -437,7 +396,6 @@ async function assignAct(c,act,btn){
   catch(e){Object.assign(c,prev);toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
   finally{btn.disabled=false}}
 
-/* ---------- มุมมอง รายการ / แผนที่ ---------- */
 function applyMode(){document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.mode===A.mode)));
   $('#list').hidden=A.mode==='map';$('#map-wrap').hidden=A.mode==='list';$('#map-wrap').classList.toggle('compact',A.mode==='both');if(A.map)setTimeout(()=>A.map.invalidateSize(),60)}
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{A.mode=b.dataset.mode;store.set('uh_view',A.mode,true);applyMode();render()}));
@@ -451,10 +409,9 @@ async function drawMap(list){
   if(!A.map){A.map=L.map('map',{preferCanvas:true}).setView([13.7563,100.5018],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap · น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC'}).addTo(A.map);A.flood=L.layerGroup().addTo(A.map);A.layer=L.layerGroup().addTo(A.map);A.fitted=false;
     if(typeof MX!=='undefined')MX.attach(A.map)}
-  if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return; // แบบ Floodboard: แสดงเฉพาะถนนที่มีน้ำขัง/เสี่ยง/ผ่านไม่ได้
+  if(A.floodDrawn!==VERIFY.F.loaded){A.floodDrawn=VERIFY.F.loaded;A.flood.clearLayers();VERIFY.F.roads.forEach(r=>{const d=r.depth||0,v=r.verdict,col=v==='blocked'||r.closed||d>=50?'#d32f2f':v==='risky'||d>=30?'#f57c00':v==='caution'||d>=10?'#fbc02d':'';if(!col)return;
       r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${r.name}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(A.flood))})}
   setTimeout(()=>A.map.invalidateSize(),50);A.layer.clearLayers();const pts=[];
-  // หมุดหยดน้ำแบบหน้าเว็บหลัก: วิกฤต (แดงกะพริบ) · เร่งด่วน (ส้ม) · รอช่วย · กำลังไป · ช่วยแล้ว
   const PZ={danger:1000,urgent:700,open:400,going:200,done:0};
   list.filter(hasPin).forEach(c=>{const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';pts.push([+c.lat,+c.lng]);
     const ph=photosOf(c);
@@ -464,7 +421,6 @@ async function drawMap(list){
   if(typeof MX!=='undefined')MX.refresh(list);
 }
 
-/* ---------- ส่งออก CSV ---------- */
 $('#export').addEventListener('click',()=>{const list=filtered();
   const head=['เลขเคส','แจ้งเมื่อ','ระดับ','สถานะ','ความต้องการ','จำนวนคน','ครัวเรือน','ถุงยังชีพ','ระดับน้ำ','ที่อยู่','เขต','lat','lng','ชื่อ','เบอร์โทร','ทีม','ต้องดูแลเป็นพิเศษ','ผลตรวจพื้นที่','คะแนนวิกฤต','องค์กรอื่นเคยมอบใกล้เคียง','สถานการณ์'];
   const rows=list.map(c=>[c.id,fullTime(c.createdAt),URG[sev(c)],ST[c.status],(c.needs||[]).join(', '),c.people||1,hh(c)||'',bagsOf(c)==null?'':bagsOf(c),LEVEL[c.level]||'',c.address,c.district,c.lat,c.lng,c.name,String(c.phone||'').replace(/^'/,''),c.volunteer,vul(c).join(', '),vr(c).result.t,vr(c).score,(cov(c)?cov(c).best.r.org+' · '+cov(c).best.r.area:''),notesOf(c)]);
@@ -473,14 +429,11 @@ $('#export').addEventListener('click',()=>{const list=filtered();
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`umplus-cases-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
   toast(`ส่งออก ${list.length} เคสแล้ว · ไฟล์มีข้อมูลส่วนตัว เก็บให้ปลอดภัย`,true)});
 
-/* ---------- เริ่ม ---------- */
 if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}else showLogin();
 
-/* ลิ้นชักเคสวาดใหม่ทุกครั้งที่ข้อมูลอัปเดต: หยุดสตรีมเดิมแล้วเริ่มกล้องในลิ้นชักใหม่ */
 {const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}
-/* ภาพถนน (กล้อง CCTV ที่ใกล้ถนนที่รายงานที่สุด) + ภาพจาก GISTDA (ภาพดาวเทียม + พื้นที่น้ำท่วม 7 วัน) */
 function roadCam(c,v){const lat=+c.lat,lng=+c.lng,fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600;
-  let cams=VERIFY.nearCams(lat,lng,60,4000).filter(fresh);if(!cams.length)cams=VERIFY.nearCams(lat,lng,60,4000).filter(k=>k.img);if(!cams.length)return null; // ไม่มีกล้องที่ยังส่งภาพ = ใช้ภาพล่าสุดที่มี (ติดป้ายภาพเก่า)
+  let cams=VERIFY.nearCams(lat,lng,60,4000).filter(fresh);if(!cams.length)cams=VERIFY.nearCams(lat,lng,60,4000).filter(k=>k.img);if(!cams.length)return null;
   if(v.road&&v.road.lines){const r=cams.map(k=>({k,dr:VERIFY.distToLines(k.lat,k.lng,v.road.lines)})).sort((a,b)=>a.dr-b.dr)[0];if(r.dr<=1500)return {k:r.k,dr:r.dr}}
   return {k:cams[0],dr:null}}
 function vrPics(c,v){const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',rc=roadCam(c,v),s=v.sat,rd=v.road;
@@ -503,7 +456,6 @@ function vrGis(){const el=document.getElementById('vr-gis');
   L.circleMarker([+c.lat,+c.lng],{radius:8,color:'#fff',weight:3,fillColor:'#dc2626',fillOpacity:1,interactive:false}).addTo(g);
   g.fitBounds(L.latLng(+c.lat,+c.lng).toBounds(1100),{animate:false})}
 {const _rd3=renderDrawer;renderDrawer=function(){_rd3();vrGis()}}
-/* ภาพประกอบผลตรวจพื้นที่: แผนที่ย่อรอบจุดเคส (ภาพดาวเทียม/แผนที่ + พื้นที่น้ำท่วม GISTDA 7 วัน + ถนนที่รายงาน + เซ็นเซอร์ + รายงาน + กล้อง) */
 const VRF={map:null,base:'sat',id:''};
 function vrFig(){const el=document.getElementById('vr-map');
   if(VRF.map&&(!el||VRF.map.getContainer()!==el)){try{VRF.map.remove()}catch(e){}VRF.map=null}
@@ -526,5 +478,4 @@ function vrFig(){const el=document.getElementById('vr-map');
 
 window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});
 
-/* เรียลไทม์: ข้อมูลเคสเปลี่ยนที่ใดก็ตาม → โหลดใหม่ทันที (ผ่าน livestream.js) */
 window.addEventListener('hm-rev',e=>{if(A.key&&e.detail.what.includes('rev')){A.rev=e.detail.rev;load()}});

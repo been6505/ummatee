@@ -1,7 +1,3 @@
-/* แผนที่หลังบ้าน (หน้าจัดการเคส): ชั้นข้อมูลระดับน้ำ + กล้อง CCTV + โซน + จัดเส้นทาง
-   - ระดับน้ำบนถนน: เซ็นเซอร์สำนักการระบายน้ำ กทม. · ระดับน้ำคลอง: ThaiWater · ถนนน้ำท่วม: Floodboard (โหลดใน verify.js)
-   - กล้อง: iTIC Foundation · เส้นทาง: Valhalla (FOSSGIS) เลี่ยงจุดน้ำท่วม, สำรองด้วย OSRM
-   ใช้ตัวแปรจาก admin.js: A, api, post, sev, URG, ST, hasPin, esc, toast, render, openDrawer */
 const MX=(()=>{
   const S={map:null,zones:[],roster:[],L:{},on:{},side:'route',zoneId:null,form:null,preview:null,route:null,start:null,picking:false,drawn:{}};
   const LAYERS=[['cases','<i data-ic="pin"></i> เคส'],['roads','<i data-ic="road"></i> ถนนน้ำท่วม'],['sensors','<i data-ic="drop"></i> น้ำบนถนน (กทม.)'],['stations','<i data-ic="wave"></i> ระดับน้ำคลอง'],['cams','<i data-ic="cam"></i> กล้อง CCTV'],['gistda','<i data-ic="sat"></i> น้ำท่วมจากดาวเทียม 7 วัน (GISTDA)'],['zones','⭕ โซน']];
@@ -18,12 +14,10 @@ const MX=(()=>{
   const zoneOf=id=>S.zones.find(z=>z.id===id);
   function inZone(c,zid){const z=typeof zid==='object'?zid:zoneOf(zid);if(!z||!hasPin(c))return false;return VERIFY.dist(+c.lat,+c.lng,z.lat,z.lng)<=z.radius}
 
-  /* ---------- โหลดโซน + ทีม ---------- */
   async function loadZones(){try{const [z,r]=await Promise.all([api({action:'zones',key:A.key}),api({action:'roster',key:A.key})]);
       if(z&&z.ok)S.zones=z.zones||[];if(r&&r.ok)S.roster=r.roster||[];fillZoneFilter();drawZones();renderSide()}catch(e){}}
   function fillZoneFilter(){const sel=$('#f-zone');if(!sel)return;sel.hidden=!S.zones.length;const v=sel.value;sel.innerHTML='<option value="">ทุกโซน</option>'+S.zones.map(z=>`<option value="${esc(z.id)}">โซน ${esc(z.name)}</option>`).join('');sel.value=S.zones.some(z=>z.id===v)?v:''}
 
-  /* ---------- ติดตั้งบนแผนที่: หน้าตาแบบหน้าเว็บหลัก (แผนที่เต็มพื้นที่ + ปุ่มลอยขวาบน + เมนูชั้นข้อมูล + คำอธิบายสีมุมซ้ายบน) ---------- */
   const ICON={layers:'<path d="m12 3 9 5-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/>',locate:'<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/>',
     full:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',close:'<path d="M6 6l12 12M18 6 6 18"/>'};
   const svg=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
@@ -32,9 +26,8 @@ const MX=(()=>{
     if(name==='sat')S.base=L.layerGroup([t(ESRI+'World_Imagery/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri'),t(ESRI+'Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',''),t(ESRI+'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}','')]);
     else if(name==='dark')S.base=L.layerGroup([t(ESRI+'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}','แผนที่ © Esri',{maxZoom:16,maxNativeZoom:16}),t(ESRI+'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}','',{maxZoom:16,maxNativeZoom:16})]);
     else S.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
-    S.base.addTo(m);{const tok=S.baseTok=(S.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==S.baseTok)return;m.removeLayer(S.base);S.base=l;l.addTo(m)})} /* OpenFreeMap (เวกเตอร์ ป้ายไทย) ทับเมื่อโหลดเสร็จ */S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
+    S.base.addTo(m);{const tok=S.baseTok=(S.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==S.baseTok)return;m.removeLayer(S.base);S.base=l;l.addTo(m)})}S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
-    // ภาพพื้นที่น้ำท่วมจากดาวเทียม GISTDA ผ่าน /api/gistda (ต้องตั้ง GISTDA_KEY ที่เซิร์ฟเวอร์)
     S.L.gistda=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'});
     map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
     map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC');
@@ -71,7 +64,6 @@ const MX=(()=>{
   function group(k){return k==='cases'?A.layer:k==='roads'?A.flood:S.L[k]}
   function applyVis(){LAYERS.forEach(([k])=>{const g=group(k);if(!g)return;if(S.on[k]){if(!S.map.hasLayer(g))g.addTo(S.map)}else if(S.map.hasLayer(g))S.map.removeLayer(g)});legend()}
 
-  /* ---------- วาดชั้นข้อมูล ---------- */
   function refresh(list){S.list=list;draw();const a=document.activeElement;if(!S.form&&!(a&&a.closest&&a.closest('#map-side')))renderSide()}
   function draw(){if(!S.map)return;const F=VERIFY.F;
     if(S.on.sensors&&S.drawn.sensors!==F.loaded+':'+F.sensors.length){S.drawn.sensors=F.loaded+':'+F.sensors.length;S.L.sensors.clearLayers();
@@ -82,12 +74,10 @@ const MX=(()=>{
       F.stations.forEach(x=>{const [col,lab]=TW[x.situation]||['#78909c','ไม่ทราบ'];
         L.marker([x.lat,x.lng],{icon:L.divIcon({className:'wl-ic',html:`<i style="background:${col}"></i>`,iconSize:[18,18]})})
           .bindTooltip(`<b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
-    // กล้อง ~1,400 ตัว (POPNIX + iTIC): วาดบน canvas แสดงเมื่อซูมระดับ 12 ขึ้นไป · ป๊อปอัปเล่นภาพสด/ภาพนิ่งล่าสุด (camlive.js)
     if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;if(S.camLayer)S.camLayer.remove();S.camLayer=CAMLIVE.layer(S.map,F.cams)}
     if(!S.on.cams&&S.camLayer){S.camLayer.remove();S.camLayer=null;S.drawn.cams=-1}
     drawZones();legend()}
   function drawZones(){if(!S.map)return;S.L.zones.clearLayers();
-    // วงโซนไม่รับคลิก (ไม่บังหมุดเคส) ใช้ป้ายชื่อตรงกลางโซนแทน
     S.zones.forEach(z=>{const st=zoneStats(z);L.circle([z.lat,z.lng],{radius:z.radius,color:z.color,weight:2,fillColor:z.color,fillOpacity:S.zoneId===z.id?.16:.06,dashArray:S.zoneId===z.id?null:'6 6',interactive:false}).addTo(S.L.zones);
       L.marker([z.lat,z.lng],{icon:L.divIcon({className:'zlab',html:`<span style="border-color:${esc(z.color)}"><i style="background:${esc(z.color)}"></i>${esc(z.name)}${st.crit?` <b>${st.crit}</b>`:''}</span>`,iconSize:null}),keyboard:false})
         .bindTooltip(`<b>โซน ${esc(z.name)}</b><br>ยังไม่เสร็จ ${st.act} เคส${st.crit?` · วิกฤต ${st.crit}`:''} · ${st.teams.length} ทีม`)
@@ -99,7 +89,6 @@ const MX=(()=>{
     if(S.on.stations)x.push('<span><i class="sq" style="background:#1e40ff"></i>ระดับน้ำคลอง</span>');if(S.route)x.push('<span><i class="ln" style="background:#0d5f62"></i>เส้นทาง</span>');
     el.innerHTML=p.join('')+(x.length?`<span class="lg-sep"></span>${x.join('')}`:'');el.hidden=!p.length&&!x.length;if(!$('#layer-menu')?.hidden)layerMenu()}
 
-  /* ---------- คลิกแผนที่: วางจุดกลางโซน / เลือกจุดเริ่มเส้นทาง ---------- */
   function onMapClick(e){const ll=e.latlng;if(!ll)return;
     if(S.form){S.form.lat=+ll.lat.toFixed(6);S.form.lng=+ll.lng.toFixed(6);showPreview();renderSide();return}
     if(S.picking){S.start={lat:ll.lat,lng:ll.lng,label:'จุดที่เลือกบนแผนที่'};S.picking=false;S.map.getContainer().classList.remove('picking');renderSide()}}
@@ -107,10 +96,8 @@ const MX=(()=>{
     S.preview.setLatLng([f.lat,f.lng]);S.preview.setRadius(f.radius);S.preview.setStyle({color:f.color,fillColor:f.color})}
   function clearPreview(){if(S.preview){S.map.removeLayer(S.preview);S.preview=null}}
 
-  /* ---------- แผงด้านข้าง ---------- */
   const side=h=>{const el=$('#map-side');if(el)el.innerHTML=`<button type="button" class="ms-handle" data-sheet aria-expanded="${el.classList.contains('open')}"><i></i><span>${S.route?`เส้นทาง ${S.route.stops.length} จุด`:'จัดเส้นทาง'}</span></button>${h}`};
-  // หน้า "โซน / เพิ่มโซน" ถูกเอาออก: แผงด้านข้างแสดงจัดเส้นทางอย่างเดียว (โซนเดิมที่มีอยู่ยังใช้เป็น "เคสจาก" ในจัดเส้นทางได้)
-  function renderSide(){const el=$('#map-side');if(!el)return;el.hidden=true} // จัดเส้นทางย้ายไปหน้าจัดทีม (จัดเคสให้ทีม · จัดเส้นทาง)
+  function renderSide(){const el=$('#map-side');if(!el)return;el.hidden=true}
   function zoneForm(){const f=S.form;
     return `<div class="ms-h"><b>${f.id?'แก้ไขโซน':'เพิ่มโซนใหม่'}</b></div>
     <p class="ms-tip ${f.lat==null?'wait':''}">${f.lat==null?'<i data-ic="hand"></i> แตะบนแผนที่เพื่อวางจุดกลางโซน':'<i data-ic="check"></i> วางจุดกลางแล้ว แตะที่อื่นเพื่อย้าย'}</p>
@@ -127,7 +114,6 @@ const MX=(()=>{
     <h4>ทีมรับผิดชอบ</h4>${S.roster.length?`<div class="zteams">${S.roster.map(t=>`<label class="chk"><input type="checkbox" data-z-team="${esc(t.id)}" ${t.zone===z.name?'checked':''}><span>${esc(t.name)}${t.vehicle?` <small>${esc(VEH[t.vehicle]||'')}</small>`:''}${t.zone&&t.zone!==z.name?` <small>(อยู่โซน ${esc(t.zone)})</small>`:''}</span></label>`).join('')}</div>`:'<p class="small muted">ยังไม่มีทีม เพิ่มได้ที่หน้า จัดทีม</p>'}
     <h4>เคสในโซน (${cases.length})</h4><div class="zcases">${cases.slice(0,30).map(c=>`<button data-open-case="${esc(c.id)}"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).slice(0,2).join(', ')||'-')} · ${c.people||1} คน<small>${esc(ST[c.status])}${c.volunteer?' · '+esc(c.volunteer):''}</small></button>`).join('')||'<p class="small muted">ไม่มีเคสที่ยังไม่เสร็จ</p>'}</div>`}
 
-  /* ---------- เส้นทาง ---------- */
   const R={src:'filtered',onlyOpen:true,max:10,avoid:true};
   function routePanel(){const r=S.route;
     const opts=[['filtered','เคสที่แสดงอยู่ตามตัวกรอง'],...S.zones.map(z=>['zone:'+z.id,'โซน '+z.name])];
@@ -145,7 +131,6 @@ const MX=(()=>{
   function order(cs,start){const left=cs.map(c=>({c,lat:+c.lat,lng:+c.lng,sv:sev(c)})),out=[];let cur=start||null;
     [3,2,1].forEach(sv=>{let tier=left.filter(p=>p.sv===sv);while(tier.length){if(!cur){cur=tier.shift();out.push(cur);continue}let bi=0,bd=Infinity;tier.forEach((p,i)=>{const d=km(cur,p);if(d<bd){bd=d;bi=i}});cur=tier.splice(bi,1)[0];out.push(cur)}});return out}
   function decode6(str){let i=0,lat=0,lng=0;const out=[];while(i<str.length){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lat+=r&1?~(r>>1):r>>1;sh=0;r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);lng+=r&1?~(r>>1):r>>1;out.push([lat/1e6,lng/1e6])}return out}
-  // Valhalla สาธารณะรับได้ครั้งละไม่เกิน 10 จุด: แบ่งเป็นช่วง (จุดท้ายของช่วงก่อน = จุดแรกของช่วงถัดไป) แล้วต่อกัน
   async function valhalla(locs,excl){const parts=[];for(let i=0;i<locs.length-1;i+=9)parts.push(locs.slice(i,i+10));
     const rs=[];for(const p of parts)rs.push(await valhallaOne(p,excl));
     const legs=rs.flatMap(r=>r.legs);return {engine:'Valhalla',legs,coords:legs.flatMap(l=>l.coords),km:rs.reduce((a,r)=>a+r.km,0),min:rs.reduce((a,r)=>a+r.min,0)}}
@@ -158,7 +143,6 @@ const MX=(()=>{
   async function osrm(locs){const u='https://router.project-osrm.org/route/v1/driving/'+locs.map(p=>p.lng.toFixed(6)+','+p.lat.toFixed(6)).join(';')+'?overview=full&geometries=geojson';
     const j=await fetch(u).then(r=>r.json());if(j.code!=='Ok')throw new Error('osrm');const r=j.routes[0];
     return {engine:'OSRM',legs:r.legs.map(l=>({km:l.distance/1000,min:l.duration/60})),coords:r.geometry.coordinates.map(c=>[c[1],c[0]]),km:r.distance/1000,min:r.duration/60}}
-  // จุดน้ำท่วมที่ควรเลี่ยง: ถนนปิด/ลึก ≥30 ซม. (Floodboard) ทุก ~80 ม. + เซ็นเซอร์ กทม. ≥20 ซม.
   function hazards(){const out=[],F=VERIFY.F;
     F.roads.forEach(r=>{const d=r.depth||0,bad=r.closed||r.verdict==='blocked'||r.verdict==='risky'||d>=30;if(!bad)return;
       r.lines.forEach(line=>{let acc=80;for(let i=0;i<line.length;i++){const p={lat:line[i][1],lng:line[i][0]};if(i){const q={lat:line[i-1][1],lng:line[i-1][0]};acc+=km(p,q)*1000}if(acc>=80){out.push({...p,name:r.name,depth:r.depth,closed:r.closed});acc=0}}})});
@@ -201,7 +185,6 @@ const MX=(()=>{
       ([...new Set(r.hits.map(h=>h.name))].length?`\n<i data-ic="alert"></i> ระวังน้ำท่วม: ${[...new Set(r.hits.map(h=>h.name))].slice(0,6).join(', ')}`:'')+`\n\nนำทางทั้งเส้น:\n${links.join('\n')}`;
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว วางในไลน์ได้เลย (มีเบอร์โทรผู้แจ้ง ส่งเฉพาะกลุ่มทีม)',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))}
 
-  /* ---------- ปุ่มในแผงด้านข้าง ---------- */
   document.addEventListener('input',e=>{const t=e.target;if(!t.closest||!t.closest('#map-side'))return;
     if(t.id==='zf-r'&&S.form){S.form.radius=+t.value;$('#zf-rv').textContent=(S.form.radius/1000).toFixed(1)+' กม.';showPreview()}
     if(t.id==='zf-name'&&S.form)S.form.name=t.value;if(t.id==='zf-note'&&S.form)S.form.note=t.value});

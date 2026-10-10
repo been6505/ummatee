@@ -1,19 +1,14 @@
-/* ธีม (สว่าง/มืด · เปลี่ยนที่หน้าตั้งค่า) + ปุ่มค้นหาทุกอย่าง มุมขวาบนของทุกหน้าหลังบ้าน · ค่าเริ่มต้นสว่าง · จำไว้ในเครื่อง (uh_theme)
-   แดชบอร์ดมีปุ่มของตัวเอง (เปลี่ยนแผนที่ฐานด้วย) จึงข้ามถ้ามี #theme-btn แล้ว
-   หน้าเดียวกันหลายแท็บ / กรอบคิวที่ฝังในหน้าจัดการเคส เปลี่ยนตามกันผ่าน storage event */
 (()=>{
   const root=document.documentElement;
   const apply=t=>{if(t==='dark')root.dataset.theme='dark';else root.dataset.theme='light';const b=document.getElementById('theme-btn');if(b)label(b)};
   const label=b=>{const dark=root.dataset.theme==='dark',t=dark?'เปลี่ยนเป็นโหมดสว่าง':'เปลี่ยนเป็นโหมดมืด';b.innerHTML=ic(dark?'sun':'moon');b.setAttribute('aria-pressed',String(dark));b.setAttribute('aria-label',t);b.title=t};
   window.addEventListener('storage',e=>{if(e.key==='uh_theme')apply(e.newValue)});
-  /* มุมขวาบน: ปุ่มค้นหาทุกอย่าง (แทนปุ่มโหมดมืด · เปลี่ยนธีมได้ที่หน้าตั้งค่า) */
   const host=document.querySelector('.top-r')||document.querySelector('.top');if(!host||document.getElementById('gs-btn'))return;
   const b=document.createElement('button');b.type='button';b.id='gs-btn';b.className='btn ghost sm theme-btn';b.innerHTML=typeof ic==='function'?ic('search'):'⌕';b.title='ค้นหาทุกอย่าง (กด / )';b.setAttribute('aria-label','ค้นหาทุกอย่าง');
   const before=host.querySelector('#refresh');before?host.insertBefore(b,before):host.prepend(b);
   b.addEventListener('click',()=>GS.open());
   document.addEventListener('keydown',e=>{if((e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||''))||((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k')){e.preventDefault();GS.open()}});
 })();
-/* ---------- ค้นหาทุกอย่าง: เคส (ในระบบ + Help Me) · ทีม · สต็อก · War Room · เมนู ---------- */
 const GS=(()=>{
   const e=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const key=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(x){return ''}};
@@ -52,8 +47,6 @@ const GS=(()=>{
   function open(){if(!el)build();el.hidden=false;document.body.classList.add('noscroll');const inp=el.querySelector('input');inp.value='';draw();setTimeout(()=>inp.focus(),30);load().then(()=>{if(!el.hidden)draw()})}
   function close(){if(el)el.hidden=true;document.body.classList.remove('noscroll')}
   return {open,close}})();
-/* ---------- ช่องที่มีรายการให้เลือก (input + datalist) → รายการแบบเลื่อนได้ใต้ช่อง ----------
-   มือถือ Android แสดง datalist เป็นแถบเล็กเหนือคีย์บอร์ดซึ่งเลือกยาก: แทนด้วยรายการใต้ช่อง กรองตามที่พิมพ์ · ไม่ล้นพ้นคีย์บอร์ด */
 (()=>{let box=null,cur=null,opts=[];
   const close=()=>{if(box){box.remove();box=null}cur=null};
   const place=()=>{if(!box||!cur)return;const r=cur.getBoundingClientRect(),vv=window.visualViewport,vh=vv?vv.height+vv.offsetTop:innerHeight,below=vh-r.bottom-10;
@@ -64,7 +57,7 @@ const GS=(()=>{
     box.innerHTML=list.length?list.map(o=>`<button type="button" data-o="${o.replace(/"/g,'&quot;')}">${o.replace(/[<&]/g,c=>c==='<'?'&lt;':'&amp;')}</button>`).join(''):'<p>ไม่พบ · พิมพ์ต่อได้เลย</p>';place()};
   document.addEventListener('focusin',e=>{const i=e.target;if(!(i instanceof HTMLInputElement))return;const id=i.getAttribute('list')||i.dataset.combo;if(!id)return;
     const dl=document.getElementById(id);if(!dl)return;if(i.getAttribute('list')){i.dataset.combo=id;i.removeAttribute('list')}
-    opts=[...dl.options].map(o=>o.value).filter(Boolean);close();cur=i;box=document.createElement('div');box.className='combo-pop';(i.closest('dialog')||document.body).append(box); // ในกล่อง dialog ต้องอยู่ชั้นเดียวกัน
+    opts=[...dl.options].map(o=>o.value).filter(Boolean);close();cur=i;box=document.createElement('div');box.className='combo-pop';(i.closest('dialog')||document.body).append(box);
     box.addEventListener('mousedown',ev=>ev.preventDefault());box.addEventListener('click',ev=>{const b=ev.target.closest('[data-o]');if(!b||!cur)return;cur.value=b.dataset.o;cur.dispatchEvent(new Event('input',{bubbles:true}));cur.dispatchEvent(new Event('change',{bubbles:true}));const c=cur;close();c.blur()});
     draw();setTimeout(()=>{if(cur===i){cur.scrollIntoView({block:'nearest'});place()}},350)});
   document.addEventListener('input',e=>{if(e.target===cur)draw()});

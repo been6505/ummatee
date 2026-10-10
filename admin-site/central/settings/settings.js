@@ -1,13 +1,10 @@
-/* ตั้งค่า: ผู้ใช้งาน (ชื่อ · ธีม) + Local AI (Hermes Agent) · ทุกค่าเก็บในเบราว์เซอร์เครื่องนี้ */
 const root=document.documentElement;
-/* ---------- ผู้ใช้งาน ---------- */
 $('#st-name').value=store.get('uh_staff')||'';
 $('#st-name').addEventListener('change',e=>{try{localStorage.setItem('uh_staff',e.target.value.trim())}catch(err){}toast('บันทึกชื่อแล้ว',true)});
 const markTheme=()=>$$('#st-theme [data-th]').forEach(b=>b.setAttribute('aria-pressed',String((root.dataset.theme==='dark'?'dark':'light')===b.dataset.th)));
 $('#st-theme').addEventListener('click',e=>{const b=e.target.closest('[data-th]');if(!b)return;const t=b.dataset.th;
   if(t==='dark')root.dataset.theme='dark';else root.dataset.theme='light';try{localStorage.setItem('uh_theme',t)}catch(err){}markTheme()});
 markTheme();
-/* ---------- Local AI ---------- */
 const P=LOCALAI.PRESETS;let cur=LOCALAI.cfg();
 $('#ai-preset').innerHTML=Object.entries(P).map(([k,v])=>`<button type="button" data-p="${k}">${esc(v.label)}</button>`).join('');
 const cloudRows=on=>['ai-url','ai-key'].forEach(id=>{const r=$('#'+id).closest('.st-row');if(r)r.hidden=on});$('#ai-list').hidden=false;
@@ -30,7 +27,6 @@ $('#ai-test').onclick=async()=>{const b=$('#ai-test');b.disabled=true;msg('ก�
   catch(e){msg('เชื่อมต่อไม่ได้: '+(e.name==='AbortError'?'หมดเวลา':e.message||'ตรวจที่อยู่และ CORS'),false);dot('off')}finally{b.disabled=false}};
 $('#ai-ask').onclick=async()=>{const q=$('#ai-q').value.trim();if(!q){$('#ai-q').focus();return}const b=$('#ai-ask'),box=$('#ai-ans');b.disabled=true;box.hidden=false;box.textContent='AI HELP กำลังคิด…';
   try{box.textContent=(await LOCALAI.ask(q,{cfg:form()})).trim()||'(ไม่มีคำตอบ)';dot('on')}catch(e){box.textContent='เชื่อมต่อไม่ได้: '+(e.message||'');dot('off')}finally{b.disabled=false}};
-/* ---------- Discord (CENTRAL เท่านั้น) ---------- */
 const DC=['newCrit','sos','critWait'];
 function dcShow(r){$('#dc-card').hidden=false;$('#dc-tag').textContent=r.connected?'เชื่อมแล้ว '+r.hook:'ยังไม่เชื่อม';$('#dc-dot').className='st-dot '+(r.connected?'on':'');
   DC.forEach(k=>$('#dc-'+k).checked=!!r[k]);$('#dc-sum').value=String(r.summaryH??3);$('#dc-url').value='';$('#dc-url').placeholder=r.connected?'เชื่อมแล้ว · วาง URL ใหม่เพื่อเปลี่ยน':'https://discord.com/api/webhooks/…'}
@@ -41,12 +37,10 @@ $('#dc-save').onclick=async()=>{const d={summaryH:+$('#dc-sum').value};DC.forEac
   if(r&&r.ok){dcShow(r);dmsg(u?'เชื่อมแล้ว · กด "ส่งข้อความทดสอบ" เพื่อลอง':'บันทึกแล้ว',true)}else dmsg(r&&r.error==='bad_webhook'?'URL ไม่ใช่ Webhook ของ Discord':'บันทึกไม่สำเร็จ',false)};
 $('#dc-test').onclick=async()=>{dmsg('กำลังส่ง…');const r=await apiPost({action:'discord_test'}).catch(()=>null);dmsg(r&&r.ok?'ส่งแล้ว · ดูในห้อง Discord':r&&r.error==='not_connected'?'ยังไม่ได้ใส่ Webhook URL':'ส่งไม่สำเร็จ · ตรวจ URL',!!(r&&r.ok))};
 $('#dc-now').onclick=async()=>{dmsg('AI HELP กำลังเขียนสรุป…');const r=await apiPost({action:'discord_test',kind:'summary'}).catch(()=>null);dmsg(r&&r.ok?'ส่งสรุปแล้ว':'ส่งไม่สำเร็จ',!!(r&&r.ok))};
-/* ---------- รับตำแหน่งทาง SMS (CENTRAL เท่านั้น) ---------- */
 async function smsLoad(renew){const r=await apiPost({action:'sms_cfg',renew:!!renew}).catch(()=>null);if(!r||!r.ok)return;$('#sms-card').hidden=false;
   $('#sms-url').value=location.origin+'/api/sms-in?k='+r.secret;if(renew)$('#sms-msg').textContent='สร้างลิงก์ใหม่แล้ว · ลิงก์เก่าใช้ไม่ได้ · อัปเดตในแอปส่งต่อ SMS ด้วย'}
 $('#sms-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('#sms-url').value);$('#sms-msg').textContent='คัดลอกแล้ว'}catch(e){$('#sms-url').select()}};
 $('#sms-renew').onclick=()=>{if(confirm('สร้างลิงก์ใหม่? ลิงก์เดิมในมือถือเบอร์ศูนย์จะใช้ไม่ได้'))smsLoad(true)};
-/* ---------- ประวัติการเปลี่ยนแปลง (audit log) · CENTRAL เท่านั้น · รายการใหม่ขึ้นเองทุก 20 วิ ---------- */
 const LG={items:[],cat:'',role:'',q:'',more:false,busy:false,open:new Set()};
 const LG_ROLE={central:['CENTRAL','c'],warroom:['War Room','w'],team:['ทีม','t'],public:['ทั่วไป','p']};
 const LG_KEY={id:'รหัส',status:'สถานะ',volunteer:'ทีม',hqNote:'หมายเหตุ',bags:'ถุงยังชีพ',note:'หมายเหตุ',team:'ทีม',name:'ชื่อ',by:'โดย',text:'ข้อความ',qty:'จำนวน',type:'ประเภท',step:'ขั้นตอน',approve:'อนุมัติ',username:'ชื่อผู้ใช้',warroom:'War Room',item:'รายการ',user:'ผู้ใช้',staff:'ทีมงาน',cctv:'CCTV',dupOf:'ซ้ำกับ',lat:'ละติจูด',lng:'ลองจิจูด'};
@@ -80,7 +74,6 @@ $('#lg-list').onclick=e=>{const u=e.target.closest('[data-undo]');if(u){lgUndo(+
 setInterval(lgPoll,20000);
 adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});
 
-/* ---------- หน้าตั้งค่าแบบรายการ (เหมือนแอป): หัวข้อเป็นหมวด · แตะแถวเพื่อเปิด · ค้นหาด้านบน · ปุ่มย้อนกลับของมือถือใช้ได้ (#หน้า) ---------- */
 const STM=[
   {h:'บัญชีของคุณ',rows:[{p:'user',ic:'user',t:'ผู้ใช้งาน',s:'ชื่อที่แสดงในประวัติ · ธีมสว่าง / มืด',k:'ชื่อ ธีม โหมดมืด dark'}]},
   {h:'การแจ้งเตือนและการเชื่อมต่อ',rows:[{p:'discord',ic:'chat',t:'Discord',s:'แจ้งเตือนเคสด่วน · SOS · สรุปโดย AI',k:'webhook แจ้งเตือน',st:()=>$('#dc-tag')&&$('#dc-tag').textContent},
@@ -93,7 +86,6 @@ const STM=[
     {fb:true,ic:'note',t:'ส่งข้อเสนอแนะ / แจ้งปัญหา',s:'บอกทีมพัฒนาว่าอะไรใช้ยาก หรืออยากให้เพิ่มอะไร',k:'feedback ข้อเสนอแนะ ปัญหา'},
     {logout:true,ic:'logout',t:'ออกจากระบบ',s:'',k:'logout ออก'}]}];
 const stIc=n=>typeof ic==='function'?ic(n):'';
-// War Room ย่อยเห็นเฉพาะผู้ใช้งาน + AI · CENTRAL เห็นทุกหัวข้อเสมอ (การ์ดที่ยังโหลดไม่เสร็จจะโหลดตอนเปิด)
 const stWR=()=>/^wru?_/.test(String(ADM.key||''));
 function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`);return !!c&&(['user','ai'].includes(p)||!stWR())}
 function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
@@ -108,6 +100,5 @@ $('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]'
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);
 addEventListener('hashchange',()=>stGo(location.hash.slice(1)));
-// การ์ดบางอันขึ้นเมื่อโหลดข้อมูลเสร็จ (Discord / SMS / ประวัติ): วาดรายการใหม่เมื่อเปลี่ยน
 new MutationObserver(()=>{if($('#main').dataset.view==='menu')stMenu()}).observe($('#main'),{attributes:true,subtree:true,attributeFilter:['hidden','class']});
 stGo(location.hash.slice(1));

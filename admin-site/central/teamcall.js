@@ -1,10 +1,3 @@
-/* โทรหาทีม: <i data-ic="phone"></i> โทร (โทรศัพท์) · <i data-ic="chat"></i> SMS (พร้อมรายละเอียดเคส) · โทรเสียง / วิดีโอคอลผ่านเน็ต (ห้องประชุมเว็บ)
-   - โทรผ่านเน็ต: ระบบสร้างสายในระบบเอง (/call/ · WebRTC ไม่ต้องลงแอป ไม่ต้องใส่ชื่อ) แล้วส่ง "สายเข้า" ไปหน้าทีม (/team/) ทีมกดรับได้ทันที
-     ทีมไม่ได้เปิดหน้า ส่งลิงก์ทาง SMS / LINE ได้ · ห้อง Jitsi ด้านล่างใช้สำรองเมื่อสร้างสายในระบบไม่ได้เท่านั้น
-   - วิดีโอคอลใช้ Jitsi สาธารณะ meet.ffmuc.net (ไม่ต้องล็อกอิน ไม่จำกัดเวลา) เปิดในแท็บใหม่ ชื่อห้องสุ่มเดาไม่ได้
-     (meet.jit.si ต้องล็อกอินผู้สร้างห้อง และถ้าฝังในหน้าเว็บจะตัดสายที่ 5 นาที · ffmuc ฝังในหน้าเว็บไม่ได้)
-   - ทีมไม่มีแอปรับสาย: ระบบส่งลิงก์ห้องให้ทาง SMS / LINE / คัดลอก
-   ใช้: TEAMCALL.buttons(team,{caseText}) คืน HTML ปุ่ม · TEAMCALL.open(team,{caseText}) เปิดแผ่นโทร */
 const TEAMCALL=(()=>{
   const MEET='https://meet.ffmuc.net/';
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,7 +8,6 @@ const TEAMCALL=(()=>{
   const store=new Map();let seq=0;
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const who=()=>{try{return localStorage.getItem('uh_staff')||'ศูนย์'}catch(e){return 'ศูนย์'}};
-  /* ข้อความแจ้งเคสสั้น ๆ สำหรับ SMS / LINE */
   function caseText(c){if(!c)return '';const where=[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ');
     const pin=c.lat!==''&&c.lat!=null&&isFinite(+c.lat)?` แผนที่ https://maps.google.com/?q=${+c.lat},${+c.lng}`:'';
     return `Helpme+ แจ้งเคส #${c.id}: ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${where?' · '+where:''}${c.phone?' · ผู้แจ้ง '+String(c.phone).replace(/^'/,''):''}${pin}`}
@@ -25,11 +17,10 @@ const TEAMCALL=(()=>{
   function sheet(html){close();const bg=document.createElement('div');bg.className='tc-bg';bg.id='tc-bg';const d=document.createElement('div');d.className='tc-sheet';d.id='tc-sheet';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
     d.innerHTML=html;document.body.append(bg,d);bg.onclick=close;d.querySelector('.tc-x').onclick=close;setTimeout(()=>d.querySelector('a,button:not(.tc-x)')?.focus(),30)}
   function close(){document.getElementById('tc-bg')?.remove();document.getElementById('tc-sheet')?.remove()}
-  /* เปิดห้องวิดีโอคอลแล้วให้ส่งลิงก์ให้ทีม */
   async function video(t,opt={},mode='video'){
     const w=window.open('about:blank','_blank');if(w)w.opener=null;let url='';
     try{const r=await(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'hq_call',key:KEY(),team:t.name,mode,name:who()})})).json();if(r.ok)url=new URL(r.link,location.origin).href}catch(e){}
-    const rang=!!url;if(!url)url=MEET+'Helpmeplus-'+rnd(12)+'#config.defaultLanguage=%22th%22&config.prejoinConfig.enabled=false&userInfo.displayName=%22'+encodeURIComponent(who())+'%22'+(mode==='voice'?'&config.startWithVideoMuted=true&config.startAudioOnly=true':''); // สำรองเมื่อระบบโทรในระบบใช้ไม่ได้
+    const rang=!!url;if(!url)url=MEET+'Helpmeplus-'+rnd(12)+'#config.defaultLanguage=%22th%22&config.prejoinConfig.enabled=false&userInfo.displayName=%22'+encodeURIComponent(who())+'%22'+(mode==='voice'?'&config.startWithVideoMuted=true&config.startAudioOnly=true':'');
     if(w)w.location=url;else window.open(url,'_blank','noopener');
     const label=mode==='voice'?'โทรเสียง':'วิดีโอคอล';
     const p=tel(t.phone),msg=`Helpme+ ${label}จากศูนย์${opt.caseText?' เรื่อง '+opt.caseText:''} · กดเข้าห้อง: ${url}`;

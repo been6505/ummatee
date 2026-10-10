@@ -1,10 +1,9 @@
-/* จัดทีม: รายชื่อทีม สถานะ พาหนะ เคสที่ถือ + มอบหมายเคสที่รออยู่ให้ทีม */
 const T={roster:[],live:[],cases:[],filter:/^(busy|ready|out|rest|live|sos)$/.test(new URLSearchParams(location.search).get('f')||'')?new URLSearchParams(location.search).get('f'):'all',loaded:0,hqPhone:''};
 const TST={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
-const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
+const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
 const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&c.lng!==''&&c.lng!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const tname=s=>String(s||'').replace(/^'/,'').trim();
@@ -19,10 +18,7 @@ async function loadAll(){T.loadedAt=Date.now();
   catch(e){$('#sync').textContent='โหลดไม่สำเร็จ'}}
 $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIVE.ok())||Date.now()-(T.loadedAt||0)>300000))loadAll()},15000);document.addEventListener('visibilitychange',()=>{if(ADM.key&&!document.hidden)loadAll()});
-/* ตำแหน่งสดทุก 15 วิ: อัปเดตแผนที่ + ป้ายสถานะบนการ์ด (ไม่วาดหน้าใหม่ทั้งหมด) */
-// ตำแหน่งสดทุก 3 วินาที (หมุดเลื่อนลื่นระหว่างรอบด้วย glideTo)
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy||(typeof LIVE!=='undefined'&&LIVE.ok()))return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);
-/* แผงขวาของแผนที่ติดตามทีม: สถานะสดรายทีม (สัญญาณ · แบต · ความเร็ว · ทิศ · ความแม่นยำ GPS · เคส/ระยะ/เวลาถึง) · แตะ = ติดตามทีมบนแผนที่ */
 function side(){const el=$('#trk-side');if(!el)return;const now=Date.now();
   const sig=a=>a==null?[0,'ไม่มีตำแหน่ง','off']:a<90e3?[4,'ดีมาก','on']:a<5*60e3?[3,'ดี','on']:a<15*60e3?[2,'อ่อน','idle']:a<30*60e3?[1,'อ่อนมาก','idle']:[0,'ขาดการติดต่อ','off'];
   const dir=h=>h==null?'':['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'][Math.round(((+h%360)+360)%360/45)%8];
@@ -44,7 +40,6 @@ function side(){const el=$('#trk-side');if(!el)return;const now=Date.now();
       </div>
       ${cs.length?`<div class="ts-case"><i data-ic="flag"></i><span>เคส #${esc(cs[0].id)} · ${esc((cs[0].needs||[]).slice(0,2).join(', ')||'เคส')}${cs.length>1?` +${cs.length-1}`:''}</span>${eta?`<em>${eta.km.toFixed(1)} กม.${eta.min!=null?` · ~${Math.max(1,Math.round(eta.min))} น.`:''}${eta.plan?' · ศูนย์กำหนด':''}</em>`:''}</div>`:''}
       ${t.vehicle||t.members?`<small class="ts-x">${esc([VEH[t.vehicle]||'',t.members?t.members+' คน':'',t.phone?tel(t.phone):''].filter(Boolean).join(' · '))}</small>`:''}</button>`}).join('')||'<p class="muted small">ยังไม่มีทีม</p>'}</div>`}
-/* นับเวลาส่งตำแหน่งล่าสุดแบบสด (ทุก 1 วิ) โดยไม่วาดแผงใหม่ */
 setInterval(()=>{if(document.hidden)return;const now=Date.now();document.querySelectorAll('#trk-side .ts-age[data-age]').forEach(x=>{const t=+x.dataset.age;if(!t)return;const a=now-t;x.textContent=a<60e3?Math.round(a/1000)+' วิ':Math.round(a/60e3)+' นาที'})},1000);
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#trk-side [data-tsel]');if(!b)return;const n=b.dataset.tsel;if(typeof TRACK!=='undefined'){TRACK.focus(n);const eta=TRACK.eta&&TRACK.eta(n);if(eta&&e.target.closest('.ts-case')&&TRACK.edit)TRACK.edit(n)}});
 setInterval(()=>{if(T.loaded&&!document.hidden)side()},5000);
@@ -52,7 +47,6 @@ setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRAC
 if(typeof LIVE!=='undefined')LIVE.start(rows=>{if(!T.loaded)return;T.live=mergeLive(T.live,rows);liveUI()});
 function liveUI(){if(typeof TRACK!=='undefined'){TRACK.update(T.live,T.roster);if(TRACK.routes)TRACK.routes(T.live,T.cases)}side();
   $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
-/* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกเคสแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */
 function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
   if(!lv)return `<span class="lv lv-none" data-live-of="${id}">${t.status==='out'?'<i data-ic="alert"></i> ไม่แชร์ตำแหน่ง':'ไม่แชร์ตำแหน่ง'}</span>`;
   const m=(Date.now()-lv.updatedAt)/60000,k=m<5?'on':m<30?'idle':'old',lost=t.status==='out'&&m>=10;
@@ -83,7 +77,6 @@ function render(){
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
   if(document.activeElement!==$('#hq-phone'))$('#hq-phone').value=tname(T.hqPhone);
   liveUI();
-  /* teams */
   const list=R.filter(t=>T.filter==='all'||(T.filter==='live'?(()=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3})():T.filter==='sos'?sosOn(t):T.filter==='busy'?teamCases(t.name).some(c=>c.status==='going'):T.filter==='one'?tname(t.name)===tname(T.one):t.status===T.filter)).sort((a,b)=>({ready:0,out:1,rest:2}[a.status]??3)-({ready:0,out:1,rest:2}[b.status]??3)||String(a.name).localeCompare(String(b.name),'th'));
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
@@ -94,10 +87,8 @@ function render(){
       ${typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(t,{caseText:g[0]?TEAMCALL.caseText(g[0]):''}):''}
       ${g.length?`<ul class="tcases">${g.map(c=>`<li><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน <small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}</small> <button class="linkish" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยแล้ว</button></li>`).join('')}</ul>`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}
       <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><span><button class="btn ghost sm" data-tlink="${esc(t.id)}"><i data-ic="link"></i> ลิงก์ทีม</button> <button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></span></div></article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
-  /* teams seen in cases but not in roster */
   const known=new Set(R.map(t=>tname(t.name))),seen=[...new Set(T.cases.map(c=>tname(c.volunteer)).filter(Boolean))].filter(n=>!known.has(n));
   if(seen.length)el.insertAdjacentHTML('beforeend',`<div class="seen"><small class="muted">ทีมที่เคยรับเคสแต่ยังไม่อยู่ในรายชื่อ:</small> ${seen.map(n=>`<button class="chip" data-quick="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>`);
-  /* queue */
   const order=c=>{const v=typeof VERIFY!=='undefined'?VERIFY.assess(c).score:0;return sev(c)*100+v};
   const q=queue.slice().sort((a,b)=>order(b)-order(a)||(Number(a.createdAt)-Number(b.createdAt)));
   $('#q-count').textContent=q.length?q.length+' เคส':'';
@@ -108,7 +99,6 @@ function render(){
     </article>`}).join(''):'<p class="empty">ไม่มีเคสรอจัดทีม <i data-ic="check"></i></p>';
 }
 
-/* ---------- actions ---------- */
 async function saveTeam(t,msg){try{const r=await apiPost({action:'roster_save',team:t,by:staffName()});
   if(!r.ok){toast(r.error==='duplicate_name'?'มีทีมชื่อนี้อยู่แล้ว':'บันทึกไม่สำเร็จ: '+(r.error||''));return false}toast(msg||'บันทึกทีมแล้ว',true);await loadAll();return true}catch(e){if(e.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่');return false}}
 async function updateCase(c,status,team){const prev={status:c.status,volunteer:c.volunteer};c.status=status;if(team)c.volunteer=team;render();
@@ -116,7 +106,6 @@ async function updateCase(c,status,team){const prev={status:c.status,volunteer:c
   catch(e){Object.assign(c,prev);render();if(e&&e.message==='auth')return;toast('บันทึกไม่สำเร็จ ลองใหม่')}}
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tst]');if(!s)return;const t=T.roster.find(x=>String(x.id)===s.dataset.tst);if(t)saveTeam({...t,status:s.value},`${t.name} → ${TST[s.value]}`)});
 document.addEventListener('click',e=>{
-  /* การ์ดสรุปด้านบน: กดแล้วกรอง/เลื่อนไปส่วนที่เกี่ยวข้อง · กดซ้ำ = ยกเลิก */
   const sc=e.target.closest('#stats [data-sf]');if(sc){let k=sc.dataset.sf;if(T.sf===k&&k!=='all')k='all';T.sf=k==='all'?'':k;
     const tf=k==='people'?'all':k==='queue'?T.filter:k;
     if(k!=='queue'){T.filter=tf;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===tf)))}
@@ -137,10 +126,9 @@ document.addEventListener('click',e=>{
 $('#add-team').addEventListener('click',()=>openForm(null));
 $('#hqp').addEventListener('submit',async e=>{e.preventDefault();try{const r=await apiPost({action:'hq_phone',phone:$('#hq-phone').value});if(r.ok){T.hqPhone=r.hqPhone;toast('บันทึกเบอร์ศูนย์แล้ว',true)}}catch(err){}});
 
-/* ลิงก์เฉพาะทีม: ทีมเปิดบนมือถือได้ทันที ไม่ต้องใช้รหัสกลาง · เปลี่ยนลิงก์ได้ถ้าหลุด */
 const QR_SRI='sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU';
 const teamUrl=t=>location.origin+'/team/?id='+encodeURIComponent(t.token||'');
-const appUrl=t=>location.origin+'/app/?id='+encodeURIComponent(t.token||''); // QR: สแกนด้วยกล้อง = หน้าดาวน์โหลดแอป + ลิงก์ทีม · สแกนในแอป = เข้าทีมเลย
+const appUrl=t=>location.origin+'/app/?id='+encodeURIComponent(t.token||'');
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();return qrP||(qrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.integrity=QR_SRI;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>{qrP=null;rej()};document.head.append(s)}))}
 function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกเคส\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
@@ -157,13 +145,11 @@ function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Help
   $('#l-copy').onclick=async e=>{try{await navigator.clipboard.writeText(url);toast('คัดลอกลิงก์แล้ว',true)}catch(err){d.querySelector('.tc-link').select()}};
   $('#l-new').onclick=async()=>{if(!confirm(`สร้างลิงก์ใหม่ให้ ${t.name}? ลิงก์เดิมจะใช้ไม่ได้`))return;try{const r=await apiPost({action:'team_link',id:t.id});if(r.ok){t.token=r.token;toast('สร้างลิงก์ใหม่แล้ว · ส่งให้ทีมอีกครั้ง',true);linkSheet(t)}else toast('สร้างไม่สำเร็จ')}catch(err){}}}
 
-/* แผ่นติดต่อทีมจากคิวเคส: โทร / SMS พร้อมรายละเอียดเคส / วิดีโอคอล */
 function callSheet(t,c){const txt=TEAMCALL.caseText(c),p=tel(t.phone);
   const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="phone"></i> ติดต่อ ${esc(t.name)}</h2><p class="muted small">${[t.leader?'หัวหน้าทีม '+t.leader:'',p.length>=9?p:'ยังไม่มีเบอร์ (แก้ไขทีมเพื่อใส่เบอร์)',t.vehicle?VEH[t.vehicle]:''].filter(Boolean).map(esc).join(' · ')}</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="call-sheet"><p class="muted small">ข้อความที่จะส่ง</p><div class="call-msg">${esc(txt)}</div>${TEAMCALL.buttons(t,{caseText:txt})}</div>`;
   d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeForm;$('#drawer-bg').onclick=closeForm}
 
-/* ---------- ฟอร์มเพิ่ม/แก้ไขทีม ---------- */
 function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
   d.innerHTML=`<div class="d-head"><div><h2>${t.id?'แก้ไขทีม':'เพิ่มทีมใหม่'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="tform" class="form-grid">
@@ -194,7 +180,6 @@ adminBoot({action:'roster'},'roster',r=>{setTimeout(()=>{if(typeof ROUTE!=='unde
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
 
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copylive]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copylive);toast('คัดลอกลิงก์ติดตามแล้ว',true)}catch(err){b.previousElementSibling.select()}});
-/* เปิดจากการ์ด "ทีมกำลังไป" ในหน้าจัดการเคส (?f=busy) หรือจากช่องค้นหา (?team=ชื่อ): กรองไว้แล้ว เลื่อนไปที่รายชื่อทีม */
 {const one=new URLSearchParams(location.search).get('team');if(one){T.one=one;T.filter='one'}}
 if(T.filter!=='all'){T.sf=T.filter;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.f===T.filter)));
   const go=()=>{const p=$('#team-list')&&$('#team-list').closest('.panel');if(p&&$$('#team-list .team').length)p.scrollIntoView({block:'start'});else if(!go.n||go.n++<20)setTimeout(go,500)};go.n=1;setTimeout(go,800)}

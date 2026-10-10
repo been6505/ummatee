@@ -1,11 +1,3 @@
-/* helpme4u.com — Help Me homepage + HELP ME CENTRAL (ศูนย์สั่งการ) under one domain name (Cloudflare Worker, Custom Domains)
-     helpme4u.com, www.helpme4u.com  → umplus-help.pages.dev (หน้าบ้าน Help Me)
-     central.helpme4u.com            → admin-helpme.pages.dev (HELP ME CENTRAL · เดิมชื่อหลังบ้าน / Center)
-     admin. / center.helpme4u.com    → ชื่อเดิม: หน้าเว็บย้ายไป central (301) · แต่ /api /team /call ยังตอบตรง
-                                       เพราะลิงก์ทีม แอปติดตาม (Traccar) และลิงก์สายที่ส่งไปแล้วใช้โดเมนนี้อยู่ (บางแอปไม่ตามการย้าย)
-   Center อยู่โดเมนย่อยแยกโดยตั้งใจ: แอปหน้าบ้านลง service worker ขอบเขต "/" บน helpme4u.com ที่แคชทุก GET ในโดเมน
-   (ยกเว้นใต้ /api/) ถ้าหน้า Center อยู่บน helpme4u.com จะถูกแคชค้างบนเครื่องที่ใช้ร่วมกัน
-   ลิงก์ CENTRAL บน helpme4u.com (/admin… /center… /central… /team… /call… /api) ส่งต่อไป central.helpme4u.com แบบ 308 (คง method + body) */
 const PUBLIC = 'https://umplus-help.pages.dev';
 const ADMIN = 'https://admin-helpme.pages.dev';
 const CENTER_HOST = 'central.helpme4u.com', OLD_HOSTS = ['admin.helpme4u.com', 'center.helpme4u.com'];
@@ -16,15 +8,12 @@ const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 import { DurableObject } from 'cloudflare:workers';
 
 export default {
-  // ซิงก์เคส Help Me (Google Sheet) เข้าฐานข้อมูล CENTRAL ทุก 1 นาที + ให้ AI ตรวจรูปผู้แจ้งทีละไม่กี่เคส
-  // ทุก 30 วินาที (cron นาทีละครั้ง + อีกรอบหลังรอ 30 วิ) · เคสที่แจ้งผ่าน helpme4u.com ซิงก์ทันทีอยู่แล้ว (bc.js → hm_nudge)
   async scheduled(event, env, ctx) {
     const hit = () => fetch(ADMIN + '/api?action=hm_sync', { headers: { 'user-agent': 'helpme4u-router-cron' } }).catch(() => {});
     ctx.waitUntil((async () => { await hit(); await new Promise(r => setTimeout(r, 30e3)); await hit(); })());
   },
   async fetch(req, env) {
     const url = new URL(req.url);
-    // วอเสียงสด: wss://central.helpme4u.com/ptt/ws?tk=…|key=… → ตรวจสิทธิ์กับ CENTRAL แล้วต่อเข้าห้องกลาง (Durable Object)
     if (url.pathname === '/ptt/ws') return pttConnect(req, env, url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }
     if (OLD_HOSTS.includes(url.hostname) && !keepOnOld(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 301); }
@@ -36,7 +25,6 @@ export default {
     if (!['GET', 'HEAD'].includes(req.method)) init.body = req.body;
     init.headers.delete('host');
     const res = await fetch(up, init);
-    // keep the visitor on our hostname when an upstream redirects to its own pages.dev host
     const loc = res.headers.get('location');
     if (loc) {
       const l = new URL(loc, origin);
@@ -46,7 +34,6 @@ export default {
         return new Response(res.body, { status: res.status, headers: h });
       }
     }
-    // หน้าบ้าน Help Me: ใส่แถบประกาศแจ้งเตือนรายพื้นที่ของ CENTRAL ลงในทุกหน้า HTML (ไม่ต้องแก้โค้ดของแอปหน้าบ้าน)
     if (!center && req.method === 'GET' && res.ok && String(res.headers.get('content-type') || '').includes('text/html')) {
       return new HTMLRewriter().on('head', { element(e) { e.append(`<script src="https://${CENTER_HOST}/bc.js" data-mode="public" defer></script>`, { html: true }); } }).transform(res);
     }
@@ -54,11 +41,6 @@ export default {
   },
 };
 
-/* ---------- วอเสียงสด (Push-to-talk แบบ Zello) ----------
-   ห้องกลางเดียว (Durable Object "hub") รับ WebSocket ของทุกคน · แต่ละคนมีรายชื่อช่องที่ใช้ได้ (จาก CENTRAL ตอนเชื่อมต่อ)
-   ช่อง: all (รวม) · wr:<รหัส War Room> · tm:<ชื่อทีม> (ส่วนตัวศูนย์↔ทีม)
-   ข้อความ JSON: {t:'talk',ch} ขอพูด → granted / busy · {t:'end'} จบ · เสียง = binary (μ-law 8 kHz) ส่งต่อให้ทุกคนในช่องทันที
-   คนละช่องพูดพร้อมกันได้ · ช่องเดียวกันพูดได้ทีละคน (ค้างเกิน 40 วิ / หลุด = ปล่อยช่องเอง) */
 async function pttConnect(req, env, url) {
   if (req.headers.get('upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
   const q = new URLSearchParams({ action: 'ptt_auth' });
@@ -71,7 +53,7 @@ async function pttConnect(req, env, url) {
   return stub.fetch(new Request('https://ptt/ws', { headers: h }));
 }
 export class PttHub extends DurableObject {
-  constructor(ctx, env) { super(ctx, env); this.floor = new Map(); // ch → { ws, id, at, name, kind }
+  constructor(ctx, env) { super(ctx, env); this.floor = new Map();
     this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}')); }
   async fetch(req) {
     let who; try { who = JSON.parse(decodeURIComponent(req.headers.get('x-ptt-who') || '')); } catch (e) {}
@@ -89,7 +71,7 @@ export class PttHub extends DurableObject {
   sweep() { const now = Date.now(); for (const [ch, f] of this.floor) if (now - f.at > 40e3) this.release(ch, 'timeout'); }
   async webSocketMessage(ws, msg) {
     const a = ws.deserializeAttachment() || {};
-    if (typeof msg !== 'string') { // เสียง: ส่งต่อให้ทุกคนในช่องที่ผู้ส่งถือไมค์อยู่
+    if (typeof msg !== 'string') {
       const ch = a.talk, f = ch && this.floor.get(ch); if (!f || f.ws !== ws) return;
       const tag = new TextEncoder().encode(f.id + '|'), out = new Uint8Array(tag.length + msg.byteLength); out.set(tag); out.set(new Uint8Array(msg), tag.length);
       for (const w of this.peers(ch, ws)) try { w.send(out); } catch (e) {}

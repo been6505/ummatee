@@ -2,7 +2,6 @@
   --surface:#fcfcfb;--page:#f4f7f8;--ink:#0b0b0b;--ink-2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--line:rgba(11,11,11,.10);
   --s1:#2a78d6;--crit:#d03b3b;--serious:#ec835a;--warn:#fab219;--good:#0ca30c;--going:#2a78d6;
   font-family:Prompt,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--page);color-scheme:light}
-/* โหมดมืด: เปิดเองจากปุ่มธีม (ค่าเริ่มต้นสว่าง ไม่ตามเครื่อง) */
 :root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;--ink-2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--line:rgba(255,255,255,.10);--s1:#3987e5;--going:#3987e5;--tint:#173a3c}
 :root[data-theme="dark"]{color-scheme:dark;--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;--ink-2:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--line:rgba(255,255,255,.10);--s1:#3987e5;--going:#3987e5;--tint:#173a3c}
 *{box-sizing:border-box}body{margin:0;background:var(--page)}[hidden]{display:none!important}
@@ -10,32 +9,27 @@ button,input{font:inherit}button{cursor:pointer}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;padding:10px 16px;font-weight:600;font-size:15px;min-height:44px;text-decoration:none}
 .btn.primary{background:var(--teal);color:#fff}.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
 .btn.ghost{background:transparent;color:#fff;box-shadow:inset 0 0 0 1px #ffffff55}
-/* login */
 .login{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(160deg,#102f42,#166d75)}
 .login-card{width:min(400px,100%);background:#fff;color:#173746;border-radius:20px;padding:28px 24px;display:grid;gap:14px}
 .login-card img{width:110px;height:auto}.login-card h1{margin:0;font-size:24px}.login-card p{margin:0;color:#68838f;font-size:14px;line-height:1.6}
 .fld{display:grid;gap:6px;font-weight:600;font-size:14px}.fld input{border:1px solid #dce6e9;border-radius:10px;min-height:50px;padding:10px 12px;font-size:16px}
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;color:#68838f}.err{color:#c62828!important;min-height:1.2em}.back{color:var(--teal);font-weight:600;text-decoration:none;font-size:14px}
-/* top */
 .top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;background:var(--navy);color:#fff;padding:10px clamp(14px,3vw,32px)}
 .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:18px;font-weight:600}.brand img{background:#fff;border-radius:8px;padding:3px 6px;height:36px;width:auto}.brand b{color:#9fe0d3}
 .tabs{display:flex;gap:4px;margin-left:8px}.tabs a{color:#bad0d9;text-decoration:none;padding:8px 12px;border-radius:9px;font-weight:600;font-size:15px}.tabs a[aria-current=page]{background:#ffffff1f;color:#fff}
 .top-r{margin-left:auto;display:flex;align-items:center;gap:8px}.sync{font-size:13px;color:#a4c8d3}
 .wrap{max-width:1400px;margin:0 auto;padding:18px clamp(14px,3vw,32px) 60px}
-/* filters */
 .filters{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:14px}
 .f-lab{font-size:14px;color:var(--ink-2);margin-right:4px}
 .filters button{border:0;background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px;min-height:38px;box-shadow:inset 0 0 0 1px var(--line)}
 .filters button[aria-pressed=true]{background:var(--teal);color:#fff;box-shadow:none}
 .f-note{font-size:13px;color:var(--muted);margin-left:6px}
 main.loading .card,main.loading .kpis{opacity:.55;transition:opacity .2s}
-/* kpis */
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .kpi{background:var(--surface);border-radius:16px;padding:14px 16px;box-shadow:inset 0 0 0 1px var(--line)}
 .kpi b{display:block;font-size:30px;line-height:1.15;font-weight:700}.kpi span{display:block;font-size:13.5px;color:var(--ink-2);margin-top:2px}
 .kpi small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin-top:6px}
 .kpi i{width:10px;height:10px;border-radius:2px;flex:none}
-/* grid & cards */
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .card{background:var(--surface);border-radius:16px;padding:16px 18px;box-shadow:inset 0 0 0 1px var(--line);min-width:0}
 .card.span2{grid-column:1/-1}
@@ -46,7 +40,6 @@ main.loading .card,main.loading .kpis{opacity:.55;transition:opacity .2s}
 .empty{color:var(--muted);font-size:14px;padding:16px 0}
 details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);padding:6px 0}
 .dt{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:4px}.dt th,.dt td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid)}.dt td.n,.dt th.n{text-align:right;font-variant-numeric:tabular-nums}
-/* horizontal bars (HTML) */
 .hb{display:grid;gap:8px}
 .hb-row{display:grid;grid-template-columns:minmax(90px,38%) 1fr;align-items:center;gap:10px;border-radius:8px;padding:2px 4px;outline:none}
 .hb-row:hover,.hb-row:focus-visible{background:var(--tint)}
@@ -55,12 +48,10 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 .hb-track{display:flex;align-items:center;gap:8px;min-width:0}
 .hb-bar{height:16px;border-radius:0 4px 4px 0;background:var(--s1);min-width:2px;flex:none}
 .hb-val{font-size:13.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
-/* lists */
 .tlist{width:100%;border-collapse:collapse;font-size:14px}.tlist th{font-size:12.5px;color:var(--muted);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid)}
 .tlist td{padding:8px;border-bottom:1px solid var(--grid);vertical-align:top}.tlist td.n{text-align:right;font-variant-numeric:tabular-nums}
 .tlist a{color:var(--teal);font-weight:600;text-decoration:none}
 .tag{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2)}.tag i{width:9px;height:9px;border-radius:2px}
-/* tooltip */
 .tip{position:fixed;z-index:50;pointer-events:none;background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.18),inset 0 0 0 1px var(--line);max-width:240px}
 .tip b{display:block;font-size:16px}.tip span{color:var(--ink-2)}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:1fr}.tabs a{padding:6px 8px;font-size:14px}.brand span{display:none}.sync{display:none}}
@@ -68,15 +59,12 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 .tlist th.n{text-align:right}
 .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* แท็บหลังบ้าน 4 หน้า: มือถือเลื่อนด้านข้างได้ */
 .tabs{overflow-x:auto;scrollbar-width:none;min-width:0;flex:1 1 auto}.tabs::-webkit-scrollbar{display:none}.tabs a{flex:none}
 
-/* สต็อก */
 .stock-sec{grid-column:1/-1;margin-top:10px}
 .sec-h{margin:4px 0 10px;font-size:20px}.sec-h small{font-size:13px;font-weight:400;color:var(--muted);margin-left:8px}
 .tlist .dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
 
-/* แผนที่ + สถานะโหลด */
 .status{background:#fff7e8;color:#7a4b12;border-radius:12px;padding:10px 14px;font-size:14px;margin:0 0 12px}
 .linkish{background:none;border:0;color:var(--teal);font-weight:700;cursor:pointer;font:inherit;padding:0}
 .mapcard{margin-bottom:12px}.map-h{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
@@ -87,7 +75,6 @@ details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--ink-2);
 @media(max-width:900px){.dmap{height:340px}}
 
 @media(max-width:600px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.kpi{padding:8px 10px;border-radius:12px}.kpi b{font-size:20px}.kpi span{font-size:12px;line-height:1.3}.kpi small{font-size:11px;margin-top:3px}.map-tg{font-size:12.5px;gap:10px}}
-/* ---- แผนที่เต็มจอ ---- */
 .dmap-wrap{position:relative;isolation:isolate}
 .fs-bar{position:absolute;top:10px;right:10px;z-index:1000;display:flex;gap:8px}
 .fs-btn{width:44px;height:44px;border-radius:12px;border:0;background:#fff;color:#102f42;font-size:22px;line-height:1;box-shadow:0 1px 5px rgba(0,0,0,.3);cursor:pointer;display:grid;place-items:center;padding:0}
@@ -108,7 +95,6 @@ body.map-fs{overflow:hidden}
 a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.kpi-cov:active{opacity:.8}
 .fs-btn.wide{width:auto;padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;gap:6px;white-space:nowrap}
 
-/* ===== แผนที่หน้าตาแบบหน้าเว็บหลัก (umplus-help): แผนที่เต็มพื้นที่ + ปุ่มลอย + คำอธิบายสี + หมุดหยดน้ำ ===== */
 .mx-legend{position:absolute;z-index:500;left:12px;top:12px;background:#fff;border-radius:14px;padding:8px 12px;font-size:12.5px;font-weight:600;color:#161B3D;display:grid;gap:3px;box-shadow:0 8px 28px rgba(22,27,61,.12),0 1px 3px rgba(22,27,61,.08)}
 .mx-legend[hidden]{display:none}.mx-legend span{display:flex;align-items:center;gap:8px}
 .mx-legend i{width:12px;height:12px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 1px #D9DEF3}
@@ -138,21 +124,18 @@ a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.
 @keyframes pinpulse{0%,100%{box-shadow:0 0 0 0 rgba(211,47,47,.55),0 3px 8px rgba(15,33,136,.4)}50%{box-shadow:0 0 0 10px rgba(211,47,47,0),0 3px 8px rgba(15,33,136,.4)}}
 @media(prefers-reduced-motion:reduce){.um-pin.danger span{animation:none}}
 .me-dot span{display:block;width:18px;height:18px;border-radius:50%;background:#2D45C8;border:3px solid #fff;box-shadow:0 0 0 6px rgba(45,69,200,.25)}
-/* แดชบอร์ด: ตำแหน่งบนการ์ดแผนที่ */
 .dmap{height:480px}.dmap-wrap .mx-legend[hidden],.mx-legend span[hidden]{display:none}
 .map-note{font-size:12.5px;color:var(--muted);margin:6px 2px 0}.map-note:empty{display:none}
 .mapcard.fs .mx-legend{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left))}
 .mapcard.fs .mx-fabs{top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right))}
 @media(max-width:900px){.dmap{height:380px}.mx-legend{font-size:11.5px;padding:6px 10px;left:10px;top:10px}.mx-legend .lg-sep,.mx-legend .lg-x{display:none}.mx-fabs{right:10px;top:10px;gap:8px}.fab{width:42px;height:42px;border-radius:12px}.layer-menu{right:60px;top:10px;width:230px}}
 
-/* เคสจากโซเชียลรอคัด (วงแหวนสีตามระดับ) + ทีมที่แชร์ตำแหน่ง */
 .lead-pin span{display:block;width:20px;height:20px;border-radius:50%;border:2.5px dashed #fab219;background:radial-gradient(circle,#fab219 0 4px,#fff 5px);box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .lead-pin.u3 span{border-color:#d03b3b;background:radial-gradient(circle,#d03b3b 0 4px,#fff 5px)}.lead-pin.u2 span{border-color:#ec835a;background:radial-gradient(circle,#ec835a 0 4px,#fff 5px)}
 .lead-lg{display:inline-block;width:10px;height:10px;border-radius:50%;border:2px dashed #d03b3b;background:#fff}
 .live-tm span{display:inline-block;white-space:nowrap;background:#fff;border:2px solid #2E9E57;color:#161B3D;border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:translate(-12px,-12px)}
 
 
-/* ---------- ภาพรวมจาก Help Me (ส่วนบนสุดของแดชบอร์ด) ---------- */
 .hm-hero{display:grid;gap:14px;margin-bottom:22px}
 .hm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .hm-eyebrow{margin:0;display:flex;align-items:center;gap:6px;color:var(--primary);font-weight:700;font-size:13px}
@@ -194,14 +177,12 @@ a.kpi-cov{text-decoration:none;color:inherit;box-shadow:inset 3px 0 0 #7b3fc4}a.
 .dash-sec{display:flex;align-items:center;gap:8px;margin:6px 0 10px}
 @media(max-width:1100px){.hm-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.hm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.hm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-grid{grid-template-columns:1fr}.hm-card.span2{grid-column:auto}.hm-v{font-size:28px}.hm-head h2{font-size:22px}}
-/* โหมดมืด */
 html.dash[data-theme="dark"] .hm-tile,html.dash[data-theme="dark"] .hm-card,html.dash[data-theme="dark"] .hm-bar,html.dash[data-theme="dark"] .hm-link{background:var(--surface);box-shadow:0 8px 24px rgba(0,0,0,.25)}
 html.dash[data-theme="dark"] .hm-metric,html.dash[data-theme="dark"] .hm-waits,html.dash[data-theme="dark"] .hm-seg{background:rgba(255,255,255,.06)}
 html.dash[data-theme="dark"] .hm-v{color:var(--ink)}html.dash[data-theme="dark"] .t-red .hm-v{color:#FF6B6E}html.dash[data-theme="dark"] .t-green .hm-v{color:#4FD083}html.dash[data-theme="dark"] .t-orange .hm-v{color:#FFA24D}
 html.dash[data-theme="dark"] .hm-ic{background:rgba(255,255,255,.08)}
 .hm-grid{align-items:start}
 
-/* ตัวเลข Help Me อยู่ในส่วน "เคสในระบบ Helpme+" ใช้การ์ดแบบเดียวกัน · ป้าย Help Me บอกแหล่งข้อมูล */
 .hm-src{margin:-4px 0 8px;font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}.hm-src a{color:var(--primary);font-weight:600;text-decoration:none;display:inline-flex;gap:4px;align-items:center}
 .hm-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--primary);background:var(--tint);border-radius:999px;padding:1px 8px;vertical-align:middle;margin-left:4px}
 .kpi .hm-tag{display:inline-block;font-size:10.5px;margin:0 0 0 4px;color:var(--primary)}
@@ -209,14 +190,10 @@ html.dash[data-theme="dark"] .hm-ic{background:rgba(255,255,255,.08)}
 .card .hm-bar{background:none;box-shadow:none;padding:0}
 html.dash[data-theme="dark"] .card .hm-bar{background:none}html.dash[data-theme="dark"] .hm-tag{background:rgba(255,255,255,.08)}
 html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="dark"] .kpi.t-green b{color:#4FD083}
-/* พื้นที่มอบแล้ว (ฝังในแดชบอร์ด) */
 .cov-sec{margin-top:18px;scroll-margin-top:80px}.cov-sec .sec-h small{font-size:13px;font-weight:500;color:var(--muted);margin-left:6px}
 #cov-frame{display:block;width:100%;height:calc(100vh - 150px);min-height:560px;border:0;border-radius:24px;background:transparent}
 #sumbox{margin:4px 0 18px}#sumbox .wr-sti{cursor:pointer}
-/* ต่ำกว่าจอใหญ่: คอลัมน์ไม่มีผลต่อการจัดวาง (ลูกเรียงต่อกันตามเดิม) */
 .dcol{display:contents}
-/* จอใหญ่ (≥1280px): เห็นทั้งหมดในจอเดียว ไม่ต้องเลื่อนทั้งหน้า
-   ซ้าย = ภาพรวม + ช่วงเวลา · กลาง = แผนที่เต็มความสูง · ขวา = ตัวเลข กราฟ พื้นที่มอบแล้ว (เลื่อนในคอลัมน์) */
 @media(min-width:1024px){
   html,body{overflow:hidden}
   #main.wrap{max-width:none!important;display:grid!important;grid-template-columns:minmax(270px,23%) minmax(0,1fr) minmax(270px,24%);gap:14px;
@@ -239,7 +216,6 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   .cov-sec{margin-top:0}
 }
 @media(min-width:1024px){
-  /* ตัวเลขด้านข้างกะทัดรัด → แผนที่ตรงกลางใหญ่ขึ้น */
   .dcol-l .wr-hero{padding:14px 16px!important;border-radius:24px!important}.dcol-l .wr-hero-top{font-size:12.5px}
   .dcol-l .wr-hero-t{padding:6px 0 12px!important;margin-bottom:10px}.dcol-l .wr-hero-t b.pc{font-size:38px!important}.dcol-l .wr-hero-t>div:first-child span{font-size:13px}
   .dcol-l .wr-ring{width:78px!important;height:78px!important}.dcol-l .wr-ring b{font-size:16px!important}.dcol-l .wr-ring span{font-size:10.5px}
@@ -256,7 +232,6 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   .dcol-m .mapcard{padding:12px!important}.dcol-m .map-h h2{font-size:16px}.dcol-m .map-h .sub{font-size:12px}
 }
 
-/* ตัวชี้วัด + ข้อเสนอแนะ */
 .mt-card h2 small,.fbk-card h2 small{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}
 .mt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px}
 .mt{border-radius:14px;padding:8px 10px;background:var(--bg,#f5f5f7);display:grid;gap:1px;box-shadow:inset 4px 0 0 var(--mc,#c9ccd6)}

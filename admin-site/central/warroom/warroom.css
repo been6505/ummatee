@@ -1,4 +1,3 @@
-/* War Room: จอเดียวไม่ต้องเลื่อน (จอกว้าง) · มือถือเรียงลงมา */
 .wr{display:flex;flex-direction:column;gap:12px}
 .wr-clock{font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted,#5e7279);white-space:nowrap;font-size:14px}
 .wr-kpis{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
@@ -44,14 +43,12 @@
 .wr-feed li{display:grid;grid-template-columns:44px 1fr;gap:8px;padding:5px 0;font-size:13.5px;border-bottom:1px dashed var(--line,#eef3f4)}.wr-feed li:last-child{border-bottom:0}
 .wr-feed time{color:var(--muted,#5e7279);font-variant-numeric:tabular-nums}
 .wr-feed .sos b,.wr-feed .new.u3 b{color:#c62828}.wr-feed .done b{color:#2E9E57}.wr-feed .team b{color:#2D45C8}
-/* หมุดทีม: วงเขียว + ชื่อทีม */
 .leaflet-div-icon.wr-team{background:none;border:0}
 .wr-team i{display:block;width:16px;height:16px;border-radius:50%;background:#0e9f6e;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);box-sizing:border-box}
 .wr-team span{position:absolute;left:18px;top:-3px;white-space:nowrap;background:rgba(14,30,40,.82);color:#fff;font:600 11.5px/1 "IBM Plex Sans Thai",system-ui,sans-serif;padding:4px 7px;border-radius:8px}
 .wr-team.stale i{background:#94a3b8}.wr-team.stale span{opacity:.7}
 .wr-team.sos i{background:#E5383B;animation:wrsos 1s ease-in-out infinite}.wr-team.sos span{background:#c62828}
 @keyframes wrsos{50%{box-shadow:0 0 0 10px rgba(229,56,59,0),0 0 0 0 rgba(229,56,59,.6)}}
-/* จอกว้าง: แผนที่ซ้าย + แผงขวา เต็มความสูงจอ */
 @media(min-width:1100px){
   body.warroom.wr-overview{overflow:hidden}
   body.warroom.wr-overview #main{height:calc(100dvh - 86px);padding-bottom:10px}
@@ -62,7 +59,6 @@
   body.wr-fs.wr-overview #main{height:calc(100dvh - 76px)}
 }
 @media(max-width:900px){.wr-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.wr-kpi b{font-size:24px}#fs,.wr-clock{display:none}}
-/* ---------- War Room ย่อย ---------- */
 .wr-rooms{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .wr-roomtabs{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
 .wr-roomtabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:var(--surface,#fff);box-shadow:inset 0 0 0 1px var(--line,#e1e9eb);border-radius:999px;padding:7px 14px;font:inherit;font-weight:600;font-size:14px;color:var(--ink,#1b1f3b);cursor:pointer;min-height:40px}
@@ -104,14 +100,12 @@
 .wr-prof{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 @media(min-width:1000px){.wr-prof{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
 .wr-dl{display:grid;grid-template-columns:140px 1fr;gap:8px 12px;margin:6px 0 0;font-size:14.5px}.wr-dl dt{color:var(--muted,#5e7279)}.wr-dl dd{margin:0}
-/* คิว: รูปเคส */
 .wr-q li{align-items:flex-start}
 .wr-q .qimg{position:relative;flex:none;width:52px;height:52px;border-radius:10px;display:block}
 .wr-q .qimg img{width:52px;height:52px;object-fit:cover;border-radius:10px;display:block;background:#dde2e8}
 .wr-q .qimg.none{display:grid;place-items:center;background:var(--bg,#f2f3f7);color:#b8c0cc}.wr-q .qimg.none svg{width:20px;height:20px}
 .wr-q .qtx{flex:1;min-width:0;text-decoration:none;color:inherit;display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center}
 .wr-q .qtx small{grid-column:1/-1;color:var(--muted,#5e7279);font-size:12.5px}
-/* กล่องฟอร์ม */
 .wr-dlg{border:0;border-radius:22px;padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);box-shadow:0 24px 60px rgba(10,14,40,.35);background:var(--surface,#fff);color:var(--ink,#1b1f3b)}
 .wr-dlg::backdrop{background:rgba(15,20,45,.45)}
 .wr-dlg form{display:grid;gap:10px;padding:18px 20px 20px}.wr-dlg h2{margin:0 0 4px;font-size:19px}
@@ -125,7 +119,6 @@
 .wr-dlg .sw input:focus-visible+i{outline:3px solid #9fb0ff;outline-offset:3px}
 .btn.danger{color:#c62828}
 @media(max-width:600px){.wr-dlg .row{grid-template-columns:1fr}.wr-dl{grid-template-columns:1fr}.wr-dl dt{margin-top:6px}}
-/* ---------- โครงสร้าง CENTRAL → จังหวัด → โซน → ทีม ---------- */
 .wr-roomtabs{align-items:center}
 .wr-grp{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;padding:3px 6px 3px 10px;border-radius:999px;background:var(--tint,#eef0ff)}
 .wr-grp .gl{font-size:12.5px;font-weight:700;color:var(--muted,#5e7279);white-space:nowrap}
@@ -151,16 +144,13 @@
 .wr-team .hd{border-bottom-color:#0e9f6e}
 .wr-q .qact,.wr-teams .qact{display:inline-flex;gap:2px;align-items:center}.wr-q .qact .lnk svg,.wr-teams .qact .lnk svg{width:18px;height:18px}
 .wr-teams li{grid-template-columns:12px minmax(0,1fr) auto auto auto}
-/* ค้นหาที่อยู่อัตโนมัติ */
 .wr-dlg .addr-wrap{position:relative}
 .addr-sug{position:absolute;left:0;right:0;top:100%;z-index:20;margin:4px 0 0;padding:4px;list-style:none;background:var(--surface,#fff);border-radius:14px;box-shadow:0 12px 30px rgba(10,14,40,.22);max-height:280px;overflow:auto}
 .addr-sug li{padding:8px 10px;border-radius:10px;cursor:pointer;display:grid;gap:1px;font-weight:400}
 .addr-sug li:hover,.addr-sug li:focus{background:var(--bg,#f2f3f7)}.addr-sug li b{font-size:14.5px;color:var(--ink,#1b1f3b)}.addr-sug li small{font-size:12.5px;color:var(--muted,#6e6e73)}
 .addr-sug li.none{cursor:default;color:var(--muted,#6e6e73);font-size:13px}
 .wr-dlg .chk-row{display:flex!important;align-items:center;gap:8px;font-weight:600;color:var(--ink,#1b1f3b)!important}.wr-dlg .chk-row input{min-height:0;width:20px;height:20px}
-/* แถบแท็บ War Room: แถวเดียว เลื่อนข้างได้ทุกขนาดจอ */
 .wr-sub{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.wr-sub::-webkit-scrollbar{display:none}.wr-sub button{flex:none!important;white-space:nowrap}
-/* คิวจัดทีม */
 .wr-dqbox{margin-bottom:12px}
 .wr-dq{display:grid;gap:8px;max-height:min(60vh,640px);overflow:auto;scrollbar-width:thin}
 .wr-dqi{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border-radius:14px;background:var(--bg,#f5f5f7);border-left:4px solid #94a3b8}
@@ -170,12 +160,9 @@
 .wr-dqi .tag{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px;background:#e8ebfb;color:#2D45C8}.wr-dqi.u3 .tag{background:#E5383B;color:#fff}.wr-dqi.u2 .tag{background:#F57C00;color:#fff}
 .wr-dqi .act{display:flex;gap:6px;align-items:center}.wr-dqi select{min-height:36px;border-radius:10px;border:1px solid var(--line,#e8e8ec);padding:4px 8px;font:inherit;font-size:13.5px;max-width:260px;background:var(--surface,#fff);color:inherit}
 @media(max-width:760px){.wr-dqi{grid-template-columns:48px minmax(0,1fr)}.wr-dqi img,.wr-dqi .noimg{width:48px;height:48px}.wr-dqi .act{grid-column:1/-1;flex-wrap:wrap}.wr-dqi select{flex:1;max-width:none}}
-/* ลิงก์ประจำ War Room */
 .wr-link{margin-top:12px;padding:12px;border-radius:14px;background:var(--bg,#f5f5f7);display:grid;gap:6px}
 .wr-link-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.wr-link-row input{flex:1 1 220px;min-width:0;min-height:38px;border-radius:10px;border:1px solid var(--line,#e8e8ec);padding:4px 10px;font:inherit;font-size:13px;background:var(--surface,#fff);color:inherit}
-/* เข้าด้วยลิงก์ของห้อง: เหลือเมนู War Room ของห้อง + จัดการเคส */
 body.wr-locked .tabs a:not(.wr-keep){display:none!important}
-/* มือถือ · เข้าด้วยลิงก์ของห้อง: เมนูของ War Room เป็นแถบลอยด้านล่าง แบบ helpme4u.com · CENTRAL ใช้แถบล่างของ CENTRAL ตามปกติ */
 @media(max-width:760px){
   body.wr-locked .wr-sub{position:fixed!important;z-index:1500;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b,0px) + 10px);
     width:min(440px,calc(100vw - 20px));left:50vw!important;display:flex!important;justify-content:space-between;gap:2px!important;padding:5px!important;margin:0!important;
@@ -187,7 +174,6 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
   body.wr-locked .wr-sub button[aria-selected=true]{background:var(--tint)!important;color:var(--primary)!important}
   body.map-fs .wr-sub,body.noscroll .wr-sub{display:none!important}
 }
-/* รายการเคสแบบ helpme4u.com: แถบสีซ้ายตามระดับ · รูปคอลัมน์แรก · กดขยาย */
 .wr-clist{background:var(--surface,#fff);border-radius:24px;box-shadow:var(--shadow-soft);overflow:hidden}
 .wr-ch{margin:0;padding:14px 18px 10px;font-size:17px;text-align:center}
 .wr-ci{--lc:#E0B53A;background:var(--surface,#fff);border-top:1px solid var(--line,#ececf0);box-shadow:inset 5px 0 0 var(--lc)}
@@ -225,10 +211,8 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
   .wr-ci-a .btn{flex:1 1 auto;justify-content:center}
 }
 @media(max-width:400px){.wr-ci .nd small{display:none}}
-/* ลิงก์ War Room บนมือถือ: ไม่ต้องมีแถวเมนู CENTRAL (ใช้แถบล่างของห้องแทน · จัดการเคสอยู่ในแท็บ "เคส") */
 @media(max-width:760px){body.wr-locked .top .tabs{display:none!important}body.wr-locked .top{flex-wrap:nowrap!important}}
 
-/* การ์ดปรึกษาคุณหมอจิตอาสา: แถวเดียวกะทัดรัด (สีเขียวแบบแท็บ "หมอ" ของ helpme4u.com) */
 .wr-doc{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:24px;background:linear-gradient(135deg,#EAF6F2,#F6FBF9);box-shadow:inset 0 0 0 1px #D3EBE3;min-width:0}
 .wr-doc-av{flex:none;width:48px;height:48px;border-radius:50%;background:linear-gradient(160deg,#5FB5A3,#336F64);color:#fff;display:grid;place-items:center}.wr-doc-av svg{width:26px;height:26px}
 .wr-doc-av circle{fill:#fff}
@@ -241,7 +225,6 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
 :root[data-theme="dark"] .wr-doc{background:#14261F;box-shadow:inset 0 0 0 1px #24453B}:root[data-theme="dark"] .wr-doc-t small{color:#8FD3C1}:root[data-theme="dark"] .wr-doc-a button{background:#1B1F33;color:var(--ink)}
 @media(max-width:380px){.wr-doc-a .call span{display:none}.wr-doc-a .call{padding:0 13px}}
 @media(min-width:1000px){.wr-prof>.wr-card:last-child{grid-column:2;grid-row:1/span 2;align-self:start}.wr-prof>#pf-info,.wr-prof>.wr-doc{grid-column:1}}
-/* มือถือ: การ์ดคุณหมอให้ชื่อขึ้นครบ · ตารางทีมงานเป็นการ์ดแถวละคน */
 @media(max-width:760px){
   .wr-doc{align-items:center}.wr-doc-t b{white-space:normal;line-height:1.3}.wr-doc-t small{white-space:normal}
   .wr-doc-a .call span{display:none}.wr-doc-a .call{padding:0 14px}
@@ -253,7 +236,6 @@ body.wr-locked .tabs a:not(.wr-keep){display:none!important}
   .wr-stf td:nth-child(4):before{content:"เวร ";}
   .wr-stf td:nth-child(5){grid-column:2;grid-row:1/span 4;align-self:center;display:flex;gap:6px}
 }
-/* แผนผัง: เคสค้างใต้ War Room */
 .wr-tree .tcs{width:100%;margin-top:4px}
 .wr-tree .tcs summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:6px;padding:4px 0}
 .wr-tree .tcs summary::-webkit-details-marker{display:none}.wr-tree .tcs summary:before{content:"▸";transition:transform .15s}.wr-tree .tcs[open] summary:before{transform:rotate(90deg)}
@@ -271,10 +253,8 @@ body.wr-locked #st-new{display:none}
 
 .wr-ai{background:linear-gradient(135deg,#17181C,#3a2c6e)!important;color:#fff!important;border:0!important;border-radius:50%!important;width:44px;height:44px;min-height:44px!important;padding:0!important;display:inline-grid!important;place-items:center;flex:none}
 
-/* CENTRAL: ปุ่มเปิดเว็บย่อยของห้อง + ลิงก์ทีม */
 .wr-linkbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 8px}.wr-linkbar .btn{display:inline-flex;align-items:center;gap:6px;border-radius:999px}
 .wr-linkbar svg{width:16px;height:16px}.wl-url{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1 1 160px}
-/* เว็บย่อยของ War Room: ไม่มีเมนู CENTRAL · ใช้เมนูของห้อง */
 body.wr-site .top .tabs{display:none!important}
 body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:1px}
 .wr-preview{margin:0 0 8px;padding:8px 14px;border-radius:14px;background:#EEF1FD;color:#2D45C8;font-size:14px;font-weight:600}
@@ -290,7 +270,6 @@ body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{di
   body.wr-site .top .brand img{display:none!important}body.wr-site .top .brand span{display:flex!important;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap}
   body.wr-site .top .brand span b{overflow:hidden;text-overflow:ellipsis}body.wr-site .top .brand .brand-plus{display:none}}
 
-/* ใบสมัครจากหน้า /join */
 .wr-apps{display:grid;gap:8px}.wr-apps .badge{background:var(--primary,#DD2027);color:#fff;border-radius:999px;font-size:12px;padding:2px 9px;vertical-align:2px}
 .app{border-radius:16px;background:var(--bg,#f5f5f7);padding:10px 12px}.app summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;list-style:none}.app summary::-webkit-details-marker{display:none}
 .app summary small{color:var(--muted);flex-basis:100%}.app.approved{opacity:.75}.app.rejected{opacity:.55}

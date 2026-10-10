@@ -1,6 +1,3 @@
-/* UM+ หลังบ้าน · ธีมกลางของทุกหน้า (จัดการเคส / แดชบอร์ด / จัดทีม / สต็อก / พื้นที่มอบแล้ว)
-   ใช้สี ฟอนต์ และรูปทรงเดียวกับหน้าเว็บหลัก (umplus-help): น้ำเงิน #2D45C8 · IBM Plex Sans Thai · มุมโค้ง 14–24 · เงานุ่ม
-   โหลดเป็นไฟล์สุดท้ายของแต่ละหน้า จึงทับสไตล์เดิมได้โดยไม่ต้องแก้โครงหน้า */
 :root{
   --primary:#2D45C8;--primary-2:#2338A8;--navy:#1F2A5E;--ink:#161B3D;--muted:#5B6386;--line:#E3E6EF;--bg:#F2F3F7;
   --tint:#E9ECFB;--tint-2:#D9DEF3;--ok:#2E9E57;--ok-tint:#E3F5E9;--red:#E5383B;--red-tint:#FDECEC;--orange:#E8710A;--orange-tint:#FFF1E3;--going:#7B8CEB;
@@ -9,13 +6,11 @@
   --r-lg:24px;--r:18px;--r-sm:14px;--font:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
   font-family:var(--font);color:var(--ink);background:var(--bg)
 }
-/* หน้าแดชบอร์ดใช้ชื่อตัวแปรอีกชุด */
 :root{--surface:#fff;--page:var(--bg);--ink-2:var(--muted);--s1:var(--primary);--crit:var(--red);--serious:#F57C00;--warn:#F5B400;--good:var(--ok);--grid:#E8EAF2;--axis:#C9CDE0}
 html.dash{--line:#E3E6EF}
 body{background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;font-family:var(--font)}
 body,button,input,select,textarea{font-family:var(--font)}
 
-/* ---------- แถบบน ---------- */
 .top{background:rgba(255,255,255,.92);-webkit-backdrop-filter:saturate(1.6) blur(12px);backdrop-filter:saturate(1.6) blur(12px);color:var(--ink);
   box-shadow:0 1px 0 var(--line),0 6px 20px rgba(22,27,61,.05);min-height:64px;padding:10px clamp(14px,3vw,32px)}
 .brand{color:var(--ink);font-weight:700}.brand b{color:var(--primary)}
@@ -28,7 +23,6 @@ body,button,input,select,textarea{font-family:var(--font)}
 .sync{color:var(--muted)}
 .bar{top:64px;background:var(--bg)}
 
-/* ---------- ปุ่ม ---------- */
 .btn{border-radius:12px;font-weight:600;transition:background .15s,box-shadow .15s,transform .05s}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(45,69,200,.24)}.btn.primary:hover{background:var(--primary-2)}
@@ -36,7 +30,6 @@ body,button,input,select,textarea{font-family:var(--font)}
 .btn:focus-visible,.tabs a:focus-visible,.seg button:focus-visible{outline:3px solid var(--tint-2);outline-offset:2px}
 .linkish{color:var(--primary)}.back{color:var(--primary)}
 
-/* ---------- การ์ด / ตัวเลขสรุป ---------- */
 .stat,.kpi{background:#fff;border:0;border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px}
 .stat b,.kpi b{font-weight:700;letter-spacing:-.02em}.stat span,.kpi span{color:var(--muted);font-weight:500}
 .stat.red{background:#fff;box-shadow:var(--shadow),inset 4px 0 0 var(--red)}.stat.red b{color:var(--red)}
@@ -44,7 +37,6 @@ body,button,input,select,textarea{font-family:var(--font)}
 .panel,.card,.map-wrap,.kit-box{background:#fff;border:0;border-radius:var(--r);box-shadow:var(--shadow)}
 .panel-h h2,.card h2{letter-spacing:-.01em}
 
-/* ---------- ช่องกรอก / ตัวกรอง ---------- */
 .search input,.bar select,.fld input,.fld select,.form-grid input:not([type=checkbox]):not([type=range]),.form-grid select,.assign select,.r-assign select,.map-side .fld input:not([type=range]),.map-side .fld select,.kit-row select,.kit-row input{
   border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;color:var(--ink)}
 .search input{min-height:50px;box-shadow:var(--shadow);border-color:transparent}
@@ -55,26 +47,22 @@ body,button,input,select,textarea{font-family:var(--font)}
 .chip{border-color:var(--tint-2);color:var(--primary)}
 input[type=checkbox],input[type=range]{accent-color:var(--primary)}
 
-/* ---------- ตาราง ---------- */
 .tbl td{border-color:var(--line)}
 .tbl td:first-child{border-radius:var(--r-sm) 0 0 var(--r-sm)}.tbl td:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0}
 .tbl tbody tr:hover td{background:#F7F8FD}
 .gt th,.dt th,.tlist th,.kit-t th{color:var(--muted)}
 .gt tbody tr:nth-child(even) td{background:#FAFBFD}.gt tbody tr:hover td{background:var(--tint)}
 
-/* ---------- ป้ายสถานะ ---------- */
 .urg-3{background:var(--red);color:#fff}.urg-2{background:var(--orange-tint);color:#B4590A}.urg-1{background:#FFF7D6;color:#7A5F00}
 .schip.zero{background:var(--red)}.schip.low{background:var(--orange-tint);color:#B4590A}.schip.ok{background:var(--ok-tint);color:#1D6B3B}.schip.need{background:var(--tint);color:var(--primary)}
 .vbadge{background:var(--tint);color:var(--primary)}
 .views button[aria-selected=true]{color:var(--primary);border-bottom-color:var(--primary)}
 .lyr[aria-pressed=true],.needbtn[aria-pressed=true]{background:var(--tint);color:var(--primary);border-color:var(--tint-2)}
 
-/* ---------- เข้าสู่ระบบ ---------- */
 .login{background:radial-gradient(900px 500px at 15% -10%,rgba(123,140,235,.55),transparent 60%),linear-gradient(155deg,#1F2A5E 0%,#2D45C8 100%)}
 .login-card{border-radius:var(--r-lg);box-shadow:var(--shadow-lg);padding:32px 28px}
 .login-card h1{letter-spacing:-.02em;color:var(--ink)}.login-card p{color:var(--muted)}
 
-/* ---------- แผง / ป๊อปอัป / แจ้งเตือน ---------- */
 .drawer{box-shadow:-16px 0 48px rgba(22,27,61,.18)}
 .drawer-bg{background:rgba(22,27,61,.35);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .drawer>.d-head{background:#fff}.drawer>form{border:0;box-shadow:var(--shadow);border-radius:var(--r)}
@@ -84,8 +72,6 @@ input[type=checkbox],input[type=range]{accent-color:var(--primary)}
 .leaflet-container{font-family:var(--font)}
 .leaflet-bar a{color:var(--navy)}
 
-/* ---------- แดชบอร์ด: โหมดมืดตามเครื่อง ---------- */
-/* โหมดมืด: เปิดเองจากปุ่มธีม (ค่าเริ่มต้นสว่าง ไม่ตามเครื่อง) */
 
   html.dash[data-theme="dark"]{--surface:#1B1F33;--page:#0F1222;--bg:#0F1222;--ink:#EEF0FA;--ink-2:#B5BAD6;--muted:#8E94B5;--line:rgba(255,255,255,.10);--grid:#2A2F48;--axis:#3A4060;--s1:#6F83F0;--tint:#24294A;--tint-2:#2F3560}
   html.dash[data-theme="dark"] .top{background:rgba(27,31,51,.92);box-shadow:0 1px 0 rgba(255,255,255,.06)}

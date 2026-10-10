@@ -66,9 +66,6 @@ h1{margin:0 0 6px;font-size:24px;font-weight:700}
   </div>
 </div>
 <script>
-/* โทรในระบบ Helpme+ (WebRTC 1 ต่อ 1) · ลิงก์ /call/#<id>.<secret>
-   ส่งข้อความนัดเชื่อมต่อผ่าน /api (call_send / call_poll) · เสียงและภาพวิ่งตรงระหว่างเครื่อง
-   ผู้ที่มีรหัสเครื่อง (peer) น้อยกว่าเป็นฝ่ายส่ง offer · เข้าใหม่/รีเฟรช = ส่ง hello ใหม่แล้วเชื่อมต่อใหม่ */
 const $=s=>document.querySelector(s);
 const C={id:location.hash.slice(1).replace(/[^0-9a-f.]/g,''),me:[...crypto.getRandomValues(new Uint8Array(6))].map(b=>b.toString(36).padStart(2,'0')).join('').slice(0,12),
   other:null,gone:new Set(),oid:0,pc:null,local:null,since:0,mode:'voice',ice:[],turn:false,pending:[],t0:0,timer:null,poll:null,ended:false,facing:'user',startedAt:Date.now(),connectedOnce:false,makingOffer:false,wake:null};
@@ -107,7 +104,7 @@ function loop(){clearTimeout(C.poll);if(C.ended)return;
   C.poll=setTimeout(async()=>{try{const r=await api({action:'call_poll',since:C.since});if(r&&r.ok)await handle(r.sigs||[])}catch(e){}loop()},fast?(document.hidden?2500:1000):3000)}
 
 async function handle(sigs){
-  sigs.forEach(s=>{if(s.kind==='bye')C.gone.add(s.peer)}); // เครื่องที่ออกไปแล้ว (รีเฟรช/ปิดหน้า/วางสาย) ไม่ต้องต่อหา
+  sigs.forEach(s=>{if(s.kind==='bye')C.gone.add(s.peer)});
   for(const s of sigs){C.since=Math.max(C.since,s.n);let d=null;try{d=s.data?JSON.parse(s.data):null}catch(e){}
     if(s.kind==='bye'){if(s.peer===C.other){
         if(d==='end'&&Date.now()-s.at<120e3)end('อีกฝ่ายวางสายแล้ว',false);
@@ -147,7 +144,7 @@ function ensurePc(){if(C.pc)return C.pc;
 async function offer(restart){const pc=restart&&C.pc?C.pc:(reset(),ensurePc());
   try{C.makingOffer=true;await pc.setLocalDescription(await pc.createOffer({iceRestart:!!restart}));send('offer',{sdp:pc.localDescription,o:++C.oid},C.other);status('กำลังเชื่อมต่อ…')}catch(e){console.warn(e)}finally{C.makingOffer=false}}
 function tick(){clearInterval(C.timer);C.timer=setInterval(()=>{if(C.pc&&C.pc.connectionState==='connected')status('เชื่อมต่อแล้ว · '+mmss(Math.round((Date.now()-C.t0)/1000)))},1000);status('เชื่อมต่อแล้ว · 00:00')}
-function end(msg,notify=true){if(C.ended)return;C.ended=true;try{if(parent!==window)parent.postMessage({hmCall:'ended'},location.origin)}catch(e){} // เปิดในกรอบของหน้า CENTRAL: บอกให้ปิดกรอบ
+function end(msg,notify=true){if(C.ended)return;C.ended=true;try{if(parent!==window)parent.postMessage({hmCall:'ended'},location.origin)}catch(e){}
   if(notify)send('bye','end');clearTimeout(C.poll);clearInterval(C.timer);
   reset();C.local&&C.local.getTracks().forEach(t=>t.stop());try{C.wake&&C.wake.release()}catch(e){}
   stage.classList.remove('has-lv','waiting');stage.classList.add('ended');

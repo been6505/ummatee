@@ -1,7 +1,3 @@
-/* หน้าจัดการเคส · มุมมอง "วันที่": จำนวนเคสที่เข้ามา และเคสที่ช่วยแล้ว รายวัน
-   เข้ามา = วันที่แจ้ง (createdAt) · ช่วยแล้ว = วันที่ทีมแจ้งช่วยแล้ว (teamDoneAt) หรือวันที่ปิดเคส (doneAt)
-   แตะวัน = ดูรายการเคสของวันนั้น · แตะเคส = เปิดรายละเอียด · ใช้คำค้น/ตัวกรองเดียวกับรายการ (ยกเว้นสถานะ)
-   ใช้ตัวแปรจาก admin.js: A, filtered, sev, URG, stOf, ST, openDrawer, esc, $ */
 const CASEDAYS=(()=>{
   const D={n:14,day:null};
   const box=()=>document.getElementById('days-view');

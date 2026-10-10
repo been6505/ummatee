@@ -1,8 +1,3 @@
-/* ศูนย์ช่วยกำหนดเส้นทางให้ทีม (หน้าจัดทีม) · แตะเส้นทาง/ธงปลายทางของทีมบนแผนที่ติดตามทีม
-   - คำนวณหลายทาง: เลี่ยงน้ำท่วม (ถนนน้ำท่วม/รายงาน/เซ็นเซอร์น้ำสูง จากข้อมูลตรวจพื้นที่) · ทางเร็วสุด · ทางเลือกอื่น (OSRM)
-   - ศูนย์ปรับเองได้: + จุดผ่าน (บังคับผ่าน) · + จุดอุปสรรค (ห้ามผ่าน เช่น ถนนขาด ต้นไม้ล้ม) แตะบนแผนที่ · ลากหมุดย้ายได้ · แตะหมุดเพื่อลบ
-   - แต่ละทางบอก ระยะ · เวลา · จำนวนจุดน้ำท่วมที่ผ่าน → เลือกทาง + หมายเหตุ → ส่งให้ทีม (ทีมเห็นในการ์ดเคส + นำทาง Google Maps ตามจุดผ่าน)
-   ใช้: ROUTE.nav (Valhalla/OSRM/จุดอันตราย) · TRACK.map() · VERIFY (ข้อมูลน้ำท่วม) */
 const RTE=(()=>{
   const E={on:false,team:'',c:null,from:null,via:[],avoid:[],auto:true,mode:'',opts:[],sel:0,note:'',busy:false,g:null,plans:{}};
   const box=document.createElement('aside');box.className='rte';box.hidden=true;document.body.append(box);
@@ -21,7 +16,6 @@ const RTE=(()=>{
     try{if(typeof VERIFY!=='undefined'&&!VERIFY.F.loaded)await VERIFY.load().catch(()=>{})}catch(e){}
     const N=nav(),allHz=N.hazards(),to={lat:+E.c.lat,lng:+E.c.lng},locs=[E.from,...E.via,to],keep=locs.map(p=>({lat:p.lat,lng:p.lng})),near=h=>keep.some(k=>VERIFY.dist(h.lat,h.lng,k.lat,k.lng)<=150);
     const hitsOf=co=>N.hitsOn(co,allHz).filter(h=>!near(h)),opts=[];
-    // 1) เลี่ยงน้ำท่วม: เส้นทาง → ตัดจุดน้ำท่วมที่ทับเส้น → คำนวณใหม่ (สูงสุด 3 รอบ)
     if(E.auto){try{let excl=[...E.avoid],r=await N.valhalla(locs,excl);for(let i=0;i<3;i++){const h=hitsOf(r.coords);if(!h.length)break;excl=[...excl,...h].slice(0,60);try{r=await N.valhalla(locs,excl)}catch(e){break}}opts.push({...r,tag:'เลี่ยงน้ำท่วม'})}catch(e){}}
     try{opts.push({...(await N.valhalla(locs,E.avoid)),tag:'ทางเร็ว'})}catch(e){}
     if(!E.avoid.length)try{(await osrmAlt(locs)).forEach((r,i)=>opts.push({...r,tag:i?'ทางเลือก '+i:'ทางหลัก (OSRM)'}))}catch(e){}

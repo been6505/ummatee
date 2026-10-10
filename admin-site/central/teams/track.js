@@ -1,6 +1,3 @@
-/* ติดตามทีม: แผนที่ตำแหน่งสดของทุกทีม + เส้นทางย้อนหลังของทีมที่เลือก
-   สีหมุด: เขียว = ส่งตำแหน่งภายใน 5 นาที · ส้ม = 5–30 นาที · เทา = นานกว่านั้น · แดงกะพริบ = SOS
-   ใช้: TRACK.init(el) · TRACK.update(live, roster) · TRACK.focus(teamName) */
 const TRACK=(()=>{
   let map=null,pins=null,trail=null,sel=null,fitted=false,leafletP=null,live=null;
   const mk=new Map();
@@ -25,12 +22,10 @@ const TRACK=(()=>{
       let m=mk.get(k);
       if(!m){m=L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}),keyboard:false}).addTo(pins);m._html=html;m.on('click',()=>focus(k));mk.set(k,m)}
       else{glideTo(m,[+t.lat,+t.lng],900,t);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}
-      // ทีมที่เลือกอยู่: ต่อเส้นทางสดตามตำแหน่งใหม่
       if(sel===k&&live){const p=live.getLatLngs(),last=p[p.length-1];if(!last||L.latLng(last).distanceTo([+t.lat,+t.lng])>3)live.addLatLng([+t.lat,+t.lng])}
       m.setZIndexOffset(isSos(r)?3000:sel===k?2000:0);m.bindPopup(info(t,r))});
     for(const [k,m] of mk)if(!seen.has(k)){m.remove();mk.delete(k)}
     if(!fitted&&mk.size){fitted=true;const b=L.latLngBounds([...mk.values()].map(m=>m.getLatLng()));map.fitBounds(b.pad(.25),{maxZoom:14})}}
-  /* เส้นทาง 6 ชม. ล่าสุดของทีม */
   async function focus(name,hours=6){if(!map)return;sel=tn(name);live=null;trail.clearLayers();
     const m=mk.get(sel);if(m){map.setView(m.getLatLng(),Math.max(map.getZoom(),14));m.openPopup()}
     document.getElementById('trk-sel').textContent=`${sel} · กำลังโหลดเส้นทาง…`;
@@ -42,13 +37,10 @@ const TRACK=(()=>{
       document.getElementById('trk-sel').innerHTML=`<b>${esc(sel)}</b> · เส้นทาง ${hours} ชม. ${pts.length>1?`${km.toFixed(1)} กม. (${pts.length} จุด)`:'ยังไม่มีข้อมูล'} <button class="linkish" id="trk-clear">ล้าง</button>`;
       document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
-  /* ทีมที่รับเคสแล้ว (ทีมกำลังไป): เส้นทางถนนจากตำแหน่งสดของทีมไปเคสที่ใกล้สุด + ระยะ/เวลาโดยประมาณ
-     คำนวณใหม่เมื่อทีมขยับเกิน 150 ม. · เปลี่ยนเคส · หรือทุก 3 นาที (เส้นทางจาก OSRM · ไม่ได้ = เส้นตรงประ) */
   let rt=null,PL={};const RT=new Map();
   async function osrm(a,b){const u=`https://router.project-osrm.org/route/v1/driving/${a.lng.toFixed(6)},${a.lat.toFixed(6)};${b.lng.toFixed(6)},${b.lat.toFixed(6)}?overview=full&geometries=geojson`;
     const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);try{const j=await fetch(u,{signal:ctl.signal}).then(r=>r.json());if(j.code!=='Ok')throw 0;const r=j.routes[0];return {coords:r.geometry.coordinates.map(c=>[c[1],c[0]]),km:r.distance/1000,min:r.duration/60}}finally{clearTimeout(tm)}}
   const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
-  /* เคสที่มอบให้ทีมแล้ว (ทีมกำลังไป / ช่วยแล้วรอปิด): หมุดบนแผนที่ + ป้ายชื่อทีมที่รับ */
   let cp=null,cpKey='';function assigned(cases){if(!map)return;if(!cp)cp=L.layerGroup().addTo(map);
     const xs=(cases||[]).filter(c=>c.status==='going'&&hasPin(c)),key=xs.map(c=>c.id+':'+c.volunteer+':'+(c.teamDoneAt?1:0)).join('|');if(key===cpKey)return;cpKey=key;cp.clearLayers();
     xs.forEach(c=>{const team=tn(c.volunteer),done=!!c.teamDoneAt,lab=`#${esc(c.id)} · ${(c.needs||[]).slice(0,2).map(esc).join(', ')||'เคส'} · ${esc(c.people||1)} คน<br>ทีม: <b>${esc(team)}</b>${done?' · ช่วยแล้ว รอปิดเคส':''}`;
@@ -72,7 +64,6 @@ const TRACK=(()=>{
     r.line=L.polyline(more,{color:pl?'#1F7A43':'#E5383B',weight:5,opacity:.9,dashArray:x?null:'8 8'}).bindTooltip((pl?'เส้นทางที่ศูนย์ส่งให้ · ':'')+lab+' · แตะเพื่อปรับเส้นทาง',{sticky:true}).addTo(r.g);
     const ed=()=>{if(typeof RTE!=='undefined')RTE.open(k,c,{lat:me.lat,lng:me.lng})};r.line.on('click',ed);
     L.marker(end,{icon:L.divIcon({className:'',html:`<div class="rt-goal${pl?' plan':''}"><i data-ic="flag"></i><span>${x?`${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} น.`:'เคส'}</span><b>${pl?'ศูนย์กำหนด':'ปรับ'}</b></div>`,iconSize:null,iconAnchor:[14,28]}),zIndexOffset:800}).bindTooltip(lab+' · แตะเพื่อปรับเส้นทาง').on('click',ed).addTo(r.g)}
-  /* จุดรวมพลบนแผนที่ติดตามทีม */
   let rl=null;function rallies(list){if(!map)return;if(!rl)rl=L.layerGroup().addTo(map);rl.clearLayers();
     (list||[]).forEach(r=>L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:900}).bindTooltip('รวมพล · '+esc(r.label)).addTo(rl))}
   return {init,update,focus,fresh,isSos,rallies,routes,map:()=>map,setPlans:p=>{PL=p||{}},refreshRoute:k=>{const r=RT.get(k);if(r)r.at=0},eta:k=>{const r=RT.get(k);return r&&r.info||null},edit:k=>{const r=RT.get(k);if(r&&r.info&&r.from&&typeof RTE!=='undefined')RTE.open(k,r.info.c,{lat:r.from.lat,lng:r.from.lng})},resize:()=>{if(map)map.invalidateSize()}}

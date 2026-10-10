@@ -1,15 +1,8 @@
-/* HELP ME CENTRAL · แถบประกาศแจ้งเตือนรายพื้นที่ (ใช้ร่วมกัน: หน้าบ้าน helpme4u.com · หน้าทีม · ทุกหน้า CENTRAL)
-   <script src="https://central.helpme4u.com/bc.js" data-mode="public|team|staff" defer></script>
-   - public/team: แสดงประกาศที่ตรงพื้นที่ผู้ใช้ (GPS ถ้าเคยอนุญาตแล้ว · พื้นที่ที่ผู้ใช้เลือกเอง) · ประกาศอันตรายที่ยังไม่รู้พื้นที่ก็แสดง
-   - staff (CENTRAL): แสดงทุกประกาศที่ยังมีผล
-   - ประกาศใหม่ที่ตรงพื้นที่: เด้งเตือน + เสียง + สั่น + แจ้งเตือนระบบ (ถ้าเคยอนุญาต) · ดึงใหม่ทุก 1 นาที และตอนกลับมาเปิดหน้า
-   ไม่ขอสิทธิ์ตำแหน่งเอง (ไม่รบกวนผู้ใช้) · ตำแหน่งไม่ถูกส่งออกจากเครื่อง ใช้เทียบในเครื่องเท่านั้น */
 (()=>{
   if(window.HMBC)return;
   const me=document.currentScript,MODE=(me&&me.dataset.mode)||'public',API=new URL('/api',me&&me.src?me.src:location.href).href;
   const LV={info:{t:'ข่าวสาร',i:'ℹ️',c:'#1f5fbf',bg:'#eaf1fd'},warn:{t:'เฝ้าระวัง',i:'⚠️',c:'#b45309',bg:'#fff4e0'},danger:{t:'อันตราย · อพยพ',i:'🚨',c:'#c62828',bg:'#fdeaea'}};
   const RANK={danger:0,warn:1,info:2};
-  /* หน้าบ้าน helpme4u.com: มีคนแจ้งเคส/แก้เคส (POST ไป Apps Script ของ Help Me) → บอก CENTRAL ให้ดึงเคสทันที (เรียลไทม์) */
   if(MODE==='public'&&window.fetch){const of=window.fetch;window.fetch=function(u,o){const p=of.apply(this,arguments);
     try{const url=String(u&&u.url||u),m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
       if(m==='POST'&&/script\.google(usercontent)?\.com\/macros\//.test(url)){const b=String(o&&o.body||'');const a=(b.match(/"action"\s*:\s*"([a-z_]+)"/)||[])[1]||'';
@@ -24,17 +17,15 @@
   const ago=t=>{const m=Math.round((Date.now()-t)/6e4);return m<1?'เมื่อสักครู่':m<60?m+' นาทีที่แล้ว':m<1440?Math.round(m/60)+' ชม.ที่แล้ว':new Date(t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})};
   const until=t=>new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const area=b=>b.scope==='all'?'ทุกพื้นที่':b.scope==='province'?'จังหวัด'+b.provinces.join(', '):b.scope==='district'?b.districts.map(d=>/^อำเภอ/.test(d)?d:'เขต'+d).join(', '):`รัศมี ${b.radiusKm} กม. จากจุดที่กำหนด`;
-  const myArea=()=>get('hmbc_area','');           // พื้นที่ที่ผู้ใช้เลือกเอง: เขตใน กทม. หรือชื่อจังหวัด
+  const myArea=()=>get('hmbc_area','');
   const myPos=()=>S.pos||(l=>l&&Date.now()-l.t<2*864e5?l:null)(get('hmbc_pos',null));
   const inBkk=p=>p&&p.lat>13.49&&p.lat<13.96&&p.lng>100.32&&p.lng<100.94;
-  /* true = ตรงพื้นที่ · false = พื้นที่อื่น · null = ยังไม่รู้ */
   function match(b){if(MODE==='staff'||b.scope==='all')return true;
     const p=myPos(),a=myArea(),aProv=BKK.includes(a)?'กรุงเทพมหานคร':a;
     if(b.scope==='circle')return p?km(p,{lat:+b.lat,lng:+b.lng})<=(+b.radiusKm||0)+0.2:null;
     if(b.scope==='province'){if(aProv)return b.provinces.includes(aProv);if(inBkk(p))return b.provinces.includes('กรุงเทพมหานคร');return null}
     if(b.scope==='district'){if(a&&BKK.includes(a))return b.districts.includes(a);return a?false:null}
     return null}
-  /* ---------- หน้าตา ---------- */
   const css=`#hmbc{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 8px);z-index:2147483000;width:min(560px,calc(100vw - 16px));font:14px/1.45 "IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif;color:#1b1f3b;display:grid;gap:6px;pointer-events:none}
 #hmbc>*{pointer-events:auto}
 #hmbc .c{border-radius:16px;padding:10px 12px 10px 14px;box-shadow:0 10px 30px rgba(15,20,45,.22);border-left:5px solid var(--c);background:var(--bg);display:grid;gap:3px;animation:hmbcIn .25s ease-out}
@@ -80,7 +71,6 @@
   function onClick(e){if(MODE==='staff'&&e.target.closest('.c strong')){e.target.closest('.c').classList.toggle('open');return}
     const h=e.target.closest('[data-hide]');if(h){const b=S.items.find(x=>x.id===h.dataset.hide);if(b){const hd=hidden();hd[b.id+'@'+b.createdAt]=Date.now();set('hmbc_hide',hd)}S.open=false;render();return}
     if(e.target.closest('[data-toggle]')){S.open=!S.open;render()}}
-  /* ---------- เตือนประกาศใหม่ ---------- */
   function beep(danger){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const a=new C(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.type='sine';
     [0,.35,.7].slice(0,danger?3:1).forEach((t,i)=>{o.frequency.setValueAtTime(i%2?660:880,a.currentTime+t)});g.gain.setValueAtTime(.18,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+(danger?1.1:.4));o.start();o.stop(a.currentTime+(danger?1.1:.4))}catch(e){}}
   function announce(){const seen=new Set(get('hmbc_seen',[])),first=!get('hmbc_init',false);let fresh=null;
@@ -91,7 +81,6 @@
     beep(fresh.level==='danger');try{navigator.vibrate&&navigator.vibrate(fresh.level==='danger'?[400,150,400,150,400]:[200])}catch(e){}
     try{if('Notification' in window&&Notification.permission==='granted'&&document.hidden)new Notification(`${lv.i} ${fresh.title}`,{body:String(fresh.body||area(fresh)).slice(0,180),tag:'hmbc-'+fresh.id})}catch(e){}
     const el=document.getElementById('hmbc-'+fresh.id);if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),2500)}}
-  /* ---------- ตำแหน่ง: ใช้เฉพาะเมื่อเคยอนุญาตแล้ว ---------- */
   async function locate(){try{if(!navigator.geolocation||!navigator.permissions)return;const p=await navigator.permissions.query({name:'geolocation'});if(p.state!=='granted')return;
     navigator.geolocation.getCurrentPosition(q=>{S.pos={lat:q.coords.latitude,lng:q.coords.longitude,t:Date.now()};set('hmbc_pos',{lat:+S.pos.lat.toFixed(3),lng:+S.pos.lng.toFixed(3),t:Date.now()});render()},()=>{},{maximumAge:120000,timeout:15000})}catch(e){}}
   async function load(){try{const r=await fetch(API+'?action=broadcasts&t='+Math.floor(Date.now()/30000),{cache:'no-store',credentials:'omit'}).then(x=>x.json());

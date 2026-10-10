@@ -1,6 +1,3 @@
-/* เคสจากโซเชียล: คัดเคสที่เจอจาก Traffy / โซเชียล (Hermes agent) ก่อนรับเป็นเคสจริง
-   - ตัวกรองโพสต์เก่า + มิจฉาชีพ ทำที่ API แล้ว หน้านี้แสดงผลและให้แอดมินตัดสินใจ
-   - ทีมใกล้เคส: ทีมที่แชร์ตำแหน่ง (teams_live) · จุดกู้ภัย (places) · องค์กรอื่นที่รับพื้นที่แล้ว (covered) */
 const LD={leads:[],live:[],places:[],covered:[],settings:null,pulledAt:null,filter:'new',q:'',sel:null,open:new Set(),loaded:0,map:null,layer:null,marks:{}};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const SRC={traffy:'Traffy Fondue',helpme:'Help Me',facebook:'Facebook',x:'X',tiktok:'TikTok',news:'ข่าว',social:'โซเชียล',hermes:'Hermes'};
@@ -10,11 +7,10 @@ const FLAG={approx_location:'ตำแหน่งโดยประมาณ',a
 const NEAR_KM=15;
 const EMBED=document.documentElement.classList.contains('embed');
 const toParent=m=>{if(EMBED&&parent!==window)parent.postMessage({src:'uh-leads',...m},location.origin)};
-const RISK=f=>/^(asks_money|account_reused|past_year_text)/.test(f); // ธงที่ต้องระวัง (ตำแหน่งโดยประมาณไม่ใช่ความเสี่ยง)
+const RISK=f=>/^(asks_money|account_reused|past_year_text)/.test(f);
 const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const pin=l=>l&&l.lat!=null&&l.lng!=null&&isFinite(+l.lat)&&isFinite(+l.lng);
 const sev=l=>Math.min(3,Math.max(1,Number(l.urgency)||1));
-/* วันที่ในชีตพื้นที่มอบแล้วมีหลายรูปแบบ: 2026-10-03 · 3/10/2569 · 3/10/69 (พ.ศ. 2 หลัก) · 3/10/26 (ค.ศ. 2 หลัก) */
 function covDate(s){s=String(s||'').trim();if(!s)return null;let t=Date.parse(s);if(isFinite(t)&&/^\d{4}-/.test(s))return t;
   const m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);if(!m)return null;let y=+m[3];if(y<100)y+=y>=50?2500:2000;if(y>2400)y-=543;return Date.UTC(y,+m[2]-1,+m[1])-7*3600e3}
 
@@ -39,7 +35,6 @@ function nearby(l){
   const cov=LD.covered.map(c=>({c,km:d(c),t:covDate(c.date)})).filter(x=>x.km<=3).sort((a,b)=>a.km-b.km).slice(0,3);
   return {live,places,cov}}
 
-/* ข้อความแจ้งเคสสำหรับ SMS/LINE ถึงทีม */
 function leadText(l){return `Helpme+ เคสจากโซเชียล: ${l.title||''}${l.address||l.district?' · '+[l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' '):''}${pin(l)?` แผนที่ https://maps.google.com/?q=${+l.lat},${+l.lng}`:''} · ที่มา ${l.url}`}
 function card(l){
   const n=nearby(l),flags=(l.flags||[]).map(f=>f.split(':')[0]),st=l.status;

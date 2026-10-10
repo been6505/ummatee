@@ -1,6 +1,3 @@
-/* Local AI (Hermes Agent) — AI ที่รันบนเครื่องของผู้ใช้เอง ผ่าน API แบบ OpenAI (/v1/chat/completions)
-   ตั้งค่าเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น (localStorage: uh_ai) · เบราว์เซอร์เรียกเครื่อง AI ตรง ๆ ข้อมูลไม่ผ่านเซิร์ฟเวอร์ CENTRAL
-   ใช้: LOCALAI.on() · await LOCALAI.ask('คำถาม') หรือ LOCALAI.ask([{role,content}...]) → ข้อความตอบ */
 const LOCALAI=(()=>{
   const PRESETS={cloud:{label:'คลาวด์ (ใช้ได้ทุกเครื่อง)',url:'cloud',model:'sea-lion-v4-27b',cloud:true},hermes:{label:'Hermes Agent',url:'http://localhost:8642/v1',model:'hermes-agent'},
     ollama:{label:'Ollama',url:'http://localhost:11434/v1',model:'hermes3'},
@@ -28,7 +25,6 @@ const LOCALAI=(()=>{
     catch(e){if(e.name!=='AbortError'&&/localhost|127\.0\.0\.1/.test(base(c))&&/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent))throw new Error('มือถือเชื่อม localhost ไม่ได้ (Hermes ไม่ได้รันบนเครื่องนี้) · เลือก "คลาวด์ (ใช้ได้ทุกเครื่อง)" ในหน้าตั้งค่า');
       if(e.name!=='AbortError'&&/failed|NetworkError|Load failed/i.test(e.message||''))throw new Error('ติดต่อ '+base(c)+' ไม่ได้ · ตรวจว่า Hermes เปิดอยู่และอนุญาต CORS');throw e}
     finally{clearTimeout(t)}}
-  /* อ่านคำตอบแบบทยอย (SSE): Workers AI {response} · OpenAI {choices[0].delta.content} */
   async function sse(r,on){const rd=r.body.getReader(),dec=new TextDecoder();let buf='',all='';
     for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
       while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).trim();buf=buf.slice(i+1);if(!line.startsWith('data:'))continue;const d=line.slice(5).trim();if(!d||d==='[DONE]')continue;

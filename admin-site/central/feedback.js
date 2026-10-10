@@ -1,5 +1,3 @@
-/* ปุ่ม "ข้อเสนอแนะ / แจ้งปัญหา" ทุกหน้า (Design Thinking: เก็บเสียงผู้ใช้จริงตลอดเวลา)
-   ส่งข้อความ + หน้าที่เปิดอยู่ + ชื่อผู้ส่ง → API feedback_save · CENTRAL ดู/ปิดเรื่องได้ที่แดชบอร์ด */
 (()=>{
   const KEY=()=>{try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}};
   const me=()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}};

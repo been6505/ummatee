@@ -99,7 +99,7 @@ function umPin(k,o={}){
 
 /* หมุดทีมขยับลื่นแบบเรียลไทม์: เลื่อนจากตำแหน่งเดิมไปตำแหน่งใหม่ตลอดช่วงเวลารอข้อมูลรอบถัดไป (ไม่กระโดด)
    ระยะไกลเกิน 3 กม. หรือแท็บซ่อนอยู่ = ย้ายทันที */
-function glideTo(m,ll,ms=3000){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
+function glideTo(m,ll,ms=1900){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
   if(!a||a.distanceTo(b)<0.3)return;if(a.distanceTo(b)>3000||document.hidden){m.setLatLng(b);return}
   const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms);m.setLatLng([a.lat+(b.lat-a.lat)*k,a.lng+(b.lng-a.lng)*k]);if(k<1)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)}
 /* ลูกศรทิศทางเมื่อทีมกำลังเคลื่อนที่ (ความเร็ว ≥ 3 กม./ชม. และรู้ทิศ) */

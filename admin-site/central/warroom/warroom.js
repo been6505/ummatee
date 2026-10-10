@@ -587,7 +587,7 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
   setInterval(async()=>{if(busy())return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
-  setInterval(pollLive,3000); // ตำแหน่งทีมแบบเรียลไทม์
+  setInterval(pollLive,2000); // ตำแหน่งทีมแบบเรียลไทม์
   setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
   document.addEventListener('visibilitychange',async()=>{if(document.hidden||busy())return;await Promise.all([loadCases(),loadTeams(),loadRooms()]);render()});
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});

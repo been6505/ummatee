@@ -255,8 +255,8 @@ body.on-chat .top .st{display:none!important}
 .ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
 </style>
 <script src="../central/verify.js?v=15"></script>
-<script src="../central/icons.js?v=13"></script>
-<script src="./native-track.js?v=2"></script>
+<script src="../central/icons.js?v=14"></script>
+<script src="./native-track.js?v=3"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
@@ -544,14 +544,14 @@ function track(on){
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
   TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,at:Date.now()};
-      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>30000||(dist(TR.sentPos,TR.pos)>8&&now-TR.sentAt>3000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
+      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>15000||(dist(TR.sentPos,TR.pos)>5&&now-TR.sentAt>2000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
     {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;
   const cur=(S.me&&S.me.cases||[]).find(c=>c.status==='going');
   try{const r=await post({action:'team_ping',lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6),accuracy:Math.round(p.acc||0),battery:TR.batt,speed:p.speed!=null?+(p.speed*3.6).toFixed(1):'',heading:p.heading!=null&&!isNaN(p.heading)?Math.round(p.heading):'',caseId:cur?cur.id:''});
     TR.fail=r.ok?0:TR.fail+1}catch(e){TR.fail++}locUI()}
-setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>55000)ping();locUI()},15000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
+setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>20000)ping();locUI()},10000); // ส่งซ้ำแม้อยู่กับที่ ให้ศูนย์รู้ว่ายังออนไลน์
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
   if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null,smsNow=NT.err==='offline'&&window.NTRK&&NTRK.offlineFor()>120000;btn.hidden=NT.err!=='denied'&&!smsNow;btn.textContent=smsNow?'ส่งทาง SMS':'อนุญาต';
     if(NT.err){b.className=NT.err==='offline'?'locbar wait':'locbar off';t.textContent=NT.err==='denied'?'ยังไม่ได้อนุญาตตำแหน่ง · ศูนย์มองไม่เห็นทีม':NT.err==='bad_link'||NT.err==='bad_key'?'ลิงก์ทีมใช้ไม่ได้ · ศูนย์ไม่ได้รับตำแหน่ง':NT.err==='offline'?`ไม่มีสัญญาณ · เก็บตำแหน่งไว้ ${NT.q} จุด จะส่งเมื่อมีสัญญาณ`:'ส่งตำแหน่งไม่ได้';return}

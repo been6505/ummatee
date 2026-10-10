@@ -21,7 +21,7 @@ $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},15000);document.addEventListener('visibilitychange',()=>{if(ADM.key&&!document.hidden)loadAll()});
 /* ตำแหน่งสดทุก 15 วิ: อัปเดตแผนที่ + ป้ายสถานะบนการ์ด (ไม่วาดหน้าใหม่ทั้งหมด) */
 // ตำแหน่งสดทุก 3 วินาที (หมุดเลื่อนลื่นระหว่างรอบด้วย glideTo)
-let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy)return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},3000);
+let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy)return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);
 function liveUI(){if(typeof TRACK!=='undefined')TRACK.update(T.live,T.roster);
   $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
 /* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกเคสแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */

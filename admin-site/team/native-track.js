@@ -3,13 +3,13 @@
    - เก็บค่าตั้ง (รหัสทีม/ที่อยู่ศูนย์) และคิวตำแหน่งไว้ในที่เก็บของแอป (Preferences) → เปิดแอปตอนไม่มีเน็ตก็เริ่มติดตามได้
    - ส่งสำเร็จจริงเมื่อเซิร์ฟเวอร์ตอบ OK เท่านั้น · ลิงก์ทีมใช้ไม่ได้ (403) = หยุดและแจ้ง ไม่ขึ้นสีเขียวหลอก
    - ส่งไม่ได้ = เก็บในคิว ลองใหม่ทุก 15 วิ และเมื่อเน็ตกลับมา (ไม่พึ่ง event online อย่างเดียว)
-   - จำกัดถี่ ~8 วิ แต่เก็บจุดสุดท้ายไว้ส่งตามหลัง จุดที่ทีมหยุดจะไม่หาย
+   - จำกัดถี่ ~3 วิ แต่เก็บจุดสุดท้ายไว้ส่งตามหลัง จุดที่ทีมหยุดจะไม่หาย · อยู่กับที่ (GPS ไม่ส่งจุดใหม่) ส่งจุดเดิมซ้ำทุก 20 วิ
    ใช้: NTRK.start({tk,host} หรือ {key,team,name,host}, onStatus) · NTRK.resume(onStatus) ใช้ค่าที่เคยเก็บไว้ */
 window.NTRK = (() => {
   const C = window.Capacitor;
   const native = !!(C && C.isNativePlatform && C.isNativePlatform());
   const PL = n => C && C.Plugins && C.Plugins[n];
-  const GAP = 8000, RETRY = 15000, QMAX = 300;
+  const GAP = 3000, RETRY = 15000, QMAX = 300, BEAT = 20000; // ส่งถี่สุดทุก 3 วิ · อยู่กับที่ส่งซ้ำทุก 20 วิ (ศูนย์รู้ว่ายังออนไลน์)
   const S = { fix: null, offSince: 0, cfg: null, q: [], lastQ: 0, trail: null, trailT: null, retryT: null, busy: false, wid: null, on: null,
     st: { state: 'idle', at: 0, err: '' } };
   const get = async k => { try { const r = await PL('Preferences').get({ key: k }); return r && r.value ? JSON.parse(r.value) : null; } catch (e) { return null; } };
@@ -73,7 +73,7 @@ window.NTRK = (() => {
     if (old) { try { await BG.removeWatcher({ id: old }); } catch (e) {} }
     try {
       S.wid = await BG.addWatcher({ backgroundTitle: 'Help Me ทีม กำลังส่งตำแหน่ง', backgroundMessage: 'ศูนย์เห็นตำแหน่งทีมแบบเรียลไทม์',
-        requestPermissions: true, stale: false, distanceFilter: 15 }, (l, err) => {
+        requestPermissions: true, stale: false, distanceFilter: 5 }, (l, err) => {
         if (err) { emit({ state: 'error', err: err.code === 'NOT_AUTHORIZED' ? 'denied' : String(err.message || err) }); return; }
         if (S.st.err === 'denied') emit({ err: '' });
         onLoc(l);
@@ -89,6 +89,7 @@ window.NTRK = (() => {
     if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
     if (!S.wid && !S.watching) { S.watching = true; S.q = (await get('ntrk_q')) || []; await watch(); } // กันเปิดตัวติดตามซ้อนเมื่อเรียก start ติดกัน
     clearInterval(S.retryT); S.retryT = setInterval(flush, RETRY);
+    clearInterval(S.beatT); S.beatT = setInterval(() => { if (S.fix && Date.now() - S.lastQ > BEAT && S.st.state !== 'fatal') enqueue({ ...S.fix, t: Date.now(), vel: 0 }); }, 5000);
     addEventListener('online', flush);
     emit({}); flush();
     return true;

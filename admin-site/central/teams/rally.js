@@ -16,7 +16,7 @@ const RALLY=(()=>{
         <select id="rl-team"><option value="">ใช้ตำแหน่งล่าสุดของทีม… (เช่น ทีมที่ขาดการติดต่อ)</option>${T.roster.filter(t=>live(t.name)).map(t=>`<option value="${esc(t.name)}">${esc(t.name)} · ${esc(ago(live(t.name).updatedAt))}</option>`).join('')}</select></div>
       <label class="rl-f">ชื่อจุด / เหตุผล<input id="rl-label" maxlength="120" placeholder="เช่น ทีมเรือ 2 ขาดการติดต่อ · เคสต้องการกำลังเสริม" value="${esc(p&&p.why||'')}"></label>
       <label class="rl-f">หมายเหตุถึงทีม<input id="rl-note" maxlength="300" placeholder="เช่น นำเรือ + เชือกช่วยชีวิตไปด้วย"></label>
-      <div class="rl-step"><b>2. ทีมที่เรียก</b><label class="rl-all"><input type="checkbox" id="rl-all" ${R.all?'checked':''}> ทุกทีมที่พร้อม/ออกเคส (${teams.length})</label></div>
+      <div class="rl-step"><b>2. ทีมที่เรียก</b><label class="rl-all"><input type="checkbox" id="rl-all" ${R.all?'checked':''}> ทุกทีมที่พร้อม/กำลังไป (${teams.length})</label></div>
       <div class="rl-teams" ${R.all?'hidden':''}>${teams.map(({t,d})=>`<label><input type="checkbox" data-rt="${esc(t.name)}" ${R.sel.has(t.name)?'checked':''}><span><b>${esc(t.name)}</b><small>${esc(TST[t.status]||'')}${t.vehicle?' · '+esc(VEH[t.vehicle]||''):''}${d!=null?` · ห่าง ${d<1?Math.round(d*1000)+' ม.':d.toFixed(1)+' กม.'}`:' · ไม่มีตำแหน่ง'}</small></span></label>`).join('')||'<p class="muted small">ยังไม่มีทีม</p>'}</div>
       <div class="rl-act"><button type="button" class="btn primary" id="rl-go" ${p?'':'disabled'}>📣 เรียกรวมพล</button><button type="button" class="btn ghost" id="rl-cancel">ยกเลิก</button></div></div>`}
   function active(){if(!R.list.length)return '<p class="muted small">ยังไม่มีการเรียกรวมพล</p>';

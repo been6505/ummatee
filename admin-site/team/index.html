@@ -277,7 +277,7 @@ body.on-chat .top .st{display:none!important}
 <div id="app" hidden>
   <header class="top"><div class="brandpill"><img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="113" height="18"><div class="who"><b id="tname"></b><small id="tsub"></small></div></div>
     <button type="button" class="locdot" id="locdot" aria-label="สถานะการส่งตำแหน่ง"><i></i></button>
-    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ออกเคส</option><option value="rest">พัก</option></select>
+    <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ทีมกำลังไป</option><option value="rest">พัก</option></select>
     <button type="button" class="top-call" id="top-call" aria-label="โทรหาศูนย์"><i data-ic="phone"></i> โทร</button></header>
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
@@ -731,7 +731,7 @@ function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const t=r.team,st=r
   const day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()},today=day(Date.now());
   const days=[...Array(7)].map((_,i)=>today-(6-i)*864e5),cnt=days.map(d=>st.week.filter(([at])=>at>=d&&at<d+864e5).length),max=Math.max(1,...cnt);
   const todayN=cnt[6],todayP=st.week.filter(([at])=>at>=today).reduce((s,[,p])=>s+p,0);
-  const STN={ready:'พร้อม',out:'ออกเคส',rest:'พัก'},VN={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
+  const STN={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'},VN={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
   const veh=t.vehicle?`<img src="../assets/veh/${encodeURIComponent(t.vehicle)}.png" alt="" onerror="this.remove()">`:'';
   const m=NATIVE?(NT.at?Math.round((Date.now()-NT.at)/60000):null):(TR.sentAt?Math.round((Date.now()-TR.sentAt)/60000):null);
   const locOk=m!=null&&m<10,locTxt=m==null?'ยังไม่ส่งตำแหน่ง':m<1?'ส่งตำแหน่งล่าสุด ไม่ถึง 1 นาทีก่อน':`ส่งตำแหน่งล่าสุด ${m} นาทีก่อน`;

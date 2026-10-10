@@ -2,7 +2,7 @@
 const S={items:[],log:[],roster:[],cat:'all',loaded:0,view:location.hash==='#bags'?'bags':'stock'};
 const BAG='ถุงยังชีพ',isBag=i=>i&&i.category===BAG;
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
-const TST={ready:'พร้อม',out:'ออกเคส',rest:'พัก'};
+const TST={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'};
 const TYPE={in:'รับเข้า',out:'จ่ายออก',set:'ตั้งยอด'};
 const CATS=['อาหาร','ยา','ถุงยังชีพ','ของใช้'];
 

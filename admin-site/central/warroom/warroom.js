@@ -29,7 +29,7 @@ const PREVIEW=()=>{try{return /^wru?_/.test(String(ADM.key||''))?'':sessionStora
 const LOCK=()=>/^wru?_/.test(String(ADM.key||''))?store.get('uh_wr_lock'):PREVIEW();
 const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1)); // ระดับที่ระบบตัดสิน (ผู้แจ้ง + ข้อมูลระบบ)
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'};
-const ST={ready:'พร้อม',out:'ออกเคส',rest:'พัก'};
+const ST={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'};
 const CST={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'};
 const ROLES={lead:'หัวหน้า War Room',ops:'ปฏิบัติการ',dispatch:'สั่งการ / จ่ายงาน',stock:'คลัง / โลจิสติกส์',comms:'สื่อสาร / ประสานงาน',medic:'การแพทย์',staff:'ทีมงาน'};
 const COLORS=['#2D45C8','#E5383B','#F57C00','#2E9E57','#7B3FC4','#0E7490','#B45309','#DB2777'];

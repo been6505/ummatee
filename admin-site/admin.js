@@ -319,7 +319,7 @@ function renderDrawer(){
 }
 /* ---------- มอบหมายทีม · ปิดเคส · หมายเหตุ ----------
    ศูนย์เลือกทีม → มอบหมาย (เคสขึ้นที่หน้าทีมทันที) → ทีมกด "ช่วยเหลือแล้ว" → ศูนย์กด "ปิดเคส" */
-const RST={ready:'ว่าง',out:'ออกเคส',rest:'พัก'};
+const RST={ready:'ว่าง',out:'ทีมกำลังไป',rest:'พัก'};
 async function loadRoster(){if(A.rosterLoading)return;A.rosterLoading=true;
   try{const r=await api({action:'roster',key:A.key});if(r&&r.ok){A.roster=(r.roster||[]).filter(t=>t.active!==0);if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.rosterLoading=false}}
 function teamOpts(c){const cur=String(c.volunteer||'').replace(/^'/,'').trim(),load={};A.cases.forEach(x=>{if(x.status==='going'&&x.volunteer){const v=String(x.volunteer).replace(/^'/,'').trim();load[v]=(load[v]||0)+1}});

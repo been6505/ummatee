@@ -1,6 +1,6 @@
 /* จัดทีม: รายชื่อทีม สถานะ พาหนะ เคสที่ถือ + มอบหมายเคสที่รออยู่ให้ทีม */
 const T={roster:[],live:[],cases:[],filter:/^(busy|ready|out|rest|live|sos)$/.test(new URLSearchParams(location.search).get('f')||'')?new URLSearchParams(location.search).get('f'):'all',loaded:0,hqPhone:''};
-const TST={ready:'พร้อม',out:'ออกเคส',rest:'พัก'};
+const TST={ready:'พร้อม',out:'ทีมกำลังไป',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
@@ -49,7 +49,7 @@ function render(){
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
   const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกเคส',cnt('ready'),'done','ready'],['กำลังออกเคส',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกเคส',cnt('ready'),'done','ready'],['ทีมกำลังไป',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${T.sf===f}"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
@@ -96,7 +96,7 @@ document.addEventListener('click',e=>{
     if(to)to.scrollIntoView({behavior:'smooth',block:'start'});
     if(k==='sos'&&!$$('#team-list .team').length)toast('ไม่มีทีมที่ส่ง SOS');if(k==='live'&&!$$('#team-list .team').length)toast('ยังไม่มีทีมที่แชร์ตำแหน่ง');return}
   const f=e.target.closest('#team-filter [data-f]');if(f)T.sf='';if(f){T.filter=f.dataset.f;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b===f)));render();return}
-  const a=e.target.closest('[data-assign]');if(a){const c=T.cases.find(x=>String(x.id)===a.dataset.assign),sel=document.querySelector(`[data-pick="${CSS.escape(a.dataset.assign)}"]`);if(c&&sel&&sel.value){updateCase(c,'going',sel.value);const t=T.roster.find(x=>x.name===sel.value);if(t&&t.status==='ready')saveTeam({...t,status:'out'},`${t.name} → ออกเคส`)}return}
+  const a=e.target.closest('[data-assign]');if(a){const c=T.cases.find(x=>String(x.id)===a.dataset.assign),sel=document.querySelector(`[data-pick="${CSS.escape(a.dataset.assign)}"]`);if(c&&sel&&sel.value){updateCase(c,'going',sel.value);const t=T.roster.find(x=>x.name===sel.value);if(t&&t.status==='ready')saveTeam({...t,status:'out'},`${t.name} → ทีมกำลังไป`)}return}
   const cp=e.target.closest('[data-callpick]');if(cp&&typeof TEAMCALL!=='undefined'){const c=T.cases.find(x=>String(x.id)===cp.dataset.callpick),sel=document.querySelector(`[data-pick="${CSS.escape(cp.dataset.callpick)}"]`),t=sel&&T.roster.find(x=>x.name===sel.value);
     if(t)callSheet(t,c);return}
   const d=e.target.closest('[data-done]');if(d){const c=T.cases.find(x=>String(x.id)===d.dataset.done);if(c)updateCase(c,'done');return}

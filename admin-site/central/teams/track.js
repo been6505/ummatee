@@ -29,10 +29,16 @@ const TRACK=(()=>{
     r.cells.forEach(([la,ln,rms,pk,bu,n,tm,at,sp])=>{const lv=rms>=2.5||pk>=12?3:rms>=1.4||bu>=2||pk>=8?2:rms>=.8?1:0;
       L.circleMarker([la,ln],{renderer:rd,pane:'roadq',radius:lv>=2?6:4,weight:1,color:'#fff',fillColor:RQC[lv],fillOpacity:.9}).bindTooltip(`<b>${RQL[lv]}</b><br>สั่น ${rms} m/s² · สูงสุด ${pk}${bu?` · กระแทก ${bu} ครั้ง`:''}<br>${n} ช่วง · ${tm} ทีม · ~${sp} กม./ชม. · ${ago(at)}`).addTo(rq)})}
   setInterval(()=>{if(LY.road&&!document.hidden)road()},30000);
-  function lyrCtl(){const C=L.Control.extend({options:{position:'topleft'},onAdd(){const d=L.DomUtil.create('div','trk-lyr');L.DomEvent.disableClickPropagation(d);
-      const draw=()=>{d.innerHTML=[['sat','ภาพดาวเทียม'],['gis','น้ำท่วม GISTDA'],['cases','เคสที่มอบแล้ว'],['rally','จุดรวมพล'],['road','สภาพถนน']].map(([k,l])=>`<button type="button" data-tl="${k}" aria-pressed="${!!LY[k]}">${l}</button>`).join('')};
-      d.onclick=e=>{const b=e.target.closest('[data-tl]');if(!b)return;const k=b.dataset.tl;LY[k]=!LY[k];try{localStorage.setItem('uh_tlay',JSON.stringify(LY))}catch(x){}
-        if(k==='sat')base(LY.sat?'sat':'road');else if(k==='gis')gistda();else if(k==='road')road(true);else if(k==='rally'){if(rl)LY.rally?rl.addTo(map):rl.remove()}else if(cp){LY.cases?cp.addTo(map):cp.remove()}draw()};draw();return d}});new C().addTo(map);if(LY.sat)base('sat')}
+  function lyrCtl(){const LS=[['sat','ภาพดาวเทียม'],['gis','น้ำท่วม GISTDA'],['cases','เคสที่มอบแล้ว'],['rally','จุดรวมพล'],['road','สภาพถนน']];
+    const C=L.Control.extend({options:{position:'topright'},onAdd(){const d=L.DomUtil.create('div','trk-lyr');L.DomEvent.disableClickPropagation(d);L.DomEvent.disableScrollPropagation(d);
+      const draw=()=>{const n=LS.filter(([k])=>LY[k]).length,open=d.classList.contains('open');
+        d.innerHTML=`<button type="button" class="tl-btn" data-tlo aria-expanded="${open}" aria-haspopup="true" aria-label="ชั้นข้อมูลแผนที่${n?' · เปิดอยู่ '+n:''}" title="ชั้นข้อมูลแผนที่">${typeof ic==='function'?ic('layers'):''}${n?`<b aria-hidden="true">${n}</b>`:''}</button>`
+          +(open?`<div class="tl-menu" role="menu" aria-label="ชั้นข้อมูลแผนที่">${LS.map(([k,l])=>`<button type="button" role="menuitemcheckbox" data-tl="${k}" aria-checked="${!!LY[k]}"><span>${l}</span><i class="tl-sw" aria-hidden="true"></i></button>`).join('')}</div>`:'')};
+      d.onclick=e=>{if(e.target.closest('[data-tlo]')){d.classList.toggle('open');draw();return}const b=e.target.closest('[data-tl]');if(!b)return;const k=b.dataset.tl;LY[k]=!LY[k];try{localStorage.setItem('uh_tlay',JSON.stringify(LY))}catch(x){}
+        if(k==='sat')base(LY.sat?'sat':'road');else if(k==='gis')gistda();else if(k==='road')road(true);else if(k==='rally'){if(rl)LY.rally?rl.addTo(map):rl.remove()}else if(cp){LY.cases?cp.addTo(map):cp.remove()}draw()};
+      document.addEventListener('click',e=>{if(d.classList.contains('open')&&e.target.isConnected&&!d.contains(e.target)){d.classList.remove('open');draw()}});
+      document.addEventListener('keydown',e=>{if(e.key==='Escape'&&d.classList.contains('open')){d.classList.remove('open');draw()}});
+      draw();return d}});new C().addTo(map);if(LY.sat)base('sat')}
   async function init(el){if(map)return true;try{await loadLeaflet()}catch(e){el.innerHTML='<p class="empty">โหลดแผนที่ไม่ได้</p>';return false}
     map=L.map(el,{scrollWheelZoom:false,zoomControl:false}).setView([13.76,100.65],11);
     map.attributionControl.setPrefix(false);base('road');gistda();lyrCtl();

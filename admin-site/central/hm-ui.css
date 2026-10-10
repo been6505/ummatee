@@ -841,3 +841,21 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
   .bd-cal-h b{min-width:0;flex:1}
   .bd-day{min-height:56px;padding:3px;border-radius:8px}.bd-cal{gap:3px}
 }
+@media(max-width:640px){
+  .stats.stats-row{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;overflow:visible!important;gap:6px!important}
+  .stats.stats-row .stat{display:grid!important;align-items:start;gap:2px!important;padding:8px 8px!important;width:auto!important;min-width:0!important}
+  .stats.stats-row .stat b{font-size:19px!important}
+  .stats.stats-row .stat span{font-size:11px!important;white-space:normal!important;line-height:1.25;overflow-wrap:anywhere}
+  .trk-wrap .trk-map,.trk .trk-map{height:52vh!important;min-height:300px!important;max-height:460px}
+}
+.trk-lyr{display:block!important;position:relative;clear:both}.trk-lyr.leaflet-control{z-index:900}
+.trk-lyr .tl-btn{position:relative;display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:10px;background:#fff;color:#1F2A5E;box-shadow:0 1px 5px rgba(0,0,0,.3);cursor:pointer}
+.trk-lyr .tl-btn svg{width:20px;height:20px}
+.trk-lyr .tl-btn b{position:absolute;top:-6px;right:-6px;background:#2D45C8;color:#fff;border:2px solid #fff;border-radius:999px;font-size:10.5px;font-weight:800;min-width:18px;line-height:14px;padding:0 4px;text-align:center}
+.trk-lyr.open .tl-btn{background:#1d1d1f;color:#fff}
+.trk-lyr .tl-menu{position:absolute;top:44px;right:0;z-index:1000;background:#fff;border-radius:16px;box-shadow:0 12px 32px rgba(22,27,61,.24);padding:6px;display:grid;min-width:220px}
+.trk-lyr .tl-menu button{display:flex;align-items:center;justify-content:space-between;gap:14px;border:0;background:none;box-shadow:none;padding:10px 10px;border-radius:10px;font:inherit;font-size:14px;font-weight:600;color:#1d1d1f;cursor:pointer;text-align:left}
+.trk-lyr .tl-menu button:hover{background:#F2F3F7}
+.trk-lyr .tl-sw{width:36px;height:22px;border-radius:999px;background:#C9CDE0;position:relative;flex:none;transition:background .15s}
+.trk-lyr .tl-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.trk-lyr [aria-checked=true] .tl-sw{background:#2D45C8}.trk-lyr [aria-checked=true] .tl-sw::after{transform:translateX(14px)}

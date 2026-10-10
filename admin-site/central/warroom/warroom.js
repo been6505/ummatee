@@ -102,7 +102,8 @@ async function usersCard(){const el=$('#pf-users');if(!el)return;if(!/^wru?_/.te
 $('#p-prof').addEventListener('click',async e=>{const o=e.target.closest('[data-wu-off]');if(o){const r=await apiPost({action:'wr_user_save',id:o.dataset.wuOff,active:o.dataset.v==='1'}).catch(()=>null);toast(r&&r.ok?'บันทึกแล้ว':'ทำไม่สำเร็จ',!!(r&&r.ok));usersCard();return}
   const p=e.target.closest('[data-wu-pw]');if(p){const pw=prompt('รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)');if(!pw)return;const r=await apiPost({action:'wr_user_save',id:p.dataset.wuPw,password:pw}).catch(()=>null);
     toast(r&&r.ok?'ตั้งรหัสใหม่แล้ว · บัญชีนี้ต้องเข้าระบบใหม่':r&&r.error==='short_password'?'รหัสผ่านสั้นเกินไป':'ทำไม่สำเร็จ',!!(r&&r.ok));usersCard()}});
-function linkBar(r){const el=$('#wr-linkbar');if(!el)return;if(!r||!r.linkKey){el.hidden=true;return}el.hidden=false;const url=wrUrl(r);
+async function wrKey(r){if(!r||r.linkKey||LOCK()||r._lkTried)return;r._lkTried=1;try{const x=await apiPost({action:'warroom_token',id:r.id});if(x&&x.ok){r.linkKey=x.token;if(W.room===r.id)render()}}catch(e){}}
+function linkBar(r){const el=$('#wr-linkbar');if(!el)return;if(r&&!r.linkKey)wrKey(r);if(!r||!r.linkKey){el.hidden=true;return}el.hidden=false;const url=wrUrl(r);
   el.innerHTML=`<a class="btn primary sm" href="${esc(url)}" target="_blank" rel="noopener">${ic('ext')} เปิดเว็บ ${esc(r.name)}</a>
     <button type="button" class="btn ghost sm" data-wlcopy="${esc(url)}">${ic('copy')} คัดลอกลิงก์ทีม</button>
     ${navigator.share?`<button type="button" class="btn ghost sm" id="wr-share">${ic('share')} แชร์</button>`:''}<span class="wl-url">${esc(url.replace(/\?k=.*/,'?k=…'))}</span>`;

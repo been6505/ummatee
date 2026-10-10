@@ -157,7 +157,7 @@ const teamUrl=t=>location.origin+'/team/?id='+encodeURIComponent(t.token||'');
 const appUrl=t=>location.origin+'/app/?id='+encodeURIComponent(t.token||'');
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();return qrP||(qrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.integrity=QR_SRI;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>{qrP=null;rej()};document.head.append(s)}))}
-function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกเคส\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
+async function linkSheet(t){if(!t)return;if(!t.token){try{const r=await apiPost({action:'team_token',id:t.id});if(!r||!r.ok)throw 0;t.token=r.token}catch(e){toast('เปิดลิงก์ทีมไม่ได้');return}}const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกเคส\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
   const sms=`sms:${p}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}`;
   const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="link"></i> ลิงก์ทีม ${esc(t.name)}</h2><p class="muted small">ลิงก์นี้ใช้แทนรหัส · ส่งให้ทีมนี้เท่านั้น</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div><p class="muted small" style="text-align:center;margin:0">สแกนด้วยกล้องมือถือ = ดาวน์โหลดแอป + เข้าทีม · สแกนในแอป = เข้าทีมทันที</p>

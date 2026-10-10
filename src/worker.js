@@ -828,9 +828,12 @@ async function listRoster(db) {
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
   for (const r of results) r.view = r.token ? await viewId(r.token) : '';
-  return { ok: true, roster: results.map(r => ({ ...r, members: r.members == null ? '' : r.members })), live: await readTeams(db), hqPhone: await getMeta(db, 'hq_phone') };
+  const adm = staffAdmin();
+  return { ok: true, roster: results.map(({ token, ...r }) => ({ ...r, ...(adm ? { token } : {}), members: r.members == null ? '' : r.members })), live: await readTeams(db), hqPhone: await getMeta(db, 'hq_phone') };
 }
-const teamToken = () => { const a = new Uint8Array(12); crypto.getRandomValues(a); return [...a].map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join(''); };
+const teamToken = () => { const a = new Uint8Array(16); crypto.getRandomValues(a); return [...a].map(b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join(''); };
+async function teamTokenGet(db, b) { const r = await db.prepare('SELECT name,token FROM roster WHERE id=? AND active=1').bind(clean(b.id, 20)).first(); return r && r.token ? { ok: true, token: r.token, team: r.name } : { ok: false, error: 'not_found' }; }
+async function warroomTokenGet(db, b) { const r = await db.prepare('SELECT id,token FROM warrooms WHERE id=? AND active=1').bind(clean(b.id, 20)).first(); return r && r.token ? { ok: true, token: r.token } : { ok: false, error: 'not_found' }; }
 async function renewTeamLink(db, b) {
   const id = clean(b.id, 20), token = teamToken();
   const r = await db.prepare('UPDATE roster SET token=? WHERE id=? AND active=1').bind(token, id).run();
@@ -1298,7 +1301,7 @@ async function listWarrooms(db) {
   const miss = rooms.filter(r => !r.token); if (miss.length) { miss.forEach(r => { r.token = rand(12); }); await db.batch(miss.map(r => db.prepare('UPDATE warrooms SET token=? WHERE id=?').bind(r.token, r.id))); }
   const { results: staff } = await db.prepare('SELECT * FROM warroom_staff WHERE active=1 ORDER BY wr, role, name').all();
   const { results: teams } = await db.prepare("SELECT name, warroom FROM roster WHERE active=1 AND warroom IS NOT NULL AND warroom<>''").all();
-  return { ok: true, warrooms: rooms.map(({ token, ...r }) => ({ ...r, ...(WRC ? {} : { linkKey: token }), kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
+  return { ok: true, warrooms: rooms.map(({ token, ...r }) => ({ ...r, ...(staffAdmin() ? { linkKey: token } : {}), kind: r.kind || 'zone', province: r.province || '', districts: String(r.districts || '').split(',').map(x => x.trim()).filter(Boolean) })), staff, teams };
 }
 async function saveWarroom(db, b) {
   const w = b.warroom || {}, id = clean(w.id, 20).replace(/[^\w-]/g, '') || ('W' + rand(3)), now = Date.now();
@@ -1335,7 +1338,7 @@ Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s =
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
   'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'fiw', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+const WR_POST_OK = new Set(['team_token', 'route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -1391,6 +1394,7 @@ async function wrPostCheck(db, b) {
     case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); if (!c || !inScope(c, sc)) return 'not_in_room'; const v = String(b.volunteer || '').replace(/^'/, '').trim(); return !v || v === String(c.volunteer || '').replace(/^'/, '').trim() || await teamOk(v) ? '' : 'not_in_room'; }
     case 'chat_send': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
     case 'ptt_send': return !b.team || await teamOk(b.team) ? '' : 'not_in_room';
+    case 'team_token': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'rally_save': if (b.all === true) return ''; for (const t of (Array.isArray(b.teams) ? b.teams : [])) if (!await teamOk(t)) return 'not_in_room'; return '';
     case 'sos_ack': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'team_link': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=? OR name=?').bind(clean(b.id, 20), clean(b.team, MAX.volunteer)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
@@ -1405,9 +1409,9 @@ async function wrPostCheck(db, b) {
   }
   return '';
 }
-const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
+const WR_DENY = ['warroom_token', 'warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
 const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_TH = { team_token: 'เปิดดูลิงก์ทีม', warroom_token: 'เปิดดูลิงก์ War Room', ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -1663,9 +1667,9 @@ async function staffSave(db, b) {
 }
 async function ticketMake(db, env, key) {
   const t = rand(20), now = Date.now(), k = isVol(env, key) ? '*' : String(key || '').slice(0, 80);
-  await db.prepare('INSERT INTO tickets (t,k,exp) VALUES (?,?,?)').bind(t, k, now + 12 * 3600e3).run();
+  await db.prepare('INSERT INTO tickets (t,k,exp) VALUES (?,?,?)').bind(t, k, now + 4 * 3600e3).run();
   if (Math.random() < 0.05) await db.prepare('DELETE FROM tickets WHERE exp<?').bind(now).run();
-  return { ok: true, t, exp: now + 12 * 3600e3 };
+  return { ok: true, t, exp: now + 4 * 3600e3 };
 }
 async function ticketKey(db, env, t) { if (!/^[a-f0-9]{40}$/.test(String(t || ''))) return ''; const r = await db.prepare('SELECT k,exp FROM tickets WHERE t=?').bind(t).first(); return r && r.exp > Date.now() ? (r.k === '*' ? env.VOLUNTEER_KEY : r.k) : ''; }
 async function keyGuard(db, env, request, key) {
@@ -1968,10 +1972,11 @@ function coordsFromUrl(u) { u = decodeURIComponent(String(u || ''));
   const pats = [/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/, /[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/, /\/(?:search|place|dir)\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/];
   for (const re of pats) { const m = u.match(re); if (m) { const a = +m[1], b = +m[2]; if (a > 5 && a < 21 && b > 97 && b < 106) return [a, b]; } } return null; }
 async function resolveMapLink(db, link) {
-  if (!/^https?:\/\//.test(link)) return null; const k = 'covlink:' + link; const c = await getMeta(db, k);
+  if (!/^https?:\/\//.test(link)) return null; try { const h = new URL(link).hostname.toLowerCase(); if (!/^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.google\.[a-z.]+|(www\.)?google\.[a-z.]+)$/.test(h)) return coordsFromUrl(link) ? { ...coordsFromUrl(link) } : null; } catch (e) { return null; } const k = 'covlink:' + link; const c = await getMeta(db, k);
   if (c) return c === '-' ? null : JSON.parse(c);
   let u = link, ll = coordsFromUrl(u);
-  for (let i = 0; i < 4 && !ll; i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (UMPlus relief map)' } });
+  const okHost = x => { try { return /^(maps\.app\.goo\.gl|goo\.gl|g\.co|maps\.google\.[a-z.]+|(www\.)?google\.[a-z.]+|consent\.google\.[a-z.]+)$/.test(new URL(x).hostname.toLowerCase()) && new URL(x).protocol === 'https:'; } catch (e) { return false; } };
+  for (let i = 0; i < 4 && !ll && okHost(u); i++) { try { const r = await fetch(u, { redirect: 'manual', headers: { 'user-agent': 'Mozilla/5.0 (UMPlus relief map)' } });
     const loc = r.headers.get('location'); if (loc) { u = new URL(loc, u).toString(); ll = coordsFromUrl(u); continue; }
     if (r.ok) { const t = (await r.text()).slice(0, 200000); ll = coordsFromUrl(t.match(/https:\/\/www\.google\.[^"' ]*@-?\d+\.\d+,-?\d+\.\d+[^"' ]*/)?.[0] || t.match(/center=-?\d+\.\d+%2C-?\d+\.\d+/)?.[0]?.replace('%2C', ',') || ''); }
     break; } catch (e) { return null; } }
@@ -2862,7 +2867,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {
@@ -2890,7 +2895,7 @@ async function handle(request, env, ctx) {
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
       let res;
       try { res = await api(request, env); }
-      catch (e) { res = json({ ok: false, error: 'server', detail: String(e && e.message || e).slice(0, 200) }, 500); }
+      catch (e) { console.error('api', e && e.stack || e); res = json({ ok: false, error: 'server' }, 500); }
       { const st = RQ.getStore(); if (request.method === 'POST' && st && st.body && !AUDIT_SKIP.has(st.body.action)) {
         if (st.before) await undoAfter(env, st, res.clone()).catch(() => {});
         const p = auditLog(env, st, res.clone()).catch(() => {}); if (ctx && ctx.waitUntil) ctx.waitUntil(p); } }

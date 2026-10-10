@@ -49,7 +49,7 @@ const CHAT=(()=>{
     root.querySelector('.chat-back').hidden=!inTeam;{const cp=root.querySelector('.chat-ptt');if(cp)cp.hidden=!inTeam||typeof PTT==='undefined'}root.querySelector('.chat-draft').hidden=!(inTeam&&typeof LOCALAI!=='undefined'&&LOCALAI.on());root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
     share();
     if(inTeam){drawMsgs();setTimeout(()=>root.querySelector('.chat-in').focus(),30)}else drawList()}
-  function share(){const sh=root.querySelector('.chat-share'),tk=S.team&&(S.roster.find(r=>r.name===S.team)||{}).token;sh.hidden=!tk;if(tk)sh.href='/team/?id='+encodeURIComponent(tk)}
+  function share(){const sh=root.querySelector('.chat-share'),tr=S.team&&S.roster.find(r=>r.name===S.team),tk=tr&&tr.token;sh.hidden=!tr;if(tk)sh.href='/team/?id='+encodeURIComponent(tk);else if(tr){sh.href='#';sh.onclick=async ev=>{if(tr.token)return;ev.preventDefault();const w=window.open('about:blank','_blank');const r=await post({action:'team_token',id:tr.id}).catch(()=>null);if(r&&r.ok){tr.token=r.token;sh.onclick=null;share();if(w)w.location='/team/?id='+encodeURIComponent(r.token)}else if(w)w.close()}}}
   function drawList(){if(!root)return;const th=S.threads.filter(t=>inScope(t.team)),known=new Set(th.map(t=>t.team));
     const pool=S.scope&&S.scope.teams?S.scope.teams:S.roster.map(r=>r.name);
     const tag=t=>{const f=info(t);return f?`<span class="chat-tag ${f.field?'on':''}">${esc(f.tag)}</span>`:''};

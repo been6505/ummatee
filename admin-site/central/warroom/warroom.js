@@ -7,7 +7,7 @@
    ข้อมูล: เคส Help Me (หลัก) + เคสในระบบ · ทีม/ตำแหน่งสด (roster) · SOS/สายเข้า/แชท (chat_threads) · ประกาศกรมอุตุฯ (news)
    อัปเดตเอง: เคส 30 วิ · ทีม/แจ้งเตือน 15 วิ · ประกาศ 10 นาที */
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
-  room:'',tab:new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
+  room:'',tab:new URLSearchParams(location.search).get('tab')==='board'?'board':new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
 /* ลิงก์ประจำ War Room (?wr=<id>&k=<token>): เข้าระบบด้วยรหัสของห้อง แล้วล็อกหน้าไว้ที่ห้องนั้น */
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
   // คนที่เข้า CENTRAL ด้วยรหัสหลักอยู่แล้ว: เปิดห้องนั้นแบบปกติ ไม่ทับรหัส CENTRAL และไม่ล็อกหน้า
@@ -144,10 +144,12 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
   ['over','struct','cases','teams','board','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
+  // เมนูหลัก: "บอร์ดงาน" (CENTRAL) กับ "War Room" ไฮไลต์ตามแท็บที่เปิด
+  {const onB=W.tab==='board'&&!r;document.querySelectorAll('nav.tabs a').forEach(a=>{const h=a.getAttribute('href')||'';if(/warroom\/\?tab=board/.test(h)){onB?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current')}else if(/warroom\/$/.test(h)){onB?a.removeAttribute('aria-current'):a.setAttribute('aria-current','page')}})}
   document.body.classList.toggle('wr-overview',W.tab==='over')}
 $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';W.tab=W.room?'over':'struct';if(!W.room)await loadStock();
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
-$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(W.tab==='prof')W.uAt='';if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
+$('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(!W.room){try{history.replaceState(null,'',location.pathname+(W.tab==='board'?'?tab=board':''))}catch(err){}}if(W.tab==='prof')W.uAt='';if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
 /* ---------- ภาพรวม ---------- */
 function kpis(V){const rm=room(),fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));

@@ -112,6 +112,6 @@ const headArrow=(t,veh)=>{const v=VEH_IMG[veh]||'car',mv=t&&t.speed!=null&&t.spe
   return `<s class="veh${mv?' run':''}" aria-hidden="true"><img src="/assets/veh/${v}.png" alt="" draggable="false" style="transform:scaleX(${flip})"></s>`};
 
 /* เมนูหลัก: ใส่ไอคอนหน้าชื่อเมนู (แสดงบนมือถือเป็นแถบล่างแบบ helpme4u.com) */
-addEventListener('DOMContentLoaded',()=>{const M=[['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];
+addEventListener('DOMContentLoaded',()=>{const M=[['tab=board','calendar'],['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];
   document.querySelectorAll('.tabs a').forEach(a=>{if(a.querySelector('.tab-ic'))return;const h=a.getAttribute('href')||'',m=M.find(([k])=>h.includes(k));if(!m||typeof ic!=='function')return;
     a.insertAdjacentHTML('afterbegin',ic(m[1],'tab-ic'))})});

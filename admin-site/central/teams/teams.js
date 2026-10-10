@@ -20,17 +20,16 @@ async function loadAll(){T.loadedAt=Date.now();
 $('#refresh').addEventListener('click',loadAll);
 setInterval(()=>{if(ADM.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIVE.ok())||Date.now()-(T.loadedAt||0)>300000))loadAll()},15000);document.addEventListener('visibilitychange',()=>{if(ADM.key&&!document.hidden)loadAll()});
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy||(typeof LIVE!=='undefined'&&LIVE.ok()))return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);
-function tcBox(t,g,d){const eta=typeof TRACK!=='undefined'&&TRACK.eta?TRACK.eta(t.name):null,ord=eta?[...g.filter(c=>String(c.id)===String(eta.caseId)),...g.filter(c=>String(c.id)!==String(eta.caseId))]:g;
-  const card=(c,i)=>{const id=String(c.id),go=eta&&String(eta.caseId)===id,ph=tel(c.phone),rep=!!c.teamDoneAt;
-    return `<div class="tc u${sev(c)}${go?' go':''}${rep?' rep':''}"><div class="tc-h"><small class="tc-tag">${i===0?'ตอนนี้':i===1?'ถัดไป':'ลำดับ '+(i+1)}</small><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span><a class="tc-id" href="../../central.html#${encodeURIComponent(id)}" title="เปิดรายละเอียดเคส">#${esc(id.length>8?id.split('-').pop():id)} ↗</a></div>
-      <b>${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน</b>
-      <small class="tc-ad">${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</small>
-      ${c.name||ph?`<small>${esc(c.name||'')}${ph.length>=9?` · <a href="tel:${esc(ph)}">${esc(ph)}</a>`:''}</small>`:''}
-      ${go?`<em class="tc-eta">${eta.km.toFixed(1)} กม.${eta.min!=null?` · ~${Math.max(1,Math.round(eta.min))} นาที`:''}${eta.plan?' · ศูนย์กำหนดเส้นทาง':''}</em>`:''}
-      ${rep?`<small class="tc-ok">ทีมแจ้งช่วยแล้ว ${esc(ago(c.teamDoneAt))} · รอปิดเคส</small>`:c.teamIssue?`<small class="tc-bad">แจ้งปัญหา: ${esc(c.teamIssue)}</small>`:''}
-      ${c.teamMemo?`<small class="tc-memo">หมายเหตุทีม: ${esc(c.teamMemo)}</small>`:''}
-      <div class="tc-f"><small class="muted">${c.pickedAt?'มอบ '+esc(ago(c.pickedAt)):''}</small><button class="linkish" data-done="${esc(id)}"><i data-ic="check"></i> ช่วยแล้ว</button></div></div>`};
-  return `<div class="tcbox"><div class="tcbox-h"><b>เคสของทีม</b><small class="muted">กำลังไป ${g.length} · ช่วยแล้ว ${d.length}</small></div>${ord.length?`<div class="tc-row">${ord.map(card).join('')}</div>${ord.length>2?`<small class="ts-more">เลื่อนดูอีก ${ord.length-2} เคส →</small>`:''}`:'<p class="muted small">ไม่มีเคสที่กำลังไป</p>'}</div>`}
+function tcBox(t,g,d){const eta=typeof TRACK!=='undefined'&&TRACK.eta?TRACK.eta(t.name):null,ord=eta?[...g.filter(c=>String(c.id)===String(eta.caseId)),...g.filter(c=>String(c.id)!==String(eta.caseId))]:g,p=tel(t.phone);
+  const row=(l,v)=>v?`<div class="tc-kv"><span>${l}</span><b>${esc(v)}</b></div>`:'';
+  const card=(c,i)=>{const id=String(c.id),go=eta&&String(eta.caseId)===id,ph=tel((c.intake&&c.intake.phone)||c.phone),rep=!!c.teamDoneAt,k=c.intake||{};
+    return `<div class="tc u${sev(c)}${go?' go':''}${rep?' rep':''}"><div class="tc-h"><small class="tc-tag">${i===0?'ตอนนี้':i===1?'ถัดไป':'ลำดับ '+(i+1)}</small><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span><a class="tc-id" href="../../central.html#${encodeURIComponent(id)}" title="เปิดรายละเอียดเคส">#${esc(id)} ↗</a></div>
+      <b class="tc-t">${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน</b>
+      ${go?`<em class="tc-eta"><i data-ic="nav"></i> ${eta.km.toFixed(1)} กม.${eta.min!=null?` · ~${Math.max(1,Math.round(eta.min))} นาที`:''}${eta.plan?' · ศูนย์กำหนดเส้นทาง':''}</em>`:''}
+      ${rep?`<p class="tc-st ok">ทีมแจ้งช่วยแล้ว ${esc(ago(c.teamDoneAt))} · รอปิดเคส</p>`:c.teamIssue?`<p class="tc-st bad">แจ้งปัญหา: ${esc(c.teamIssue)}</p>`:''}
+      <div class="tc-kvs">${row('ผู้แจ้ง',k.name||c.name)}${ph.length>=9?`<div class="tc-kv"><span>เบอร์</span><b><a href="tel:${esc(ph)}">${esc(ph)}</a></b></div>`:''}${row('ที่อยู่',[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${row('จุดรถถึง',k.car)}${row('จุดส่งมอบ',k.handoff)}${row('ระดับน้ำ',k.water||(c.level?LEVEL[c.level]||c.level:''))}${row('ความเสี่ยง',k.risks)}${row('เวลาดึกสุด',k.latest)}${row('ต้องการ',k.items)}${row('หมายเหตุศูนย์',c.hqNote)}${row('หมายเหตุทีม',c.teamMemo)}${row('โน้ตผู้แจ้ง',c.notes&&String(c.notes).length>160?String(c.notes).slice(0,160)+'…':c.notes)}</div>
+      <div class="tc-f"><small class="muted">${c.pickedAt?'มอบ '+esc(ago(c.pickedAt)):''}${c.createdAt?' · แจ้ง '+esc(ago(c.createdAt)):''}</small><button class="linkish" data-done="${esc(id)}"><i data-ic="check"></i> ช่วยแล้ว</button></div></div>`};
+  return `<section class="tcbox" id="tcg-${esc(tname(t.name))}"><div class="tcbox-h"><b>${esc(t.name)}</b><small class="muted">${[t.vehicle?VEH[t.vehicle]:'',p.length>=9?p:''].filter(Boolean).map(esc).join(' · ')} · กำลังไป ${g.length} · ช่วยแล้ว ${d.length}</small></div><div class="tc-grid">${ord.map(card).join('')}</div></section>`}
 function side(){const el=$('#trk-side');if(!el||el.querySelector('.ptt-press'))return;const now=Date.now();
   const sig=a=>a==null?[0,'ไม่มีตำแหน่ง','off']:a<90e3?[4,'ดีมาก','on']:a<5*60e3?[3,'ดี','on']:a<15*60e3?[2,'อ่อน','idle']:a<30*60e3?[1,'อ่อนมาก','idle']:[0,'ขาดการติดต่อ','off'];
   const dir=TK.dir;
@@ -95,11 +94,11 @@ function render(){
   const el=$('#team-list');
   if(!R.length)el.innerHTML='<p class="empty">ยังไม่มีทีม กด "+ เพิ่มทีม" เพื่อเริ่ม<br><small>ทีมที่เคยรับเคสจะขึ้นด้านล่างให้เพิ่มได้ในคลิกเดียว</small></p>';
   else el.innerHTML=list.map(t=>{const cs=teamCases(t.name),g=cs.filter(c=>c.status==='going'),d=cs.filter(c=>c.status==='done'),lv=liveOf(t.name),p=tel(t.phone);
-    return `<article class="team st-${esc(t.status)}${sosOn(t)?' sos':''} tw2" data-team-id="${esc(t.id)}"><div class="team-main"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.members?t.members+' คน':'',t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุรายละเอียด'}</small></div>
+    return `<article class="team st-${esc(t.status)}${sosOn(t)?' sos':''}" data-team-id="${esc(t.id)}"><div class="team-main"><div class="team-h"><div><b>${esc(t.name)}</b><small>${[t.vehicle?VEH[t.vehicle]:'',t.members?t.members+' คน':'',t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).map(esc).join(' · ')||'ยังไม่ระบุรายละเอียด'}</small></div>
       <select class="tst tst-${esc(t.status)}" data-tst="${esc(t.id)}" aria-label="สถานะทีม ${esc(t.name)}">${Object.entries(TST).map(([k,v])=>`<option value="${k}" ${t.status===k?'selected':''}>${v}</option>`).join('')}</select></div>
       <div class="team-m">${t.leader?`หัวหน้าทีม ${esc(t.leader)} `:''}${p.length>=9?`<a href="tel:${esc(p)}">${esc(tname(t.phone))}</a>`:''}${liveTag(t)}${lv?`<button class="linkish" data-track="${esc(t.name)}"><i data-ic="pin"></i> ติดตาม</button>`:''}${t.view?`<a class="linkish" href="${esc('/live/?v='+t.view)}" target="_blank" rel="noopener" title="ลิงก์ติดตามตำแหน่งสด (ส่งต่อได้)"><i data-ic="live"></i> ลิงก์ติดตาม ↗</a>`:''}${/^https:\/\//.test(t.gmaps||'')?`<a class="linkish gm" href="${esc(t.gmaps)}" target="_blank" rel="noopener" title="ตำแหน่งสดที่ทีมแชร์จาก Google Maps (ส่งต่อแม้ล็อกจอ)"><i data-ic="live"></i> ตำแหน่งสด Google Maps ↗</a>`:''}</div>
       ${typeof TEAMCALL!=='undefined'?TEAMCALL.buttons(t,{caseText:g[0]?TEAMCALL.caseText(g[0]):''}):''}
-      <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><span><button class="btn ghost sm" data-tlink="${esc(t.id)}"><i data-ic="link"></i> ลิงก์ทีม</button> <button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></span></div></div>${tcBox(t,g,d)}</article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
+      <div class="team-f"><span class="muted small">ช่วยแล้ว ${d.length} เคส${t.note?' · '+esc(t.note):''}</span><span><button class="btn ghost sm" data-tlink="${esc(t.id)}"><i data-ic="link"></i> ลิงก์ทีม</button> <button class="btn ghost sm" data-edit="${esc(t.id)}">แก้ไข</button></span></div></div>${g.length?`<button type="button" class="tc-jump" data-tcj="${esc(t.name)}"><i data-ic="flag"></i> กำลังไป ${g.length} เคส · ดูรายละเอียด →</button>`:''}</article>`}).join('')||'<p class="empty">ไม่มีทีมในสถานะนี้</p>';
   const known=new Set(R.map(t=>tname(t.name))),seen=[...new Set(T.cases.map(c=>tname(c.volunteer)).filter(Boolean))].filter(n=>!known.has(n));
   if(seen.length)el.insertAdjacentHTML('beforeend',`<div class="seen"><small class="muted">ทีมที่เคยรับเคสแต่ยังไม่อยู่ในรายชื่อ:</small> ${seen.map(n=>`<button class="chip" data-quick="${esc(n)}">+ ${esc(n)}</button>`).join('')}</div>`);
   const order=c=>{const v=typeof VERIFY!=='undefined'?VERIFY.assess(c).score:0;return sev(c)*100+v};
@@ -109,7 +108,10 @@ function render(){
     return `<article class="qcase u${sev(c)}"><div class="q-h"><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span>${vr&&vr.result.k!=='nopin'?`<span class="vr vr-${vr.result.k}">${esc(vr.result.t)}</span>`:''}${(()=>{const m=typeof COVERED!=='undefined'?COVERED.match(c):null;return m?`<span class="cov" title="${esc(m.best.r.area+' · '+m.best.how)}"><i data-ic="hand"></i> ${esc(m.best.r.org)} เคยมอบใกล้เคียง</span>`:''})()}<small class="muted">${esc(ago(c.createdAt))} · #${esc(c.id)}</small></div>
       <b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><div class="small">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''} · ${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
       ${R.length?`<div class="assign"><select data-pick="${esc(c.id)}" aria-label="เลือกทีมสำหรับเคส ${esc(c.id)}">${sg.map((x,i)=>`<option value="${esc(x.t.name)}">${i===0?'แนะนำ: ':''}${esc(x.t.name)} (${esc(x.why)})</option>`).join('')}</select><button class="btn primary sm" data-assign="${esc(c.id)}">มอบหมาย</button><button class="btn ghost sm" data-callpick="${esc(c.id)}" title="โทร / SMS / วิดีโอคอล ทีมที่เลือก"><i data-ic="phone"></i> ติดต่อทีม</button></div>`:'<p class="muted small">เพิ่มทีมก่อนจึงจะมอบหมายได้</p>'}
-    </article>`}).join(''):'<p class="empty">ไม่มีเคสรอจัดทีม <i data-ic="check"></i></p>';
+    </article>`}).join(''):'<p class="empty sm">ไม่มีเคสรอจัดทีม <i data-ic="check"></i></p>';
+  const ac=$('#tcases-all');if(ac){const gs=R.map(t=>({t,g:teamCases(t.name).filter(c=>c.status==='going'),d:teamCases(t.name).filter(c=>c.status==='done')})).filter(x=>x.g.length).sort((a,b)=>b.g.length-a.g.length);
+    $('#tc-count').textContent=gs.length?gs.reduce((n,x)=>n+x.g.length,0)+' เคส · '+gs.length+' ทีม':'';
+    ac.innerHTML=gs.map(x=>tcBox(x.t,x.g,x.d)).join('')||'<p class="empty sm">ยังไม่มีทีมที่กำลังไปเคส</p>'}
 }
 
 async function saveTeam(t,msg){try{const r=await apiPost({action:'roster_save',team:t,by:staffName()});
@@ -117,6 +119,7 @@ async function saveTeam(t,msg){try{const r=await apiPost({action:'roster_save',t
 async function updateCase(c,status,team){const prev={status:c.status,volunteer:c.volunteer};c.status=status;if(team)c.volunteer=team;render();
   try{const r=await apiPost({action:'update',id:c.id,status,volunteer:team||c.volunteer||''});if(!r.ok)throw 0;toast(status==='going'?`มอบหมายเคส #${c.id} ให้ ${team} แล้ว`:`ปิดเคส #${c.id} แล้ว`,true)}
   catch(e){Object.assign(c,prev);render();if(e&&e.message==='auth')return;toast('บันทึกไม่สำเร็จ ลองใหม่')}}
+document.addEventListener('click',e=>{const j=e.target.closest&&e.target.closest('[data-tcj]');if(!j)return;const g=document.getElementById('tcg-'+tname(j.dataset.tcj));if(g){g.scrollIntoView({behavior:'smooth',block:'start'});g.classList.add('flash');setTimeout(()=>g.classList.remove('flash'),1500)}});
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tst]');if(!s)return;const t=T.roster.find(x=>String(x.id)===s.dataset.tst);if(t)saveTeam({...t,status:s.value},`${t.name} → ${TST[s.value]}`)});
 document.addEventListener('click',e=>{
   const sc=e.target.closest('#stats [data-sf]');if(sc){let k=sc.dataset.sf;if(T.sf===k&&k!=='all')k='all';T.sf=k==='all'?'':k;

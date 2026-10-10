@@ -276,7 +276,12 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 <script src="./native-track.js?v=7"></script>
 <script src="../central/ptt.js?v=9"></script>
 <script>(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
-<style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
+<style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style><style>.top{--hh:50px;align-items:center!important;gap:8px!important}
+.top .brandpill{height:var(--hh)!important;padding:0 14px!important;box-sizing:border-box;flex:0 1 auto!important}.top .brandpill img{height:16px;width:auto}
+.top .hdr-sos{width:var(--hh)!important;height:var(--hh)!important;font-size:13px!important;border-width:3px!important;box-sizing:border-box;flex:none}
+.top .locdot{width:var(--hh)!important;height:var(--hh)!important;flex:none}
+.top .st:not([hidden]){height:var(--hh)!important;min-width:0;max-width:34vw;box-sizing:border-box;padding:0 30px 0 14px!important;font-size:15px!important;background-position:right 10px center!important;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;flex:0 1 auto!important}
+@media(max-width:380px){.top{--hh:44px}.top .brandpill{padding:0 10px!important}}</style>
 <script>(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
   const probe=()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';document.documentElement.append(d);const h=d.getBoundingClientRect().height;d.remove();return h};
   const set=()=>{if(probe()<1){r.style.setProperty('--sat','36px');r.style.setProperty('--sab','24px')}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',set):set()})();</script>

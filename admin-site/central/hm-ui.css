@@ -686,3 +686,14 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 @media (max-width:760px){.kb-cols.fold{grid-template-columns:repeat(3,82vw) 150px}}
 
 .kb-mark{height:4px;border-radius:4px;background:#2D45C8;margin:-2px 4px;flex:none;box-shadow:0 0 0 3px rgba(45,69,200,.15)}
+
+/* หมุดทีม (หน้าจัดทีม): รถ 3D ยืนบนแผนที่ + ป้ายชื่อเล็กข้าง ๆ (จุดสีในป้าย = สถานะ) · ไม่แสดงความเร็ว */
+.trk-pin{background:none!important;box-shadow:none!important;padding:0!important;gap:0!important;outline:none!important;animation:none!important}
+.trk-pin i::after{display:none!important}
+.trk-pin .nm{display:inline-flex;align-items:center;gap:6px;margin-left:-2px;background:#fff;border-radius:999px;padding:4px 10px 4px 8px;font-weight:700;font-size:12.5px;line-height:1.2;color:#161B3D;box-shadow:0 2px 8px rgba(22,27,61,.22);white-space:nowrap}
+.trk-pin .nm::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--st,#2E9E57);flex:none}
+.trk-pin.mv .nm::before{animation:vehpulse 1.4s ease-out infinite}
+.trk-pin .nm small{color:#E5383B;font-weight:600;font-size:11.5px;opacity:1}
+.trk-pin.sel .nm{box-shadow:0 0 0 2px #2D45C8,0 2px 8px rgba(22,27,61,.22)}
+.trk-pin.sos .nm{background:#E5383B;color:#fff;animation:trkp 1.2s infinite}.trk-pin.sos .nm::before{background:#fff}
+.wr-team span{font-weight:700}

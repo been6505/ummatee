@@ -159,7 +159,8 @@ function outCase(r, full) {
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
     bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', teamDoneAt: r.teamDoneAt || null, teamNote: r.teamNote || '', teamMemo: r.teamMemo || '', teamMemoAt: r.teamMemoAt || null, teamArrivedAt: r.teamArrivedAt || null, teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake) };
   if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
-  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; }
+  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; o.hqNote = ''; o.teamMemo = ''; o.teamMemoAt = null; o.teamNote = ''; o.teamIssue = ''; o.teamIssueAt = null; o.sevBy = ''; o.cctv = '';
+    o.address = String(o.address || '').replace(/(บ้านเลขที่|เลขที่)?\s*\d+(\/\d+)?/g, '').replace(/\s{2,}/g, ' ').trim(); if (o.lat !== '' && o.lat != null) { o.lat = Math.round(Number(o.lat) * 1000) / 1000; o.lng = Math.round(Number(o.lng) * 1000) / 1000; } }
   return o;
 }
 
@@ -623,12 +624,13 @@ async function pttAuth(env, db, p, vol) {
   ch.push({ id: 'tm:' + t.name, label: 'ส่วนตัวกับศูนย์' });
   return { ok: true, kind: 'team', name: t.name, chans: ch };
 }
-const PTT_MAX = 700e3;
+const PTT_MAX = 250e3;
 function b64bytes(s) { const bin = atob(String(s || '').replace(/^data:[^,]*,/, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 async function pttSend(db, who, b) {
   let a; try { a = b64bytes(b.audio); } catch (e) { return { ok: false, error: 'bad_audio' }; }
   if (a.length < 400 || a.length > PTT_MAX * 2 || String.fromCharCode(a[0], a[1], a[2], a[3]) !== 'RIFF') return { ok: false, error: 'bad_audio' };
   const ch = clean(b.ch, 80) || 'all'; if (who.chans && !who.chans.includes(ch)) return { ok: false, error: 'bad_channel' };
+  const qk = 'ptt:' + clean(who.sender, 80); if (!await quota(db, qk + ':n', 40, 600e3) || !await quota(db, qk + ':b', 12e6, 600e3, a.length)) return { ok: false, error: 'too_many' };
   const now = Date.now(), r = await db.prepare('INSERT INTO ptt (ch,sender,kind,name,dur,at,audio,talk) VALUES (?,?,?,?,?,?,?,?)')
     .bind(ch, clean(who.sender, 80), who.kind, clean(b.name || who.name || '', 60), Math.min(60, Math.max(0, Number(b.dur) || 0)), now, a, clean(b.talk, 20)).run();
   const n = r.meta && r.meta.last_row_id; await pttToChat(db, who, ch, n, Number(b.dur) || 0).catch(() => {});
@@ -747,6 +749,7 @@ async function saveTele(db, team, b, lat, lng) {
 async function pingTeam(db, b) {
   const team = clean(b.team, MAX.volunteer);
   if (!team) return { ok: false, error: 'missing_team' };
+  if (!await quota(db, 'ping:' + team, 900, 600e3)) return { ok: false, error: 'too_many' };
   if (b.stop) { await db.prepare('DELETE FROM teams_live WHERE team=?').bind(team).run(); return { ok: true, stopped: true }; }
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (lat == null || lng == null) return { ok: false, error: 'bad_location' };
@@ -1038,6 +1041,7 @@ const TEAM_POST = {
   ptt_send: async (db, t, b) => { const au = await pttAuth(ENV, db, { ...b, tk: b.tk || '', team: t.name }, false); return pttSend(db, { sender: t.name, kind: 'team', name: b.name, chans: (au.chans || []).map(c => c.id) }, b); },
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   road_q: async (db, t, b) => {
+    if (!await quota(db, 'roadq:' + t.name, 30, 600e3)) return { ok: false, error: 'too_many' };
     const pts = (Array.isArray(b.pts) ? b.pts : []).slice(0, 120), now = Date.now(), st = [];
     for (const p of pts) { const lat = num(p.lat, -90, 90), lng = num(p.lng, -180, 180), at = Number(p.at); if (lat == null || lng == null || !lat || !lng) continue;
       st.push(db.prepare('INSERT INTO road_q (team,at,lat,lng,rms,peak,bumps,spd) VALUES (?,?,?,?,?,?,?,?)').bind(t.name, at > now - 7 * 864e5 && at <= now + 6e4 ? at : now, lat, lng, num(p.rms, 0, 50) || 0, num(p.peak, 0, 80) || 0, clampInt(p.bumps, 0, 999, 0), num(p.spd, 0, 250) || 0)); }
@@ -1049,6 +1053,7 @@ const TEAM_POST = {
     return { ok: true, status: b.status };
   },
   case_photo_add: async (db, t, b) => {
+    if (!await quota(db, 'photo:' + t.name, 60, 3600e3)) return { ok: false, error: 'too_many' };
     const c = await db.prepare('SELECT id,volunteer,status FROM cases WHERE id=?').bind(clean(b.id, 30)).first();
     if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== t.name) return { ok: false, error: 'not_your_case' };
     let a; try { a = b64bytes(b.img); } catch (e) { return { ok: false, error: 'bad_image' }; }
@@ -1085,7 +1090,7 @@ const TEAM_POST = {
     return { ok: true, sosAt: b.cancel ? null : now };
   },
   call_start: (db, t, b) => callStart(db, t.name, 'team', b),
-  chat_send: (db, t, b) => chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }),
+  chat_send: async (db, t, b) => await quota(db, 'chat:' + t.name, 120, 600e3) ? chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }) : { ok: false, error: 'too_many' },
   team_gmaps: (db, t, b) => setTeamGmaps(db, t.name, b.gmaps),
   env_check: (db, t, b) => envCheck(ENV, b),
   chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
@@ -1269,8 +1274,10 @@ async function viewId(token) { const d = await crypto.subtle.digest('SHA-256', n
 async function liveView(db, v) {
   v = String(v || '').toLowerCase();
   if (!/^[0-9a-f]{16}$/.test(v)) return { ok: false, error: 'bad_link' };
-  const { results } = await db.prepare("SELECT name,status,token,vehicle,members FROM roster WHERE active=1 AND token IS NOT NULL AND token<>''").all();
-  let t = null; for (const r of results) if (await viewId(r.token) === v) { t = r; break; }
+  const cached = await getMeta(db, 'view:' + v); let t = null;
+  if (cached) t = await db.prepare("SELECT name,status,token,vehicle,members FROM roster WHERE active=1 AND name=? AND token IS NOT NULL AND token<>''").bind(cached).first();
+  if (!t || await viewId(t.token) !== v) { t = null; const { results } = await db.prepare("SELECT name,status,token,vehicle,members FROM roster WHERE active=1 AND token IS NOT NULL AND token<>''").all();
+    for (const r of results) if (await viewId(r.token) === v) { t = r; break; } if (t) await setMeta(db, 'view:' + v, t.name); }
   if (!t) return { ok: false, error: 'bad_link' };
   const live = await db.prepare('SELECT lat,lng,accuracy,updatedAt,speed,heading,battery FROM teams_live WHERE team=?').bind(t.name).first();
   const { results: pts } = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? AND at>? ORDER BY at, n LIMIT 1500').bind(t.name, Date.now() - 6 * 3600e3).all();
@@ -1368,6 +1375,12 @@ async function wrGet(env, db, p) {
     case 'chat_threads': { const r = await chatThreads(db); r.threads = r.threads.filter(t => sc.teams.has(t.team));
       if (r.alerts) r.alerts = { sos: (r.alerts.sos || []).filter(x => sc.teams.has(x.name)), calls: (r.alerts.calls || []).filter(x => sc.teams.has(x.team)), silent: (r.alerts.silent || []).filter(x => sc.teams.has(x.name)) }; return r; }
     case 'stock': { const r = await listStock(db); r.items = r.items.filter(i => !i.warroom || sc.zones.has(i.warroom)); const ids = new Set(r.items.map(i => i.id)); r.log = (r.log || []).filter(l => ids.has(l.itemId)); return r; }
+    case 'warrooms': { const r = await listWarrooms(db); r.warrooms = r.warrooms.filter(w => sc.zones.has(w.id)); r.staff = (r.staff || []).filter(x => sc.zones.has(x.wr)); r.teams = (r.teams || []).filter(x => sc.zones.has(x.warroom)); return r; }
+    case 'case_photos': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return c && inScope(c, sc) ? null : { ok: false, error: 'not_in_room' }; }
+    case 'case_photo': { const ph = await db.prepare('SELECT caseId FROM case_photo WHERE n=?').bind(Number(p.n) || 0).first(); const c = ph && await db.prepare('SELECT * FROM cases WHERE id=?').bind(ph.caseId).first(); return c && inScope(c, sc) ? null : { ok: false, error: 'not_in_room' }; }
+    case 'photo_index': { const { results } = await db.prepare("SELECT caseId, n FROM case_photo WHERE kind='handoff' AND at>? ORDER BY n").bind(Date.now() - 30 * 864e5).all(); const ids = [...new Set(results.map(r => r.caseId))]; const ok = new Set();
+      for (let i = 0; i < ids.length; i += 50) { const chunk = ids.slice(i, i + 50); const { results: cs } = await db.prepare(`SELECT * FROM cases WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).all(); cs.forEach(c => { if (inScope(c, sc)) ok.add(c.id); }); }
+      const m = {}; for (const r of results) if (ok.has(r.caseId)) (m[r.caseId] = m[r.caseId] || []).push(r.n); return { ok: true, m }; }
   }
   return null;
 }
@@ -1375,8 +1388,9 @@ async function wrPostCheck(db, b) {
   const sc = await wrScope(db); if (sc.none) return 'no_room';
   const teamOk = async name => sc.teams.has(clean(name, MAX.volunteer));
   switch (b.action) {
-    case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); return c && inScope(c, sc) ? '' : 'not_in_room'; }
+    case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); if (!c || !inScope(c, sc)) return 'not_in_room'; const v = String(b.volunteer || '').replace(/^'/, '').trim(); return !v || v === String(c.volunteer || '').replace(/^'/, '').trim() || await teamOk(v) ? '' : 'not_in_room'; }
     case 'chat_send': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
+    case 'ptt_send': return !b.team || await teamOk(b.team) ? '' : 'not_in_room';
     case 'rally_save': if (b.all === true) return ''; for (const t of (Array.isArray(b.teams) ? b.teams : [])) if (!await teamOk(t)) return 'not_in_room'; return '';
     case 'sos_ack': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'team_link': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=? OR name=?').bind(clean(b.id, 20), clean(b.team, MAX.volunteer)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
@@ -1597,6 +1611,10 @@ async function pwHash(pw, salt) {
 }
 const WR_USER = u => String(u || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 32);
 const UN_OK = u => /^[a-z0-9._-]{3,32}$/.test(String(u || '').trim().toLowerCase());
+async function quota(db, k, max, win, add = 1) {
+  const key = 'q:' + k, now = Date.now(); let o = {}; try { o = JSON.parse(await getMeta(db, key) || '{}'); } catch (e) {}
+  if (!o.t || now - o.t > win) o = { t: now, n: 0 }; o.n += add; await setMeta(db, key, JSON.stringify(o)); return o.n <= max;
+}
 async function ipLimit(db, ip, kind, max = 30, win = 600e3) {
   if (!ip) return true; const k = 'rl:' + kind + ':' + ip, now = Date.now(); let o = {}; try { o = JSON.parse(await getMeta(db, k) || '{}'); } catch (e) {}
   if (!o.t || now - o.t > win) o = { t: now, n: 0 }; o.n++; await setMeta(db, k, JSON.stringify(o)); return o.n <= max;
@@ -2712,7 +2730,8 @@ async function api(request, env) {
   ENV = env;
   const db = env.DB;
   const gm = new URL(request.url).pathname.match(/^\/api\/gistda\/(1day|3days|7days|30days|freq)\/(\d{1,2})\/(\d{1,7})\/(\d{1,7})(?:\.png)?$/);
-  if (gm && request.method === 'GET') return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]);
+  if (gm && request.method === 'GET') { const u = new URL(request.url), k = request.headers.get('x-hm-key') || u.searchParams.get('key') || (u.searchParams.get('t') && await ticketKey(db, env, u.searchParams.get('t')));
+    if (!k || !(isVol(env, k) || await wrAuth(db, k) || await staffAuth(db, k))) return new Response('forbidden', { status: 403 }); return gistdaTile(env, gm[1], gm[2], gm[3], gm[4]); }
   if (request.method === 'GET' && new URL(request.url).searchParams.get('action') === 'news') { try { return json(await newsData()); } catch (e) { return json({ ok: false, error: 'news_unavailable' }); } }
   const trk = new URL(request.url).pathname.match(/^\/api\/track(?:\/([A-Za-z0-9]{10,40}))?\/?$/);
   if (!db) return json({ ok: false, error: 'no_database', hint: 'ผูก D1 ชื่อ DB กับโปรเจกต์ Pages ก่อน' }, 500);
@@ -2827,7 +2846,7 @@ async function api(request, env) {
     if (b.key && !await keyGuard(db, env, request, b.key)) return json({ ok: false, error: 'too_many' }, 429);
     WRC = await wrAuth(db, b.key);
     { const sf = !WRC && await staffAuth(db, b.key); if (sf) { const st = RQ.getStore(); if (st) { st.staff = sf; st.k0 = env.VOLUNTEER_KEY; } b.key = env.VOLUNTEER_KEY; b.by = sf.name; } }
-    if (b.key && !WRC && !isVol(env, b.key) && !b.tk) await keyFail(db, request, b.key);
+    if (b.key && !WRC && !isVol(env, b.key)) await keyFail(db, request, b.key);
     if (b.action === 'ticket') { const st = RQ.getStore(), raw = st && st.staff ? st.body && st.body._raw : null; if (!WRC && !isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' }); return json(await ticketMake(db, env, raw || (WRC ? st.k0 : b.key))); }
     if (WRC) {
       if (WR_DENY.includes(b.action) || !WR_POST_OK.has(b.action) || (b.action === 'warroom_save' && clean((b.warroom || {}).id, 20) !== WRC.id)) return json({ ok: false, error: 'central_only' });

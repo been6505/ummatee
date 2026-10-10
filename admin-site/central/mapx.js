@@ -28,7 +28,7 @@ const MX=(()=>{
     else S.base=t('https://tile.openstreetmap.org/{z}/{x}/{y}.png','© OpenStreetMap');
     S.base.addTo(m);{const tok=S.baseTok=(S.baseTok||0)+1;if((name==='road'||name==='dark')&&typeof OFM!=='undefined')OFM.layer(name).then(l=>{if(!l||tok!==S.baseTok)return;m.removeLayer(S.base);S.base=l;l.addTo(m)})}S.baseName=name;try{localStorage.setItem('uh_base',name)}catch(e){}layerMenu()}
   function attach(map){S.map=map;['sensors','stations','cams','zones','route'].forEach(k=>S.L[k]=L.layerGroup());
-    S.L.gistda=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'});
+    S.L.gistda=HMT.tiles('/api/gistda/7days/{z}/{x}/{y}',{opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'});
     map.eachLayer(l=>{if(l instanceof L.TileLayer)map.removeLayer(l)});
     map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('น้ำท่วม: Floodboard (CC-BY), สำนักการระบายน้ำ กทม., ThaiWater · กล้อง: iTIC');
     if(map.zoomControl)map.zoomControl.setPosition('bottomright');L.control.scale({metric:true,imperial:false,position:'bottomleft'}).addTo(map);

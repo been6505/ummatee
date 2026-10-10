@@ -20,7 +20,7 @@ const TRACK=(()=>{
   async function gistda(){if(gl){map.removeLayer(gl);gl=null}if(!LY.gis)return;
     if(gisOk==null){try{const r=await fetch('/api?action=gistda_status').then(r=>r.json());gisOk=!!(r&&r.enabled)}catch(e){gisOk=false}}if(!gisOk||!LY.gis)return;
     if(!map.getPane('gistda')){const p=map.createPane('gistda');p.style.zIndex=340;p.style.pointerEvents='none'}
-    gl=L.tileLayer('/api/gistda/7days/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'}).addTo(map)}
+    gl=HMT.tiles('/api/gistda/7days/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18,attribution:'น้ำท่วมจากดาวเทียม © GISTDA'}).addTo(map)}
   const RQL=['ถนนเรียบ','ขรุขระเล็กน้อย','ขรุขระ','แย่มาก / หลุมบ่อ'],RQC=['#22A06B','#E5B800','#F97316','#D92D20'];
   async function road(force){if(!LY.road){if(rq){rq.remove();rq=null}return}if(!force&&Date.now()-rqAt<120000)return;rqAt=Date.now();
     let r;try{r=await apiGet({action:'road_q',hours:72})}catch(e){return}if(!r||!r.ok||!LY.road)return;

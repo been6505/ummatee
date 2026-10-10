@@ -1,9 +1,10 @@
 const root=document.documentElement;
 $('#st-name').value=store.get('uh_staff')||'';
 $('#st-name').addEventListener('change',e=>{try{localStorage.setItem('uh_staff',e.target.value.trim())}catch(err){}toast('บันทึกชื่อแล้ว',true)});
-const markTheme=()=>$$('#st-theme [data-th]').forEach(b=>b.setAttribute('aria-pressed',String((root.dataset.theme==='dark'?'dark':'light')===b.dataset.th)));
-$('#st-theme').addEventListener('click',e=>{const b=e.target.closest('[data-th]');if(!b)return;const t=b.dataset.th;
-  if(t==='dark')root.dataset.theme='dark';else root.dataset.theme='light';try{localStorage.setItem('uh_theme',t)}catch(err){}markTheme()});
+const isDark=()=>root.dataset.theme==='dark';
+const markTheme=()=>{const t=isDark()?'dark':'light';$$('[data-stsw="theme"]').forEach(i=>{i.checked=t==='dark'});const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=t==='dark'?'#222224':'#F2F3F7'};
+function setTheme(t){root.dataset.theme=t==='dark'?'dark':'light';try{localStorage.setItem('uh_theme',t)}catch(err){}markTheme()}
+window.addEventListener('storage',e=>{if(e.key==='uh_theme')markTheme()});
 markTheme();
 const P=LOCALAI.PRESETS;let cur=LOCALAI.cfg();
 $('#ai-preset').innerHTML=Object.entries(P).map(([k,v])=>`<button type="button" data-p="${k}">${esc(v.label)}</button>`).join('');
@@ -75,7 +76,8 @@ setInterval(lgPoll,20000);
 adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});
 
 const STM=[
-  {h:'บัญชีของคุณ',rows:[{p:'user',ic:'user',t:'ผู้ใช้งาน',s:'ชื่อที่แสดงในประวัติ · ธีมสว่าง / มืด',k:'ชื่อ ธีม โหมดมืด dark'}]},
+  {h:'การแสดงผล',rows:[{sw:'theme',ic:'moon',t:'โหมดมืด',s:'ใช้กับทุกหน้า CENTRAL ในเครื่องนี้',k:'ธีม โหมดมืด โหมดสว่าง dark light theme'}]},
+  {h:'บัญชีของคุณ',rows:[{p:'user',ic:'user',t:'ผู้ใช้งาน',s:'ชื่อที่แสดงในประวัติ',k:'ชื่อ user'}]},
   {h:'ความปลอดภัย',rows:[{p:'staff',ic:'users',t:'บัญชีเจ้าหน้าที่',s:'เข้าระบบรายคน · เพิ่ม · เปลี่ยนรหัส · ปิดบัญชี',k:'บัญชี ผู้ใช้ รหัสผ่าน staff account'}]},
   {h:'การแจ้งเตือนและการเชื่อมต่อ',rows:[{p:'discord',ic:'chat',t:'Discord',s:'แจ้งเตือนเคสด่วน · SOS · สรุปโดย AI',k:'webhook แจ้งเตือน',st:()=>$('#dc-tag')&&$('#dc-tag').textContent},
     {p:'sms',ic:'send',t:'รับตำแหน่งทีมทาง SMS',s:'ทีมส่งตำแหน่งได้แม้ไม่มีเน็ต',k:'sms ส่งต่อ ตำแหน่ง'}]},
@@ -93,11 +95,13 @@ function stAvail(p){const c=document.querySelector(`.st-card[data-page="${p}"]`)
 function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
   $('#st-menu').innerHTML=STM.map(sec=>{const rows=sec.rows.filter(r=>(!r.hq||!stWR())&&(!r.p||stAvail(r.p))&&(!q||(r.t+' '+r.s+' '+(r.k||'')).toLowerCase().includes(q)));if(!rows.length)return '';
     return `<section class="stm-sec"><h2>${esc(sec.h)}</h2>${rows.map(r=>{const st=r.st?r.st():'';const inner=`<span class="stm-ic">${stIc(r.ic)}</span><span class="stm-tx"><b>${esc(r.t)}</b>${r.s?`<small>${esc(r.s)}</small>`:''}</span>${st?`<em>${esc(st)}</em>`:''}<span class="stm-chev">${r.logout?'':stIc('chev')}</span>`;
+      if(r.sw)return `<label class="stm-row stm-sw"><span class="stm-ic">${stIc(r.ic)}</span><span class="stm-tx"><b>${esc(r.t)}</b>${r.s?`<small>${esc(r.s)}</small>`:''}</span><input type="checkbox" class="sw" role="switch" data-stsw="${r.sw}" aria-label="${esc(r.t)}"${r.sw==='theme'&&isDark()?' checked':''}></label>`;
       return r.href?`<a class="stm-row" href="${r.href}">${inner}</a>`:`<button type="button" class="stm-row${r.logout?' danger':''}" ${r.logout?'data-stout':r.fb?'data-stfb':`data-stp="${r.p}"`}>${inner}</button>`}).join('')}</section>`}).join('')||'<p class="stm-none">ไม่พบการตั้งค่าที่ค้นหา</p>'}
 function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
   if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
   const changed=m.dataset.view!==p;m.dataset.view=p;$('#st-title').textContent=row.t;if(changed)window.scrollTo(0,0);
   const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='staff')sfLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
+$('#st-menu').addEventListener('change',e=>{const i=e.target.closest('[data-stsw="theme"]');if(i)setTheme(i.checked?'dark':'light')});
 $('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click();if(e.target.closest('[data-stfb]')){const f=document.getElementById('fb-btn');if(f)f.click()}});
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);

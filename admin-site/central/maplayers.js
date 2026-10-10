@@ -73,7 +73,7 @@ const MAPL=(()=>{
     if(S.gisOn==null){try{const r=await fetch('/api?action=gistda_status').then(r=>r.json());S.gisOn=!!(r&&r.enabled)}catch(e){S.gisOn=false}}
     if(!S.gisOn){setSub('mt-gistda','ยังใช้ไม่ได้: ผู้ดูแลต้องตั้ง GISTDA_KEY (สมัครฟรีที่ api-gateway.gistda.or.th)');return}
     if(!S.map.getPane('gistda')){const p=S.map.createPane('gistda');p.style.zIndex=340;p.style.pointerEvents='none'}
-    S.gis=L.tileLayer('/api/gistda/'+gisRange+'/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18}).addTo(S.map);
+    S.gis=HMT.tiles('/api/gistda/'+gisRange+'/{z}/{x}/{y}',{pane:'gistda',opacity:.65,maxZoom:20,maxNativeZoom:18}).addTo(S.map);
     S.map.attributionControl.addAttribution(GIS_ATTR);setSub('mt-gistda','GISTDA · '+GIS_TXT[gisRange]+' (สีฟ้า = น้ำท่วม)')}
   document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gr]');if(!b)return;e.preventDefault();gisRange=b.dataset.gr;try{localStorage.setItem('uh_gistda',gisRange)}catch(err){}
     const sw=document.getElementById('mt-gistda');if(sw&&!sw.checked){sw.checked=true;save()}drawGistda()});

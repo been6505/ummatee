@@ -1,0 +1,14 @@
+/central/*.js
+  Cache-Control: public, max-age=86400
+/central/*.css
+  Cache-Control: public, max-age=86400
+/admin.js
+  Cache-Control: public, max-age=86400
+/admin.css
+  Cache-Control: public, max-age=86400
+/team/*.js
+  Cache-Control: public, max-age=86400
+/assets/*
+  Cache-Control: public, max-age=604800
+/app/*.apk
+  Cache-Control: public, max-age=3600

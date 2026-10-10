@@ -625,8 +625,6 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
 .kb-teams button:hover{border-color:#2D45C8;background:#f5f7ff}
 .kb-teams small{color:#6b7280}
 @media (max-width:760px){.kb-cols{grid-template-columns:repeat(4,82vw)}.kb-col{max-height:calc(100vh - 260px)}}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kb-col{background:#1b1f2a}:root:not([data-theme="light"]) .kb-card,:root:not([data-theme="light"]) .kb-teams button,:root:not([data-theme="light"]) .kb-pick{background:#252a36;color:#e5e7eb}:root:not([data-theme="light"]) .kb-col h3 span{background:#2f3542}:root:not([data-theme="light"]) .kb-col.over{background:#232a4a}}
-:root[data-theme="dark"] .kb-col{background:#1b1f2a}:root[data-theme="dark"] .kb-card,:root[data-theme="dark"] .kb-teams button,:root[data-theme="dark"] .kb-pick{background:#252a36;color:#e5e7eb}:root[data-theme="dark"] .kb-col h3 span{background:#2f3542}:root[data-theme="dark"] .kb-col.over{background:#232a4a}
 body.kb-on .bar-row>.seg,body.kb-on #export,body.kb-on #count,body.kb-on #f-status,body.kb-on #f-sort{display:none!important}
 body.kb-on .bar-row{min-height:0}
 @media (max-width:760px){.view-sw button{white-space:nowrap;font-size:13px;padding-left:10px;padding-right:10px}.kb-tip{font-size:12px}}
@@ -667,5 +665,3 @@ body.kb-on .bar-row{min-height:0}
 .dv-tbl td.ok{color:#0e9f6e;font-weight:700}.dv-tbl td.bad{color:#e5484d}
 body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-status,body.dv-on #f-sort{display:none!important}
 @media (max-width:760px){.dv-two{grid-template-columns:1fr}.dv-bs{height:110px}.dv-bar{flex-basis:22px}.view-sw{overflow-x:auto}}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dv-sum>div,:root:not([data-theme="light"]) .dv-chart,:root:not([data-theme="light"]) .dv-day,:root:not([data-theme="light"]) .dv-tbl{background:#1f2430}}
-:root[data-theme="dark"] .dv-sum>div,:root[data-theme="dark"] .dv-chart,:root[data-theme="dark"] .dv-day,:root[data-theme="dark"] .dv-tbl{background:#1f2430}

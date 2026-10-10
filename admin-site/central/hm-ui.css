@@ -749,3 +749,8 @@ body.rte-on .rally-fab{display:none!important}
 .ts-cases>.ts-cc{flex:0 0 calc(50% - 3px);scroll-snap-align:start}
 .ts-cc .ts-tag{font-size:10px;font-weight:700;color:#5B6386;text-transform:none}.ts-cc.go .ts-tag{color:#B42318}
 .ts-more{display:block;font-size:11px;color:#5B6386;margin-top:2px;text-align:right}
+
+#trk-side .ts{position:relative}
+.ts-ptt{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:#1E3A8A;color:#fff;box-shadow:0 4px 12px rgba(30,58,138,.35);touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.ts-ptt .ic{width:20px;height:20px}.ts-ptt.ptt-press{background:#E5383B;transform:scale(1.08);box-shadow:0 0 0 6px rgba(229,56,59,.25)}
+#trk-side .ts .ts-x{display:flex;align-items:center;min-height:44px;padding-right:56px}

@@ -14,11 +14,11 @@
 <link rel="stylesheet" href="../pages.css?v=14">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
-<link rel="stylesheet" href="../hm-ui.css?v=54">
+<link rel="stylesheet" href="../hm-ui.css?v=55">
 <link rel="stylesheet" href="../summary.css?v=1">
 <link rel="stylesheet" href="./wr-map.css?v=2">
 <link rel="stylesheet" href="./warroom.css?v=32">
-<script src="../icons.js?v=10"></script>
+<script src="../icons.js?v=11"></script>
 </head>
 <body>
 <section id="login" class="login" hidden>
@@ -55,7 +55,7 @@
     <div class="wr-rooms"><div class="wr-roomtabs" id="rooms" role="tablist" aria-label="เลือก War Room"></div><button class="btn sm wr-ai" id="wr-ai" type="button" aria-label="AI HELP" title="AI HELP"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button><button class="btn primary sm" id="wr-new" type="button">+ สร้างศูนย์จังหวัด / War Room</button></div>
     <div class="wr-linkbar" id="wr-linkbar" hidden></div>
     <div class="wr-sub" id="subtabs" role="tablist" aria-label="เมนู War Room">
-      <button type="button" data-tab="struct" aria-selected="false"><i data-ic="users"></i> จัดการ War Room</button><button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
+      <button type="button" data-tab="struct" aria-selected="false"><i data-ic="users"></i> จัดการ War Room</button><button type="button" data-tab="over" aria-selected="true"><i data-ic="board"></i> ภาพรวม</button><button type="button" data-tab="cases" aria-selected="false"><i data-ic="list"></i> เคส</button><button type="button" data-tab="teams" aria-selected="false"><i data-ic="users"></i> ทีม</button><button type="button" data-tab="board" aria-selected="false"><i data-ic="calendar"></i> บอร์ดงาน</button><button type="button" data-tab="stock" aria-selected="false"><i data-ic="box"></i> สต็อก</button><button type="button" data-tab="prof" aria-selected="false"><i data-ic="user"></i> โปรไฟล์</button>
     </div>
     <div class="wr-pane wr-over" id="p-over">
     <section class="wr-kpis hm-sum" id="kpis" aria-label="สรุปสถานการณ์"></section>
@@ -109,6 +109,7 @@
       <p class="muted small" id="t-hint"></p>
       <div class="wr-tgrid" id="t-list"></div>
     </section>
+    <section class="wr-pane" id="p-board" hidden></section>
     <section class="wr-pane" id="p-stock" hidden>
       <div class="wr-tools"><b id="s-title">คลังของ War Room</b><button class="btn primary sm" id="s-add" type="button">+ เพิ่มของในคลังนี้</button><a class="btn ghost sm" href="../stock/">สต็อกทั้งหมด ↗</a></div>
       <div class="wr-tw"><table class="wr-tbl"><thead><tr><th>ของ</th><th>หมวด</th><th class="n">คงเหลือ</th><th>ขั้นต่ำ</th><th>รับเข้า / จ่ายออก</th><th></th></tr></thead><tbody id="s-body"></tbody></table></div>
@@ -138,7 +139,8 @@
 <script src="../maplayers.js?v=7"></script>
 <script src="../verify.js?v=15"></script>
 <script src="../summary.js?v=2"></script>
-<script src="./warroom.js?v=43"></script>
+<script src="./warroom.js?v=44"></script>
+<script src="./board.js?v=2"></script>
 <script src="../theme-toggle.js?v=6"></script>
 <script src="../chat.js?v=12"></script>
 <script src="../feedback.js?v=1"></script>

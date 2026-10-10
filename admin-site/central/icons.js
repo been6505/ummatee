@@ -46,6 +46,7 @@ const ICONS={
   sat:'<path d="m13 7 4 4"/><path d="m4 20 4-4"/><rect x="8.5" y="5.5" width="7" height="7" rx="1" transform="rotate(45 12 9)"/><path d="M15 15a4 4 0 0 0 4-4M15 19a8 8 0 0 0 8-8"/>',
   moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>',
   road:'<path d="M6 21 9 3M18 21 15 3M12 5v2M12 11v2M12 17v2"/>',
+  calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M7.5 14h2M11 14h2M14.5 14h2M7.5 17.5h2M11 17.5h2"/>',
   qr:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2v2M16 16h2v2"/>',
   cam:'<path d="M3 7h11a2 2 0 0 1 2 2v1l5-3v10l-5-3v1a2 2 0 0 1-2 2H3z"/><circle cx="8.5" cy="12" r="2"/>',
   rain:'<path d="M7 15a4.5 4.5 0 1 1 .9-8.9A6 6 0 0 1 19 8.5 3.5 3.5 0 0 1 18 15z"/><path d="M8 18.5 7 21M12.5 18.5l-1 2.5M17 18.5l-1 2.5"/>',

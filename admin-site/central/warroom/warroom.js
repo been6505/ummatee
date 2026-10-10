@@ -139,11 +139,11 @@ function roomsBar(){const all=W.cases.filter(c=>c.status!=='done');
   else $('#rooms').innerHTML=chip(null,'ทั้งหมด')+provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv);
     return `<span class="wr-grp"><span class="gl">${pv?'จ.'+esc(pv.replace('กรุงเทพมหานคร','กรุงเทพฯ')):'ไม่ระบุจังหวัด'}</span>${pr?chip(pr):''}${zs.map(z=>chip(z)).join('')}</span>`}).join('');
   linkBar(lk?null:room());
-  const r=room();$('#subtabs').hidden=!r;
-  const tabs=!r?['struct']:['over','cases','teams','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้ว
+  const r=room();$('#subtabs').hidden=false;
+  const tabs=!r?['struct','board']:['over','cases','teams','board','stock','prof']; // ภาพรวมทั้งหมดย้ายไปอยู่แดชบอร์ดแล้ว
   if(!tabs.includes(W.tab))W.tab=tabs[0];
   $$('#subtabs [data-tab]').forEach(b=>{b.hidden=!tabs.includes(b.dataset.tab);b.setAttribute('aria-selected',String(b.dataset.tab===W.tab))});
-  ['over','struct','cases','teams','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
+  ['over','struct','cases','teams','board','stock','prof'].forEach(k=>$('#p-'+k).hidden=k!==W.tab);
   document.body.classList.toggle('wr-overview',W.tab==='over')}
 $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-room]');if(!b)return;W.room=b.dataset.room;W.fitted='';W.tab=W.room?'over':'struct';if(!W.room)await loadStock();
   try{history.replaceState(null,'',W.room?'?wr='+encodeURIComponent(W.room):location.pathname)}catch(err){}render()});
@@ -537,6 +537,7 @@ function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
 function render(){roomsBar();const V=view();chatScope(V);
   if(W.tab==='over'){kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
   else if(!V.r&&W.tab==='struct')structTab();
+  else if(W.tab==='board'){if(typeof BOARD!=='undefined')BOARD.show()}
   else if(V.r&&W.tab==='cases')casesTab(V);else if(V.r&&W.tab==='teams')teamsTab(V);else if(V.r&&W.tab==='stock')stockTab(V);else if(V.r&&W.tab==='prof')profTab(V);
   $("#status").textContent=`${V.r?V.r.name+' · ':''}อัปเดต ${new Date(W.at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · เคส ${V.cases.length} · อัปเดตเองทุก 30 วินาที`;}
 

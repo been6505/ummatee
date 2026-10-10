@@ -60,6 +60,9 @@ const SCHEMA = [
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
+  `CREATE TABLE IF NOT EXISTS board (id TEXT PRIMARY KEY, room TEXT, title TEXT, body TEXT, status TEXT, lat REAL, lng REAL, place TEXT, cases TEXT, due INTEGER, dueEnd INTEGER, allDay INTEGER, assignee TEXT, color TEXT, imgs TEXT, createdAt INTEGER, updatedAt INTEGER, by_ TEXT, deleted INTEGER DEFAULT 0)`,
+  `CREATE INDEX IF NOT EXISTS board_room ON board(room, deleted)`,
+  `CREATE TABLE IF NOT EXISTS board_img (id TEXT PRIMARY KEY, cardId TEXT, room TEXT, data TEXT, at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS rallies (id TEXT PRIMARY KEY, lat REAL, lng REAL, label TEXT, note TEXT, teams TEXT, caseId TEXT, warroom TEXT, createdAt INTEGER, by_ TEXT, closedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS rally_resp (rallyId TEXT, team TEXT, status TEXT, at INTEGER, note TEXT, PRIMARY KEY (rallyId, team))`,
   `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT, undo TEXT, undone INTEGER)`,
@@ -817,6 +820,64 @@ async function teamRallies(db, name) {
     .bind(name, Date.now() - 3 * 864e5, name).all();
   return results.map(r => ({ id: r.id, lat: r.lat, lng: r.lng, label: r.label, note: r.note || '', caseId: r.caseId || '', createdAt: r.createdAt, my: r.my || '' }));
 }
+/* ---------- บอร์ดงาน (วางแผนงานของทีมงานศูนย์) · แยกตาม War Room (room = รหัสห้อง · 'central' = บอร์ดของ CENTRAL) ----------
+   การ์ด: หัวข้อ · รายละเอียด · สถานะ (todo/doing/done) · วัน-เวลา (เริ่ม/สิ้นสุด) · ผู้รับผิดชอบ · หมุดตำแหน่ง · เคสที่เกี่ยวข้อง · รูป (เก็บแยกตาราง)
+   War Room ย่อยเห็น/แก้ได้เฉพาะบอร์ดห้องตัวเอง */
+const BOARD_ST = ['todo', 'doing', 'done'], BOARD_COLORS = ['', 'red', 'orange', 'green', 'blue', 'purple'];
+const boardRoom = v => WRC ? WRC.id : (clean(v, 30).replace(/[^\w-]/g, '') || 'central');
+const boardOut = c => ({ id: c.id, room: c.room, title: c.title, body: c.body || '', status: c.status, lat: c.lat, lng: c.lng, place: c.place || '', cases: String(c.cases || '').split(',').filter(Boolean),
+  due: c.due || null, dueEnd: c.dueEnd || null, allDay: !!c.allDay, assignee: c.assignee || '', color: c.color || '', imgs: String(c.imgs || '').split(',').filter(Boolean), createdAt: c.createdAt, updatedAt: c.updatedAt, by: c.by_ || '' });
+async function boardList(db, p) {
+  const room = boardRoom(p.room);
+  const { results } = await db.prepare('SELECT * FROM board WHERE room=? AND deleted=0 ORDER BY COALESCE(due, 9e15), createdAt LIMIT 500').bind(room).all();
+  return { ok: true, room, cards: results.map(boardOut), rev: await getMeta(db, 'board_rev:' + room) || '0' };
+}
+async function boardSave(db, b) {
+  const c = b.card || {}, room = boardRoom(c.room), now = Date.now(), id = clean(c.id, 20).replace(/[^\w-]/g, '');
+  const old = id ? await db.prepare('SELECT * FROM board WHERE id=? AND deleted=0').bind(id).first() : null;
+  if (id && (!old || old.room !== room)) return { ok: false, error: 'not_found' };
+  const title = clean(c.title, 140); if (!title) return { ok: false, error: 'missing_title' };
+  const lat = num(c.lat, -90, 90), lng = num(c.lng, -180, 180), ts = v => { const n = Number(v); return n > 1e12 && n < 1e13 ? Math.round(n) : null; };
+  const v = [room, title, clean(c.body, 4000), BOARD_ST.includes(c.status) ? c.status : 'todo', lat, lat == null ? null : lng, clean(c.place, 200),
+    (Array.isArray(c.cases) ? c.cases : []).map(x => clean(x, 40)).filter(Boolean).slice(0, 30).join(','), ts(c.due), ts(c.dueEnd), c.allDay ? 1 : 0, clean(c.assignee, 80), BOARD_COLORS.includes(c.color) ? c.color : '', now, clean(b.by, 60)];
+  if (old) await db.prepare('UPDATE board SET room=?,title=?,body=?,status=?,lat=?,lng=?,place=?,cases=?,due=?,dueEnd=?,allDay=?,assignee=?,color=?,updatedAt=?,by_=? WHERE id=?').bind(...v, id).run();
+  const nid = old ? id : 'B' + rand(5);
+  if (!old) await db.prepare('INSERT INTO board (room,title,body,status,lat,lng,place,cases,due,dueEnd,allDay,assignee,color,updatedAt,by_,id,createdAt,imgs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(...v, nid, now, '').run();
+  await setMeta(db, 'board_rev:' + room, String(now));
+  return { ok: true, id: nid };
+}
+async function boardMove(db, b) {
+  const c = await db.prepare('SELECT room FROM board WHERE id=? AND deleted=0').bind(clean(b.id, 20)).first();
+  if (!c || c.room !== boardRoom(c.room)) return { ok: false, error: 'not_found' };
+  if (!BOARD_ST.includes(b.status)) return { ok: false, error: 'bad_status' };
+  await db.prepare('UPDATE board SET status=?, updatedAt=?, by_=? WHERE id=?').bind(b.status, Date.now(), clean(b.by, 60), clean(b.id, 20)).run();
+  await setMeta(db, 'board_rev:' + c.room, String(Date.now())); return { ok: true };
+}
+async function boardDelete(db, b) {
+  const c = await db.prepare('SELECT room FROM board WHERE id=? AND deleted=0').bind(clean(b.id, 20)).first();
+  if (!c || c.room !== boardRoom(c.room)) return { ok: false, error: 'not_found' };
+  await db.prepare('UPDATE board SET deleted=1, updatedAt=? WHERE id=?').bind(Date.now(), clean(b.id, 20)).run();
+  await setMeta(db, 'board_rev:' + c.room, String(Date.now())); return { ok: true };
+}
+/* รูปในการ์ด: รับเป็น data URL (หน้าเว็บย่อเหลือ ≤1600px ก่อนส่ง) ไม่เกิน ~900KB ต่อรูป · ไม่เกิน 12 รูปต่อการ์ด */
+async function boardImgAdd(db, b) {
+  const c = await db.prepare('SELECT room,imgs FROM board WHERE id=? AND deleted=0').bind(clean(b.cardId, 20)).first();
+  if (!c || c.room !== boardRoom(c.room)) return { ok: false, error: 'not_found' };
+  const data = String(b.data || ''); if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > 1200000) return { ok: false, error: 'bad_image' };
+  const imgs = String(c.imgs || '').split(',').filter(Boolean); if (imgs.length >= 12) return { ok: false, error: 'too_many' };
+  const id = 'I' + rand(6); imgs.push(id);
+  await db.batch([db.prepare('INSERT INTO board_img (id,cardId,room,data,at) VALUES (?,?,?,?,?)').bind(id, clean(b.cardId, 20), c.room, data, Date.now()),
+    db.prepare('UPDATE board SET imgs=?, updatedAt=? WHERE id=?').bind(imgs.join(','), Date.now(), clean(b.cardId, 20))]);
+  await setMeta(db, 'board_rev:' + c.room, String(Date.now())); return { ok: true, id };
+}
+async function boardImgDel(db, b) {
+  const i = await db.prepare('SELECT cardId,room FROM board_img WHERE id=?').bind(clean(b.id, 20)).first();
+  if (!i || i.room !== boardRoom(i.room)) return { ok: false, error: 'not_found' };
+  const c = await db.prepare('SELECT imgs FROM board WHERE id=?').bind(i.cardId).first();
+  await db.batch([db.prepare('DELETE FROM board_img WHERE id=?').bind(clean(b.id, 20)), db.prepare('UPDATE board SET imgs=?, updatedAt=? WHERE id=?').bind(String((c || {}).imgs || '').split(',').filter(x => x && x !== clean(b.id, 20)).join(','), Date.now(), i.cardId)]);
+  await setMeta(db, 'board_rev:' + i.room, String(Date.now())); return { ok: true };
+}
+async function boardImg(db, p) { const i = await db.prepare('SELECT room,data FROM board_img WHERE id=?').bind(clean(p.id, 20)).first(); if (!i || i.room !== boardRoom(i.room)) return { ok: false, error: 'not_found' }; return { ok: true, data: i.data }; }
 const TEAM_POST = {
   rally_resp: async (db, t, b) => {
     const r = await db.prepare('SELECT * FROM rallies WHERE id=? AND closedAt IS NULL').bind(clean(b.id, 20)).first();
@@ -1132,8 +1193,8 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+const WR_POST_OK = new Set(['board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -1202,8 +1263,8 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
 /* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
-const AUDIT_SKIP = new Set(['intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_SKIP = new Set(['board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_TH = { board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -2570,6 +2631,8 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'board_list': return json(vol ? await boardList(db, p) : { ok: false, error: 'not_volunteer' });
+      case 'board_img': return json(vol ? await boardImg(db, p) : { ok: false, error: 'not_volunteer' });
       case 'rallies': return json(vol ? await rallyList(db) : { ok: false, error: 'not_volunteer' });
       case 'intel_brief': return json(vol ? { ok: true, ...(await intelBrief(db)) } : { ok: false, error: 'not_volunteer' });
       case 'dams': try { return json(await damData()); } catch (e) { return json({ ok: false, error: 'dams_unavailable' }); }
@@ -2641,7 +2704,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)

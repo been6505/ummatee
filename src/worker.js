@@ -38,6 +38,7 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS chat_team ON chat(team, n)`,
   `CREATE TABLE IF NOT EXISTS team_track (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, lat REAL, lng REAL, accuracy INTEGER, battery INTEGER, speed REAL, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS team_track_team ON team_track(team, n)`,
+  `CREATE INDEX IF NOT EXISTS team_track_at ON team_track(team, at)`,
   `CREATE TABLE IF NOT EXISTS calls (id TEXT PRIMARY KEY, secret TEXT, mode TEXT, team TEXT, caller TEXT, name TEXT, createdAt INTEGER, endedAt INTEGER)`,
   `CREATE TABLE IF NOT EXISTS call_sig (n INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT, peer TEXT, dest TEXT, kind TEXT, data TEXT, at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS call_sig_call ON call_sig(call, n)`,
@@ -566,7 +567,6 @@ async function pttSend(db, who, b) {
   const ch = clean(b.ch, 80) || 'all'; if (who.chans && !who.chans.includes(ch)) return { ok: false, error: 'bad_channel' };
   const now = Date.now(), r = await db.prepare('INSERT INTO ptt (ch,sender,kind,name,dur,at,audio,talk) VALUES (?,?,?,?,?,?,?,?)')
     .bind(ch, clean(who.sender, 80), who.kind, clean(b.name || who.name || '', 60), Math.min(60, Math.max(0, Number(b.dur) || 0)), now, a, clean(b.talk, 20)).run();
-  if (Math.random() < 0.05) await db.prepare('DELETE FROM ptt WHERE at<?').bind(now - 864e5).run();
   const n = r.meta && r.meta.last_row_id; await pttToChat(db, who, ch, n, Number(b.dur) || 0).catch(() => {});
   return { ok: true, n, at: now };
 }
@@ -665,7 +665,6 @@ async function trackApp(db, request, url, pathTk) {
     db.prepare('UPDATE teams_live SET appAt=? WHERE team=?').bind(now, row.name),
   ]);
   await saveTele(db, row.name, { alt: p.alt, sig: body.sig, net: body.net, carrier: body.carrier, charging: body.chg }, lat, lng).catch(() => {});
-  if (Math.random() < 0.01) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 864e5).run();
   return body._type ? json([]) : out({ ok: true });
 }
 async function saveTele(db, team, b, lat, lng) {
@@ -694,7 +693,6 @@ async function pingTeam(db, b) {
   const last = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? ORDER BY n DESC LIMIT 1').bind(team).first();
   if (!last || km(last.lat, last.lng, lat, lng) > 0.02 || now - last.at > 120e3) {
     await db.prepare('INSERT INTO team_track (team,lat,lng,accuracy,battery,speed,at) VALUES (?,?,?,?,?,?,?)').bind(team, lat, lng, acc, batt, speed, now).run();
-    if (Math.random() < 0.02) await db.prepare('DELETE FROM team_track WHERE at<?').bind(now - 7 * 86400e3).run();
   }
   return { ok: true };
 }

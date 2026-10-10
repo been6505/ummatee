@@ -235,15 +235,18 @@ body.on-chat .top .st{display:none!important}
 .ac-top{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 0}.ac-top b{font-size:16px}
 .ac-rf{border:0;background:#fff;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;box-shadow:0 1px 3px rgba(22,27,61,.1);color:var(--ink);cursor:pointer}.ac-rf .ic{width:18px;height:18px}
 .ac-chips{display:flex;gap:6px;overflow-x:auto}
-.ac-list{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(22,27,61,.06)}
-.ac{border-left:4px solid #C9CCD8}.ac+.ac{border-top:1px solid var(--line)}.ac.u3{border-left-color:var(--red)}.ac.u2{border-left-color:var(--amber)}
-.ac-h{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:12px 12px 12px 14px;font:inherit;text-align:left;color:inherit;cursor:pointer}
-.ac-m{flex:1;min-width:0;display:grid;gap:4px}.ac-t{display:flex;align-items:center;gap:8px;min-width:0}
-.ac-h .tag{font-size:11.5px;padding:3px 9px;margin:0;flex:none}.ac-n{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ac-s{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ac-s .ic{width:14px;height:14px;flex:none}
-.ac-km{flex:none;background:var(--tint);color:var(--primary);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700}
-.ac-h>.ic{width:18px;height:18px;color:var(--muted);flex:none;transition:transform .2s}.ac.open .ac-h>.ic{transform:rotate(180deg)}
-.ac.open{background:#FAFBFE}
+.ac-list{display:grid;gap:10px}
+.ac{background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(22,27,61,.08);border-left:5px solid #C9CCD8;overflow:hidden}.ac.u3{border-left-color:var(--red)}.ac.u2{border-left-color:var(--amber)}
+.ac-h{display:grid;gap:6px;padding:14px 14px 12px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ac-r1{display:flex;align-items:center;gap:8px;min-width:0}
+.ac-id{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ac-h .tag{font-size:12px;padding:3px 10px;margin:0;flex:none}
+.ac-km{margin-left:auto;flex:none;background:var(--tint);color:var(--primary);border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700}
+.ac-who{display:flex;align-items:center;gap:7px;min-width:0}.ac-who b{font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ac-who .ic{width:17px;height:17px;color:var(--muted);flex:none}
+.ac-tel{display:inline-flex;align-items:center;gap:7px;justify-self:start;font-size:16px;font-weight:700;color:var(--ok);text-decoration:none;background:var(--okt);border-radius:999px;padding:5px 14px 5px 10px;font-variant-numeric:tabular-nums}.ac-tel .ic{width:16px;height:16px}
+.ac-tel.off{color:var(--muted);background:#F0F1F5;font-weight:600;font-size:14px}
+.ac-s{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac.open .ac-h{padding-bottom:6px}
 .ac-b{padding:0 14px 14px}.ac-b dl{display:grid;grid-template-columns:84px 1fr;gap:7px 10px;margin:2px 0 14px;font-size:14px;background:#fff;border-radius:14px;padding:12px;box-shadow:inset 0 0 0 1px var(--line)}.ac-b dt{color:var(--muted)}.ac-b dd{margin:0;word-break:break-word}
 .ac-act{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}.ac-act .btn{min-height:46px;font-size:15px;border-radius:999px}
 .ac-more{width:100%}
@@ -788,14 +791,17 @@ function allCases(){if(!AC.list)return '<p class="empty">กำลังโห�
   const km=d=>d==null?'':d<1000?Math.round(d)+' ม.':(d/1000).toFixed(d<10000?1:0)+' กม.';
   const chips=[['near','ใกล้ฉัน'],['crit','วิกฤต'],['new','ใหม่สุด']].map(([k,l])=>`<button type="button" class="chip" data-asort="${k}" aria-pressed="${AC.sort===k}">${l}</button>`).join('');
   const rows=xs.slice(0,AC.lim).map(({c,d})=>{const s=sv(c),op=AC.open===String(c.id),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' ');
-    return `<article class="ac u${s}${op?' open':''}"><button type="button" class="ac-h" data-aopen="${esc(c.id)}" aria-expanded="${op}"><span class="ac-m"><span class="ac-t"><span class="tag u${s}">${URG[s]}</span><b class="ac-n">${esc((c.needs||[]).slice(0,2).join(' · ')||'ขอความช่วยเหลือ')}</b></span><small class="ac-s"><i data-ic="users"></i>${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''} · ${esc(ago(c.createdAt))}</small></span>${d!=null?`<span class="ac-km">${km(d)}</span>`:''}<i data-ic="chev"></i></button>
+    return `<article class="ac u${s}${op?' open':''}"><div class="ac-h" data-aopen="${esc(c.id)}" role="button" tabindex="0" aria-expanded="${op}"><div class="ac-r1"><span class="ac-id">#${esc(c.id)}</span><span class="tag u${s}">${URG[s]}</span>${d!=null?`<span class="ac-km">${km(d)}</span>`:''}</div>
+        <div class="ac-who"><i data-ic="user"></i><b>${esc(c.name||'ไม่ระบุชื่อ')}</b></div>
+        ${p.length>=9?`<a class="ac-tel" href="tel:${esc(p)}"><i data-ic="phone"></i>${esc(p.replace(/^(\d{3})(\d{3})(\d{3,4})$/,'$1-$2-$3'))}</a>`:'<span class="ac-tel off"><i data-ic="phone"></i>ไม่มีเบอร์</span>'}
+        <small class="ac-s">${esc((c.needs||[]).slice(0,2).join(' · ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''} · ${esc(ago(c.createdAt))}</small></div>
       ${op?`<div class="ac-b"><dl><dt>ต้องการ</dt><dd>${esc((c.needs||[]).join(' · ')||'-')}</dd><dt>จำนวนคน</dt><dd>${esc(c.people||1)} คน${c.vulnerable&&c.vulnerable.length?' · '+esc(c.vulnerable.join(', ')):''}</dd>${c.level?`<dt>ระดับน้ำ</dt><dd>${esc(LEVEL[c.level]||c.level)}</dd>`:''}<dt>ที่อยู่</dt><dd>${esc([c.address,c.district].filter(Boolean).join(' · ')||'-')}</dd><dt>ผู้แจ้ง</dt><dd>${esc([c.name,c.phone].filter(Boolean).join(' · ')||'-')}</dd>${c.photos?`<dt>รูป</dt><dd>${c.photos} รูป</dd>`:''}${c.notes?`<dt>หมายเหตุ</dt><dd>${esc(c.notes)}</dd>`:''}<dt>แจ้งเมื่อ</dt><dd>${esc(ago(c.createdAt))}ที่แล้ว${d!=null?' · ห่าง '+km(d):''} · #${esc(c.id)}</dd></dl>
         <div class="ac-act">${p.length>=9?`<a class="btn red" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}${dest?`<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}<button type="button" class="btn green" data-areq="${esc(c.id)}"><i data-ic="hand"></i> ขอรับเคส</button></div></div>`:''}</article>`}).join('');
   return `<div class="ac-top"><b>รอความช่วยเหลือ ${AC.list.length} เคส</b><button type="button" class="ac-rf" data-arefresh aria-label="โหลดใหม่"><i data-ic="refresh"></i></button></div><div class="ac-chips">${chips}</div>${!me&&AC.sort==='near'?'<p class="hint">เปิดตำแหน่งเพื่อเรียงเคสใกล้ฉัน</p>':''}
     <div class="ac-list">${rows||'<p class="empty">ไม่มีเคสที่รอความช่วยเหลือ</p>'}</div>${xs.length>AC.lim?`<button type="button" class="btn ac-more" data-amore>ดูเพิ่ม (${xs.length-AC.lim})</button>`:''}`}
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#dash [data-dtab],#dash [data-aopen],#dash [data-asort],#dash [data-amore],#dash [data-arefresh],#dash [data-areq]');if(!t)return;
   if(t.dataset.dtab){S.dtab=t.dataset.dtab;DASH();$('#v-call').scrollTop=0;return}
-  if(t.dataset.aopen){AC.open=AC.open===t.dataset.aopen?'':t.dataset.aopen;DASH();return}
+  if(t.dataset.aopen){if(e.target.closest('a'))return;AC.open=AC.open===t.dataset.aopen?'':t.dataset.aopen;DASH();return}
   if(t.dataset.asort){AC.sort=t.dataset.asort;AC.lim=30;DASH();return}
   if(t.hasAttribute('data-amore')){AC.lim+=30;DASH();return}
   if(t.hasAttribute('data-arefresh')){loadAll(true);return}

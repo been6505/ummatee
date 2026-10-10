@@ -32,8 +32,6 @@ const CHAT=(()=>{
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
     window.addEventListener('hm-rev',e=>{if(e.detail.what.includes('chat'))poll(true)});
-    if(KEY()&&!/^wr/.test(KEY())){const rb=document.createElement('button');rb.type='button';rb.className='rally-fab';rb.setAttribute('aria-label','รวมพล · เรียกทีมไปจุดเดียวกัน');rb.title='รวมพล';rb.innerHTML='<i data-ic="megaphone"></i><b>รวมพล</b>';document.body.append(rb);
-      rb.onclick=()=>{if(document.getElementById('rally')){document.body.classList.toggle('rl-open');setTimeout(()=>window.dispatchEvent(new Event('resize')),80)}else{const base=location.pathname.includes('/central/')?location.pathname.replace(/\/central\/.*$/,'/central/teams/'):'./central/teams/';location.href=base+'?rally=open'}}}
     if(typeof PTT!=='undefined'&&KEY()){const pb=document.createElement('button');pb.type='button';pb.className='ptt-fab';pb.setAttribute('aria-label','วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด');pb.title='วอ · กดค้างเพื่อพูด';pb.innerHTML='<i data-ic="mic"></i>';document.body.append(pb);
       PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,t:HMT.t}),me:()=>({sender:'ศูนย์',kind:'hq'}),
         ws:()=>HMT.get().then(t=>t?((()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com'))+'/ptt/ws?'+new URLSearchParams({t}):''),

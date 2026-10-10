@@ -277,6 +277,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 .vlen{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}.vlab{font-size:13px;opacity:.85;margin:0}
 .m.mcase{background:none!important;box-shadow:none!important;padding:0!important;max-width:100%!important;width:100%}.m.mcase .who{margin:0 4px 6px}.m.mcase .case{margin:0}
 @keyframes pttb{50%{opacity:.4}}
+.hq-route{display:grid;gap:4px;background:#E9F6EE;border:1.5px solid #9BD3B0;border-radius:14px;padding:10px 12px;margin:8px 0}.hq-route b{display:flex;align-items:center;gap:6px;color:#1F7A43}.hq-route b .ic{width:18px;height:18px}.hq-route span{font-size:13.5px;font-weight:600}.hq-route p{margin:0;font-size:13.5px}.hq-route .btn{margin-top:4px;min-height:44px}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=21"></script>
@@ -627,6 +628,10 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
     ${c.intake&&(c.intake.car||c.intake.handoff||c.intake.latest||c.intake.items||c.intake.risks)?`<dl class="ik-team">${[['🚗 รถเข้าถึง',c.intake.car],['📦 จุดส่งมอบ',c.intake.handoff],['🌊 ระดับน้ำ',c.intake.water],['⚠️ ความเสี่ยง',c.intake.risks],['🕘 รับได้ถึง',c.intake.latest?c.intake.latest+' น.':''],['🧾 ต้องการ',c.intake.items],['📞 ติดต่อ',[c.intake.name,c.intake.phone].filter(Boolean).join(' · ')]].filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`:''}
+    ${(()=>{const rt=S.me&&S.me.route;if(!rt||String(rt.caseId)!==String(c.id)||!rt.coords||rt.coords.length<2)return '';
+      const pts=(rt.via&&rt.via.length?rt.via:rt.coords.filter((p,i,a)=>i>0&&i<a.length-1&&i%Math.max(1,Math.floor(a.length/7))===0).slice(0,8)),end=rt.coords[rt.coords.length-1];
+      const u='https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+end[0]+','+end[1]+(pts.length?'&waypoints='+encodeURIComponent(pts.map(p=>p[0]+','+p[1]).join('|')):'');
+      return `<div class="hq-route"><b><i data-ic="route"></i> เส้นทางแนะนำจากศูนย์</b><span>${esc(rt.km)} กม. · ~${esc(rt.min)} นาที${rt.hits?'':' · เลี่ยงจุดน้ำท่วมแล้ว'}${rt.avoid&&rt.avoid.length?` · เลี่ยงอุปสรรค ${rt.avoid.length} จุด`:''}</span>${rt.note?`<p>${esc(rt.note)}</p>`:''}<a class="btn green" href="${esc(u)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทางตามเส้นทางนี้</a></div>`})()}
     ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
     ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}

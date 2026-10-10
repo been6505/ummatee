@@ -1,6 +1,6 @@
 /* จัดทีม: รายชื่อทีม สถานะ พาหนะ เคสที่ถือ + มอบหมายเคสที่รออยู่ให้ทีม */
 const T={roster:[],live:[],cases:[],filter:/^(busy|ready|out|rest|live|sos)$/.test(new URLSearchParams(location.search).get('f')||'')?new URLSearchParams(location.search).get('f'):'all',loaded:0,hqPhone:''};
-const TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
+const TST={ready:'พร้อม',out:'ออกเคส',rest:'พัก'};
 const VEH={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว'};
@@ -24,7 +24,7 @@ setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},15000);document.addEven
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy)return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},3000);
 function liveUI(){if(typeof TRACK!=='undefined')TRACK.update(T.live,T.roster);
   $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
-/* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกงานแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */
+/* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกเคสแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */
 function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
   if(!lv)return `<span class="lv lv-none" data-live-of="${id}">${t.status==='out'?'<i data-ic="alert"></i> ไม่แชร์ตำแหน่ง':'ไม่แชร์ตำแหน่ง'}</span>`;
   const m=(Date.now()-lv.updatedAt)/60000,k=m<5?'on':m<30?'idle':'old',lost=t.status==='out'&&m>=10;
@@ -49,7 +49,7 @@ function render(){
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
   const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกงาน',cnt('ready'),'done','ready'],['กำลังออกงาน',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกเคส',cnt('ready'),'done','ready'],['กำลังออกเคส',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${T.sf===f}"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');
@@ -96,7 +96,7 @@ document.addEventListener('click',e=>{
     if(to)to.scrollIntoView({behavior:'smooth',block:'start'});
     if(k==='sos'&&!$$('#team-list .team').length)toast('ไม่มีทีมที่ส่ง SOS');if(k==='live'&&!$$('#team-list .team').length)toast('ยังไม่มีทีมที่แชร์ตำแหน่ง');return}
   const f=e.target.closest('#team-filter [data-f]');if(f)T.sf='';if(f){T.filter=f.dataset.f;$$('#team-filter [data-f]').forEach(b=>b.setAttribute('aria-selected',String(b===f)));render();return}
-  const a=e.target.closest('[data-assign]');if(a){const c=T.cases.find(x=>String(x.id)===a.dataset.assign),sel=document.querySelector(`[data-pick="${CSS.escape(a.dataset.assign)}"]`);if(c&&sel&&sel.value){updateCase(c,'going',sel.value);const t=T.roster.find(x=>x.name===sel.value);if(t&&t.status==='ready')saveTeam({...t,status:'out'},`${t.name} → ออกงาน`)}return}
+  const a=e.target.closest('[data-assign]');if(a){const c=T.cases.find(x=>String(x.id)===a.dataset.assign),sel=document.querySelector(`[data-pick="${CSS.escape(a.dataset.assign)}"]`);if(c&&sel&&sel.value){updateCase(c,'going',sel.value);const t=T.roster.find(x=>x.name===sel.value);if(t&&t.status==='ready')saveTeam({...t,status:'out'},`${t.name} → ออกเคส`)}return}
   const cp=e.target.closest('[data-callpick]');if(cp&&typeof TEAMCALL!=='undefined'){const c=T.cases.find(x=>String(x.id)===cp.dataset.callpick),sel=document.querySelector(`[data-pick="${CSS.escape(cp.dataset.callpick)}"]`),t=sel&&T.roster.find(x=>x.name===sel.value);
     if(t)callSheet(t,c);return}
   const d=e.target.closest('[data-done]');if(d){const c=T.cases.find(x=>String(x.id)===d.dataset.done);if(c)updateCase(c,'done');return}
@@ -115,7 +115,7 @@ const teamUrl=t=>location.origin+'/team/?id='+encodeURIComponent(t.token||'');
 const appUrl=t=>location.origin+'/app/?id='+encodeURIComponent(t.token||''); // QR: สแกนด้วยกล้อง = หน้าดาวน์โหลดแอป + ลิงก์ทีม · สแกนในแอป = เข้าทีมเลย
 let qrP=null;
 function loadQR(){if(window.QRCode)return Promise.resolve();return qrP||(qrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.integrity=QR_SRI;s.crossOrigin='anonymous';s.onload=res;s.onerror=()=>{qrP=null;rej()};document.head.append(s)}))}
-function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกงาน\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
+function linkSheet(t){if(!t)return;const url=teamUrl(t),p=tel(t.phone),msg=`Helpme+ หน้าทีม ${t.name}: ${url}\nเปิดแล้วกด "เปิดตำแหน่ง" · เปิดหน้านี้ค้างไว้ระหว่างออกเคส\nดาวน์โหลดแอป Help Me ทีม: ${appUrl(t)}`;
   const sms=`sms:${p}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(msg)}`;
   const d=$('#drawer');d.innerHTML=`<div class="d-head"><div><h2><i data-ic="link"></i> ลิงก์ทีม ${esc(t.name)}</h2><p class="muted small">ลิงก์นี้ใช้แทนรหัส · ส่งให้ทีมนี้เท่านั้น</p></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="link-sheet"><div class="qr" id="qr" aria-label="QR โค้ดลิงก์ทีม"></div><p class="muted small" style="text-align:center;margin:0">สแกนด้วยกล้องมือถือ = ดาวน์โหลดแอป + เข้าทีม · สแกนในแอป = เข้าทีมทันที</p>

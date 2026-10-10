@@ -12,7 +12,7 @@ const HERMES=(()=>{
   const get=async p=>{const r=await fetch('/api?'+new URLSearchParams({...p,key:KEY(),t:Date.now()}),{cache:'no-store'});return r.json()};
   const post=async b=>{const r=await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,key:KEY()})});return r.json()};
   const sevOf=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
-  const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'},STS={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'},TST={ready:'พร้อม',out:'ออกงาน',rest:'พัก'};
+  const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ปกติ'},STS={open:'รอช่วย',going:'กำลังไป',done:'ช่วยแล้ว'},TST={ready:'พร้อม',out:'ออกเคส',rest:'พัก'};
   const pin=c=>c&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&+c.lat!==0;
   const km=(a,b,c,d)=>{const R=6371,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
   const mins=t=>t?Math.max(0,Math.round((Date.now()-t)/60000)):0;

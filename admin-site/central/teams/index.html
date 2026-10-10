@@ -56,7 +56,7 @@
     <div class="cols">
       <section class="panel">
         <div class="panel-h"><h2>ทีมอาสา</h2><button class="btn primary sm" id="add-team">+ เพิ่มทีม</button></div>
-        <div class="seg" role="tablist" id="team-filter"><button data-f="all" aria-selected="true">ทั้งหมด</button><button data-f="ready" aria-selected="false">พร้อม</button><button data-f="out" aria-selected="false">ออกงาน</button><button data-f="rest" aria-selected="false">พัก</button></div>
+        <div class="seg" role="tablist" id="team-filter"><button data-f="all" aria-selected="true">ทั้งหมด</button><button data-f="ready" aria-selected="false">พร้อม</button><button data-f="out" aria-selected="false">ออกเคส</button><button data-f="rest" aria-selected="false">พัก</button></div>
         <div id="team-list" class="team-list"></div>
       </section>
       <section class="panel">
@@ -77,14 +77,14 @@
 <script src="../teamcall.js?v=5"></script>
 <script src="../mapfs.js?v=1"></script>
 <script src="./track.js?v=97"></script>
-<script src="./teams.js?v=21"></script>
+<script src="./teams.js?v=22"></script>
 <script src="./route.js?v=3"></script>
-<script src="./rally.js?v=2"></script>
+<script src="./rally.js?v=3"></script>
 <script src="../theme-toggle.js?v=7"></script>
 <script src="../chat.js?v=13"></script>
 <script src="../feedback.js?v=1"></script>
 <script src="../localai.js?v=4"></script>
-<script src="../hermes.js?v=12"></script>
+<script src="../hermes.js?v=14"></script>
 <script src="../kbfit.js?v=2"></script>
 <script>/* ปุ่มแสดง/ซ่อนรหัสในช่องเข้าระบบ */document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="../../bc.js?v=2" data-mode="staff" defer></script>

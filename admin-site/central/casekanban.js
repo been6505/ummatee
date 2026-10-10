@@ -30,7 +30,7 @@ const KANBAN=(()=>{
   /* เลือกทีมตอนวางลง "ทีมกำลังไป" */
   function pickTeam(c){return new Promise(async res=>{if(!A.roster)await loadRoster();
     const d=document.createElement('dialog');d.className='kb-pick';const load={};A.cases.forEach(x=>{if(x.status==='going'&&vol(x))load[vol(x)]=(load[vol(x)]||0)+1});
-    const RS={ready:'ว่าง',out:'ออกปฏิบัติ',rest:'พัก'},teams=(A.roster||[]).filter(t=>t.status!=='rest');
+    const RS={ready:'ว่าง',out:'ออกเคส',rest:'พัก'},teams=(A.roster||[]).filter(t=>t.status!=='rest');
     d.innerHTML=`<h3>มอบเคสให้ทีม</h3><p class="muted small">${esc((c.needs||[]).join(' · ')||'เคส')} · ${esc(c.district||'')}</p><div class="kb-teams">${teams.map(t=>`<button type="button" data-t="${esc(t.name)}"><b>${esc(t.name)}</b><small>${esc(RS[t.status]||'')}${load[t.name]?' · มีงาน '+load[t.name]+' เคส':''}</small></button>`).join('')||'<p class="muted">ยังไม่มีทีม · สร้างทีมได้ในรายละเอียดเคส</p>'}</div><button type="button" class="btn ghost" data-x>ยกเลิก</button>`;
     document.body.append(d);d.showModal();
     d.onclick=e=>{const b=e.target.closest('[data-t]');if(b){d.close();res(b.dataset.t)}else if(e.target.closest('[data-x]')||e.target===d){d.close();res(null)}};d.onclose=()=>{d.remove();res(null);if(K.pend)setTimeout(draw,50)}})}

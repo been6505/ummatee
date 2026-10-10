@@ -244,6 +244,36 @@ async function aiGeo(env, c) {
   for (const q of qs) { const hit = await geoLookup(q, prov, must.filter(m => addrSk.includes(sk(m)))); if (hit && inAddr(hit.label)) return { ...hit, level: 'AI อ่านที่อยู่' + (j.place && q.includes(j.place) ? '' : am ? ' (อำเภอ/ตำบล)' : '') }; }
   return null;
 }
+async function aiPin(db, b) {
+  if (!ENV || !ENV.AI) return { ok: false, error: 'ai_unavailable' };
+  const c = await db.prepare('SELECT id,address,district,province,notes,lat,lng,glat,glng,intake FROM cases WHERE id=?').bind(clean(b.id, 40)).first(); if (!c) return { ok: false, error: 'not_found' };
+  let ik = {}; try { ik = JSON.parse(c.intake || '{}') || {}; } catch (e) {}
+  const txt = [c.address, ik.car && 'จุดรถถึง: ' + ik.car, ik.handoff && 'จุดส่งมอบ: ' + ik.handoff, c.notes && 'โน้ตผู้แจ้ง: ' + String(c.notes).slice(0, 600)].filter(Boolean).join('\n');
+  let j = null;
+  for (const m of HERMES_MODELS) { try {
+    const out = await ENV.AI.run(m, { messages: [
+      { role: 'system', content: 'คุณเป็นผู้เชี่ยวชาญภูมิศาสตร์และเส้นทางในประเทศไทย ช่วยทีมกู้ภัยน้ำท่วม อ่านข้อความที่อยู่/จุดสังเกตภาษาไทย (อาจเขียนไม่ครบหรือสะกดผิด) แล้วตอบเป็น JSON อย่างเดียว: {"province":"","amphoe":"","tambon":"","road":"ถนนหลัก","soi":"ซอย","place":"สถานที่/หมู่บ้าน/สะพาน/มัสยิด/วัด ที่เป็นจุดสังเกต","house":"บ้านเลขที่","queries":["คำค้นแผนที่ 2-4 แบบ เรียงจากละเอียด(ซอย+ถนน+เขต) ไปกว้าง"],"steps":["ขั้นตอนเข้าถึงจากถนนหลักเป็นข้อสั้นๆ 2-5 ข้อ ตามที่ข้อความบอก เช่น เข้าซอย..., ข้ามสะพานแล้วเลี้ยวขวา"],"warn":"ข้อควรระวังเรื่องเส้นทาง เช่น ซอยแคบ น้ำลึก ต้องใช้เรือ ถ้ามี","confidence":0-100} ห้ามเดาชื่อที่ไม่มีในข้อความ ถ้าไม่รู้ให้เว้นว่าง' },
+      { role: 'user', content: `${txt}\nเขต/อำเภอที่ระบบรู้: ${c.district || '-'}\nจังหวัดที่ระบบรู้: ${c.province || '-'}` }], max_tokens: 600, temperature: 0.1 });
+    const t = aiText(out), mm = t.match(/\{[\s\S]*\}/); j = mm ? JSON.parse(mm[0]) : null; if (j) break; } catch (e) {} }
+  if (!j) return { ok: false, error: 'ai_failed' };
+  const prov = String(j.province || c.province || '').replace(/^จังหวัด/, '').replace(/^กรุงเทพฯ?$|^กทม\.?$/, 'กรุงเทพมหานคร').trim();
+  const am = String(j.amphoe || c.district || '').replace(/^(อำเภอ|เขต)/, '').trim(), tb = String(j.tambon || '').replace(/^(ตำบล|แขวง)/, '').trim();
+  const qs = [...(Array.isArray(j.queries) ? j.queries : []).map(String), [j.soi, j.road, am].filter(Boolean).join(' '), [j.place, am, prov].filter(Boolean).join(' '), [j.road, am, prov].filter(Boolean).join(' '), tb && `${tb} ${am} ${prov}`]
+    .map(x => String(x || '').trim()).filter((x, i, a) => x.length > 3 && a.indexOf(x) === i).slice(0, 6);
+  const cur = c.lat ? [+c.lat, +c.lng] : c.glat != null ? [+c.glat, +c.glng] : null, dk = (a, b2) => { const R = 6371, x = (b2[0] - a[0]) * Math.PI / 180, y = (b2[1] - a[1]) * Math.PI / 180, h = Math.sin(x / 2) ** 2 + Math.cos(a[0] * Math.PI / 180) * Math.cos(b2[0] * Math.PI / 180) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+  const cands = [];
+  for (const q of qs) { if (cands.length >= 3) break; const hit = await geoLookup(q, prov, []); if (hit && !cands.some(k => dk([k.lat, k.lng], [hit.lat, hit.lng]) < 0.2)) cands.push({ ...hit, q, km: cur ? +dk(cur, [hit.lat, hit.lng]).toFixed(2) : null }); }
+  const steps = (Array.isArray(j.steps) ? j.steps : []).map(x => clean(String(x), 160)).filter(Boolean).slice(0, 6);
+  return { ok: true, parsed: { province: prov, amphoe: am, tambon: tb, road: clean(j.road, 80), soi: clean(j.soi, 80), place: clean(j.place, 120), house: clean(j.house, 40) }, steps, warn: clean(j.warn, 200), confidence: Math.max(0, Math.min(100, Number(j.confidence) || 0)), cands, cur, pinType: c.lat ? 'pin' : c.glat != null ? 'geocoded' : 'none' };
+}
+async function aiPinSet(db, b) {
+  const lat = num(b.lat, 5, 21), lng = num(b.lng, 97, 106); if (lat == null || lng == null) return { ok: false, error: 'bad_pin' };
+  const c = await db.prepare('SELECT id,lat FROM cases WHERE id=?').bind(clean(b.id, 40)).first(); if (!c) return { ok: false, error: 'not_found' };
+  const now = Date.now(), lab = ('ระดับAI ตรวจจากข้อความ · ' + clean(b.label, 120)).slice(0, 160);
+  if (c.lat && b.replace) await db.prepare('UPDATE cases SET lat=?,lng=?,updatedAt=? WHERE id=?').bind(lat, lng, now, c.id).run();
+  else await db.prepare('UPDATE cases SET glat=?,glng=?,glabel=?,gai=?,updatedAt=? WHERE id=?').bind(lat, lng, lab, now, now, c.id).run();
+  await bumpRev(db); return { ok: true };
+}
 async function geocodePass(env, db, n = 4) {
   const now = Date.now();
   const { results } = await db.prepare("SELECT id,address,district,province FROM cases WHERE (lat IS NULL OR lat='' OR lat=0) AND glat IS NULL AND status<>'done' AND COALESCE(dupOf,'')='' AND COALESCE(address,'')<>'' AND COALESCE(gtry,0)<? ORDER BY createdAt DESC LIMIT ?").bind(now - 6 * 3600e3, n).all();
@@ -1341,8 +1371,8 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['road_q', 'case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_TH = { ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -2790,7 +2820,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {

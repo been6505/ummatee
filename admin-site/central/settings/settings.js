@@ -76,6 +76,7 @@ adminBoot({action:'chat_rev'},'rev',()=>{dcLoad();smsLoad();lgLoad()});
 
 const STM=[
   {h:'บัญชีของคุณ',rows:[{p:'user',ic:'user',t:'ผู้ใช้งาน',s:'ชื่อที่แสดงในประวัติ · ธีมสว่าง / มืด',k:'ชื่อ ธีม โหมดมืด dark'}]},
+  {h:'ความปลอดภัย',rows:[{p:'staff',ic:'users',t:'บัญชีเจ้าหน้าที่',s:'เข้าระบบรายคน · เพิ่ม · เปลี่ยนรหัส · ปิดบัญชี',k:'บัญชี ผู้ใช้ รหัสผ่าน staff account'}]},
   {h:'การแจ้งเตือนและการเชื่อมต่อ',rows:[{p:'discord',ic:'chat',t:'Discord',s:'แจ้งเตือนเคสด่วน · SOS · สรุปโดย AI',k:'webhook แจ้งเตือน',st:()=>$('#dc-tag')&&$('#dc-tag').textContent},
     {p:'sms',ic:'send',t:'รับตำแหน่งทีมทาง SMS',s:'ทีมส่งตำแหน่งได้แม้ไม่มีเน็ต',k:'sms ส่งต่อ ตำแหน่ง'}]},
   {h:'AI',rows:[{p:'ai',ic:'chat',t:'AI HELP',s:'Local AI (Hermes Agent) หรือคลาวด์ · ทดสอบถาม',k:'ai hermes ollama โมเดล',st:()=>{const d=$('#ai-dot');return d&&d.classList.contains('on')?'เชื่อมแล้ว':''}}]},
@@ -95,10 +96,28 @@ function stMenu(){const q=(($('#st-q')||{}).value||'').trim().toLowerCase();
 function stGo(p){const m=$('#main'),row=STM.flatMap(s=>s.rows).find(r=>r.p===p);
   if(!p||!row||!stAvail(p)){m.dataset.view='menu';$('#st-title').textContent='การตั้งค่าและกิจกรรม';stMenu();return}
   const changed=m.dataset.view!==p;m.dataset.view=p;$('#st-title').textContent=row.t;if(changed)window.scrollTo(0,0);
-  const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
+  const c=document.querySelector(`.st-card[data-page="${p}"]`);if(c&&c.hidden){c.hidden=false;if(p==='log')lgLoad();if(p==='staff')sfLoad();if(p==='discord')dcLoad();if(p==='sms')smsLoad()}}
 $('#st-menu').addEventListener('click',e=>{const b=e.target.closest('[data-stp]');if(b){location.hash=b.dataset.stp;return}if(e.target.closest('[data-stout]'))$('#logout').click();if(e.target.closest('[data-stfb]')){const f=document.getElementById('fb-btn');if(f)f.click()}});
 $('#st-back').onclick=()=>{if(location.hash)history.length>1?history.back():(location.hash='')};
 $('#st-q').addEventListener('input',stMenu);
 addEventListener('hashchange',()=>stGo(location.hash.slice(1)));
 new MutationObserver(()=>{if($('#main').dataset.view==='menu')stMenu()}).observe($('#main'),{attributes:true,subtree:true,attributeFilter:['hidden','class']});
 stGo(location.hash.slice(1));
+
+const SF={list:[],me:''};
+async function sfLoad(){const r=await apiGet({action:'staff_list'}).catch(()=>null);const el=$('#sf-list');
+  if(!r||!r.ok){el.innerHTML=`<p class="st-p">${r&&r.error==='admin_only'?'เฉพาะผู้ดูแลเท่านั้นที่จัดการบัญชีได้':'โหลดไม่สำเร็จ'}</p>`;$('#sf-form').hidden=true;return}
+  SF.list=r.staff;SF.me=r.me;$('#sf-form').hidden=false;
+  el.innerHTML=SF.list.map(u=>`<div class="sf-row${u.active?'':' off'}"><div><b>${esc(u.name||u.username)}</b><small>@${esc(u.username)} · ${u.role==='admin'?'ผู้ดูแล':'เจ้าหน้าที่'}${u.lastLogin?' · เข้าล่าสุด '+esc(ago(u.lastLogin)):' · ยังไม่เคยเข้า'}${u.lockUntil&&u.lockUntil>Date.now()?' · ล็อกอยู่':''}${u.active?'':' · ปิดใช้งาน'}</small></div>
+    <button type="button" class="btn ghost sm" data-sfe="${esc(u.id)}">แก้ไข</button><button type="button" class="btn ghost sm" data-sft="${esc(u.id)}">${u.active?'ปิดบัญชี':'เปิดบัญชี'}</button></div>`).join('')||'<p class="st-p">ยังไม่มีบัญชี · เพิ่มคนแรกด้านล่าง</p>'}
+function sfReset(){$('#sf-form').reset();$('#sf-id').value='';$('#sf-user').disabled=false;$('#sf-h').textContent='เพิ่มเจ้าหน้าที่';$('#sf-pass').placeholder='อย่างน้อย 8 ตัว';$('#sf-cancel').hidden=true}
+$('#sf-list').addEventListener('click',async e=>{const ed=e.target.closest('[data-sfe]'),tg=e.target.closest('[data-sft]');
+  if(ed){const u=SF.list.find(x=>x.id===ed.dataset.sfe);if(!u)return;$('#sf-id').value=u.id;$('#sf-user').value=u.username;$('#sf-user').disabled=true;$('#sf-name').value=u.name||'';$('#sf-role').value=u.role||'staff';$('#sf-pass').value='';$('#sf-pass').placeholder='เว้นว่าง = ไม่เปลี่ยนรหัส';$('#sf-h').textContent='แก้ไข @'+u.username;$('#sf-cancel').hidden=false;$('#sf-form').scrollIntoView({behavior:'smooth'});return}
+  if(tg){const u=SF.list.find(x=>x.id===tg.dataset.sft);if(!u)return;if(u.active&&!confirm(`ปิดบัญชี ${u.name||u.username}? (ออกจากระบบทุกเครื่องทันที)`))return;
+    const r=await apiPost({action:'staff_save',staff:{id:u.id,name:u.name,role:u.role,active:!u.active}}).catch(()=>null);toast(r&&r.ok?'บันทึกแล้ว':'บันทึกไม่สำเร็จ',!!(r&&r.ok));sfLoad()}});
+$('#sf-cancel').addEventListener('click',sfReset);
+$('#sf-form').addEventListener('submit',async e=>{e.preventDefault();const id=$('#sf-id').value,pass=$('#sf-pass').value;
+  if(!id&&pass.length<8){toast('รหัสผ่านอย่างน้อย 8 ตัว');return}if(id&&pass&&pass.length<8){toast('รหัสผ่านอย่างน้อย 8 ตัว');return}
+  const b=$('#sf-save');b.disabled=true;const r=await apiPost({action:'staff_save',staff:{id,username:$('#sf-user').value.trim(),name:$('#sf-name').value.trim(),role:$('#sf-role').value,password:pass,active:true}}).catch(()=>null);b.disabled=false;
+  if(r&&r.ok){toast(id?'บันทึกแล้ว'+(pass?' · ผู้ใช้นี้ต้องเข้าระบบใหม่':''):'เพิ่มบัญชีแล้ว',true);sfReset();sfLoad()}
+  else toast(r&&r.error==='duplicate_user'?'มีชื่อผู้ใช้นี้แล้ว':r&&r.error==='weak_password'?'รหัสผ่านอย่างน้อย 8 ตัว':r&&r.error==='admin_only'?'เฉพาะผู้ดูแล':'บันทึกไม่สำเร็จ')});

@@ -130,3 +130,18 @@ const headArrow=(t,veh)=>{const v=VEH_IMG[veh]||'car',mv=t&&t.speed!=null&&t.spe
 addEventListener('DOMContentLoaded',()=>{const M=[['/board/','calendar'],['dashboard','board'],['central.html','list'],['warroom','map'],['teams','users'],['stock','box'],['covered','hand'],['news','info'],['broadcast','megaphone'],['settings','settings']];
   document.querySelectorAll('.tabs a').forEach(a=>{if(a.querySelector('.tab-ic'))return;const h=a.getAttribute('href')||'',m=M.find(([k])=>h.includes(k));if(!m||typeof ic!=='function')return;
     a.insertAdjacentHTML('afterbegin',ic(m[1],'tab-ic'))})});
+(()=>{const of=window.fetch;if(!of||of._hm)return;const nf=function(u,o){try{if(typeof u==='string'&&!(o&&o.method&&o.method!=='GET')){const x=new URL(u,location.href);if(x.origin===location.origin&&x.pathname==='/api'&&x.searchParams.has('key')){const k=x.searchParams.get('key');x.searchParams.delete('key');const h=new Headers((o&&o.headers)||{});if(k)h.set('x-hm-key',k);o={...(o||{}),headers:h};u=x.pathname+x.search}}}catch(e){}return of.call(this,u,o)};nf._hm=1;window.fetch=nf})();
+window.HMT={t:'',exp:0,k:'',p:null,key(){try{return localStorage.getItem('uh_vol_key')||sessionStorage.getItem('uh_vol_key')||''}catch(e){return ''}},
+  get(){const k=this.key();if(!k)return Promise.resolve('');if(this.t&&this.k===k&&this.exp-Date.now()>600000)return Promise.resolve(this.t);if(this.p)return this.p;
+    this.p=fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'ticket',key:k})}).then(r=>r.json()).then(j=>{this.p=null;if(j&&j.ok){this.t=j.t;this.exp=j.exp;this.k=k;return j.t}return ''}).catch(()=>{this.p=null;return ''});return this.p}};
+(()=>{const go=()=>{const f=document.getElementById('login-form'),k=document.getElementById('login-key');if(!f||!k||document.getElementById('login-user'))return;
+  const lab=k.closest('label');const u=document.createElement('label');u.className='fld';u.innerHTML='<span>ชื่อผู้ใช้</span><input id="login-user" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="บัญชีส่วนตัว · เว้นว่างถ้าใช้รหัสกลาง">';lab.before(u);
+  const s=lab.querySelector('span');if(s)s.textContent='รหัสผ่าน';
+  f.addEventListener('submit',async e=>{const un=document.getElementById('login-user').value.trim();if(!un||f._ok)return;e.preventDefault();e.stopImmediatePropagation();
+    const err=document.getElementById('login-err'),b=document.getElementById('login-go');if(b)b.disabled=true;if(err)err.textContent='กำลังเข้าสู่ระบบ…';
+    try{const r=await(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'staff_login',username:un,password:k.value})})).json();
+      if(r&&r.ok){k.value=r.key;try{localStorage.setItem('uh_staff',r.name);localStorage.setItem('uh_staff_role',r.role)}catch(x){}if(b)b.disabled=false;f._ok=1;f.requestSubmit();f._ok=0;return}
+      if(err)err.textContent=r&&r.error==='locked'?'บัญชีถูกล็อก 15 นาที (ใส่รหัสผิดหลายครั้ง)':r&&r.error==='too_many'?'ลองหลายครั้งเกินไป · รอสักครู่':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'}
+    catch(x){if(err)err.textContent='เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ต'}if(b)b.disabled=false},true);
+  document.addEventListener('click',e=>{if(!e.target.closest||!e.target.closest('#logout'))return;const key=HMT.key();if(/^st_/.test(key))fetch('/api',{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'staff_logout',key})}).catch(()=>{});try{localStorage.removeItem('uh_staff_role')}catch(x){}HMT.t=''},true)};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go):go()})();

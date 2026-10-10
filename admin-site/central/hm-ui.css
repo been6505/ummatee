@@ -700,3 +700,5 @@ body.rl-open .rl-float{display:block}
 .rl-float{top:130px!important}
 @media(max-width:760px){.rl-float{top:auto!important}}
 .trk-lyr{display:flex;gap:6px;flex-wrap:wrap}.trk-lyr button{border:0;background:rgba(255,255,255,.95);color:#3a3a3c;border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;font-weight:600;box-shadow:0 2px 8px rgba(22,27,61,.18);cursor:pointer}.trk-lyr button[aria-pressed=true]{background:#2D45C8;color:#fff}
+.chat-ptt{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:999px;padding:6px 12px;background:linear-gradient(180deg,#2D45C8,#1A2C8F);color:#fff;font:inherit;font-weight:700;font-size:13px;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;margin-left:auto}.chat-ptt[hidden]{display:none}.chat-ptt .ic{width:16px;height:16px}.chat-ptt.ptt-press,body.ptt-on .chat-ptt.ptt-press{background:linear-gradient(180deg,#E5383B,#B3121F);transform:scale(1.06)}
+.chat-h .chat-share{margin-left:6px}

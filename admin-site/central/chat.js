@@ -16,7 +16,7 @@ const CHAT=(()=>{
     root=document.createElement('div');root.className='chat-root';
     root.innerHTML=`<button type="button" class="chat-fab" aria-label="แชทกับทีม" aria-expanded="false"><i data-ic="chat"></i><b class="chat-badge" hidden></b></button>
       <section class="chat-win" hidden aria-label="แชทกับทีม">
-        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><span class="chat-tw"><b class="chat-title">แชทกับทีม</b><small class="chat-sub" hidden></small></span><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
+        <header class="chat-h"><button type="button" class="chat-back" aria-label="กลับไปรายชื่อทีม" hidden><i data-ic="back"></i></button><span class="chat-tw"><b class="chat-title">แชทกับทีม</b><small class="chat-sub" hidden></small></span><a class="chat-share" target="_blank" rel="noopener" hidden title="ลิงก์หน้าแชทสำหรับทีม"><i data-ic="link"></i> ลิงก์ทีม</a><button type="button" class="chat-ptt" hidden title="วอส่วนตัวกับทีมนี้ · กดค้างเพื่อพูด" aria-label="วอส่วนตัวกับทีมนี้ กดค้างเพื่อพูด"><i data-ic="mic"></i><b>วอ</b></button><button type="button" class="chat-x" aria-label="ปิด"><i data-ic="close"></i></button></header>
         <div class="chat-list"></div>
         <div class="chat-msgs" hidden aria-live="polite"></div>
         <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-draft" type="button" title="ให้ AI HELP ร่างคำตอบ (แก้ก่อนส่งได้)" hidden>✦ ร่าง</button><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
@@ -35,9 +35,9 @@ const CHAT=(()=>{
     if(KEY()&&!/^wr/.test(KEY())){const rb=document.createElement('button');rb.type='button';rb.className='rally-fab';rb.setAttribute('aria-label','รวมพล · เรียกทีมไปจุดเดียวกัน');rb.title='รวมพล';rb.innerHTML='<i data-ic="megaphone"></i><b>รวมพล</b>';document.body.append(rb);
       rb.onclick=()=>{if(document.getElementById('rally')){document.body.classList.toggle('rl-open');setTimeout(()=>window.dispatchEvent(new Event('resize')),80)}else{const base=location.pathname.includes('/central/')?location.pathname.replace(/\/central\/.*$/,'/central/teams/'):'./central/teams/';location.href=base+'?rally=open'}}}
     if(typeof PTT!=='undefined'&&KEY()){const pb=document.createElement('button');pb.type='button';pb.className='ptt-fab';pb.setAttribute('aria-label','วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด');pb.title='วอ · กดค้างเพื่อพูด';pb.innerHTML='<i data-ic="mic"></i><b>วอ</b>';document.body.append(pb);
-      PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,key:KEY()}),me:()=>({sender:'ศูนย์',kind:'hq'}),
-        ws:()=>((()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com'))+'/ptt/ws?'+new URLSearchParams({key:KEY()}),
-        onState:s=>{pb.classList.toggle('ptt-off',!s.up);pb.title='วอ · '+s.label+' · กดค้างเพื่อพูด'}});PTT.bind(pb)}
+      PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,t:HMT.t}),me:()=>({sender:'ศูนย์',kind:'hq'}),
+        ws:()=>HMT.get().then(t=>t?((()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com'))+'/ptt/ws?'+new URLSearchParams({t}):''),
+        onState:s=>{pb.classList.toggle('ptt-off',!s.up);pb.title='วอ · '+s.label+' · กดค้างเพื่อพูด'}});PTT.bind(pb);const cp=root.querySelector('.chat-ptt');if(cp)PTT.bind(cp,{ch:()=>S.team?'tm:'+S.team:null,tap:()=>{if(typeof toast==='function')toast('กดค้างไว้เพื่อพูดกับทีม '+(S.team||''))}})}
     root.querySelector('.chat-x').onclick=()=>toggle(false);
     root.querySelector('.chat-back').onclick=()=>{S.team=null;view()};
     root.querySelector('.chat-list').onclick=e=>{const b=e.target.closest('[data-chat-team]');if(b)openTeam(b.dataset.chatTeam)};
@@ -48,7 +48,7 @@ const CHAT=(()=>{
       try{const r=await post({action:'chat_send',team:S.team,from:'hq',name:me(),text:t});if(!r.ok)throw 0}catch(err){i.value=t}poll(true)}}
   function toggle(on){S.open=on==null?!S.open:on;root.querySelector('.chat-win').hidden=!S.open;root.querySelector('.chat-fab').setAttribute('aria-expanded',String(S.open));if(S.open){view();poll(true)}schedule()}
   function view(){const inTeam=!!S.team;root.querySelector('.chat-list').hidden=inTeam;root.querySelector('.chat-msgs').hidden=!inTeam;root.querySelector('.chat-form').hidden=!inTeam;
-    root.querySelector('.chat-back').hidden=!inTeam;root.querySelector('.chat-draft').hidden=!(inTeam&&typeof LOCALAI!=='undefined'&&LOCALAI.on());root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
+    root.querySelector('.chat-back').hidden=!inTeam;{const cp=root.querySelector('.chat-ptt');if(cp)cp.hidden=!inTeam||typeof PTT==='undefined'}root.querySelector('.chat-draft').hidden=!(inTeam&&typeof LOCALAI!=='undefined'&&LOCALAI.on());root.querySelector('.chat-title').textContent=inTeam?S.team:title();const f=info(S.team);root.querySelector('.chat-sub').hidden=!(inTeam&&f);if(inTeam&&f)root.querySelector('.chat-sub').textContent=f.text;
     share();
     if(inTeam){drawMsgs();setTimeout(()=>root.querySelector('.chat-in').focus(),30)}else drawList()}
   function share(){const sh=root.querySelector('.chat-share'),tk=S.team&&(S.roster.find(r=>r.name===S.team)||{}).token;sh.hidden=!tk;if(tk)sh.href='/team/?id='+encodeURIComponent(tk)}
@@ -66,7 +66,7 @@ const CHAT=(()=>{
     box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==lastDay?`<p class="chat-day">${esc(d)}</p>`:'';lastDay=d;
       const loc=m.lat!=null?`<a class="chat-loc" href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่งของทีม · เปิดแผนที่</a>`:'';
       const call=m.kind==='call'&&m.link?`<a class="chat-join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
-      const voice=m.kind==='voice'&&m.link?`<audio class="chat-voice" controls preload="none" src="${esc(m.link)}&${new URLSearchParams({key:KEY()})}"></audio>`:'';
+      const voice=m.kind==='voice'&&m.link?`<audio class="chat-voice" controls preload="none" src="${esc(m.link)}&${new URLSearchParams({t:HMT.t})}"></audio>`:'';
       const cs=m.kind==='case'&&m.caseId?`<span class="chat-case">📋 การ์ดเคส #${esc(m.caseId)}</span>`:'';
       return `${sep}<div class="chat-m ${m.sender==='hq'?'me':'them'}${m.pending?' pending':''}${m.kind==='sos'?' sos':''}">${m.sender==='hq'?'':`<small class="chat-who">${esc(m.name||S.team)}</small>`}${cs}${m.text?`<p>${esc(m.text)}</p>`:''}${voice}${call}${loc}<small class="chat-t">${esc(m.sender==='hq'&&m.name?m.name+' · ':'')}${hhmm(m.at)}${m.sender==='hq'?(m.readTeam?' · อ่านแล้ว':''):''}</small></div>`}).join(''):'<p class="chat-empty">ยังไม่มีข้อความ · ส่งลิงก์ <i data-ic="link"></i> ให้ทีมเปิดหน้าแชทบนมือถือ</p>';
     if(atBottom||S.justOpened){box.scrollTop=box.scrollHeight;S.justOpened=false}}

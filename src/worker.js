@@ -47,6 +47,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS wr_users (id TEXT PRIMARY KEY, warroom TEXT, username TEXT, name TEXT, role TEXT, salt TEXT, hash TEXT, active INTEGER, fails INTEGER DEFAULT 0, lockUntil INTEGER, lastLogin INTEGER, createdAt INTEGER, by_ TEXT)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS wr_users_u ON wr_users(warroom, username)`,
   `CREATE TABLE IF NOT EXISTS wr_sessions (token TEXT PRIMARY KEY, userId TEXT, warroom TEXT, expires INTEGER, at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS staff (id TEXT PRIMARY KEY, username TEXT UNIQUE, name TEXT, role TEXT, salt TEXT, hash TEXT, active INTEGER, fails INTEGER DEFAULT 0, lockUntil INTEGER, lastLogin INTEGER, createdAt INTEGER, by_ TEXT)`,
+  `CREATE TABLE IF NOT EXISTS staff_sessions (token TEXT PRIMARY KEY, staffId TEXT, expires INTEGER, at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS tickets (t TEXT PRIMARY KEY, k TEXT, exp INTEGER)`,
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
@@ -106,11 +109,10 @@ const maskPhone = p => { const d = String(p || '').replace(/\D/g, ''); return d.
 const rand = n => { const a = new Uint8Array(n); crypto.getRandomValues(a); return [...a].map(b => b.toString(16).padStart(2, '0')).join(''); };
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const ctEq = (a, b) => { a = String(a || ''); b = String(b || ''); if (!a || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+function keyEq(real, k) { if (!real || !k || real.length !== k.length) return false; let d = 0; for (let i = 0; i < real.length; i++) d |= real.charCodeAt(i) ^ k.charCodeAt(i); return d === 0; }
 function isVol(env, key) {
-  const real = String(env.VOLUNTEER_KEY || ''), k = String(key || '');
-  if (!real || !k || real.length !== k.length) return false;
-  let d = 0; for (let i = 0; i < real.length; i++) d |= real.charCodeAt(i) ^ k.charCodeAt(i);
-  return d === 0;
+  const k = String(key || '');
+  return keyEq(String(env.VOLUNTEER_KEY || ''), k) || keyEq(String(env.VOLUNTEER_KEY_OLD || ''), k);
 }
 function urgency(c) {
   const label = String(c.urgencyLabel || ''), needs = c.needs.join(' ');
@@ -797,7 +799,10 @@ async function teamMe(db, t) {
 }
 async function teamCases(db) {
   const { results } = await db.prepare("SELECT * FROM cases WHERE status='open' AND COALESCE(dupOf,'')='' ORDER BY urgency DESC, createdAt DESC LIMIT 400").all();
-  return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).length; return { ...outCase(c, true), photos: ph }; }), now: Date.now() };
+  return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).length, o = outCase(c, true);
+    o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.phone = ''; o.notes = ''; if (o.intake) { o.intake = { ...o.intake }; delete o.intake.name; delete o.intake.phone; }
+    o.address = String(o.address || '').replace(/(บ้านเลขที่|เลขที่)?\s*\d+(\/\d+)?/g, '').replace(/\s{2,}/g, ' ').trim(); o.hidden = true;
+    return { ...o, photos: ph }; }), now: Date.now() };
 }
 async function teamRoute(db, name) { const r = await db.prepare('SELECT caseId,data,at,by_ FROM team_route WHERE team=? AND at>?').bind(name, Date.now() - 24 * 3600e3).first(); if (!r) return null; try { return { ...JSON.parse(r.data), at: r.at, by: r.by_ }; } catch (e) { return null; } }
 async function teamStats(db, name, now) {
@@ -1308,8 +1313,8 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_SKIP = new Set(['ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_TH = { staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -1335,7 +1340,7 @@ async function auditLog(env, st, res) {
   let actor = '', role = '';
   if (st.wrc) { role = 'warroom'; actor = `War Room ${st.wrc.name || st.wrc.id}` + (st.wrc.user ? ` · ${st.wrc.user.name || st.wrc.user.username}` : ' · ลิงก์หัวหน้า'); }
   else if (b.tk || (['team_status', 'team_case', 'team_sos', 'team_ping'].includes(a) && !(st.k0 && isVol(env, st.k0)))) { role = 'team'; let n = b.team || ''; if (b.tk) { const r = await db.prepare('SELECT name FROM roster WHERE token=?').bind(String(b.tk).toLowerCase()).first().catch(() => null); n = r ? r.name : n; } actor = 'ทีม ' + (n || '?') + (b.name ? ` · ${b.name}` : ''); }
-  else if (st.k0 && isVol(env, st.k0)) { role = 'central'; actor = 'CENTRAL' + (b.by ? ` · ${b.by}` : ''); }
+  else if (st.k0 && isVol(env, st.k0)) { role = 'central'; actor = 'CENTRAL' + (st.staff ? ` · ${st.staff.name} (@${st.staff.username})` : b.by ? ` · ${b.by} (รหัสกลาง)` : ' · รหัสกลาง'); }
   else if (a === 'wr_login') { role = 'warroom'; actor = `War Room ${b.warroom || ''} · ${b.username || ''}`; }
   else { role = 'public'; actor = a === 'wr_login' || a === 'app_login' ? 'ผู้ใช้ ' + (b.username || '') : a === 'app_apply' ? 'ผู้สมัคร ' + (b.username || b.name || '') : 'ผู้ใช้ทั่วไป'; }
   const tg = b.id || (b.team && typeof b.team === 'object' ? b.team.name || b.team.id : b.team) || (b.item && b.item.name) || (b.warroom && typeof b.warroom === 'object' ? b.warroom.name || b.warroom.id : b.warroom) || (b.user && (b.user.username || b.user.name)) || (b.staff && b.staff.name) || b.username || j.id || '';
@@ -1516,6 +1521,66 @@ const UN_OK = u => /^[a-z0-9._-]{3,32}$/.test(String(u || '').trim().toLowerCase
 async function ipLimit(db, ip, kind, max = 30, win = 600e3) {
   if (!ip) return true; const k = 'rl:' + kind + ':' + ip, now = Date.now(); let o = {}; try { o = JSON.parse(await getMeta(db, k) || '{}'); } catch (e) {}
   if (!o.t || now - o.t > win) o = { t: now, n: 0 }; o.n++; await setMeta(db, k, JSON.stringify(o)); return o.n <= max;
+}
+async function staffAuth(db, key) {
+  const k = String(key || ''); if (!/^st_[a-f0-9]{48}$/.test(k)) return null;
+  const r = await db.prepare('SELECT s.expires,u.id,u.username,u.name,u.role,u.active FROM staff_sessions s JOIN staff u ON u.id=s.staffId WHERE s.token=?').bind(k.slice(3)).first();
+  return r && r.active && r.expires > Date.now() ? { id: r.id, username: r.username, name: r.name || r.username, role: r.role || 'staff' } : null;
+}
+async function staffLogin(db, b) {
+  const un = WR_USER(b.username), pw = String(b.password || ''); if (!un || !pw) return { ok: false, error: 'missing' };
+  const u = await db.prepare('SELECT * FROM staff WHERE username=? AND active=1').bind(un).first(), now = Date.now();
+  if (!u) { await pwHash(pw, 'x'); return { ok: false, error: 'bad_login' }; }
+  if (u.lockUntil && u.lockUntil > now) return { ok: false, error: 'locked', until: u.lockUntil };
+  if (await pwHash(pw, u.salt) !== u.hash) { const f = (u.fails || 0) + 1; await db.prepare('UPDATE staff SET fails=?, lockUntil=? WHERE id=?').bind(f >= 5 ? 0 : f, f >= 5 ? now + 15 * 60e3 : null, u.id).run(); return { ok: false, error: f >= 5 ? 'locked' : 'bad_login' }; }
+  const tok = rand(24);
+  await db.batch([db.prepare('INSERT INTO staff_sessions (token,staffId,expires,at) VALUES (?,?,?,?)').bind(tok, u.id, now + 30 * 864e5, now), db.prepare('UPDATE staff SET fails=0, lockUntil=NULL, lastLogin=? WHERE id=?').bind(now, u.id)]);
+  if (Math.random() < 0.05) await db.prepare('DELETE FROM staff_sessions WHERE expires<?').bind(now).run();
+  return { ok: true, key: 'st_' + tok, name: u.name || u.username, role: u.role || 'staff' };
+}
+async function staffLogout(db, b) { const k = String(b.key || ''); if (/^st_[a-f0-9]{48}$/.test(k)) await db.prepare('DELETE FROM staff_sessions WHERE token=?').bind(k.slice(3)).run(); return { ok: true }; }
+const staffAdmin = () => { const st = RQ.getStore(); return !!st && !st.wrc && (!st.staff || st.staff.role === 'admin'); };
+async function staffList(db) {
+  if (!staffAdmin()) return { ok: false, error: 'admin_only' };
+  const { results } = await db.prepare('SELECT id,username,name,role,active,lastLogin,createdAt,lockUntil FROM staff ORDER BY active DESC, name').all();
+  const st = RQ.getStore(); return { ok: true, staff: results, me: st && st.staff ? st.staff.id : 'master' };
+}
+async function staffSave(db, b) {
+  if (!staffAdmin()) return { ok: false, error: 'admin_only' };
+  const u = b.staff || {}, id = clean(u.id, 20).replace(/[^\w-]/g, ''), un = WR_USER(u.username), pw = String(u.password || ''), now = Date.now();
+  const role = u.role === 'admin' ? 'admin' : 'staff', name = clean(u.name, 60), active = u.active === false ? 0 : 1;
+  if (pw && pw.length < 8) return { ok: false, error: 'weak_password' };
+  if (!id) {
+    if (!un || !pw) return { ok: false, error: 'missing' };
+    if (await db.prepare('SELECT id FROM staff WHERE username=?').bind(un).first()) return { ok: false, error: 'duplicate_user' };
+    const nid = 'S' + rand(4), salt = rand(16);
+    await db.prepare('INSERT INTO staff (id,username,name,role,salt,hash,active,fails,createdAt,by_) VALUES (?,?,?,?,?,?,?,0,?,?)').bind(nid, un, name || un, role, salt, await pwHash(pw, salt), 1, now, clean(b.by, 60)).run();
+    return { ok: true, id: nid };
+  }
+  const cur = await db.prepare('SELECT * FROM staff WHERE id=?').bind(id).first(); if (!cur) return { ok: false, error: 'not_found' };
+  const sets = ['name=?', 'role=?', 'active=?'], vals = [name || cur.name, role, active];
+  if (pw) { const salt = rand(16); sets.push('salt=?', 'hash=?', 'fails=0', 'lockUntil=NULL'); vals.push(salt, await pwHash(pw, salt)); }
+  await db.prepare(`UPDATE staff SET ${sets.join(',')} WHERE id=?`).bind(...vals, id).run();
+  if (pw || !active) await db.prepare('DELETE FROM staff_sessions WHERE staffId=?').bind(id).run();
+  return { ok: true, id };
+}
+async function ticketMake(db, env, key) {
+  const t = rand(20), now = Date.now(), k = isVol(env, key) ? '*' : String(key || '').slice(0, 80);
+  await db.prepare('INSERT INTO tickets (t,k,exp) VALUES (?,?,?)').bind(t, k, now + 12 * 3600e3).run();
+  if (Math.random() < 0.05) await db.prepare('DELETE FROM tickets WHERE exp<?').bind(now).run();
+  return { ok: true, t, exp: now + 12 * 3600e3 };
+}
+async function ticketKey(db, env, t) { if (!/^[a-f0-9]{40}$/.test(String(t || ''))) return ''; const r = await db.prepare('SELECT k,exp FROM tickets WHERE t=?').bind(t).first(); return r && r.exp > Date.now() ? (r.k === '*' ? env.VOLUNTEER_KEY : r.k) : ''; }
+async function keyGuard(db, env, request, key) {
+  if (!key) return true; const ip = request.headers.get('cf-connecting-ip') || ''; if (!ip) return true;
+  let o = {}; try { o = JSON.parse(await getMeta(db, 'rl:key:' + ip) || '{}'); } catch (e) {}
+  return !(o.t && Date.now() - o.t < 900e3 && (o.k || []).length > 20);
+}
+async function keyFail(db, request, key) {
+  const ip = request.headers.get('cf-connecting-ip') || ''; if (!ip) return; const m = 'rl:key:' + ip, now = Date.now();
+  let o = {}; try { o = JSON.parse(await getMeta(db, m) || '{}'); } catch (e) {} if (!o.t || now - o.t > 900e3) o = { t: now, k: [] };
+  const h = String(key).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36);
+  if (!o.k.includes(h)) { o.k.push(h); if (o.k.length > 40) o.k = o.k.slice(-40); await setMeta(db, m, JSON.stringify(o)); }
 }
 async function wrLogin(db, b) {
   const wr = clean(b.warroom, 20), un = WR_USER(b.username), pw = String(b.password || '');
@@ -2578,7 +2643,12 @@ async function api(request, env) {
   if (url.pathname.replace(/\/$/, '') === '/api/sms-in' && ['GET', 'POST'].includes(request.method)) return smsIn(db, request, url);
   if (request.method === 'GET') {
     const p = Object.fromEntries(url.searchParams);
+    if (!p.key && request.headers.get('x-hm-key')) p.key = request.headers.get('x-hm-key');
+    if (p.t && !p.key) p.key = await ticketKey(db, env, p.t);
+    if (p.key && !await keyGuard(db, env, request, p.key)) return json({ ok: false, error: 'too_many' }, 429);
     WRC = await wrAuth(db, p.key); if (WRC) p.key = env.VOLUNTEER_KEY;
+    { const sf = !WRC && await staffAuth(db, p.key); if (sf) { const st = RQ.getStore(); if (st) st.staff = sf; p.key = env.VOLUNTEER_KEY; } }
+    if (p.key && !WRC && !isVol(env, p.key)) await keyFail(db, request, p.key);
     if (WRC) { if (!WR_GET_OK.has(p.action)) return json({ ok: false, error: 'central_only' }); const fr = await wrGet(env, db, p); if (fr) return json(fr); }
     const vol = isVol(env, p.key);
     switch (p.action) {
@@ -2616,6 +2686,8 @@ async function api(request, env) {
         if (ex) { await setMeta(db, 'hm_extra_at', String(Date.now())); try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} try { geo = await geocodePass(env, db, 4); } catch (e) {} } return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { let intel = null; try { intel = await intelTick(env, db); } catch (e2) {} return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120), intel }); }
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
+      case 'staff_list': return json(vol ? await staffList(db) : { ok: false, error: 'not_volunteer' });
+      case 'staff_me': { const st = RQ.getStore(); return json(vol ? { ok: true, staff: st && st.staff || null, admin: staffAdmin() } : { ok: false, error: 'not_volunteer' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });
       case 'cctv': try { return json(await allCams()); } catch (e) { return json({ ok: false, error: 'cctv_unavailable' }); }
@@ -2657,13 +2729,19 @@ async function api(request, env) {
   if (request.method === 'POST') {
     let b = {};
     try { b = JSON.parse(await request.text() || '{}'); } catch (e) { return json({ ok: false, error: 'bad_json' }); }
-    { const st = RQ.getStore(); if (st && b && typeof b === 'object') { st.body = b; st.k0 = String(b.key || ''); st.ip = request.headers.get('cf-connecting-ip') || ''; } }
+    { const st = RQ.getStore(); if (st && b && typeof b === 'object') { st.body = b; st.k0 = String(b.key || ''); st.ip = request.headers.get('cf-connecting-ip') || ''; if (/^st_/.test(st.k0)) Object.defineProperty(b, '_raw', { value: st.k0, enumerable: false }); } }
     if (b.action === 'app_apply') return json(await appApply(db, b, request.headers.get('cf-connecting-ip') || ''));
     if ((b.action === 'app_login' || b.action === 'wr_login') && !await ipLimit(db, request.headers.get('cf-connecting-ip') || '', 'login')) return json({ ok: false, error: 'too_many' });
     if (b.action === 'app_login') return json(await appLogin(db, b));
     if (b.action === 'wr_login') return json(await wrLogin(db, b));
     if (b.action === 'wr_logout') return json(await wrLogout(db, b));
+    if (b.action === 'staff_login') { if (!await ipLimit(db, request.headers.get('cf-connecting-ip') || '', 'login')) return json({ ok: false, error: 'too_many' }); return json(await staffLogin(db, b)); }
+    if (b.action === 'staff_logout') return json(await staffLogout(db, b));
+    if (b.key && !await keyGuard(db, env, request, b.key)) return json({ ok: false, error: 'too_many' }, 429);
     WRC = await wrAuth(db, b.key);
+    { const sf = !WRC && await staffAuth(db, b.key); if (sf) { const st = RQ.getStore(); if (st) { st.staff = sf; st.k0 = env.VOLUNTEER_KEY; } b.key = env.VOLUNTEER_KEY; b.by = sf.name; } }
+    if (b.key && !WRC && !isVol(env, b.key) && !b.tk) await keyFail(db, request, b.key);
+    if (b.action === 'ticket') { const st = RQ.getStore(), raw = st && st.staff ? st.body && st.body._raw : null; if (!WRC && !isVol(env, b.key)) return json({ ok: false, error: 'not_volunteer' }); return json(await ticketMake(db, env, raw || (WRC ? st.k0 : b.key))); }
     if (WRC) {
       if (WR_DENY.includes(b.action) || !WR_POST_OK.has(b.action) || (b.action === 'warroom_save' && clean((b.warroom || {}).id, 20) !== WRC.id)) return json({ ok: false, error: 'central_only' });
       const why = await wrPostCheck(db, b); if (why) return json({ ok: false, error: why });
@@ -2678,10 +2756,10 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
-    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'ptt_send'].includes(b.action))) {
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
       return json(await TEAM_POST[b.action](db, t, b));

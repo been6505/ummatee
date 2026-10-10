@@ -40,11 +40,19 @@ const PTT=(()=>{
       P.out=P.ctx.destination;if(P.cfg&&P.cfg.native&&P.ctx.createMediaStreamDestination){P.mdest=P.ctx.createMediaStreamDestination();P.media=new Audio();P.media.srcObject=P.mdest.stream;P.media.setAttribute('playsinline','')}}
     if(P.ctx.state!=='running')P.ctx.resume().catch(()=>{});if(P.media&&P.media.paused)P.media.play().catch(()=>{});return P.ctx}
   const outNode=()=>P.mdest&&document.hidden?P.mdest:P.ctx.destination;
-  function beep(f,ms,at=0){try{const c=ctxGet(),o=c.createOscillator(),g=c.createGain();o.frequency.value=f;g.gain.value=.08;o.connect(g);g.connect(outNode());o.start(c.currentTime+at);o.stop(c.currentTime+at+ms/1000)}catch(e){}}
+  function note(c,t,f1,f2,d,v,type){const o=c.createOscillator(),h=c.createOscillator(),g=c.createGain(),hg=c.createGain(),lp=c.createBiquadFilter();
+    o.type=type||'sine';h.type='sine';o.frequency.setValueAtTime(f1,t);h.frequency.setValueAtTime(f1*2,t);if(f2&&f2!==f1){o.frequency.exponentialRampToValueAtTime(f2,t+d);h.frequency.exponentialRampToValueAtTime(f2*2,t+d)}
+    hg.gain.value=.18;lp.type='lowpass';lp.frequency.value=3400;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(v,t+0.006);g.gain.setValueAtTime(v,t+Math.max(0.006,d-0.025));g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g);h.connect(hg);hg.connect(g);g.connect(lp);lp.connect(outNode());o.start(t);h.start(t);o.stop(t+d+0.02);h.stop(t+d+0.02)}
+  const SND={permit:[[1046,1046,.055],[1568,1568,.085,.07]],roger:[[1568,988,.14]],rx:[[1319,1319,.03],[1760,1760,.04,.045]],over:[[880,660,.11]],busy:[[480,480,.12],[480,480,.12,.2],[480,480,.12,.4]],err:[[330,262,.28]]};
+  function sfx(name,vol){try{const c=ctxGet(),t0=c.currentTime+0.01,v=vol||0.22;(SND[name]||[]).forEach(([a,b,d,at])=>note(c,t0+(at||0),a,b,d,name==='busy'?v*.8:v,name==='busy'||name==='err'?'triangle':'sine'))}catch(e){}
+    try{navigator.vibrate&&navigator.vibrate({permit:35,roger:[20,40,20],busy:[60,60,60,60,60],err:120,rx:15}[name]||0)}catch(e){}}
+  function beep(f,ms,at=0){sfx(f===880?'permit':f===660?'roger':f===1200?'rx':f===420?(at?'':'busy'):'err')}
   const canPlay=()=>P.ctx&&P.ctx.state==='running';
   function lockUI(){const u=$('.ptt-unlock');if(u)u.hidden=!P.cfg||canPlay()}
   function unlock(){ctxGet();setTimeout(lockUI,150);if(!P.clip){P.clip=new Audio();P.clip.preload='auto';P.clip.onended=clipDone;P.clip.onerror=clipDone}}
-  function connect(){if(!P.cfg||P.ws&&P.ws.readyState<2)return;let ws;try{ws=new WebSocket(P.cfg.ws())}catch(e){return later()}P.ws=ws;ws.binaryType='arraybuffer';
+  function connect(){if(!P.cfg||P.ws&&P.ws.readyState<2||P.conn)return;P.conn=true;Promise.resolve(P.cfg.ws()).then(u=>{P.conn=false;if(!u)return later();if(P.ws&&P.ws.readyState<2)return;open(u)},()=>{P.conn=false;later()})}
+  function open(u){let ws;try{ws=new WebSocket(u)}catch(e){return later()}P.ws=ws;ws.binaryType='arraybuffer';
     ws.onopen=()=>{P.retry=1000;clearInterval(P.ping);P.ping=setInterval(()=>{try{ws.readyState===1&&ws.send('{"t":"ping"}')}catch(e){}},25000)};
     ws.onmessage=e=>typeof e.data==='string'?onMsg(JSON.parse(e.data)):onAudio(e.data);
     ws.onclose=()=>{if(P.ws===ws){P.ws=null;P.up=false;P.wasDown=P.wasDown||Date.now();clearInterval(P.ping);if(P.tx&&P.tx.granted)stopTx(true);state();later()}}}
@@ -53,17 +61,17 @@ const PTT=(()=>{
     if(m.t==='hello'){P.up=true;const known=new Set(P.chans.map(c=>c.id));P.chans=(m.chans||[]).map(id=>({id,label:(P.chans.find(c=>c.id===id)||{}).label||id}));if(!P.chans.some(c=>c.id===P.ch))P.ch='all';
       P.live.clear();(m.live||[]).forEach(f=>P.live.set(f.ch,f));loadChans();if(P.wasDown){P.wasDown=0;poll(true)}state();return}
     if(m.t==='granted'){const t=P.tx||P.last;if(!t||t.ch!==m.ch||t.id)return;t.id=m.id;if(P.tx===t){$('.ptt-talk').classList.remove('wait');$('.ptt-tl').textContent='กำลังพูด · '+lab(t.ch)}if(t.done){P.mine.add(t.id);upload(t,t.dur)}return}
-    if(m.t==='busy'){const t=P.tx;if(t&&t.ch===m.ch){t.go=false;stopTx(true);beep(420,90);beep(420,90,.15);toast(`ช่องไม่ว่าง · ${m.kind==='hq'?'ศูนย์':m.name} กำลังพูด`)}return}
-    if(m.t==='denied'){stopTx(true);toast('พูดในช่องนี้ไม่ได้');return}
-    if(m.t==='start'){P.live.set(m.ch,m);if(!P.muted.has(m.ch)){pauseClip();ctxGet();if(canPlay())P.heard.add(m.id);else{lockUI();P.missed=Date.now()}P.rx.set(m.id,{ch:m.ch,next:0});show(m,true);beep(1200,40)}state();return}
-    if(m.t==='end'){P.live.delete(m.ch);const r=P.rx.get(m.id);const left=r&&P.ctx?Math.max(0,(r.next-P.ctx.currentTime)*1000):0;setTimeout(()=>{P.rx.delete(m.id);if(!P.rx.size)hideNow();nextClip()},left+150);state()}}
+    if(m.t==='busy'){const t=P.tx;if(t&&t.ch===m.ch){t.go=false;stopTx(true);sfx('busy');toast(`ช่องไม่ว่าง · ${m.kind==='hq'?'ศูนย์':m.name} กำลังพูด`)}return}
+    if(m.t==='denied'){stopTx(true);sfx('err');toast('พูดในช่องนี้ไม่ได้');return}
+    if(m.t==='start'){P.live.set(m.ch,m);if(!P.muted.has(m.ch)){pauseClip();ctxGet();if(canPlay())P.heard.add(m.id);else{lockUI();P.missed=Date.now()}P.rx.set(m.id,{ch:m.ch,next:0});show(m,true);sfx('rx',0.16)}state();return}
+    if(m.t==='end'){P.live.delete(m.ch);const r=P.rx.get(m.id);const left=r&&P.ctx?Math.max(0,(r.next-P.ctx.currentTime)*1000):0;setTimeout(()=>{if(r&&!P.muted.has(m.ch))sfx('over',0.15);P.rx.delete(m.id);if(!P.rx.size)hideNow();nextClip()},left+150);state()}}
   function onAudio(buf){const u=new Uint8Array(buf),i=u.indexOf(124);if(i<0)return;const id=new TextDecoder().decode(u.subarray(0,i)),r=P.rx.get(id);if(!r||P.muted.has(r.ch))return;
     const c=ctxGet(),n=u.length-i-1;if(n<=0)return;const ab=c.createBuffer(1,n,8000),d=ab.getChannelData(0);for(let k=0;k<n;k++)d[k]=ULAW[u[i+1+k]];
     const s=c.createBufferSource();s.buffer=ab;s.connect(outNode());const now=c.currentTime;r.jit=r.jit||0.08;if(r.next&&r.next<now)r.jit=Math.min(0.25,r.jit+0.04);if(r.next<now+0.02)r.next=now+r.jit;s.start(r.next);r.next+=ab.duration}
-  async function armTx(){if(P.tx)return;unlock();if(!P.up){toast('วอยังไม่เชื่อมต่อ · รอสักครู่');connect();return}
-    const t=P.tx={ch:P.ch,go:false,granted:false,pending:[],pcm:[],t0:Date.now(),done:false};
+  async function armTx(chOv){if(P.tx)return;unlock();if(!P.up){sfx('err');toast('วอยังไม่เชื่อมต่อ · รอสักครู่');connect();return}
+    const t=P.tx={ch:chOv||P.ch,go:false,granted:false,pending:[],pcm:[],t0:Date.now(),done:false};
     try{if(!P.stream||!P.stream.active)P.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
-    catch(e){if(P.tx===t)P.tx=null;toast('ใช้ไมโครโฟนไม่ได้ · อนุญาตไมค์ในการตั้งค่าเครื่อง');return}
+    catch(e){if(P.tx===t)P.tx=null;sfx('err');toast('ใช้ไมโครโฟนไม่ได้ · อนุญาตไมค์ในการตั้งค่าเครื่อง');return}
     if(P.tx!==t)return;const c=ctxGet(),src=c.createMediaStreamSource(P.stream),node=c.createScriptProcessor(1024,1,1),z=c.createGain();z.gain.value=0;let carry=0;
     const ratio=c.sampleRate/8000;
     node.onaudioprocess=e=>{if(P.tx!==t)return;const d=e.inputBuffer.getChannelData(0),out=[];let m=0;
@@ -73,15 +81,15 @@ const PTT=(()=>{
       if(t.go){t.pcm.push(f);send(bytes)}else{t.pending.push([f,bytes]);if(t.pending.length>6)t.pending.shift()}};
     src.connect(node);node.connect(z);z.connect(c.destination);t.nodes=[src,node,z];if(t.want)goTx()}
   function goTx(){const t=P.tx;if(!t){return}if(!t.nodes){t.want=true;return}if(t.go)return;
-    if(P.live.has(t.ch)){const f=P.live.get(t.ch);stopTx(true);beep(420,90);beep(420,90,.15);toast(`ช่องไม่ว่าง · ${f.kind==='hq'?'ศูนย์':f.name} กำลังพูด`);return}
+    if(P.live.has(t.ch)){const f=P.live.get(t.ch);stopTx(true);sfx('busy');toast(`ช่องไม่ว่าง · ${f.kind==='hq'?'ศูนย์':f.name} กำลังพูด`);return}
     P.ws.send(JSON.stringify({t:'talk',ch:t.ch}));t.go=true;t.granted=true;t.t0=Date.now();t.pending.forEach(([f,b])=>{t.pcm.push(f);send(b)});t.pending=[];pauseClip();
-    beep(880,60);try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}
+    sfx('permit');
     $('.ptt-talk').hidden=false;$('.ptt-talk').classList.add('wait');$('.ptt-tl').textContent='กำลังพูด · '+lab(t.ch);document.body.classList.add('ptt-on');
     P.talkT=setInterval(()=>{const s=(Date.now()-t.t0)/1000;$('.ptt-t').textContent=s.toFixed(1);$('.ptt-lv i').style.width=Math.min(100,(t.lv||0)*180)+'%';if(s>=40)endTx()},80)}
   function startTx(){armTx().then(goTx)}
   function send(b){try{P.ws&&P.ws.readyState===1&&P.ws.send(b)}catch(e){}}
   function teardown(t){clearInterval(P.talkT);try{t.nodes&&t.nodes.forEach(n=>n.disconnect())}catch(e){}$('.ptt-talk').hidden=true;document.body.classList.remove('ptt-on')}
-  function stopTx(silent){const t=P.tx;if(!t)return;P.tx=null;teardown(t);try{t.go&&P.ws&&P.ws.send('{"t":"end"}')}catch(e){}if(!silent)beep(660,70);setTimeout(nextClip,300)}
+  function stopTx(silent){const t=P.tx;if(!t)return;P.tx=null;teardown(t);try{t.go&&P.ws&&P.ws.send('{"t":"end"}')}catch(e){}if(!silent)sfx('roger');setTimeout(nextClip,300)}
   function endTx(cancel){const t=P.tx;if(!t)return;const dur=(Date.now()-t.t0)/1000;
     if(cancel||!t.go||dur<0.35){stopTx(true);if(!cancel&&t.go)toast('กดค้างไว้ระหว่างพูด');return}
     stopTx();t.dur=dur;t.done=true;P.last=t;if(t.id){P.mine.add(t.id);upload(t,dur)}}
@@ -113,11 +121,11 @@ const PTT=(()=>{
     const mu=t.closest('[data-mu]');if(mu){e.stopPropagation();const id=mu.dataset.mu;P.muted.has(id)?P.muted.delete(id):P.muted.add(id);LS('ptt_muted',JSON.stringify([...P.muted]));draw();return}
     const ch=t.closest('[data-ch]');if(ch){P.ch=ch.dataset.ch;state();return}
     const b=t.closest('[data-pn]');if(b){const it=P.list.find(x=>String(x.n)===b.dataset.pn);if(it){unlock();if(P.playing){P.clip.pause();P.playing=null}P.queue.unshift(it);nextClip()}}});
-  function bind(btn){let downAt=0,pid=null,holdT=null,talking=false;
+  function bind(btn,o){o=o||{};let downAt=0,pid=null,holdT=null,talking=false;
     btn.addEventListener('contextmenu',e=>e.preventDefault());
-    btn.addEventListener('pointerdown',e=>{e.preventDefault();unlock();downAt=Date.now();pid=e.pointerId;try{btn.setPointerCapture(pid)}catch(x){}btn.classList.add('ptt-press');armTx();holdT=setTimeout(()=>{talking=true;goTx()},150)});
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();unlock();downAt=Date.now();pid=e.pointerId;try{btn.setPointerCapture(pid)}catch(x){}btn.classList.add('ptt-press');armTx(o.ch?o.ch():null);holdT=setTimeout(()=>{talking=true;goTx()},150)});
     const end=e=>{if(pid==null)return;clearTimeout(holdT);btn.classList.remove('ptt-press');const r=btn.getBoundingClientRect(),out=e.type==='pointercancel'||e.clientX<r.left-50||e.clientX>r.right+50||e.clientY<r.top-90;
-      if(talking){talking=false;endTx(out)}else{const t=P.tx;if(t&&!t.go)stopTx(true);if(Date.now()-downAt<150)toggle()}pid=null};
+      if(talking){talking=false;endTx(out)}else{const t=P.tx;if(t&&!t.go)stopTx(true);if(Date.now()-downAt<150)(o.tap||toggle)()}pid=null};
     btn.addEventListener('pointerup',end);btn.addEventListener('pointercancel',end)}
   function toggle(){const p=$('.ptt-panel');p.hidden=!p.hidden;if(!p.hidden){loadChans();poll()}draw()}
   function init(cfg){if(P.cfg)return;P.cfg=cfg;document.head.append(st);document.body.append(el);loadChans();connect();poll();

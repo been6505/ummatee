@@ -44,7 +44,7 @@ export default {
 async function pttConnect(req, env, url) {
   if (req.headers.get('upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
   const q = new URLSearchParams({ action: 'ptt_auth' });
-  for (const k of ['tk', 'key', 'team']) if (url.searchParams.get(k)) q.set(k, url.searchParams.get(k));
+  for (const k of ['tk', 't', 'team']) if (url.searchParams.get(k)) q.set(k, url.searchParams.get(k));
   let who = null;
   try { const r = await fetch((env.ADMIN_ORIGIN || ADMIN) + '/api?' + q, { headers: { 'user-agent': 'helpme4u-ptt' } }); who = await r.json(); } catch (e) {}
   if (!who || !who.ok) return new Response('unauthorized', { status: 403 });

@@ -164,6 +164,8 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 @keyframes ldp{50%{box-shadow:0 0 0 9px rgba(46,158,87,.08)}}
 .top .st{margin-left:0!important}
 .locbar.ok-hide{display:none!important}
+.rl-alert{display:grid;gap:2px;background:#FFF1F3;border:1.5px solid #F2B8BF;border-radius:18px;padding:12px 14px;color:#8E0F22}.rl-alert b{font-size:17px}.rl-alert small{color:#6b1020}
+.rl-pin{width:40px;height:40px;border-radius:50%;background:#C8102E;display:grid;place-items:center;font-size:20px;border:3px solid #fff;box-shadow:0 0 0 7px rgba(200,16,46,.25),0 4px 10px rgba(0,0,0,.3);animation:rlp 1.6s ease-in-out infinite}@keyframes rlp{50%{box-shadow:0 0 0 14px rgba(200,16,46,.08),0 4px 10px rgba(0,0,0,.3)}}
 .sos-hold{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}.sos-hold .sh-fill{position:absolute;inset:0;width:0;background:rgba(255,255,255,.3)}.sos-hold.holding .sh-fill{width:100%;transition:width 1s linear}.sos-hold .sh-t{position:relative}
 .iss{display:flex;flex-wrap:wrap;gap:8px}.iss button{border:1.5px solid #F2B8BF;background:#FFF5F6;color:#B3121F;border-radius:999px;padding:10px 14px;font:inherit;font-weight:700;font-size:15px}
 #call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
@@ -512,7 +514,8 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wa
 /* ---------- หน้างาน ---------- */
 /* ระดับเคสคำนวณแบบเดียวกับ CENTRAL (ข้อมูลที่ผู้แจ้งกรอก + ฝน/ดาวเทียม/น้ำท่วม/กล้อง) */
 if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
-function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();if(S.view==='home'||!S.view)HOME.draw();
+function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
+  {const nr=(r.rallies||[]).find(x=>!x.my);if(nr&&S.rlSeen!==nr.id){S.rlSeen=nr.id;try{buzz([600,200,600,200,600]);tone(880,300,.15);setTimeout(()=>tone(660,300,.15),350)}catch(e){}if(S.view!=='home')go('home');toast('📣 ศูนย์เรียกรวมพล: '+nr.label)}}if(S.view==='home'||!S.view)HOME.draw();
   $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
   const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;document.body.classList.toggle('sos-on',!!sos);$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
@@ -565,6 +568,8 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
     if(p){if(!H.me)H.me=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="me-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:1000}).addTo(H.map);else H.me.setLatLng([p.lat,p.lng])}
     H.cases.clearLayers();const cs=((S.me&&S.me.cases)||[]).filter(hasPin);
     if(H.on.cases)cs.forEach(c=>{const s=sev(c),done=c.status==='done';L.marker([+c.lat,+c.lng],{icon:L.divIcon({className:'',html:`<div class="cs-pin ${done?'done':'u'+s}"></div>`,iconSize:[30,30],iconAnchor:[15,30]})}).bindPopup(`<b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><br>${esc(c.people||1)} คน · ${esc(URG[s])}<br><small>${esc([c.address,c.district].filter(Boolean).join(' · '))}</small>`).addTo(H.cases)});
+    if(H.rl)H.rl.remove();H.rl=L.layerGroup().addTo(H.map);((S.me&&S.me.rallies)||[]).filter(r=>r.my!=='declined').forEach(r=>L.marker([+r.lat,+r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[40,40],iconAnchor:[20,20]}),zIndexOffset:900}).bindPopup(`<b>รวมพล</b><br>${esc(r.label)}`).addTo(H.rl));
+    const nr=((S.me&&S.me.rallies)||[]).find(r=>!r.my);if(nr&&H.seenRl!==nr.id){H.seenRl=nr.id;H.map.setView([+nr.lat,+nr.lng],14)}
     if(!H.fit){const pts=[...cs.map(c=>[+c.lat,+c.lng]),...(p?[[p.lat,p.lng]]:[])];if(pts.length){H.map.fitBounds(pts,{padding:[60,60],maxZoom:15});H.fit=true}}
     sheet()}
   async function layer(k,on){H.on[k]=on;if(k==='cases'){draw();return}
@@ -575,7 +580,12 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
       if(k==='cctv'){const j=await fetch('../api?action=cctv').then(r=>r.json()),g=L.layerGroup();(j.cams||[]).forEach(c=>{if(!c.lat)return;L.circleMarker([c.lat,c.lng],{radius:5,color:'#fff',weight:2,fillColor:'#111827',fillOpacity:1}).bindPopup(`<b>${esc(c.title)}</b>${c.img?`<br><img src="${esc(c.img)}" style="width:220px;border-radius:8px;margin-top:6px">`:c.hls?'<br><a href="'+esc(c.hls)+'" target="_blank" rel="noopener">ดูภาพสด ↗</a>':''}`).addTo(g)});H.L[k]=g.addTo(H.map)}}
     catch(e){toast('โหลดชั้นข้อมูลไม่ได้ (ต้องใช้เน็ต)');H.on[k]=false;sheet()}}
   function sheet(){const el=$('#hsheet');if(!el)return;const cs=((S.me&&S.me.cases)||[]).filter(c=>c.status==='going'),c=cs[0];
-    let top;
+    let top;const rl=((S.me&&S.me.rallies)||[]).find(r=>r.my!=='arrived'&&r.my!=='declined');
+    if(rl){const p=TR.pos||H.np,d=p?kmTo(p,rl):null;
+      el.innerHTML=`<div class="rl-alert"><b>📣 ศูนย์เรียกรวมพล</b><span>${esc(rl.label)}${d!=null?` · ห่าง ${d<1?Math.round(d*1000)+' ม.':d.toFixed(1)+' กม.'}`:''}</span>${rl.note?`<small>${esc(rl.note)}</small>`:''}</div>
+        <a class="hs-big" href="https://www.google.com/maps/dir/?api=1&destination=${+rl.lat},${+rl.lng}" target="_blank" rel="noopener" data-rlgo="${esc(rl.id)}"><i data-ic="nav"></i> นำทางไปจุดรวมพล</a>
+        <div class="hs-row">${rl.my==='going'?`<button class="hs-pill" type="button" data-rl="${esc(rl.id)}" data-st="arrived"><i data-ic="check"></i> ถึงแล้ว</button>`:`<button class="hs-pill" type="button" data-rl="${esc(rl.id)}" data-st="going"><i data-ic="nav"></i> รับทราบ · กำลังไป</button>`}<button class="hs-pill gray" type="button" data-rl="${esc(rl.id)}" data-st="declined">ไม่สะดวก</button></div>`;
+      if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px');return}
     if(c){const s=sev(c),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' '),p=tel(c.phone),rep=!!c.teamDoneAt;
       top=`<div class="hs-case"><span class="tag u${s}">${URG[s]}${cs.length>1?` · งานถัดไป 1/${cs.length}`:''}</span><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')} · ${esc(c.people||1)} คน</b><small>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</small>${c.hqNote?`<small style="color:#7a4300">ศูนย์: ${esc(c.hqNote)}</small>`:''}</div>
       ${dest?`<a class="hs-big" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทางไปเคสนี้</a>`:''}
@@ -585,6 +595,12 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
     el.innerHTML=top; // แผ่นล่างแสดงเฉพาะเคส (ชั้นข้อมูลแผนที่เอาออกตามที่ทีมใช้จริง)
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});
     document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
+  const kmTo=(a,b)=>{const R=6371,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+  document.addEventListener('click',async e=>{const r=e.target.closest('[data-rl]');if(r){r.disabled=true;const p=TR.pos||H.np,st=r.dataset.st;
+      const res=await opost({action:'rally_resp',id:r.dataset.rl,status:st,lat:p?+(+p.lat).toFixed(6):'',lng:p?+(+p.lng).toFixed(6):''},'ตอบรวมพล').catch(()=>({}));
+      const x=((S.me&&S.me.rallies)||[]).find(y=>y.id===r.dataset.rl);if(x)x.my=st;saveMe(S.me);draw();toast(res.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':res.ok?({going:'แจ้งศูนย์แล้ว · กำลังไป',arrived:'แจ้งศูนย์แล้ว · ถึงจุดรวมพล',declined:'แจ้งศูนย์แล้ว'}[st]):'ส่งไม่ได้ ลองใหม่');return}
+    const g=e.target.closest('[data-rlgo]');if(g){const x=((S.me&&S.me.rallies)||[]).find(y=>y.id===g.dataset.rlgo);if(x&&!x.my){opost({action:'rally_resp',id:x.id,status:'going'},'ตอบรวมพล').catch(()=>{});x.my='going';saveMe(S.me);setTimeout(draw,300)}}
+  });
   document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}
     const g=e.target.closest('#hsheet [data-go]');if(g)go(g.dataset.go)});
   // ในแอป: ตำแหน่งมาจากตัวติดตามของแอป (NTRK) · อัปเดตจุดของฉันทุก 10 วิ
@@ -615,7 +631,8 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
     const call=m.kind==='call'&&m.link&&Date.now()-m.at>3*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
-async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;
+async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที
+
     const fresh=msgs.filter(m=>m.sender==='hq'&&m.n>S.lastN);
     if(!first&&fresh.length){buzz([150,80,150]);tone()}
     const call=msgs.filter(m=>m.kind==='call'&&m.sender==='hq'&&m.n>S.handledCall&&Date.now()-m.at<90000).pop();if(call)ring(call);

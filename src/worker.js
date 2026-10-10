@@ -60,6 +60,8 @@ const SCHEMA = [
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
+  `CREATE TABLE IF NOT EXISTS rallies (id TEXT PRIMARY KEY, lat REAL, lng REAL, label TEXT, note TEXT, teams TEXT, caseId TEXT, warroom TEXT, createdAt INTEGER, by_ TEXT, closedAt INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS rally_resp (rallyId TEXT, team TEXT, status TEXT, at INTEGER, note TEXT, PRIMARY KEY (rallyId, team))`,
   `CREATE TABLE IF NOT EXISTS audit (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, action TEXT, cat TEXT, role TEXT, actor TEXT, target TEXT, summary TEXT, data TEXT, ip TEXT, undo TEXT, undone INTEGER)`,
   `CREATE INDEX IF NOT EXISTS audit_at ON audit(at)`,
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
@@ -713,7 +715,8 @@ async function teamMe(db, t) {
   results.forEach(c => { c._stk = stk[String(c.id)] || []; });
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
       status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', view: r.token ? await viewId(r.token) : '', inRoster: !!r.id },
-    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now };
+    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now,
+    rallies: await teamRallies(db, t.name) };
 }
 async function callStart(db, team, from, b) {
   if (!team) return { ok: false, error: 'missing_team' };
@@ -773,7 +776,54 @@ const CALL_POST = {
     return { ok: true, n: r.meta.last_row_id };
   },
 };
+/* ---------- รวมพล: ศูนย์เรียกทีมไปจุดเดียวกัน (ทีมขาดการติดต่อ · ทีมที่หน้างานกำลังไม่พอ) ----------
+   teams = '*' (ทุกทีมที่พร้อม/ออกงาน) หรือรายชื่อทีมคั่นด้วย \n · ทีมตอบ: going (กำลังไป) · arrived (ถึงแล้ว) · declined (ไม่สะดวก) */
+const RALLY_ST = ['going', 'arrived', 'declined'];
+async function rallyTargets(db, r) {
+  if (r.teams !== '*') return String(r.teams || '').split('\n').filter(Boolean);
+  const { results } = await db.prepare("SELECT name FROM roster WHERE active=1 AND COALESCE(status,'ready')<>'rest'" + (r.warroom ? ' AND warroom=?' : '')).bind(...(r.warroom ? [r.warroom] : [])).all();
+  return results.map(x => x.name);
+}
+async function rallySave(db, b) {
+  const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
+  if (lat == null || lng == null) return { ok: false, error: 'missing_location' };
+  const list = Array.isArray(b.teams) ? [...new Set(b.teams.map(t => clean(t, MAX.volunteer)).filter(Boolean))].slice(0, 100) : [];
+  if (b.all !== true && !list.length) return { ok: false, error: 'no_teams' };
+  const id = 'R' + rand(5), now = Date.now(), r = { id, lat, lng, label: clean(b.label, 120) || 'จุดรวมพล', note: clean(b.note, 300), teams: b.all === true ? '*' : list.join('\n'), caseId: clean(b.caseId, 40), warroom: WRC ? WRC.id : '' };
+  await db.prepare('INSERT INTO rallies (id,lat,lng,label,note,teams,caseId,warroom,createdAt,by_) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(id, lat, lng, r.label, r.note, r.teams, r.caseId, r.warroom, now, clean(b.by, 60)).run();
+  const targets = await rallyTargets(db, r);
+  for (const t of targets) await chatSend(db, { team: t, from: 'hq', name: clean(b.by, 60) || 'ศูนย์', text: `📣 เรียกรวมพล: ${r.label}${r.note ? ' · ' + r.note : ''}`, lat, lng, caseId: r.caseId });
+  await bumpRev(db);
+  return { ok: true, id, sent: targets.length };
+}
+async function rallyClose(db, b) { const id = clean(b.id, 20); const r = await db.prepare('SELECT * FROM rallies WHERE id=?').bind(id).first(); if (!r) return { ok: false, error: 'not_found' };
+  if (WRC && r.warroom !== WRC.id) return { ok: false, error: 'not_in_room' };
+  await db.prepare('UPDATE rallies SET closedAt=? WHERE id=? AND closedAt IS NULL').bind(Date.now(), id).run(); await bumpRev(db); return { ok: true }; }
+async function rallyList(db) {
+  const { results } = await db.prepare('SELECT * FROM rallies WHERE closedAt IS NULL AND createdAt>? ORDER BY createdAt DESC LIMIT 20').bind(Date.now() - 3 * 864e5).all();
+  const out = [];
+  for (const r of results) { if (WRC && r.warroom !== WRC.id) continue;
+    const { results: resp } = await db.prepare('SELECT team,status,at,note FROM rally_resp WHERE rallyId=?').bind(r.id).all();
+    out.push({ id: r.id, lat: r.lat, lng: r.lng, label: r.label, note: r.note || '', all: r.teams === '*', teams: await rallyTargets(db, r), caseId: r.caseId || '', createdAt: r.createdAt, by: r.by_ || '', resp }); }
+  return { ok: true, rallies: out };
+}
+async function teamRallies(db, name) {
+  const { results } = await db.prepare('SELECT * FROM rallies WHERE closedAt IS NULL AND createdAt>? ORDER BY createdAt DESC LIMIT 10').bind(Date.now() - 3 * 864e5).all();
+  const out = [];
+  for (const r of results) { if (!(await rallyTargets(db, r)).includes(name)) continue;
+    const me = await db.prepare('SELECT status,at FROM rally_resp WHERE rallyId=? AND team=?').bind(r.id, name).first();
+    out.push({ id: r.id, lat: r.lat, lng: r.lng, label: r.label, note: r.note || '', caseId: r.caseId || '', createdAt: r.createdAt, my: me ? me.status : '' }); }
+  return out;
+}
 const TEAM_POST = {
+  rally_resp: async (db, t, b) => {
+    const r = await db.prepare('SELECT * FROM rallies WHERE id=? AND closedAt IS NULL').bind(clean(b.id, 20)).first();
+    if (!r || !(await rallyTargets(db, r)).includes(t.name)) return { ok: false, error: 'not_found' };
+    if (!RALLY_ST.includes(b.status)) return { ok: false, error: 'bad_status' };
+    await db.prepare('INSERT INTO rally_resp (rallyId,team,status,at,note) VALUES (?,?,?,?,?) ON CONFLICT(rallyId,team) DO UPDATE SET status=excluded.status, at=excluded.at, note=excluded.note').bind(r.id, t.name, b.status, Date.now(), clean(b.note, 200)).run();
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `รวมพล "${r.label}": ${{ going: 'กำลังไป', arrived: 'ถึงจุดรวมพลแล้ว', declined: 'ไม่สะดวกไป' }[b.status]}${b.note ? ' · ' + clean(b.note, 200) : ''}`, lat: b.lat, lng: b.lng });
+    await bumpRev(db); return { ok: true };
+  },
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   team_status: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
@@ -1069,8 +1119,8 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+const WR_POST_OK = new Set(['rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -1121,6 +1171,7 @@ async function wrPostCheck(db, b) {
   switch (b.action) {
     case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); return c && inScope(c, sc) ? '' : 'not_in_room'; }
     case 'chat_send': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
+    case 'rally_save': if (b.all === true) return ''; for (const t of (Array.isArray(b.teams) ? b.teams : [])) if (!await teamOk(t)) return 'not_in_room'; return '';
     case 'sos_ack': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'team_link': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=? OR name=?').bind(clean(b.id, 20), clean(b.team, MAX.volunteer)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'roster_save': { const id = clean((b.team || {}).id, 20); if (!id) return ''; const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(id).first(); return !t || sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
@@ -1139,7 +1190,7 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
 const AUDIT_SKIP = new Set(['intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
-const AUDIT_TH = { update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
+const AUDIT_TH = { rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
   team_status: 'ทีมเปลี่ยนสถานะ', team_case: 'ทีมอัปเดตเคส', team_sos: 'ทีมส่ง/ยกเลิก SOS', sos_ack: 'รับทราบ SOS', hq_call: 'ศูนย์โทรหาทีม',
@@ -2506,6 +2557,7 @@ async function api(request, env) {
       case 'places': return json(await listPlaces(db));
       case 'roster': return json(vol ? await listRoster(db) : { ok: false, error: 'not_volunteer' });
       case 'stock': return json(vol ? await listStock(db) : { ok: false, error: 'not_volunteer' });
+      case 'rallies': return json(vol ? await rallyList(db) : { ok: false, error: 'not_volunteer' });
       case 'intel_brief': return json(vol ? { ok: true, ...(await intelBrief(db)) } : { ok: false, error: 'not_volunteer' });
       case 'dams': try { return json(await damData()); } catch (e) { return json({ ok: false, error: 'dams_unavailable' }); }
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
@@ -2576,11 +2628,11 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { silent_ack: async (db, b) => { const t = clean(b.team, MAX.volunteer); let a = {}; try { a = JSON.parse(await getMeta(db, 'silent_ack') || '{}'); } catch (e) {} const now = Date.now(); for (const k in a) if (a[k] < now - 864e5) delete a[k]; a[t] = now; await setMeta(db, 'silent_ack', JSON.stringify(a)); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { const t = clean(b.team, MAX.volunteer); let a = {}; try { a = JSON.parse(await getMeta(db, 'silent_ack') || '{}'); } catch (e) {} const now = Date.now(); for (const k in a) if (a[k] < now - 864e5) delete a[k]; a[t] = now; await setMeta(db, 'silent_ack', JSON.stringify(a)); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
-    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start'].includes(b.action))) {
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
       return json(await TEAM_POST[b.action](db, t, b));

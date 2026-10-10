@@ -42,5 +42,8 @@ const TRACK=(()=>{
       document.getElementById('trk-sel').innerHTML=`<b>${esc(sel)}</b> · เส้นทาง ${hours} ชม. ${pts.length>1?`${km.toFixed(1)} กม. (${pts.length} จุด)`:'ยังไม่มีข้อมูล'} <button class="linkish" id="trk-clear">ล้าง</button>`;
       document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
-  return {init,update,focus,fresh,isSos}
+  /* จุดรวมพลบนแผนที่ติดตามทีม */
+  let rl=null;function rallies(list){if(!map)return;if(!rl)rl=L.layerGroup().addTo(map);rl.clearLayers();
+    (list||[]).forEach(r=>L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:900}).bindTooltip('รวมพล · '+esc(r.label)).addTo(rl))}
+  return {init,update,focus,fresh,isSos,rallies}
 })();

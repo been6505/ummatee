@@ -1,7 +1,7 @@
 /* Service worker หน้าทีม: เปิดหน้าได้แม้ไม่มีเน็ต
    - หน้า/ไฟล์ของหน้าทีม: ใช้จากเน็ตก่อน (รอไม่เกิน 4 วิ) ไม่ได้ = ใช้ที่เก็บไว้ · เก็บของใหม่ทุกครั้งที่โหลดสำเร็จ
    - /api ไม่เก็บ (ข้อมูลงานล่าสุดเก็บใน localStorage ของหน้าทีม · สิ่งที่กดตอนไม่มีเน็ตอยู่ในกล่องขาออก) */
-const CACHE = 'hm-team-v23';
+const CACHE = 'hm-team-v24';
 const CORE = ['./', './native-track.js?v=2', '../assets/helpme4u-logo.png', '../central/icons.js?v=10', './jsqr.min.js?v=1', '../central/verify.js?v=15', '../bc.js?v=2', '../assets/hm-icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hm-team-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

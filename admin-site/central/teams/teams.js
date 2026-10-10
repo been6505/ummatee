@@ -22,8 +22,9 @@ setInterval(()=>{if(ADM.key&&!document.hidden)loadAll()},15000);document.addEven
 /* ตำแหน่งสดทุก 15 วิ: อัปเดตแผนที่ + ป้ายสถานะบนการ์ด (ไม่วาดหน้าใหม่ทั้งหมด) */
 // ตำแหน่งสดทุก 3 วินาที (หมุดเลื่อนลื่นระหว่างรอบด้วย glideTo)
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy||(typeof LIVE!=='undefined'&&LIVE.ok()))return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);
+setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRACK.routes)TRACK.routes(T.live,T.cases)},5000);
 if(typeof LIVE!=='undefined')LIVE.start(rows=>{if(!T.loaded)return;T.live=mergeLive(T.live,rows);liveUI()});
-function liveUI(){if(typeof TRACK!=='undefined')TRACK.update(T.live,T.roster);
+function liveUI(){if(typeof TRACK!=='undefined'){TRACK.update(T.live,T.roster);if(TRACK.routes)TRACK.routes(T.live,T.cases)}
   $$('[data-live-of]').forEach(el=>{const t=T.roster.find(x=>String(x.id)===el.dataset.liveOf);if(t)el.outerHTML=liveTag(t)})}
 /* ป้ายตำแหน่งของทีม: สด / เงียบ / ขาดการติดต่อ (ทีมออกเคสแต่ไม่ส่งตำแหน่งเกิน 10 นาที) */
 function liveTag(t){const lv=liveOf(t.name),id=esc(t.id);
@@ -50,7 +51,7 @@ function render(){
   const queue=T.cases.filter(c=>c.status==='open');
   const going=T.cases.filter(c=>c.status==='going').length;
   const sharing=R.filter(t=>{const l=liveOf(t.name);return l&&Date.now()-l.updatedAt<30*60e3}).length,sos=R.filter(sosOn);
-  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกเคส',cnt('ready'),'done','ready'],['ทีมกำลังไป',cnt('out'),'go','out'],['ทีมกำลังไป',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
+  $('#stats').innerHTML=[['ทีมทั้งหมด',R.length,'','all'],['พร้อมออกเคส',cnt('ready'),'done','ready'],['ทีมกำลังไป',cnt('out'),'go','out'],['ถือเคสอยู่',R.filter(t=>teamCases(t.name).some(c=>c.status==='going')).length,'go','busy'],['แชร์ตำแหน่ง',sharing,'go','live'],['อาสาทั้งหมด',people||'–','','people'],['เคสรอจัดทีม',queue.length,'red','queue'],['SOS',sos.length,sos.length?'red':'','sos']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${T.sf===f}"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   $('#sos-list').innerHTML=sos.map(t=>{const lv=liveOf(t.name),p=tel(t.phone);return `<div class="sos-card" role="alert"><b><i data-ic="alert"></i> SOS · ${esc(t.name)}</b><span>${esc(ago(t.sosAt))}${lv?' · ตำแหน่ง '+esc(ago(lv.updatedAt)):''}</span>
     <span class="sos-acts">${lv?`<button class="btn sm" data-track="${esc(t.name)}"><i data-ic="pin"></i> ดูตำแหน่ง</button>`:''}${p.length>=9?`<a class="btn sm" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:''}<button class="btn sm" data-tchat="${esc(t.name)}"><i data-ic="chat"></i> แชท</button><button class="btn sm primary" data-sosack="${esc(t.id)}">รับทราบ</button></span></div>`}).join('');

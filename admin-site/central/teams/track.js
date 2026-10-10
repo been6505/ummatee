@@ -42,8 +42,28 @@ const TRACK=(()=>{
       document.getElementById('trk-sel').innerHTML=`<b>${esc(sel)}</b> · เส้นทาง ${hours} ชม. ${pts.length>1?`${km.toFixed(1)} กม. (${pts.length} จุด)`:'ยังไม่มีข้อมูล'} <button class="linkish" id="trk-clear">ล้าง</button>`;
       document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
+  /* ทีมที่รับเคสแล้ว (ทีมกำลังไป): เส้นทางถนนจากตำแหน่งสดของทีมไปเคสที่ใกล้สุด + ระยะ/เวลาโดยประมาณ
+     คำนวณใหม่เมื่อทีมขยับเกิน 150 ม. · เปลี่ยนเคส · หรือทุก 3 นาที (เส้นทางจาก OSRM · ไม่ได้ = เส้นตรงประ) */
+  let rt=null;const RT=new Map();
+  async function osrm(a,b){const u=`https://router.project-osrm.org/route/v1/driving/${a.lng.toFixed(6)},${a.lat.toFixed(6)};${b.lng.toFixed(6)},${b.lat.toFixed(6)}?overview=full&geometries=geojson`;
+    const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);try{const j=await fetch(u,{signal:ctl.signal}).then(r=>r.json());if(j.code!=='Ok')throw 0;const r=j.routes[0];return {coords:r.geometry.coordinates.map(c=>[c[1],c[0]]),km:r.distance/1000,min:r.duration/60}}finally{clearTimeout(tm)}}
+  const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
+  function routes(live,cases){if(!map)return;if(!rt)rt=L.layerGroup().addTo(map);const seen=new Set();
+    (live||[]).forEach(t=>{const k=tn(t.team),mine=(cases||[]).filter(c=>c.status==='going'&&!c.teamDoneAt&&tn(c.volunteer)===k&&hasPin(c));if(!mine.length)return;
+      const me=L.latLng(+t.lat,+t.lng),tgt=mine.map(c=>({c,d:me.distanceTo([+c.lat,+c.lng])})).sort((a,b)=>a.d-b.d)[0].c;seen.add(k);
+      let r=RT.get(k);if(!r){r={g:L.layerGroup().addTo(rt)};RT.set(k,r)}
+      const need=!r.at||r.cid!==String(tgt.id)||r.from.distanceTo(me)>150||Date.now()-r.at>180e3;
+      if(need&&!r.busy){r.busy=true;r.cid=String(tgt.id);r.from=me;r.at=Date.now();const b={lat:+tgt.lat,lng:+tgt.lng};
+        osrm({lat:me.lat,lng:me.lng},b).then(x=>draw(k,r,tgt,me,x)).catch(()=>draw(k,r,tgt,me,null)).finally(()=>{r.busy=false})}
+      else if(r.line&&r.straight)r.line.setLatLngs([me,[+tgt.lat,+tgt.lng]])});
+    for(const [k,r] of RT)if(!seen.has(k)){rt.removeLayer(r.g);RT.delete(k)}}
+  function draw(k,r,c,me,x){r.g.clearLayers();const end=[+c.lat,+c.lng],more=(x&&x.coords)||[[me.lat,me.lng],end];r.straight=!x;
+    const lab=`${esc(k)} → เคส #${esc(c.id)} · ${(c.needs||[]).slice(0,2).map(esc).join(', ')||'เคส'}${x?` · ${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} นาที`:` · ระยะตรง ${(me.distanceTo(end)/1000).toFixed(1)} กม.`}`;
+    L.polyline(more,{color:'#fff',weight:8,opacity:.9}).addTo(r.g);
+    r.line=L.polyline(more,{color:'#E5383B',weight:5,opacity:.9,dashArray:x?null:'8 8'}).bindTooltip(lab,{sticky:true}).addTo(r.g);
+    L.marker(end,{icon:L.divIcon({className:'',html:`<div class="rt-goal"><i data-ic="flag"></i><span>${x?`${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} น.`:'เคส'}</span></div>`,iconSize:null,iconAnchor:[14,28]}),zIndexOffset:800}).bindTooltip(lab).addTo(r.g)}
   /* จุดรวมพลบนแผนที่ติดตามทีม */
   let rl=null;function rallies(list){if(!map)return;if(!rl)rl=L.layerGroup().addTo(map);rl.clearLayers();
     (list||[]).forEach(r=>L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div class="rl-pin">📣</div>',iconSize:[36,36],iconAnchor:[18,18]}),zIndexOffset:900}).bindTooltip('รวมพล · '+esc(r.label)).addTo(rl))}
-  return {init,update,focus,fresh,isSos,rallies}
+  return {init,update,focus,fresh,isSos,rallies,routes}
 })();

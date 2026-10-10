@@ -75,6 +75,22 @@ Object.assign(ICONS,{
   live:'<circle cx="12" cy="12" r="2.5"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/>',
   drop:'<path d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3z"/>',
   expand:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',board:'<rect x="3" y="3" width="7.5" height="9" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5" rx="1.5"/><rect x="13.5" y="11" width="7.5" height="10" rx="1.5"/><rect x="3" y="15" width="7.5" height="6" rx="1.5"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/>',
+  flame:'<path d="M12 21c-3.9 0-6.5-2.6-6.5-6.1 0-3.4 2.6-5.3 3.7-8.4.3 2.3 1.8 3.4 2.8 3.9.4-2.2 1.3-4.3 3.3-6.4.1 3.5 3.2 6 3.2 10.4 0 3.8-2.6 6.6-6.5 6.6z"/>',
+  storm:'<path d="M17.5 17A4.5 4.5 0 0 0 17 8a6 6 0 0 0-11.6 2A3.5 3.5 0 0 0 6 17"/><path d="m13 12-3 5h4l-3 5"/>',
+  snow:'<path d="M12 2v20M4.9 7l14.2 10M4.9 17 19.1 7"/><path d="m9 4 3 2 3-2M9 20l3-2 3 2"/>',
+  mountain:'<path d="m3 20 6.5-11 4 6.5L16 12l5 8z"/>',
+  siren:'<path d="M7 18v-6a5 5 0 0 1 10 0v6"/><path d="M5 21h14v-3H5z"/><path d="M12 3V2M4.2 6.2l-.7-.7M19.8 6.2l.7-.7M2 12h1M21 12h1"/>',
+  sparkle:'<path d="M12 3c.6 4.2 2.8 6.4 7 7-4.2.6-6.4 2.8-7 7-.6-4.2-2.8-6.4-7-7 4.2-.6 6.4-2.8 7-7z"/><path d="M19 15c.2 1.5 1 2.3 2.5 2.5-1.5.2-2.3 1-2.5 2.5-.2-1.5-1-2.3-2.5-2.5 1.5-.2 2.3-1 2.5-2.5z"/>',
+  wifioff:'<path d="M2 2l20 20"/><path d="M8.5 16.4a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 4.2-2.5M14.8 10.4A10 10 0 0 1 19 12.9M2 8.8a15 15 0 0 1 4.3-2.7M10.7 5a15 15 0 0 1 11.3 3.8"/><path d="M12 20h.01"/>',
+  bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  belloff:'<path d="M2 2l20 20"/><path d="M8.7 3.7A6 6 0 0 1 18 8c0 3 .5 5.1 1.2 6.6M17 17H3s3-2 3-9a5.6 5.6 0 0 1 .3-1.8"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  mobile:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  radio:'<rect x="3" y="9" width="18" height="12" rx="2"/><path d="m7 9 10-5"/><circle cx="15.5" cy="15" r="2.5"/><path d="M7 13h3M7 17h3"/>',
+  clipboard:'<rect x="5" y="4" width="14" height="18" rx="2"/><path d="M9 4V2.8A.8.8 0 0 1 9.8 2h4.4a.8.8 0 0 1 .8.8V4"/><path d="M9 11h6M9 15h6"/>',
+  arrows:'<path d="m18 8 4 4-4 4M6 8l-4 4 4 4M2 12h20"/>',
+  dot:'<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
+  hole:'<ellipse cx="12" cy="15" rx="9" ry="4"/><path d="M8 15c0-1.1 1.8-2 4-2s4 .9 4 2"/><path d="M7 9l2-4M17 9l-2-4M12 8V4"/>',
   mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>',
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   box:'<path d="m21 8-9-5-9 5v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/>'
@@ -83,7 +99,14 @@ Object.assign(ICONS,{
 function ic(name,cls){return `<svg class="ic${cls?' '+cls:''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`}
 /* ใน HTML: <i data-ic="phone"></i> → แทนที่ด้วยไอคอนเส้น (ทั้งตอนโหลดและเมื่อมีเนื้อหาใหม่เข้ามา) */
 (()=>{const fill=root=>root.querySelectorAll&&root.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic,i.className)});
-  const go=()=>{fill(document);new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.matches&&n.matches('i[data-ic]'))n.outerHTML=ic(n.dataset.ic,n.className);else fill(n)}}))).observe(document.documentElement,{childList:true,subtree:true})};
+  /* อีโมจิที่ใช้เป็นไอคอนในข้อความ → ไอคอนเส้นสีเดียวกับตัวอักษร (ทั้งข้อความในโค้ดและข้อความจากเซิร์ฟเวอร์/แชท) */
+  const EMO={'↗':'ext','⚠':'alert','🌊':'wave','📣':'megaphone','📢':'megaphone','✓':'check','✔':'check','✅':'check','📍':'pin','↔':'arrows','🌐':'globe','🔥':'flame','⛈':'storm','🌀':'storm','🧊':'snow','🌧':'rain','⛰':'mountain','🚨':'siren','▶':'play','⚙':'settings','✦':'sparkle','🕳':'hole','📴':'wifioff','✕':'close','✖':'close','❌':'close','🔔':'bell','🔕':'belloff','📱':'mobile','👁':'eye','👥':'users','📻':'radio','🔴':'dot','📋':'clipboard','🎉':'check','📡':'sat','🚗':'car','🚙':'car','🚤':'boat','⛵':'boat','📦':'box','🕘':'clock','⏰':'clock','🧾':'note','📝':'note','📞':'phone','☎':'phone','🙋':'hand','🎙':'mic','🎤':'mic','🗺':'map','🏠':'home','💬':'chat','🔍':'search','📷':'cam','📸':'cam','🎥':'video','💧':'drop','🛟':'shield','🛡':'shield','📊':'chart','📅':'calendar','🔗':'link','⬇':'down','⬆':'up','🧭':'nav','🔄':'refresh','🔁':'refresh','⏱':'clock','🌡':'alert','ℹ':'info','🆘':'siren','⚡':'storm','🌪':'storm','💡':'sparkle','⭐':'sparkle','✨':'sparkle','✋':'hand','🗓':'calendar','📆':'calendar','📌':'pin','🏥':'heart','🚑':'ambulance','🛶':'boat','🔇':'belloff','🔊':'bell','⏳':'clock','❗':'alert','❓':'info','➕':'plus','➖':'minus','👤':'user','🧑':'user','📄':'note','🗒':'note','🔒':'key','🔑':'key','📲':'mobile','🛰':'sat','📹':'video','🚚':'car','🏍':'car','🚶':'user'};
+  const RE=new RegExp('('+Object.keys(EMO).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\uFE0F?','g'),SKIP=/^(SCRIPT|STYLE|TEXTAREA|INPUT|OPTION|SELECT|TITLE|NOSCRIPT|SVG|svg|CODE|PRE)$/;
+  const emo=n=>{if(!n)return;if(n.nodeType===3){const p=n.parentNode,v=n.nodeValue;if(!p||!v||SKIP.test(p.nodeName)||p.closest&&p.closest('svg,[contenteditable],[data-noemo]'))return;RE.lastIndex=0;if(!RE.test(v))return;RE.lastIndex=0;
+      const f=document.createDocumentFragment();let last=0;v.replace(RE,(m,k,i)=>{if(i>last)f.append(v.slice(last,i));const t=document.createElement('template');t.innerHTML=ic(EMO[k],'emo'+(k==='🔴'?' emo-live':''));f.append(t.content);last=i+m.length;return m});if(last<v.length)f.append(v.slice(last));p.replaceChild(f,n);return}
+    if(n.nodeType===1&&!SKIP.test(n.nodeName)){const w=document.createTreeWalker(n,4),xs=[];while(w.nextNode())xs.push(w.currentNode);xs.forEach(emo)}};
+  const go=()=>{fill(document);emo(document.body);new MutationObserver(ms=>ms.forEach(m=>{if(m.type==='characterData'){emo(m.target);return}m.addedNodes.forEach(n=>{if(n.nodeType===1){if(n.matches&&n.matches('i[data-ic]'))n.outerHTML=ic(n.dataset.ic,n.className);else{fill(n);emo(n)}}else if(n.nodeType===3)emo(n)})})).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+    const st=document.createElement('style');st.textContent='.ic.emo{width:1.15em;height:1.15em;vertical-align:-.2em;display:inline-block;flex:none;margin:0 .08em}.ic.emo-live{color:#E5383B}';document.head.append(st)};
   document.readyState==='loading'?document.addEventListener('DOMContentLoaded',go):go()})();
 
 /* หมุดหยดน้ำบนแผนที่ (SVG คมทุกขนาดจอ · ปลายหมุดตรงตำแหน่งจริงพอดี)

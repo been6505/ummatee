@@ -540,7 +540,7 @@ const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0
 const dist=(a,b)=>{const R=6371e3,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
 const TELE=window.TELE={batt:null,charging:null,sig:null,net:null,carrier:null};
 try{navigator.getBattery&&navigator.getBattery().then(b=>{const u=()=>{TR.batt=Math.round(b.level*100);if(TELE.batt==null||!TELE._native){TELE.batt=TR.batt;TELE.charging=b.charging}};u();b.onlevelchange=u;b.onchargingchange=u})}catch(e){}
-async function teleTick(){try{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform()&&C.registerPlugin){const DS=TELE._ds||(TELE._ds=C.registerPlugin('DeviceSense'));const r=await DS.info();TELE._native=true;
+async function teleTick(){try{const C=window.Capacitor;const DS=C&&C.isNativePlatform&&C.isNativePlatform()&&((C.Plugins&&C.Plugins.DeviceSense)||(C.registerPlugin&&C.registerPlugin('DeviceSense')));if(DS){const r=await DS.info();TELE._native=true;
       if(r.battery!=null){TELE.batt=r.battery;TR.batt=r.battery}if(r.charging!=null)TELE.charging=!!r.charging;if(r.signal!=null)TELE.sig=r.signal;if(r.network)TELE.net=r.network;if(r.carrier)TELE.carrier=r.carrier}}catch(e){}
   const c=navigator.connection;if(c&&!TELE._native){TELE.net=c.type&&c.type!=='unknown'?c.type:(c.effectiveType||null);const et=c.effectiveType,dl=+c.downlink||0;TELE.sig=et==='4g'?(dl>=5?4:3):et==='3g'?2:et?1:null}}
 teleTick();setInterval(teleTick,20000);

@@ -31,22 +31,23 @@ const GS=(()=>{
       D.stock.forEach(x=>{if(m(norm([x.name,x.category,x.location,x.note].join(' '))))out.push({g:'สต็อก',ic:'box',t:x.name,s:`เหลือ ${x.qty} ${x.unit||''}${x.category?' · '+x.category:''}`,href:U('/central/stock/')+'?q='+encodeURIComponent(x.name)})});
       D.rooms.forEach(x=>{if(x.active===0)return;if(m(norm([x.id,x.name,x.province,x.kind].join(' '))))out.push({g:'War Room',ic:'map',t:x.name||x.id,s:[x.province,x.id].filter(Boolean).join(' · '),href:U('/central/warroom/')+'?wr='+encodeURIComponent(x.id)})})}
     return out}
-  function draw(){const q=el.querySelector('input').value,list=el.querySelector('.gs-list');hits=search(q);sel=Math.min(sel,Math.max(0,hits.length-1));
+  function draw(){const q=el.querySelector('input').value,list=el.querySelector('.gs-list');hits=search(q);const onCases=!!document.getElementById('q');sel=Math.min(sel,Math.max(0,hits.length-1));
     if(!q.trim()){list.innerHTML=`<p class="gs-tip">พิมพ์ รหัสเคส · ชื่อ · เบอร์ · ที่อยู่ · ชื่อทีม · ของในสต็อก · War Room · เมนู${!D?'<br><small>กำลังโหลดข้อมูล…</small>':''}</p>`;return}
     if(!hits.length){list.innerHTML=`<p class="gs-tip">${loading?'กำลังค้นหา…':'ไม่พบ "'+e(q)+'"'}</p>`;return}
     const cnt={};let h='',i=0,last='';for(const x of hits){cnt[x.g]=(cnt[x.g]||0)+1;if(cnt[x.g]>30)continue;if(x.g!==last){last=x.g;h+=`<p class="gs-g">${e(x.g)} <span>${hits.filter(y=>y.g===x.g).length}</span></p>`}
       h+=`<a class="gs-it${i===sel?' on':''}" href="${e(x.href)}" data-i="${i}"><span class="gs-ic">${typeof ic==='function'?ic(x.ic):''}</span><span class="gs-tx"><b>${e(x.t)}</b><small>${e(x.s)}</small></span></a>`;i++}
-    list.innerHTML=h}
+    list.innerHTML=(onCases?`<button type="button" class="gs-flt" data-gsf>${typeof ic==='function'?ic('filter'):''} กรองรายการเคสในหน้านี้ด้วย “${e(q)}” <span>ดูผลในหน้า</span></button>`:'')+h}
   function go(a){if(!a)return;const href=a.getAttribute('href');close();const here=location.pathname===new URL(href,location.href).pathname;location.href=href;if(here&&href.includes('#'))setTimeout(()=>location.reload(),50)}
   function build(){el=document.createElement('div');el.className='gs';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-label','ค้นหาทุกอย่าง');
     el.innerHTML=`<div class="gs-box"><div class="gs-in">${typeof ic==='function'?ic('search'):''}<input type="search" placeholder="ค้นหาทุกอย่าง…" aria-label="ค้นหาทุกอย่าง" autocomplete="off"><button type="button" class="gs-x" aria-label="ปิด">ปิด</button></div><div class="gs-list"></div></div>`;
     document.body.append(el);const inp=el.querySelector('input');let t;
-    inp.addEventListener('input',()=>{clearTimeout(t);sel=0;t=setTimeout(draw,120)});
-    inp.addEventListener('keydown',ev=>{const n=el.querySelectorAll('.gs-it').length;if(ev.key==='ArrowDown'){ev.preventDefault();sel=Math.min(n-1,sel+1);draw()}else if(ev.key==='ArrowUp'){ev.preventDefault();sel=Math.max(0,sel-1);draw()}else if(ev.key==='Enter'){ev.preventDefault();go(el.querySelector('.gs-it.on'))}else if(ev.key==='Escape')close()});
-    el.addEventListener('click',ev=>{if(ev.target===el||ev.target.closest('.gs-x')){close();return}const a=ev.target.closest('.gs-it');if(a){ev.preventDefault();go(a)}})}
-  function open(){if(!el)build();el.hidden=false;document.body.classList.add('noscroll');const inp=el.querySelector('input');inp.value='';draw();setTimeout(()=>inp.focus(),30);load().then(()=>{if(!el.hidden)draw()})}
+    inp.addEventListener('input',()=>{clearTimeout(t);sel=0;t=setTimeout(()=>{draw();syncQ(inp.value)},120)});
+    inp.addEventListener('keydown',ev=>{const n=el.querySelectorAll('.gs-it').length;if(ev.key==='ArrowDown'){ev.preventDefault();sel=Math.min(n-1,sel+1);draw()}else if(ev.key==='ArrowUp'){ev.preventDefault();sel=Math.max(0,sel-1);draw()}else if(ev.key==='Enter'){ev.preventDefault();const a=el.querySelector('.gs-it.on');if(a)go(a);else{syncQ(inp.value);close()}}else if(ev.key==='Escape')close()});
+    el.addEventListener('click',ev=>{if(ev.target.closest('[data-gsf]')){syncQ(el.querySelector('input').value);close();const v=document.querySelector('.view-sw [aria-selected="true"]');if(v&&v.dataset.view!=='cases'&&v.dataset.view!=='kanban'){const c=document.querySelector('.view-sw [data-view="cases"]');if(c)c.click()}return}if(ev.target===el||ev.target.closest('.gs-x')){close();return}const a=ev.target.closest('.gs-it');if(a){ev.preventDefault();go(a)}})}
+  function syncQ(v){const q=document.getElementById('q');if(!q)return;q.value=v.trim();q.dispatchEvent(new Event('input',{bubbles:true}));const c=document.getElementById('q-chip');if(c){c.hidden=!q.value;const b=c.querySelector('b');if(b)b.textContent=q.value}}
+  function open(){if(!el)build();el.hidden=false;document.body.classList.add('noscroll');const inp=el.querySelector('input'),q0=document.getElementById('q');inp.value=q0?q0.value:'';draw();setTimeout(()=>inp.focus(),30);load().then(()=>{if(!el.hidden)draw()})}
   function close(){if(el)el.hidden=true;document.body.classList.remove('noscroll')}
-  return {open,close}})();
+  return {open,close,syncQ}})();
 (()=>{let box=null,cur=null,opts=[];
   const close=()=>{if(box){box.remove();box=null}cur=null};
   const place=()=>{if(!box||!cur)return;const r=cur.getBoundingClientRect(),vv=window.visualViewport,vh=vv?vv.height+vv.offsetTop:innerHeight,below=vh-r.bottom-10;

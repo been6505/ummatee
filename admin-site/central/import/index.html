@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
-<link rel="stylesheet" href="../hm-ui.css?v=104">
+<link rel="stylesheet" href="../hm-ui.css?v=105">
 <script src="../icons.js?v=22"></script>
 </head>
 <body>
@@ -58,7 +58,7 @@ $('#imp').addEventListener('submit',async e=>{e.preventDefault();const f=e.targe
   catch(err){out('ผิดพลาด: '+err.message)}finally{btn.disabled=false}});
 adminBoot({action:'stock'},'items',()=>{});
 </script>
-<script src="../theme-toggle.js?v=7"></script>
+<script src="../theme-toggle.js?v=8"></script>
 <script>document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 </body>
 </html>

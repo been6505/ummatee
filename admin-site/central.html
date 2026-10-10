@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./admin.css?v=18">
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
-<link rel="stylesheet" href="./central/hm-ui.css?v=104">
+<link rel="stylesheet" href="./central/hm-ui.css?v=105">
 <script src="./central/icons.js?v=22"></script>
 </head>
 <body>
@@ -48,7 +48,7 @@
     <section class="stats" id="stats" aria-label="สรุปเคส"></section>
 
     <section class="bar">
-      <div class="bar-top"><label class="search"><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหา: ชื่อ เบอร์ ที่อยู่ เขต ความต้องการ เลขเคส ทีม" aria-label="ค้นหาเคส"></label><button class="btn ghost sm f-toggle ic-btn" id="f-toggle" aria-expanded="false" aria-controls="filters-box" aria-label="ตัวกรอง" title="ตัวกรอง"><i data-ic="filter"></i><b id="f-n" hidden></b></button></div>
+      <div class="bar-top"><button type="button" class="q-chip" id="q-chip" hidden onclick="if(event.target.closest('[data-qx]')){GS.syncQ('')}else GS.open()">ค้นหา: <b></b><span data-qx aria-label="ล้างคำค้น">✕</span></button><label class="search" hidden><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหา: ชื่อ เบอร์ ที่อยู่ เขต ความต้องการ เลขเคส ทีม" aria-label="ค้นหาเคส"></label><button class="btn ghost sm f-toggle ic-btn" id="f-toggle" aria-expanded="false" aria-controls="filters-box" aria-label="ตัวกรอง" title="ตัวกรอง"><i data-ic="filter"></i><b id="f-n" hidden></b></button></div>
       <div class="bar-row">
         <div class="filters-box" id="filters-box">
         <select id="f-status" aria-label="สถานะ"><option value="active">ยังไม่เสร็จ</option><option value="open">รอความช่วยเหลือ</option><option value="going">ทีมกำลังไป</option><option value="helped">ช่วยเหลือแล้ว (รอปิดเคส)</option><option value="done">ปิดเคส</option><option value="all">ทั้งหมด</option></select>
@@ -98,7 +98,7 @@
 <script src="./central/casekanban.js?v=10"></script>
 <script src="./central/casedays.js?v=1"></script>
 <script src="./central/leadsview.js?v=7"></script>
-<script src="./central/theme-toggle.js?v=7"></script>
+<script src="./central/theme-toggle.js?v=8"></script>
 <script src="./central/livestream.js?v=4"></script>
 <script src="./central/ptt.js?v=9"></script>
 <script src="./central/chat.js?v=22"></script>

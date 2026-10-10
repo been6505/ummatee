@@ -69,7 +69,34 @@ form.send{display:flex;gap:8px;padding:8px 12px 10px;background:rgba(255,255,255
 form.send input{border-radius:999px;padding:11px 16px}
 .round{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--primary);color:#fff;cursor:pointer;display:grid;place-items:center}.round.soft{background:var(--tint);color:var(--primary)}
 /* โทร */
-.callgrid{display:grid;gap:10px}.callgrid .btn{min-height:64px;font-size:17px;border-radius:18px}
+.callgrid{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.cg{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;border-radius:16px;background:var(--tint);color:var(--primary);padding:12px 4px;font:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer}
+.cg .ic{width:24px;height:24px}.cg[hidden]{display:none}
+#dash{display:grid;gap:12px}
+.db-card{background:#fff;border-radius:22px;padding:14px 16px;box-shadow:0 1px 3px rgba(22,27,61,.06)}
+.db-card h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}.db-card h3 small{margin-left:auto;font-weight:500;color:var(--muted);font-size:12.5px}
+.db-contact{margin-top:12px}.db-contact .hint{margin:8px 0 0}
+.db-team{display:flex;align-items:center;gap:12px}
+.db-veh{width:52px;height:52px;border-radius:16px;background:var(--tint);display:grid;place-items:center;flex:none}.db-veh img{width:42px;height:42px;object-fit:contain}
+.db-team b{font-size:17px;display:block}.db-team small{color:var(--muted);font-size:13px}
+.db-st{margin-left:auto;border-radius:999px;padding:5px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.db-st.ready{background:var(--okt);color:var(--ok)}.db-st.out{background:var(--ambert);color:var(--amber)}.db-st.rest{background:#ECEDF2;color:var(--muted)}
+.db-tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.db-tile{background:#fff;border-radius:20px;padding:12px 14px;box-shadow:0 1px 3px rgba(22,27,61,.06);border:0;font:inherit;text-align:left;color:inherit}
+.db-tile small{display:block;color:var(--muted);font-size:12.5px}.db-tile b{font-size:28px;line-height:1.2}
+.db-tile.go b{color:var(--amber)}.db-tile.ok b{color:var(--ok)}.db-tile.pp b{color:var(--primary)}
+button.db-tile{cursor:pointer}
+.db-bars{display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:16px}
+.db-bars>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.db-bars i{width:100%;max-width:26px;border-radius:6px 6px 2px 2px;background:var(--ok);position:relative;min-height:3px}
+.db-bars i.z{background:#E3E6EF}.db-bars em{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-style:normal;font-size:11px;font-weight:700;color:var(--ok)}
+.db-bars small{font-size:11px;color:var(--muted)}.db-bars .td small{color:var(--ink);font-weight:700}
+.db-row{display:flex;align-items:center;gap:10px;font-size:14px;padding:6px 0}.db-row+.db-row{border-top:1px solid var(--line)}
+.db-row .dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--ok)}.db-row .dot.wait{background:var(--amber)}.db-row .dot.off{background:var(--red)}
+.db-row span{flex:1;min-width:0}.db-row small{color:var(--muted)}
+.db-chips{display:flex;flex-wrap:wrap;gap:6px}.db-chips span{background:var(--tint);color:var(--primary);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600}
+.db-rally{background:#161B3D;color:#fff}.db-rally h3{color:#fff}.db-rally p{margin:0 0 10px;font-size:14px;opacity:.9}
+
 .hint{font-size:13px;color:var(--muted);margin:0}
 .bg-trk{border-top:1px solid var(--line,#e6e8ef);padding-top:10px}.bg-trk summary{font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:40px}
 .bg-trk>*:not(summary){margin-top:8px}.trk-apps{display:grid;grid-template-columns:1fr 1fr;gap:8px}.trk-apps .btn{min-height:44px;font-size:14px;text-decoration:none}
@@ -171,7 +198,7 @@ body.on-home .top{position:fixed!important;left:0;right:0;z-index:600}
 #call-pane{position:fixed;inset:0;z-index:2000;background:#0f1430}#call-pane iframe{width:100%;height:100%;border:0}
 #call-pane .cp-back{position:absolute;left:12px;top:calc(var(--sat) + 10px);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:inherit;font-weight:700;padding:8px 14px}
 /* หน้าโทร: ปุ่มอยู่กลางจอ (ระหว่างหัวกับเมนูล่าง) */
-main#v-call:not([hidden]){display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - var(--sat) - 190px);max-width:520px;margin:0 auto;width:100%;padding:0 14px}
+main#v-call:not([hidden]){display:block;max-width:560px;margin:0 auto;width:100%;padding:12px 14px calc(var(--nav) + var(--safe-b) + 60px)}
 main#v-call .hint{text-align:center}
 /* เมนูเลือกสถานะทีม: เปิดเป็นรายการใต้ปุ่ม (แทนกล่องเลือกกลางจอของระบบ) */
 .st-pop{position:fixed;z-index:950;background:#fff;border-radius:18px;box-shadow:0 14px 34px rgba(22,27,61,.22);padding:6px;display:grid;gap:4px;min-width:170px}
@@ -323,18 +350,20 @@ body.on-chat .top .st{display:none!important}
     <form class="send" id="send"><button class="round soft" type="button" id="loc-send" aria-label="ส่งตำแหน่ง"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button class="round" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
   </main>
   <main id="v-call" hidden>
-    <div class="callgrid">
-      <a class="btn green" id="c-tel" href="#"><i data-ic="phone"></i> โทรเข้าเบอร์ศูนย์</a>
-      <button class="btn blue" type="button" data-call="voice"><i data-ic="wifi"></i> โทรด้วยเสียง (ผ่านเน็ต)</button>
-      <button class="btn" type="button" data-call="video"><i data-ic="video"></i> วิดีโอคอล</button>
-      <button class="btn" type="button" id="c-sms"><i data-ic="pin"></i> ส่งพิกัด GPS ทาง SMS (ไม่ต้องใช้เน็ต)</button>
-    </div>
-    <p class="hint" style="margin-top:10px">โทรผ่านเน็ต: ศูนย์จะเห็นสายเข้าบนหน้าจอ · ไม่ต้องลงแอป</p>
-    <p class="hint">เน็ตใช้ไม่ได้: GPS ในมือถือยังหาตำแหน่งได้ · ส่งพิกัดทาง SMS ใช้แค่สัญญาณโทรศัพท์ (แม้สัญญาณอ่อน)</p>
-    <p class="hint" id="c-none" hidden>ศูนย์ยังไม่ได้ตั้งเบอร์โทร · ใช้โทรผ่านเน็ตแทน</p>
+    <div id="dash"></div>
+    <section class="db-card db-contact"><h3>ติดต่อศูนย์</h3>
+      <div class="callgrid">
+        <button class="cg" type="button" data-call="voice"><i data-ic="wifi"></i><span>โทรผ่านเน็ต</span></button>
+        <button class="cg" type="button" data-call="video"><i data-ic="video"></i><span>วิดีโอคอล</span></button>
+        <a class="cg" id="c-tel" href="#"><i data-ic="phone"></i><span>เบอร์ศูนย์</span></a>
+        <button class="cg" type="button" id="c-sms"><i data-ic="pin"></i><span>SMS พิกัด</span></button>
+      </div>
+      <p class="hint">ไม่มีเน็ต: กด "SMS พิกัด" ใช้แค่สัญญาณโทรศัพท์</p>
+      <p class="hint" id="c-none" hidden>ศูนย์ยังไม่ได้ตั้งเบอร์โทร · ใช้โทรผ่านเน็ตแทน</p>
+    </section>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="phone"></i>โทร</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="chart"></i>แดชบอร์ด</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -533,6 +562,7 @@ function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
     +(done.length?`<p class="sec">เสร็จวันนี้ ${done.length}</p>`+done.map(card).join(''):'');
   $('#supplies').innerHTML=(r.supplies||[]).map(n=>`<button type="button" class="chip" aria-pressed="${S.sup.has(n)}">${esc(n)}</button>`).join('');
   const p=tel(r.hqPhone);$('#c-tel').hidden=p.length<3;$('#c-tel').href='tel:'+p;$('#c-none').hidden=p.length>=3;
+  if(S.view==='call')DASH();
 }
 function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' ');
   const done=c.status==='done',rep=!done&&c.teamDoneAt;
@@ -629,7 +659,7 @@ $('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
   ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
   ld.onclick=()=>{reveal=Date.now()+4000;lb.classList.remove('ok-hide');setTimeout(sync,4100)}}}
-function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();
+function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();if(v==='call')DASH();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
 /* ---------- แชท ---------- */
@@ -694,6 +724,34 @@ function smsSheet(kind='แจ้งตำแหน่ง',why='',reason=''){
       ${hq.length>=3?`<a class="btn green" href="tel:${esc(hq)}" style="text-decoration:none"><i data-ic="phone"></i> โทรเข้าเบอร์ศูนย์</a>`:'<p class="hint">ศูนย์ยังไม่ได้ตั้งเบอร์ · เลือกผู้รับในแอปข้อความเอง</p>'}
       <button class="btn" type="button" id="sms-again">หาตำแหน่งใหม่</button><button class="btn" type="button" data-x>ปิด</button>`;
     $('#sms-again').onclick=()=>{TR.pos=null;smsSheet(kind,why,reason)}})}
+
+/* ---------- แดชบอร์ดทีม (แท็บล่างขวา): สถานะทีม · งานตอนนี้ · ยอดช่วยเหลือ · กราฟ 7 วัน · ตำแหน่ง · ของที่นำไป · รวมพล · ติดต่อศูนย์ ---------- */
+function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const t=r.team,st=r.stats||{total:0,helped:0,people:0,week:[]};
+  const going=r.cases.filter(c=>c.status==='going'),waitClose=going.filter(c=>c.teamDoneAt),act=going.filter(c=>!c.teamDoneAt);
+  const day=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()},today=day(Date.now());
+  const days=[...Array(7)].map((_,i)=>today-(6-i)*864e5),cnt=days.map(d=>st.week.filter(([at])=>at>=d&&at<d+864e5).length),max=Math.max(1,...cnt);
+  const todayN=cnt[6],todayP=st.week.filter(([at])=>at>=today).reduce((s,[,p])=>s+p,0);
+  const STN={ready:'พร้อม',out:'ออกเคส',rest:'พัก'},VN={boat:'เรือ',truck:'รถสูง / รถบรรทุก',pickup:'รถกระบะ',car:'รถเก๋ง / รถตู้',motorbike:'มอเตอร์ไซค์',foot:'เดินเท้า',other:'อื่น ๆ'};
+  const veh=t.vehicle?`<img src="../assets/veh/${encodeURIComponent(t.vehicle)}.png" alt="" onerror="this.remove()">`:'';
+  const m=NATIVE?(NT.at?Math.round((Date.now()-NT.at)/60000):null):(TR.sentAt?Math.round((Date.now()-TR.sentAt)/60000):null);
+  const locOk=m!=null&&m<10,locTxt=m==null?'ยังไม่ส่งตำแหน่ง':m<1?'ส่งตำแหน่งล่าสุด ไม่ถึง 1 นาทีก่อน':`ส่งตำแหน่งล่าสุด ${m} นาทีก่อน`;
+  const sup={};going.forEach(c=>(c.supplies||[]).forEach(x=>{sup[x.item]=(sup[x.item]||0)+x.qty}));
+  const rl=(r.rallies||[]).filter(x=>!x.closedAt);
+  el.innerHTML=`<section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<span class="db-st ${esc(t.status||'ready')}">${STN[t.status]||'พร้อม'}</span>`:''}</section>
+    ${rl.length?`<section class="db-card db-rally"><h3>📣 ศูนย์เรียกรวมพล</h3><p>${esc(rl[0].label||'')}</p><button type="button" class="btn red" data-dgo="home">ดูจุดรวมพล</button></section>`:''}
+    <div class="db-tiles">
+      <button type="button" class="db-tile go" data-dgo="work"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
+      <button type="button" class="db-tile" data-dgo="work"><small>รอศูนย์ปิดเคส</small><b>${waitClose.length}</b></button>
+      <div class="db-tile ok"><small>ช่วยแล้ววันนี้</small><b>${todayN}</b><small>${todayP} คน</small></div>
+      <div class="db-tile pp"><small>ช่วยแล้วทั้งหมด</small><b>${st.helped}</b><small>${st.people} คน${st.since?' · ตั้งแต่ '+new Date(st.since).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''}</small></div>
+    </div>
+    <section class="db-card"><h3>ช่วยแล้ว 7 วันล่าสุด <small>${cnt.reduce((a,b)=>a+b,0)} เคส</small></h3><div class="db-bars">${days.map((d,i)=>`<div class="${i===6?'td':''}"><i class="${cnt[i]?'':'z'}" style="height:${cnt[i]/max*100}%">${cnt[i]?`<em>${cnt[i]}</em>`:''}</i><small>${i===6?'วันนี้':new Date(d).toLocaleDateString('th-TH',{weekday:'narrow'})}</small></div>`).join('')}</div></section>
+    <section class="db-card"><h3>สถานะเครื่อง</h3>
+      <div class="db-row"><i class="dot ${locOk?'':m==null?'off':'wait'}"></i><span>${esc(locTxt)}</span></div>
+      <div class="db-row"><i class="dot ${navigator.onLine?'':'off'}"></i><span>${navigator.onLine?'ออนไลน์':'ไม่มีเน็ต · ข้อความจะส่งเมื่อมีสัญญาณ'}</span></div>
+    </section>
+    ${Object.keys(sup).length?`<section class="db-card"><h3>ของที่ศูนย์ส่งมากับงาน</h3><div class="db-chips">${Object.entries(sup).map(([k,v])=>`<span>${esc(k)} × ${v}</span>`).join('')}</div></section>`:''}`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#dash [data-dgo]');if(b)go(b.dataset.dgo)});
 $('#c-sms').onclick=()=>smsSheet();
 
 /* ---------- SOS ---------- */

@@ -733,7 +733,14 @@ async function teamMe(db, t) {
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
       status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', view: r.token ? await viewId(r.token) : '', inRoster: !!r.id },
     hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now,
-    rallies: await teamRallies(db, t.name) };
+    rallies: await teamRallies(db, t.name), stats: await teamStats(db, t.name, now) };
+}
+/* แดชบอร์ดทีม: ยอดรวมของทีม (ช่วยแล้ว = ปิดเคส หรือทีมแจ้งช่วยแล้ว) + เวลาที่ช่วยใน 7 วันล่าสุด (ไว้วาดกราฟรายวัน) */
+async function teamStats(db, name, now) {
+  const DONE = "(status='done' OR COALESCE(teamDoneAt,0)>0)", AT = 'COALESCE(teamDoneAt,doneAt,updatedAt)';
+  const a = await db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN ${DONE} THEN 1 ELSE 0 END) helped, SUM(CASE WHEN ${DONE} THEN MAX(COALESCE(people,1),1) ELSE 0 END) ppl, MIN(createdAt) since FROM cases WHERE volunteer IN (?,?) AND COALESCE(dupOf,'')=''`).bind(name, "'" + name).first() || {};
+  const { results } = await db.prepare(`SELECT ${AT} t, MAX(COALESCE(people,1),1) p FROM cases WHERE volunteer IN (?,?) AND ${DONE} AND ${AT}>? AND COALESCE(dupOf,'')=''`).bind(name, "'" + name, now - 8 * 864e5).all();
+  return { total: a.n || 0, helped: a.helped || 0, people: a.ppl || 0, since: a.since || null, week: results.map(r => [Number(r.t) || 0, Number(r.p) || 1]) };
 }
 async function callStart(db, team, from, b) {
   if (!team) return { ok: false, error: 'missing_team' };

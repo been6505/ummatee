@@ -301,7 +301,7 @@ body.on-chat .top .st{display:none!important}
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
   <p class="obar" id="obar" hidden role="status"></p>
-  <section id="v-home" class="home" aria-label="หน้าแรก · แผนที่">
+  <section id="v-home" class="home" aria-label="แผนที่">
     <div id="hmap" class="hmap"></div>
     <div class="hmap-btns"><button type="button" class="rbtn" id="h-me" aria-label="ไปที่ตำแหน่งของฉัน"><i data-ic="locate"></i></button></div>
     <div class="hsheet" id="hsheet"></div>
@@ -381,7 +381,7 @@ body.on-chat .top .st{display:none!important}
     </section>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="home" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="call" aria-selected="false"><i data-ic="chart"></i>แดชบอร์ด</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -390,7 +390,7 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const st={get:k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}},set:(k,v)=>{try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){}}};
 const qs=new URLSearchParams(location.search);
-const S={tk:(qs.get('id')||'').replace(/[^a-z0-9]/g,''),key:'',team:'',name:'',me:null,msgs:[],lastN:0,seenN:+st.get('uh_tm_seen')||0,view:'home',sup:new Set(),handledCall:+st.get('uh_tm_call')||0};
+const S={tk:(qs.get('id')||'').replace(/[^a-z0-9]/g,''),key:'',team:'',name:'',me:null,msgs:[],lastN:0,seenN:+st.get('uh_tm_seen')||0,view:'call',sup:new Set(),handledCall:+st.get('uh_tm_call')||0};
 if(S.tk){st.set('uh_tm_tk',S.tk)}else{S.tk=st.get('uh_tm_tk');S.key=st.get('uh_vol_key');S.team=st.get('uh_chat_team')||qs.get('t')||''}
 S.name=st.get('uh_chat_name');
 const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
@@ -570,7 +570,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wa
 /* ระดับเคสคำนวณแบบเดียวกับ CENTRAL (ข้อมูลที่ผู้แจ้งกรอก + ฝน/ดาวเทียม/น้ำท่วม/กล้อง) */
 if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
 function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
-  {const nr=(r.rallies||[]).find(x=>!x.my);if(nr&&S.rlSeen!==nr.id){S.rlSeen=nr.id;try{buzz([600,200,600,200,600]);tone(880,300,.15);setTimeout(()=>tone(660,300,.15),350)}catch(e){}if(S.view!=='home')go('home');toast('📣 ศูนย์เรียกรวมพล: '+nr.label)}}if(S.view==='home'||!S.view)HOME.draw();
+  {const nr=(r.rallies||[]).find(x=>!x.my);if(nr&&S.rlSeen!==nr.id){S.rlSeen=nr.id;try{buzz([600,200,600,200,600]);tone(880,300,.15);setTimeout(()=>tone(660,300,.15),350)}catch(e){}if(S.view!=='home'&&S.view!=='call')go('call');toast('📣 ศูนย์เรียกรวมพล: '+nr.label)}}if(S.view==='home'||!S.view)HOME.draw();
   $('#tname').textContent=t.name;$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
   const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;document.body.classList.toggle('sos-on',!!sos);$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';

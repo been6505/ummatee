@@ -714,3 +714,10 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .ik-sev{display:flex;gap:6px}.ik-sev .urg{border:2px solid transparent;cursor:pointer;font:inherit;font-size:13px;font-weight:700;padding:6px 14px;opacity:.5}.ik-sev .urg[aria-pressed=true]{opacity:1;border-color:currentColor}
 .ik-save{width:100%;min-height:44px}
 @media (max-width:560px){.ik-g{grid-template-columns:1fr}}
+
+/* วอ (CENTRAL): ปุ่มลอยเหนือปุ่ม AI */
+.ptt-fab{position:fixed;right:18px;bottom:150px;z-index:2490;width:52px;height:52px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;align-content:center;gap:0;color:#fff;background:linear-gradient(180deg,#2D45C8,#1A2C8F);box-shadow:0 8px 22px rgba(45,69,200,.35);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;font-family:inherit}
+.ptt-fab .ic{width:20px;height:20px}.ptt-fab b{font-size:11px;line-height:1}
+body.ptt-on .ptt-fab{background:linear-gradient(180deg,#E5383B,#B3121F);transform:scale(1.12);box-shadow:0 0 0 10px rgba(229,56,59,.25)}
+@media(max-width:760px){.ptt-fab{bottom:calc(var(--tab-h,64px) + 148px + var(--safe-b,0px));right:14px;width:50px;height:50px}}
+body.map-fs .ptt-fab,body.noscroll .ptt-fab{display:none}

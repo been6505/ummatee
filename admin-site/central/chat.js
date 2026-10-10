@@ -38,6 +38,9 @@ const CHAT=(()=>{
       if(k==='silent'){a.disabled=true;post({action:'silent_ack',team:v}).then(()=>poll());S.alerts.silent=(S.alerts.silent||[]).filter(x=>x.name!==v);drawAlerts();return}
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
+    // วอ (กดค้างพูด) · ช่องรวมทุกทีม + ศูนย์ · ไม่เปิดให้ War Room ย่อย
+    if(typeof PTT!=='undefined'&&!/^wr/.test(KEY())){const pb=document.createElement('button');pb.type='button';pb.className='ptt-fab';pb.setAttribute('aria-label','วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด');pb.title='วอ · กดค้างเพื่อพูด';pb.innerHTML='<i data-ic="mic"></i><b>วอ</b>';document.body.append(pb);
+      PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,key:KEY()}),me:()=>({sender:'ศูนย์',kind:'hq'})});PTT.bind(pb)}
     root.querySelector('.chat-x').onclick=()=>toggle(false);
     root.querySelector('.chat-back').onclick=()=>{S.team=null;view()};
     root.querySelector('.chat-list').onclick=e=>{const b=e.target.closest('[data-chat-team]');if(b)openTeam(b.dataset.chatTeam)};

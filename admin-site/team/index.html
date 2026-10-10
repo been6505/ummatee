@@ -259,10 +259,22 @@ body.on-chat .top .st{display:none!important}
 .pf-veh{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.pf-veh button{border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:6px 2px;display:grid;justify-items:center;gap:2px;cursor:pointer;font:inherit}
 .pf-veh img{width:36px;height:30px;object-fit:contain}.pf-veh small{font-size:11px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
 .pf-veh button[aria-pressed=true]{border-color:var(--primary);background:var(--tint)}.pf-veh button[aria-pressed=true] small{color:var(--primary)}
+.hdr-sos{flex:none;width:40px;height:40px;border-radius:50%;border:3px solid #fff;background:linear-gradient(180deg,#E5383B,#B3121F);color:#fff;font:800 12px/1 inherit;font-family:inherit;letter-spacing:.02em;box-shadow:0 6px 16px rgba(200,16,30,.35);cursor:pointer;margin-left:auto;padding:0}
+.hdr-sos+.locdot{margin-left:0!important}
+body.sos-on .hdr-sos{animation:navsos 1.2s ease-in-out infinite}
+nav.tabs .nav-ptt span{background:linear-gradient(180deg,#2D45C8,#1A2C8F)!important;box-shadow:0 8px 20px rgba(45,69,200,.4)!important;display:grid!important;place-items:center;gap:0;align-content:center}
+nav.tabs .nav-ptt span .ic{width:24px;height:24px}nav.tabs .nav-ptt span b{font-size:13px;line-height:1;margin-top:1px}
+nav.tabs .nav-ptt{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.sos-on nav.tabs .nav-ptt span{animation:none}
+body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3121F)!important;transform:scale(1.12);box-shadow:0 0 0 10px rgba(229,56,59,.25)!important}
+.top .brandpill{flex:1 1 auto!important;min-width:0!important;overflow:hidden}.top .brandpill img{flex:none}.top .brandpill .who{min-width:0;overflow:hidden}.top .brandpill .who b,.top .brandpill .who small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-sos{margin-left:8px!important}.top>.locdot,.top>.st{flex:none}
+@media (max-width:380px){.top .brandpill img{width:92px;height:auto}}
 </style>
 <script src="../central/verify.js?v=15"></script>
-<script src="../central/icons.js?v=16"></script>
+<script src="../central/icons.js?v=17"></script>
 <script src="./native-track.js?v=4"></script>
+<script src="../central/ptt.js?v=1"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
@@ -306,6 +318,7 @@ body.on-chat .top .st{display:none!important}
 
 <div id="app" hidden>
   <header class="top"><div class="brandpill"><img src="../assets/helpme4u-logo.png" alt="Help Me 4U" width="113" height="18"><div class="who"><b id="tname"></b><small id="tsub"></small></div></div>
+    <button type="button" class="hdr-sos" id="hdr-sos" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
     <button type="button" class="locdot" id="locdot" aria-label="สถานะการส่งตำแหน่ง"><i></i></button>
     <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ทีมกำลังไป</option><option value="rest">พัก</option></select>
     <button type="button" class="top-call" id="top-call" aria-label="โทรหาศูนย์"><i data-ic="phone"></i> โทร</button></header>
@@ -393,7 +406,7 @@ body.on-chat .top .st{display:none!important}
     </section>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos" id="nav-sos" aria-label="ขอความช่วยเหลือด่วน SOS"><span>SOS</span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos nav-ptt" id="nav-ptt" aria-label="วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด"><span><i data-ic="mic"></i><b>วอ</b></span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -447,7 +460,8 @@ async function boot(){
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
   }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return} // ไม่มีเน็ต: ใช้ข้อมูลล่าสุดที่เก็บไว้
     if(S.me){S.offline=true;obUI();setTimeout(boot,15000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
-function start(){screen('#app');if(TR.want)track(true);go(S.view||'home');render();pollChat(true);refresh();
+function pttInit(){if(typeof PTT==='undefined'||!S.me)return;PTT.init({api,post,url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,...auth()}),me:()=>({sender:(S.me&&S.me.team&&S.me.team.name)||S.team||'ทีม',kind:'team'})});const b=$('#nav-ptt');if(b&&!b._ptt){b._ptt=1;PTT.bind(b)}}
+function start(){screen('#app');setTimeout(pttInit,800);if(TR.want)track(true);go(S.view||'home');render();pollChat(true);refresh();
   clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
   st.set('uh_vol_key',S.key);st.set('uh_chat_team',S.team);st.set('uh_chat_name',S.name);$('#err').textContent='กำลังตรวจ…';boot()});
@@ -676,7 +690,7 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   setInterval(()=>{if(S.view!=='home'||!H.map)return;if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f){H.np={lat:f.lat,lng:f.lng};draw()}}).catch(()=>{});else if(TR.pos)draw()},10000);
   return {show(){init().then(()=>{if(H.map)setTimeout(()=>H.map.invalidateSize(),60);if(window.NTRK&&NTRK.native)NTRK.lastFix().then(f=>{if(f)H.np={lat:f.lat,lng:f.lng};draw()}).catch(()=>draw());else draw()})},draw}})();
 $('#bell')&&($('#bell').onclick=()=>go('chat'));
-$('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
+$('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
 // สถานะทีม: แตะปุ่ม → รายการใต้ปุ่ม (ไม่ใช้กล่องเลือกกลางจอ)
 {const sel=$('#status');if(sel){const close=()=>{const p=document.querySelector('.st-pop');if(p)p.remove()};
   const open=e=>{e.preventDefault();if(document.querySelector('.st-pop')){close();return}const r=sel.getBoundingClientRect(),p=document.createElement('div');p.className='st-pop';p.setAttribute('role','menu');

@@ -60,6 +60,8 @@ const SCHEMA = [
   // ประกาศแจ้งเตือนรายพื้นที่ (ขึ้นที่หน้าบ้าน Help Me, หน้าทีม และทุกหน้า CENTRAL)
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
+  `CREATE TABLE IF NOT EXISTS ptt (n INTEGER PRIMARY KEY AUTOINCREMENT, ch TEXT, sender TEXT, kind TEXT, name TEXT, dur REAL, at INTEGER, audio BLOB)`,
+  `CREATE INDEX IF NOT EXISTS ptt_at ON ptt(at)`,
   `CREATE TABLE IF NOT EXISTS board (id TEXT PRIMARY KEY, room TEXT, title TEXT, body TEXT, status TEXT, lat REAL, lng REAL, place TEXT, cases TEXT, due INTEGER, dueEnd INTEGER, allDay INTEGER, assignee TEXT, color TEXT, imgs TEXT, createdAt INTEGER, updatedAt INTEGER, by_ TEXT, deleted INTEGER DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS board_room ON board(room, deleted)`,
   `CREATE TABLE IF NOT EXISTS board_img (id TEXT PRIMARY KEY, cardId TEXT, room TEXT, data TEXT, at INTEGER)`,
@@ -556,6 +558,28 @@ async function liveStream(db, p) {
   })().catch(() => { try { w.abort(); } catch (e) {} });
   return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
 }
+/* วอ (กดค้างพูดแบบ Zello): คลิปเสียงสั้น WAV 8 kHz ไม่เกิน 30 วิ · ช่องรวมทุกทีม + ศูนย์ · เก็บ 24 ชม.
+   ส่ง: ทีม (ลิงก์ทีม) หรือศูนย์ (รหัสอาสา) · ฟัง: ดึงรายการใหม่ (ptt_list since) แล้วโหลดเสียง (ptt_audio n) เล่นต่อกันอัตโนมัติ */
+const PTT_MAX = 700e3;
+function b64bytes(s) { const bin = atob(String(s || '').replace(/^data:[^,]*,/, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+async function pttSend(db, who, b) {
+  let a; try { a = b64bytes(b.audio); } catch (e) { return { ok: false, error: 'bad_audio' }; }
+  if (a.length < 400 || a.length > PTT_MAX || String.fromCharCode(a[0], a[1], a[2], a[3]) !== 'RIFF') return { ok: false, error: 'bad_audio' };
+  const now = Date.now(), r = await db.prepare('INSERT INTO ptt (ch,sender,kind,name,dur,at,audio) VALUES (?,?,?,?,?,?,?)')
+    .bind('all', clean(who.sender, 80), who.kind, clean(b.name || who.name || '', 60), Math.min(30, Math.max(0, Number(b.dur) || 0)), now, a).run();
+  if (Math.random() < 0.05) await db.prepare('DELETE FROM ptt WHERE at<?').bind(now - 864e5).run();
+  return { ok: true, n: r.meta && r.meta.last_row_id, at: now };
+}
+async function pttList(db, p) {
+  const since = Number(p.since) || 0;
+  const { results } = await db.prepare('SELECT n,sender,kind,name,dur,at FROM ptt WHERE n>? AND at>? ORDER BY n DESC LIMIT 40').bind(since, Date.now() - 6 * 3600e3).all();
+  return { ok: true, items: results.reverse(), now: Date.now() };
+}
+async function pttAudio(db, p) {
+  const r = await db.prepare('SELECT audio FROM ptt WHERE n=?').bind(Number(p.n) || 0).first();
+  if (!r || !r.audio) return new Response('not found', { status: 404 });
+  return new Response(new Uint8Array(r.audio), { headers: { 'content-type': 'audio/wav', 'cache-control': 'private, max-age=86400' } });
+}
 async function readTeams(db) {
   const { results } = await db.prepare('SELECT * FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS).all();
   return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
@@ -951,6 +975,7 @@ const TEAM_POST = {
     await db.prepare(`UPDATE roster SET ${sets.join(',')} WHERE id=?`).bind(...vals, t.row.id).run();
     await bumpRev(db); return { ok: true };
   },
+  ptt_send: (db, t, b) => pttSend(db, { sender: t.name, kind: 'team', name: b.name }, b),
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   team_status: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
@@ -1327,7 +1352,7 @@ const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead
 /* ---------- ประวัติการเปลี่ยนแปลง (audit log) ----------
    ทุกคำขอ POST ที่สำเร็จ (ยกเว้นตำแหน่งทีม/อ่านแชท/AI/สัญญาณโทร) บันทึก: เวลา · ใคร (CENTRAL / War Room+ผู้ใช้ / ทีม / ประชาชน) · ทำอะไร · กับอะไร · รายละเอียด
    ตัดรหัสผ่าน/รหัสเข้าระบบออกก่อนเก็บ · เก็บ 180 วัน · ดูได้ที่หน้าตั้งค่า (CENTRAL เท่านั้น) */
-const AUDIT_SKIP = new Set(['kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2766,6 +2791,7 @@ async function api(request, env) {
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
+      case 'ptt_list': case 'ptt_audio': { const ok = vol || (p.tk || p.team) && await teamFrom(env, db, p); if (!ok) return json({ ok: false, error: 'not_volunteer' }); return p.action === 'ptt_list' ? json(await pttList(db, p)) : pttAudio(db, p); }
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
@@ -2798,11 +2824,11 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { ptt_send: (db, b) => pttSend(db, { sender: 'ศูนย์', kind: 'hq', name: clean(b.by, 60) }, b), kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)
-    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action))) {
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'ptt_send'].includes(b.action))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
       return json(await TEAM_POST[b.action](db, t, b));

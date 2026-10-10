@@ -741,3 +741,6 @@ body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sat);ba
 .rte-pt.sm{width:18px;height:18px;font-size:10px}
 body.rte-on .rally-fab{display:none!important}
 @media(max-width:760px){.rte-mini{height:180px}.rte{max-height:72vh}}
+.rte{bottom:auto;max-height:calc(100vh - 120px);gap:8px;padding:12px}
+.rte-top,.rte-body{gap:8px}.rte-mini{height:200px}.rte-mini .leaflet-control-zoom a{width:30px;height:30px;line-height:30px;font-size:18px}
+@media(max-width:760px){.rte{top:auto;max-height:70vh}}

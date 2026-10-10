@@ -40,7 +40,7 @@ const RTE=(()=>{
       <label class="rte-note">หมายเหตุถึงทีม<textarea data-rnote rows="2" maxlength="300" placeholder="เช่น ถนนสุวินทวงศ์ช่วง กม.5 น้ำลึก ให้เข้าทางซอย 12 แทน">${esc(E.note)}</textarea></label>
       <div class="rte-act"><button type="button" class="btn primary" data-rsend ${E.opts.length&&!E.busy?'':'disabled'}>ส่งเส้นทางให้ทีม</button>${sent?'<button type="button" class="btn ghost" data-rclear>ยกเลิกเส้นทางที่ส่ง</button>':''}</div>`;
     drawMap();drawMini()}
-  function drawMini(){if(!mini){mini=L.map(miniEl,{zoomControl:false,attributionControl:false,dragging:true,scrollWheelZoom:false});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mini);mg=L.layerGroup().addTo(mini)}
+  function drawMini(){if(!mini){mini=L.map(miniEl,{zoomControl:true,attributionControl:false,dragging:true,scrollWheelZoom:false});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mini);mg=L.layerGroup().addTo(mini)}
     mg.clearLayers();const to=[+E.c.lat,+E.c.lng],fr=[E.from.lat,E.from.lng],o=E.opts[E.sel];let bd=L.latLngBounds([fr,to]);
     E.opts.forEach((x,i)=>{if(i!==E.sel)L.polyline(x.coords,{color:'#5B6386',weight:3,opacity:.5,dashArray:'5 5'}).on('click',()=>{E.sel=i;draw()}).addTo(mg)});
     if(o){L.polyline(o.coords,{color:'#fff',weight:8}).addTo(mg);const ln=L.polyline(o.coords,{color:'#1F7A43',weight:5}).addTo(mg);bd=bd.extend(ln.getBounds())}else if(!E.busy)L.polyline([fr,to],{color:'#E5383B',weight:3,dashArray:'6 6'}).addTo(mg);

@@ -251,3 +251,10 @@ html.dash[data-theme="dark"] .kpi.t-red b{color:#FF6B6E}html.dash[data-theme="da
   #main>.dcol.dcol-r .stock-sec>.grid>.card:not(.span2){grid-column:auto!important}
   #main>.dcol.dcol-r .stock-sec #stock-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+html.dash[data-theme="dark"] .wr-sti{border-color:var(--line)!important}
+html.dash[data-theme="dark"] .wr-sti:hover{border-color:rgba(255,255,255,.22)!important}
+html.dash[data-theme="dark"] .wr-ppl .r b{color:#FF6B6E}
+html.dash[data-theme="dark"] .mt.ok b{color:#4FD083}html.dash[data-theme="dark"] .mt.warn b{color:#FFC94D}html.dash[data-theme="dark"] .mt.bad b{color:#FF6B6E}
+html.dash[data-theme="dark"] .hm-waits b.warn{color:#FFA24D}html.dash[data-theme="dark"] .hm-waits b.bad{color:#FF6B6E}
+html.dash[data-theme="dark"] .linkish{color:#9FB4FF}
+html.dash[data-theme="dark"] .hm-tag{color:#B7C3FF}

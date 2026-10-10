@@ -17,7 +17,7 @@ function render(){
   $('#tb').innerHTML=v.length?v.map(r=>{const cs=hit.get(r)||[];
     const map=r.link?`<a href="${esc(r.link)}" target="_blank" rel="noopener">เปิดแผนที่ ↗</a>`:'<span class="cv-warn">ยังไม่มีลิงก์</span>';
     const pos=r.lat==null?'<small class="muted">ไม่พบตำแหน่ง</small>':r.approx?'<small class="muted">ตำแหน่งโดยประมาณ</small>':r.src==='known'?'<small class="cv-ok">ตำแหน่งที่ทีมตรวจแล้ว</small>':'<small class="cv-ok">ตำแหน่งจากลิงก์</small>';
-    return `<tr><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="รายการ">${esc(r.items)}${r.items&&r.sets?'<br>':''}${r.sets?`<b>${/^[\d,]+$/.test(String(r.sets).trim())?nf(String(r.sets).replace(/,/g,''))+' ชุด':esc(r.sets)}</b>`:''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
+    return `<tr data-ci="${COVERED.C.rows.indexOf(r)}"${r.lat==null?' class="nopos"':''}><td data-l="องค์กร"><span class="cov">${esc(r.org)}</span></td><td data-l="พื้นที่"><b>${esc(r.area)}</b>${r.note?`<small class="muted cv-note">${esc(r.note)}</small>`:''}</td><td data-l="เขต">${esc(r.district)}</td><td data-l="วันที่" class="d">${esc(r.date)}</td><td data-l="รายการ">${esc(r.items)}${r.items&&r.sets?'<br>':''}${r.sets?`<b>${/^[\d,]+$/.test(String(r.sets).trim())?nf(String(r.sets).replace(/,/g,''))+' ชุด':esc(r.sets)}</b>`:''}</td><td data-l="แผนที่">${map}<br>${pos}</td>
       <td data-l="เคสที่อาจซ้ำ"${cs.length?'':' class="cv-nodup"'}>${cs.length?`<a class="cv-dup" href="../../central.html" title="${esc(cs.map(c=>'#'+c.id+' '+(c.address||'')).join('\n'))}"><span class="cv-m"><i data-ic="alert"></i> อาจซ้ำ </span>${cs.length} เคส</a>`:'<span class="muted">–</span>'}</td><td data-l="go">${r.lat!=null?`<button class="cv-go" data-i="${COVERED.C.rows.indexOf(r)}">ดูบนแผนที่</button>`:''}</td></tr>`}).join(''):'<tr><td colspan="7" class="empty">ไม่พบพื้นที่ที่ตรงกับการค้นหา</td></tr>';
   if(!document.documentElement.classList.contains('embed'))drawMap(hit);
   $('#sync').textContent=COVERED.C.loaded?'อัปเดต '+ago(COVERED.C.loaded):'';
@@ -49,6 +49,12 @@ $('#tb').addEventListener('click',e=>{const b=e.target.closest('.cv-go');if(!b)r
   $$('#tb tr.on').forEach(t=>t.classList.remove('on'));b.closest('tr').classList.add('on');
   $('#cmap').scrollIntoView({behavior:'smooth',block:'center'});M.map.setView([r.lat,r.lng],15);m.openPopup()});
 $('#mt-cases').addEventListener('change',()=>render());
+if(document.documentElement.classList.contains('embed')&&window.parent!==window){
+  $('#tb').addEventListener('click',e=>{if(e.target.closest('a,button'))return;const tr=e.target.closest('tr[data-ci]');if(!tr)return;const r=COVERED.C.rows[+tr.dataset.ci];if(!r)return;
+    if(r.lat==null){if(typeof toast==='function')toast('พื้นที่นี้ยังไม่มีตำแหน่งบนแผนที่');return}
+    $$('#tb tr.on').forEach(t=>t.classList.remove('on'));tr.classList.add('on');
+    window.parent.postMessage({type:'hm-cov-show',lat:+r.lat,lng:+r.lng,area:r.area||'',org:r.org||'',district:r.district||'',date:r.date||'',items:r.items||'',sets:r.sets||'',approx:!!r.approx},location.origin)});
+}
 COVERED.C.onupdate=()=>render();
 function load(){render();return COVERED.load(API_URL,ADM.key).then(render,render)}
 $('#orgs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;P.org=b.dataset.o;M.fitted=false;

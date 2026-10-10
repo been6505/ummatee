@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./admin.css?v=18">
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
-<link rel="stylesheet" href="./central/hm-ui.css?v=107">
+<link rel="stylesheet" href="./central/hm-ui.css?v=108">
 <script src="./central/icons.js?v=23"></script>
 </head>
 <body>
@@ -48,7 +48,7 @@
     <section class="stats" id="stats" aria-label="สรุปเคส"></section>
 
     <section class="bar">
-      <div class="bar-top"><button type="button" class="q-chip" id="q-chip" hidden onclick="if(event.target.closest('[data-qx]')){GS.syncQ('')}else GS.open()">ค้นหา: <b></b><span data-qx aria-label="ล้างคำค้น">✕</span></button><label class="search" hidden><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหา: ชื่อ เบอร์ ที่อยู่ เขต ความต้องการ เลขเคส ทีม" aria-label="ค้นหาเคส"></label><button class="btn ghost sm f-toggle ic-btn" id="f-toggle" aria-expanded="false" aria-controls="filters-box" aria-label="ตัวกรอง" title="ตัวกรอง"><i data-ic="filter"></i><b id="f-n" hidden></b></button></div>
+      <div class="bar-top"><button type="button" class="q-chip" id="q-chip" hidden onclick="if(event.target.closest('[data-qx]')){GS.syncQ('')}else GS.open()">ค้นหา: <b></b><span data-qx aria-label="ล้างคำค้น">✕</span></button><label class="search" hidden><span aria-hidden="true">⌕</span><input id="q" type="search" placeholder="ค้นหา: ชื่อ เบอร์ ที่อยู่ เขต ความต้องการ เลขเคส ทีม" aria-label="ค้นหาเคส"></label></div>
       <div class="bar-row">
         <div class="filters-box" id="filters-box">
         <select id="f-status" aria-label="สถานะ"><option value="active">ยังไม่เสร็จ</option><option value="open">รอความช่วยเหลือ</option><option value="going">ทีมกำลังไป</option><option value="helped">ช่วยเหลือแล้ว (รอปิดเคส)</option><option value="done">ปิดเคส</option><option value="all">ทั้งหมด</option></select>
@@ -60,6 +60,7 @@
         </div>
         <div class="seg" role="tablist" aria-label="มุมมอง"><button role="tab" data-mode="both" aria-selected="true" aria-label="แผนที่ + รายการ" title="แผนที่ + รายการ"><i data-ic="layers"></i></button><button role="tab" data-mode="list" aria-selected="false" aria-label="รายการ" title="รายการ"><i data-ic="list"></i></button><button role="tab" data-mode="map" aria-selected="false" aria-label="แผนที่เต็ม" title="แผนที่เต็ม"><i data-ic="map"></i></button></div>
         <button class="btn ghost sm ic-btn" id="export" aria-label="ดาวน์โหลด CSV" title="ดาวน์โหลด CSV"><i data-ic="download"></i></button>
+        <button class="btn ghost sm f-toggle ic-btn" id="f-toggle" aria-expanded="false" aria-controls="filters-box" aria-label="ตัวกรอง" title="ตัวกรอง"><i data-ic="filter"></i><b id="f-n" hidden></b></button>
       </div>
       <p class="count" id="count" aria-live="polite"></p>
     </section>
@@ -88,7 +89,7 @@
 
 <script src="./central/verify.js?v=15"></script>
 <script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=67"></script>
+<script src="./admin.js?v=68"></script>
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=14"></script>

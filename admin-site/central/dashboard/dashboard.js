@@ -126,6 +126,12 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-dbase]');i
 $('#fs-loc').addEventListener('click',e=>{const btn=e.currentTarget;if(!navigator.geolocation||!M.map){if(typeof toast==='function')toast('อุปกรณ์นี้หาตำแหน่งไม่ได้');return}btn.classList.add('busy');
   navigator.geolocation.getCurrentPosition(p=>{btn.classList.remove('busy');const ll=[p.coords.latitude,p.coords.longitude];if(!M.me)M.me=L.marker(ll,{icon:L.divIcon({className:'me-dot',html:'<span></span>',iconSize:[22,22]}),interactive:false,zIndexOffset:2000}).addTo(M.map);M.me.setLatLng(ll);M.map.flyTo(ll,Math.max(M.map.getZoom(),15),{duration:.6})},
     ()=>{btn.classList.remove('busy')},{enableHighAccuracy:true,timeout:15000})});
+addEventListener('message',e=>{if(e.origin!==location.origin)return;const d=e.data;if(!d||d.type!=='hm-cov-show'||!M.map||!isFinite(d.lat)||!isFinite(d.lng))return;
+  M.fitted=true;const ll=[+d.lat,+d.lng];if(!M.covHi)M.covHi=L.layerGroup().addTo(M.map);M.covHi.clearLayers();
+  const sets=String(d.sets||'').trim(),html=`<b>${escT(d.area||'พื้นที่มอบแล้ว')}</b><br>${escT(d.org)}${d.date?' · '+escT(d.date):''}${d.district?'<br>'+escT(d.district):''}${d.items?'<br>'+escT(d.items):''}${sets?'<br><b>'+escT(sets)+(/^[\d,]+$/.test(sets)?' ชุด':'')+'</b>':''}${d.approx?'<br><small>ตำแหน่งโดยประมาณ (จากชื่อพื้นที่)</small>':''}`;
+  const mk=L.circleMarker(ll,{radius:16,color:'#7B3FC4',weight:3,fillColor:'#7B3FC4',fillOpacity:.22}).bindPopup(html).addTo(M.covHi);
+  const mc=document.querySelector('.mapcard');if(mc&&innerWidth<1024)mc.scrollIntoView({behavior:'smooth',block:'center'});
+  M.map.once('moveend',()=>mk.openPopup());M.map.flyTo(ll,Math.max(M.map.getZoom(),16),{duration:.6})});
 ['#mt-done','#mt-flood','#mt-cov','#mt-leads','#mt-live'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
 function summary(){if(typeof hmSummary!=='function')return;const all=(D.hmc||[]).concat(D.cases);if(!all.length&&!D.hmcDone)return;

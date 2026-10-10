@@ -697,3 +697,20 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .trk-pin.sel .nm{box-shadow:0 0 0 2px #2D45C8,0 2px 8px rgba(22,27,61,.22)}
 .trk-pin.sos .nm{background:#E5383B;color:#fff;animation:trkp 1.2s infinite}.trk-pin.sos .nm::before{background:#fff}
 .wr-team span{font-weight:700}
+
+/* รายละเอียดเคส · ข้อมูลส่งมอบ 9 ช่อง */
+.d-intake{background:#fff;border:1px solid var(--line,#E8E8EC);border-radius:18px;padding:14px;margin:0 0 12px;display:grid;gap:12px}
+.d-intake.dirty{border-color:#2D45C8;box-shadow:0 0 0 3px rgba(45,69,200,.1)}
+.ik-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ik-h b{display:flex;align-items:center;gap:6px;font-size:15px}.ik-h b .ic{width:18px;height:18px}.ik-h small{margin-left:auto;color:var(--muted,#6b7280);font-size:12px}
+.ik-g{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.ik-f{display:grid;gap:5px;min-width:0}.ik-f:nth-child(n+3){grid-column:1/-1}
+.ik-f>span{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink-2,#3a3a3c)}
+.ik-f>span i{font-style:normal;width:18px;height:18px;border-radius:50%;background:#EEF1FD;color:#2D45C8;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.ik-f input,.ik-f textarea{width:100%;border:1px solid var(--line,#E3E6EF);border-radius:12px;padding:9px 11px;font:inherit;font-size:14px;background:#FAFBFD;color:inherit;min-height:40px}
+.ik-f textarea{resize:vertical;min-height:58px;line-height:1.45}
+.ik-f input:focus,.ik-f textarea:focus{outline:none;border-color:#2D45C8;background:#fff}
+.ik-chips{display:flex;flex-wrap:wrap;gap:5px}.ik-chips .chip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line,#E3E6EF);background:#fff;cursor:pointer;font-family:inherit}
+.ik-chips .chip[aria-pressed=true]{background:#FDECEC;border-color:#F5B5B5;color:#B42318;font-weight:600}
+.ik-sev{display:flex;gap:6px}.ik-sev .urg{border:2px solid transparent;cursor:pointer;font:inherit;font-size:13px;font-weight:700;padding:6px 14px;opacity:.5}.ik-sev .urg[aria-pressed=true]{opacity:1;border-color:currentColor}
+.ik-save{width:100%;min-height:44px}
+@media (max-width:560px){.ik-g{grid-template-columns:1fr}}

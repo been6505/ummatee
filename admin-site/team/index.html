@@ -252,6 +252,7 @@ body.on-chat .top .st{display:none!important}
 .ac-more{width:100%}
 /* แชท: เว้นที่ให้แถบเมนูล่างแบบลอย (สูง ~74 + ลอย 10 + ปุ่ม SOS ยื่นขึ้น) ช่องพิมพ์ไม่โดนทับ */
 #v-chat{padding-bottom:calc(var(--sab) + 108px)!important}
+.ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=13"></script>
@@ -594,6 +595,7 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     <div class="meta">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''}${(c.vulnerable||[]).length?' · กลุ่มเปราะบาง':''}${c.name?' · '+esc(c.name):''}</div>
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
+    ${c.intake&&(c.intake.car||c.intake.handoff||c.intake.latest||c.intake.items||c.intake.risks)?`<dl class="ik-team">${[['🚗 รถเข้าถึง',c.intake.car],['📦 จุดส่งมอบ',c.intake.handoff],['🌊 ระดับน้ำ',c.intake.water],['⚠️ ความเสี่ยง',c.intake.risks],['🕘 รับได้ถึง',c.intake.latest?c.intake.latest+' น.':''],['🧾 ต้องการ',c.intake.items],['📞 ติดต่อ',[c.intake.name,c.intake.phone].filter(Boolean).join(' · ')]].filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`:''}
     ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
     ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}

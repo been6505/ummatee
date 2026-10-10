@@ -286,7 +286,7 @@ const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.tes
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
   // วาดใหม่โดยไม่ทิ้งสิ่งที่ผู้ใช้กำลังทำ: ชื่อทีมที่พิมพ์ค้าง ส่วนที่กางไว้ ตำแหน่งเลื่อน และช่องที่โฟกัสอยู่
-  const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:''}:null;
+  const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
   d.dataset.case=String(c.id);
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',hasPin(c)?{h:`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c)}:'ไม่ได้ปักหมุด'],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
@@ -297,6 +297,7 @@ function renderDrawer(){
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
+    ${intakeBox(c)}
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
@@ -309,6 +310,7 @@ function renderDrawer(){
   d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
+  if(keep&&keep.ik){const f=d.querySelector('.d-intake');if(f){f.classList.add('dirty');keep.ik.forEach(([k,v])=>{const i=f.querySelector(`[data-ik="${k}"]`);if(i)i.value=v})}}
   if(keep){(keep.ed||[]).forEach(([id,v])=>{const i=d.querySelector('#'+id);if(i)i.value=v});const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
@@ -325,6 +327,36 @@ async function loadRoster(){if(A.rosterLoading)return;A.rosterLoading=true;
 function teamOpts(c){const cur=String(c.volunteer||'').replace(/^'/,'').trim(),load={};A.cases.forEach(x=>{if(x.status==='going'&&x.volunteer){const v=String(x.volunteer).replace(/^'/,'').trim();load[v]=(load[v]||0)+1}});
   const names=(A.roster||[]).map(t=>({n:t.name,st:t.status}));if(cur&&!names.some(t=>t.n===cur))names.unshift({n:cur,st:''});
   return `<option value="">${A.roster?'— เลือกทีม —':'กำลังโหลดรายชื่อทีม…'}</option>`+names.map(t=>`<option value="${esc(t.n)}" ${t.n===cur?'selected':''}>${esc(t.n)}${t.st?' · '+(RST[t.st]||t.st):''}${load[t.n]?' · มีงาน '+load[t.n]+' เคส':''}</option>`).join('')}
+/* ข้อมูลส่งมอบ (กรอก/ยืนยันกับผู้แจ้ง) · ลำดับตามแบบฟอร์มของศูนย์ · เก็บแยก ไม่ถูกซิงก์ Help Me ทับ */
+const IK_RISK=['ผู้สูงอายุ','เด็กเล็ก','ผู้ป่วยติดเตียง','คนพิการ','หญิงตั้งครรภ์','สัตว์เลี้ยง','ไฟฟ้ารั่ว','กระแสน้ำแรง','ถนนขาด','กลางคืนมืด'];
+function intakeOf(c){const k=c.intake||{};return {name:k.name??(c.name||''),phone:k.phone??String(c.phone||'').replace(/^'/,''),car:k.car||'',handoff:k.handoff||'',water:k.water??(LEVEL[c.level]||''),risks:k.risks??vul(c).join(', '),latest:k.latest||'',items:k.items??(c.needs||[]).join(', '),by:k.by||'',at:k.at||0}}
+function intakeBox(c){const k=intakeOf(c),s=sev(c),f=(n,id,lab,inp)=>`<label class="ik-f"><span><i>${n}</i>${lab}</span>${inp}</label>`;
+  const inp=(id,ph,v,t='text',x='')=>`<input data-ik="${id}" type="${t}" value="${esc(v)}" placeholder="${esc(ph)}" ${x}>`,ta=(id,ph,v)=>`<textarea data-ik="${id}" rows="2" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
+  return `<section class="d-intake"><div class="ik-h"><b><i data-ic="note"></i> ข้อมูลส่งมอบ</b>${k.at?`<small>บันทึก ${esc(ago(k.at))}${k.by?' · '+esc(k.by):''}</small>`:'<small>ยังไม่ได้ยืนยันกับผู้แจ้ง</small>'}</div>
+    <div class="ik-g">
+      ${f(1,'name','ชื่อ',inp('name','ชื่อผู้ติดต่อ',k.name))}
+      ${f(2,'phone','เบอร์ติดต่อ',inp('phone','08x-xxx-xxxx',k.phone,'tel','inputmode="tel"'))}
+      ${f(3,'car','จุดที่รถเข้าถึงได้ใกล้ที่สุด',ta('car','เช่น ปากซอย 12 ถ.ร่มเกล้า · รถกระบะเข้าได้ถึงหน้าวัด',k.car))}
+      ${f(4,'handoff','สถานที่ส่งมอบ',ta('handoff','เช่น ศาลาหน้าหมู่บ้าน · ส่งเรือต่อเข้าไปบ้านเลขที่ 7/1',k.handoff))}
+      ${f(5,'water','ระดับความสูงน้ำ',`<input data-ik="water" list="ik-water" value="${esc(k.water)}" placeholder="เช่น เข่า · 60 ซม."><datalist id="ik-water">${Object.values(LEVEL).map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`)}
+      ${f(6,'risks','ความเสี่ยงต่าง ๆ',ta('risks','เลือกด้านล่าง หรือพิมพ์เพิ่ม',k.risks)+`<div class="ik-chips">${IK_RISK.map(r=>`<button type="button" class="chip" data-ikrisk="${esc(r)}" aria-pressed="${k.risks.split(/\s*,\s*/).includes(r)}">${esc(r)}</button>`).join('')}</div>`)}
+      ${f(7,'latest','เวลาดึกสุดที่ยังสะดวกรับ',inp('latest','',k.latest,'time'))}
+      ${f(8,'items','ต้องการอะไรบ้าง จำนวนเท่าไหร่',ta('items','เช่น น้ำดื่ม 2 แพ็ค · ข้าวสาร 5 กก. · ยาความดัน 1 ชุด',k.items))}
+      ${f(9,'sev','ระดับความเดือดร้อน',`<div class="ik-sev" role="radiogroup">${[1,2,3].map(v=>`<button type="button" class="urg urg-${v}" data-iksev="${v}" aria-pressed="${s===v}">${URG[v]}</button>`).join('')}</div><input type="hidden" data-ik="sev" value="${s}">`)}
+    </div>
+    <button type="button" class="btn primary ik-save" id="ik-save"><i data-ic="check"></i> บันทึกข้อมูลส่งมอบ</button></section>`}
+async function intakeSave(c,btn){const f=$('#drawer .d-intake');if(!f)return;const v={};f.querySelectorAll('[data-ik]').forEach(i=>{v[i.dataset.ik]=i.value.trim()});
+  const sevNew=Number(v.sev)||sev(c);delete v.sev;btn.disabled=true;
+  const body={action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',metaOnly:true,intake:v,by:store.get('uh_staff')||''};if(sevNew!==sev(c))body.sevSet=sevNew;
+  const r=await post(body).catch(()=>null);btn.disabled=false;
+  if(!r||!r.ok){toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง');return}
+  c.intake={...v,by:body.by,at:Date.now()};if(body.sevSet){c.sevSet=sevNew;c.sevBy=body.by}f.classList.remove('dirty');toast('บันทึกข้อมูลส่งมอบแล้ว',true);render();renderDrawer()}
+document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('#drawer .d-intake');if(f)f.classList.add('dirty')});
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('#drawer .d-intake [data-ikrisk],#drawer .d-intake [data-iksev],#drawer #ik-save');if(!t)return;const f=t.closest('.d-intake');
+  if(t.id==='ik-save'){const c=A.cases.find(x=>String(x.id)===A.openId);if(c)intakeSave(c,t);return}
+  f.classList.add('dirty');
+  if(t.dataset.iksev){f.querySelectorAll('[data-iksev]').forEach(b=>b.setAttribute('aria-pressed',String(b===t)));f.querySelector('[data-ik="sev"]').value=t.dataset.iksev;return}
+  const ta=f.querySelector('[data-ik="risks"]'),cur=ta.value.split(/\s*,\s*/).filter(Boolean),r=t.dataset.ikrisk,i=cur.indexOf(r);if(i>=0)cur.splice(i,1);else cur.push(r);ta.value=cur.join(', ');t.setAttribute('aria-pressed',String(i<0))});
 function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=going&&c.teamDoneAt;
   return `<fieldset class="d-status"><legend>มอบหมายทีม</legend>
     <p class="d-now">สถานะ: <b class="st-txt st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>

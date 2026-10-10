@@ -91,7 +91,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -156,14 +156,19 @@ async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new Text
 
 const aiText = out => { if (!out) return ''; if (typeof out.response === 'string') return out.response; if (out.response && typeof out.response === 'object') return JSON.stringify(out.response); const m = out.choices && out.choices[0] && out.choices[0].message; return m && typeof m.content === 'string' ? m.content : ''; };
 const noPin = r => r.lat == null || r.lat === '' || !Number(r.lat);
+/* ข้อมูลส่งมอบ (เจ้าหน้าที่กรอก/ยืนยันกับผู้แจ้ง) เก็บแยกเป็น JSON · ซิงก์จาก Help Me ไม่ทับ
+   ชื่อ · เบอร์ · จุดที่รถเข้าถึงใกล้สุด · จุดส่งมอบ · ระดับน้ำ · ความเสี่ยง · เวลาดึกสุดที่รับได้ · ของที่ต้องการ+จำนวน (ระดับความเดือดร้อน = sevSet) */
+const INTAKE_KEYS = { name: 80, phone: 30, car: 300, handoff: 300, water: 60, risks: 400, latest: 20, items: 600 };
+function parseIntake(v) { if (!v) return null; try { const o = JSON.parse(v); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
+function cleanIntake(x) { const o = {}; if (!x || typeof x !== 'object') return o; for (const [k, m] of Object.entries(INTAKE_KEYS)) { const v = String(x[k] == null ? '' : x[k]).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, m); if (v) o[k] = v; } return o; }
 function outCase(r, full) {
   const o = { id: r.id, createdAt: r.createdAt, status: r.status, urgency: r.urgency, name: r.name || '', phone: r.phone || '', district: r.district || '',
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
-    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', teamDoneAt: r.teamDoneAt || null, teamNote: r.teamNote || '', teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '' };
+    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', teamDoneAt: r.teamDoneAt || null, teamNote: r.teamNote || '', teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake) };
   if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
-  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; }
+  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; }
   return o;
 }
 
@@ -510,6 +515,7 @@ async function updateCase(db, b) {
   // เจ้าหน้าที่แก้จำนวนคน / ครัวเรือน
   if (b.people !== undefined && b.people !== '') { sets.push('people=?'); vals.push(clampInt(b.people, 1, 9999, 1)); }
   if (b.households !== undefined) { sets.push('households=?'); vals.push(b.households === '' ? null : clampInt(b.households, 1, 9999, 1)); }
+  if (b.intake !== undefined && b.intake !== null) { const o = cleanIntake(b.intake); o.by = clean(b.by, 60); o.at = Date.now(); sets.push('intake=?'); vals.push(JSON.stringify(o)); }
   // หมายเหตุจากศูนย์ (ทีมเห็นในหน้าทีม)
   if (b.hqNote !== undefined && b.hqNote !== null) { sets.push('hqNote=?'); vals.push(clean(b.hqNote, 500)); }
   if (!meta) {
@@ -2518,7 +2524,7 @@ async function helpmeCases(env, db) {
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
     // หน้าจัดการเคสใช้เคส Help Me เป็นข้อมูลหลัก จึงต้องมีชื่อ เบอร์ รายละเอียด (endpoint นี้ให้เฉพาะอาสาที่ล็อกอินแล้ว)
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {

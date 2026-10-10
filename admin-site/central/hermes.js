@@ -121,8 +121,7 @@ const HERMES=(()=>{
     return {text:t.replace(m[0],'').trim(),acts}}
   async function run(a,d){
     if(a.type==='assign'){for(const id of a.cases){const r=await post({action:'update',id,status:'going',volunteer:a.team});if(!r.ok)throw new Error(r.error||'update')}
-      if(a.notify){const cs=a.cases.map(id=>d.cases.find(c=>String(c.id)===id)).filter(Boolean);
-        await post({action:'chat_send',team:a.team,from:'hq',name:me(),text:`ศูนย์มอบ ${cs.length} เคส:\n`+cs.map((c,i)=>`${i+1}) ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน · ${c.district||''} ${String(c.address||'').slice(0,60)}${c.phone?' · โทร '+String(c.phone).replace(/^'/,''):''}${pin(c)?` · https://maps.google.com/?q=${(+c.lat).toFixed(6)},${(+c.lng).toFixed(6)}`:''}`).join('\n')})}
+      // แจ้งทีม: เซิร์ฟเวอร์ส่งการ์ดเคสเข้าแชทของทีมให้อัตโนมัติเมื่อมอบเคส (ไม่ส่งข้อความซ้ำ)
       d.cases.forEach(c=>{if(a.cases.includes(String(c.id))){c.status='going';c.volunteer=a.team}});S.at=0}
     if(a.type==='merge'){for(const c of a.dup){const r=await post({action:'update',id:c.id,status:'done',volunteer:vol(a.keep)||vol(c)||'',dupOf:String(a.keep.id)});if(!r.ok)throw new Error(r.error||'update')}
       d.cases=d.cases.filter(c=>!a.dup.includes(c));S.at=0}

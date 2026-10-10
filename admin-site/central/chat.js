@@ -39,8 +39,10 @@ const CHAT=(()=>{
       if(k==='ack'){const s=S.alerts.sos.find(x=>String(x.id)===v);if(s){a.disabled=true;post({action:'sos_ack',id:s.id,team:s.name,by:me()}).then(()=>poll())}}};
     root.querySelector('.chat-fab').onclick=()=>toggle();
     // วอ (กดค้างพูด) · ช่องรวมทุกทีม + ศูนย์ · ไม่เปิดให้ War Room ย่อย
-    if(typeof PTT!=='undefined'&&!/^wr/.test(KEY())){const pb=document.createElement('button');pb.type='button';pb.className='ptt-fab';pb.setAttribute('aria-label','วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด');pb.title='วอ · กดค้างเพื่อพูด';pb.innerHTML='<i data-ic="mic"></i><b>วอ</b>';document.body.append(pb);
-      PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,key:KEY()}),me:()=>({sender:'ศูนย์',kind:'hq'})});PTT.bind(pb)}
+    if(typeof PTT!=='undefined'&&KEY()){const pb=document.createElement('button');pb.type='button';pb.className='ptt-fab';pb.setAttribute('aria-label','วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด');pb.title='วอ · กดค้างเพื่อพูด';pb.innerHTML='<i data-ic="mic"></i><b>วอ</b>';document.body.append(pb);
+      PTT.init({api,post:b=>post({...b,by:(()=>{try{return localStorage.getItem('uh_staff')||''}catch(e){return ''}})()}),url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,key:KEY()}),me:()=>({sender:'ศูนย์',kind:'hq'}),
+        ws:()=>((()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com'))+'/ptt/ws?'+new URLSearchParams({key:KEY()}),
+        onState:s=>{pb.classList.toggle('ptt-off',!s.up);pb.title='วอ · '+s.label+' · กดค้างเพื่อพูด'}});PTT.bind(pb)}
     root.querySelector('.chat-x').onclick=()=>toggle(false);
     root.querySelector('.chat-back').onclick=()=>{S.team=null;view()};
     root.querySelector('.chat-list').onclick=e=>{const b=e.target.closest('[data-chat-team]');if(b)openTeam(b.dataset.chatTeam)};
@@ -69,7 +71,9 @@ const CHAT=(()=>{
     box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==lastDay?`<p class="chat-day">${esc(d)}</p>`:'';lastDay=d;
       const loc=m.lat!=null?`<a class="chat-loc" href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่งของทีม · เปิดแผนที่</a>`:'';
       const call=m.kind==='call'&&m.link?`<a class="chat-join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
-      return `${sep}<div class="chat-m ${m.sender==='hq'?'me':'them'}${m.pending?' pending':''}${m.kind==='sos'?' sos':''}">${m.sender==='hq'?'':`<small class="chat-who">${esc(m.name||S.team)}</small>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small class="chat-t">${esc(m.sender==='hq'&&m.name?m.name+' · ':'')}${hhmm(m.at)}${m.sender==='hq'?(m.readTeam?' · อ่านแล้ว':''):''}</small></div>`}).join(''):'<p class="chat-empty">ยังไม่มีข้อความ · ส่งลิงก์ <i data-ic="link"></i> ให้ทีมเปิดหน้าแชทบนมือถือ</p>';
+      const voice=m.kind==='voice'&&m.link?`<audio class="chat-voice" controls preload="none" src="${esc(m.link)}&${new URLSearchParams({key:KEY()})}"></audio>`:'';
+      const cs=m.kind==='case'&&m.caseId?`<span class="chat-case">📋 การ์ดเคส #${esc(m.caseId)}</span>`:'';
+      return `${sep}<div class="chat-m ${m.sender==='hq'?'me':'them'}${m.pending?' pending':''}${m.kind==='sos'?' sos':''}">${m.sender==='hq'?'':`<small class="chat-who">${esc(m.name||S.team)}</small>`}${cs}${m.text?`<p>${esc(m.text)}</p>`:''}${voice}${call}${loc}<small class="chat-t">${esc(m.sender==='hq'&&m.name?m.name+' · ':'')}${hhmm(m.at)}${m.sender==='hq'?(m.readTeam?' · อ่านแล้ว':''):''}</small></div>`}).join(''):'<p class="chat-empty">ยังไม่มีข้อความ · ส่งลิงก์ <i data-ic="link"></i> ให้ทีมเปิดหน้าแชทบนมือถือ</p>';
     if(atBottom||S.justOpened){box.scrollTop=box.scrollHeight;S.justOpened=false}}
   async function openTeam(name){if(!S.open)toggle(true);S.team=name;S.msgs=[];S.last=0;S.justOpened=true;view();await poll(true)}
   async function poll(force){if(!KEY())return;S.lastPoll=Date.now();

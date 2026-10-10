@@ -263,18 +263,25 @@ body.on-chat .top .st{display:none!important}
 .hdr-sos+.locdot{margin-left:0!important}
 body.sos-on .hdr-sos{animation:navsos 1.2s ease-in-out infinite}
 nav.tabs .nav-ptt span{background:linear-gradient(180deg,#2D45C8,#1A2C8F)!important;box-shadow:0 8px 20px rgba(45,69,200,.4)!important;display:grid!important;place-items:center;gap:0;align-content:center}
-nav.tabs .nav-ptt span .ic{width:24px;height:24px}nav.tabs .nav-ptt span b{font-size:13px;line-height:1;margin-top:1px}
+nav.tabs .nav-ptt span .ic{width:22px;height:22px}nav.tabs .nav-ptt span b{font-size:12.5px;line-height:1;margin-top:1px}nav.tabs .nav-ptt .ptt-chl{font-size:8.5px;line-height:1;opacity:.85;margin-top:1px;white-space:nowrap}
+nav.tabs .nav-ptt.ptt-off span{filter:grayscale(.7);opacity:.75}nav.tabs .nav-ptt.ptt-busy span{box-shadow:0 0 0 6px rgba(229,56,59,.35)!important}
 nav.tabs .nav-ptt{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 body.sos-on nav.tabs .nav-ptt span{animation:none}
 body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3121F)!important;transform:scale(1.12);box-shadow:0 0 0 10px rgba(229,56,59,.25)!important}
 .top .brandpill{flex:1 1 auto!important;min-width:0!important;overflow:hidden}.top .brandpill img{flex:none}.top .brandpill .who{min-width:0;overflow:hidden}.top .brandpill .who b,.top .brandpill .who small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hdr-sos{margin-left:8px!important}.top>.locdot,.top>.st{flex:none}
 @media (max-width:380px){.top .brandpill img{width:92px;height:auto}}
+.vmsg{display:flex;align-items:center;gap:10px;border:0;background:rgba(255,255,255,.18);border-radius:999px;padding:6px 12px 6px 6px;min-width:190px;font:inherit;color:inherit;cursor:pointer;margin-top:4px}
+.m.hq .vmsg{background:#EEF1FD;color:var(--primary)}.vplay{width:32px;height:32px;border-radius:50%;background:#fff;color:var(--red);display:grid;place-items:center;font-size:12px;flex:none}.m.hq .vplay{background:var(--primary);color:#fff}
+.vmsg.on .vplay{animation:pttb 1s infinite}.vbar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.35);overflow:hidden}.m.hq .vbar{background:rgba(45,69,200,.2)}.vbar i{display:block;height:100%;width:0;background:currentColor}
+.vlen{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}.vlab{font-size:13px;opacity:.85;margin:0}
+.m.mcase{background:none!important;box-shadow:none!important;padding:0!important;max-width:100%!important;width:100%}.m.mcase .who{margin:0 4px 6px}.m.mcase .case{margin:0}
+@keyframes pttb{50%{opacity:.4}}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=17"></script>
 <script src="./native-track.js?v=4"></script>
-<script src="../central/ptt.js?v=1"></script>
+<script src="../central/ptt.js?v=2"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
@@ -406,7 +413,7 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
     </section>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos nav-ptt" id="nav-ptt" aria-label="วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด"><span><i data-ic="mic"></i><b>วอ</b></span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos nav-ptt" id="nav-ptt" aria-label="วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด"><span><i data-ic="mic"></i><b>วอ</b><small class="ptt-chl">ช่องรวม</small></span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -460,7 +467,11 @@ async function boot(){
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
   }catch(e){const c=!S.me&&cachedMe();if(c&&(!S.tk||!c.team||c.team.name)){S.me=c;S.team=c.team.name;S.offline=true;TR.skip=true;start();obUI();setTimeout(boot,15000);return} // ไม่มีเน็ต: ใช้ข้อมูลล่าสุดที่เก็บไว้
     if(S.me){S.offline=true;obUI();setTimeout(boot,15000);return}screen('#gate');$('#g-err').textContent='เชื่อมต่อไม่ได้ · ตรวจอินเทอร์เน็ต';setTimeout(boot,8000)}}
-function pttInit(){if(typeof PTT==='undefined'||!S.me)return;PTT.init({api,post,url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,...auth()}),me:()=>({sender:(S.me&&S.me.team&&S.me.team.name)||S.team||'ทีม',kind:'team'})});const b=$('#nav-ptt');if(b&&!b._ptt){b._ptt=1;PTT.bind(b)}}
+function pttWs(){const o=(()=>{try{return localStorage.getItem('ptt_ws')}catch(e){return ''}})()||(/helpme4u\.com$/.test(location.hostname)?'wss://'+location.host:'wss://central.helpme4u.com');return o+'/ptt/ws?'+new URLSearchParams(auth())}
+function pttInit(){if(typeof PTT==='undefined'||!S.me)return;const b=$('#nav-ptt');
+  PTT.init({api,post,ws:pttWs,url:n=>'/api?'+new URLSearchParams({action:'ptt_audio',n,...auth()}),me:()=>({sender:(S.me&&S.me.team&&S.me.team.name)||S.team||'ทีม',kind:'team'}),native:!!NATIVE,
+    onState:s=>{if(!b)return;b.classList.toggle('ptt-off',!s.up);b.classList.toggle('ptt-busy',!!s.live);const l=b.querySelector('.ptt-chl');if(l)l.textContent=s.ch==='all'?'ช่องรวม':s.ch.startsWith('wr:')?'War Room':'ศูนย์'}});
+  if(b&&!b._ptt){b._ptt=1;PTT.bind(b)}}
 function start(){screen('#app');setTimeout(pttInit,800);if(TR.want)track(true);go(S.view||'home');render();pollChat(true);refresh();
   clearInterval(S.t1);clearInterval(S.t2);S.t1=setInterval(refresh,30000);S.t2=setInterval(()=>pollChat(),5000)}
 $('#lf').addEventListener('submit',async e=>{e.preventDefault();S.key=$('#code').value.trim();S.team=$('#team').value.trim();S.name=$('#name').value.trim();if(!S.key||!S.team)return;
@@ -712,7 +723,9 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
     const call=m.kind==='call'&&m.link&&Date.now()-m.at>30*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
-    return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
+    if(m.kind==='case'&&m.caseId){const c=((S.me&&S.me.cases)||[]).find(x=>String(x.id)===String(m.caseId));if(c)return `${sep}<div class="m hq mcase"><p class="who">ศูนย์มอบเคส${m.name?' · '+esc(m.name):''} · ${hhmm(m.at)}</p>${card(c)}</div>`}
+    const voice=m.kind==='voice'&&m.link?`<button type="button" class="vmsg" data-vsrc="${esc(m.link)}"><span class="vplay">▶</span><span class="vbar"><i></i></span><span class="vlen">${esc((String(m.text).match(/(\d+) วิ/)||[])[1]||'')} วิ</span></button>`:'';
+    return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}${voice?' vm':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text&&!voice?`<p>${esc(m.text)}</p>`:voice?`<p class="vlab">${esc(String(m.text).replace(/ · \d+ วิ$/,''))}</p>${voice}`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
 async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที
 
@@ -847,6 +860,12 @@ function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
     try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}
     catch(err){b.disabled=false;b.textContent='บันทึก';toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}}}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit]'))profileSheet()});
+/* แชท: เล่นเสียงวอที่เก็บไว้ (แตะ ▶) */
+const VM={a:null,btn:null};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#msgs [data-vsrc]');if(!b)return;
+  if(VM.btn===b&&VM.a&&!VM.a.paused){VM.a.pause();return}
+  if(VM.a)VM.a.pause();if(VM.btn)VM.btn.classList.remove('on');const a=VM.a=new Audio(b.dataset.vsrc+'&'+new URLSearchParams(auth()));VM.btn=b;b.classList.add('on');
+  a.ontimeupdate=()=>{const i=b.querySelector('.vbar i');if(i&&a.duration)i.style.width=(a.currentTime/a.duration*100)+'%'};a.onended=a.onpause=()=>{b.classList.remove('on')};a.play().catch(()=>{b.classList.remove('on');toast('เล่นเสียงไม่ได้')})});
 $('#c-sms').onclick=()=>smsSheet();
 
 /* ---------- SOS ---------- */

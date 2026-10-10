@@ -93,7 +93,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run(); // ของในถุงยังชีพ 1 ถุง: [{id, qty}] // ทีม/รถที่รับของ (เช่น ถุงยังชีพขึ้นรถ)
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -536,6 +536,10 @@ async function updateCase(db, b) {
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }
   if (sets.length) await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, r.id).run();
+  // มอบเคสให้ทีม (ใหม่ หรือเปลี่ยนทีม): ส่งการ์ดเคสเข้าแชทของทีมนั้นอัตโนมัติ
+  if (!meta && b.status === 'going') { const nv = clean(b.volunteer, MAX.volunteer).replace(/^'/, ''), pv = String(r.volunteer || '').replace(/^'/, '').trim();
+    if (nv && (nv !== pv || r.status !== 'going')) { const needs = String(r.needs || '').split(/\s*,\s*/).filter(Boolean).join(', ') || 'ขอความช่วยเหลือ';
+      try { await chatSend(db, { team: nv, from: 'hq', name: clean(b.by, 60), text: `ศูนย์มอบเคส #${r.id} · ${needs} · ${r.people || 1} คน${r.district ? ' · ' + r.district : ''}`, kind: 'case', caseId: r.id }); } catch (e) {} } }
   await bumpRev(db);
   return { ok: true, bags, bagsSupported: true };
 }
@@ -558,22 +562,48 @@ async function liveStream(db, p) {
   })().catch(() => { try { w.abort(); } catch (e) {} });
   return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
 }
+/* วอเสียงสด: ตัวกลาง (router) ถามว่าใครเชื่อมต่อ ใช้ช่องไหนได้บ้าง
+   ทีม: รวม · War Room ของทีม · ส่วนตัวกับศูนย์ | ศูนย์: ทุกช่อง | War Room ย่อย: ช่องห้องตัวเอง + ส่วนตัวกับทีมในห้อง */
+async function pttAuth(env, db, p, vol) {
+  const rooms = (await db.prepare('SELECT id,name FROM warrooms WHERE active=1 ORDER BY name').all()).results;
+  const roomName = id => (rooms.find(r => r.id === id) || {}).name || id;
+  if (WRC) { const sc = await wrScope(db); return { ok: true, kind: 'hq', name: 'War Room ' + roomName(WRC.id), chans: [{ id: 'wr:' + WRC.id, label: 'War Room ' + roomName(WRC.id) }, ...[...sc.teams].map(t => ({ id: 'tm:' + t, label: 'ส่วนตัว · ' + t }))] }; }
+  if (vol && !p.tk && !p.team) { const teams = (await db.prepare('SELECT name FROM roster WHERE active=1 ORDER BY name').all()).results;
+    return { ok: true, kind: 'hq', name: 'ศูนย์', chans: [{ id: 'all', label: 'ช่องรวม' }, ...rooms.map(r => ({ id: 'wr:' + r.id, label: 'War Room ' + r.name })), ...teams.map(t => ({ id: 'tm:' + t.name, label: 'ส่วนตัว · ' + t.name }))] }; }
+  const t = await teamFrom(env, db, p); if (!t) return { ok: false, error: 'bad_link' };
+  const ch = [{ id: 'all', label: 'ช่องรวม' }]; if (t.row && t.row.warroom) ch.push({ id: 'wr:' + t.row.warroom, label: 'War Room ' + roomName(t.row.warroom) });
+  ch.push({ id: 'tm:' + t.name, label: 'ส่วนตัวกับศูนย์' });
+  return { ok: true, kind: 'team', name: t.name, chans: ch };
+}
 /* วอ (กดค้างพูดแบบ Zello): คลิปเสียงสั้น WAV 8 kHz ไม่เกิน 30 วิ · ช่องรวมทุกทีม + ศูนย์ · เก็บ 24 ชม.
    ส่ง: ทีม (ลิงก์ทีม) หรือศูนย์ (รหัสอาสา) · ฟัง: ดึงรายการใหม่ (ptt_list since) แล้วโหลดเสียง (ptt_audio n) เล่นต่อกันอัตโนมัติ */
 const PTT_MAX = 700e3;
 function b64bytes(s) { const bin = atob(String(s || '').replace(/^data:[^,]*,/, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 async function pttSend(db, who, b) {
   let a; try { a = b64bytes(b.audio); } catch (e) { return { ok: false, error: 'bad_audio' }; }
-  if (a.length < 400 || a.length > PTT_MAX || String.fromCharCode(a[0], a[1], a[2], a[3]) !== 'RIFF') return { ok: false, error: 'bad_audio' };
-  const now = Date.now(), r = await db.prepare('INSERT INTO ptt (ch,sender,kind,name,dur,at,audio) VALUES (?,?,?,?,?,?,?)')
-    .bind('all', clean(who.sender, 80), who.kind, clean(b.name || who.name || '', 60), Math.min(30, Math.max(0, Number(b.dur) || 0)), now, a).run();
+  if (a.length < 400 || a.length > PTT_MAX * 2 || String.fromCharCode(a[0], a[1], a[2], a[3]) !== 'RIFF') return { ok: false, error: 'bad_audio' };
+  const ch = clean(b.ch, 80) || 'all'; if (who.chans && !who.chans.includes(ch)) return { ok: false, error: 'bad_channel' };
+  const now = Date.now(), r = await db.prepare('INSERT INTO ptt (ch,sender,kind,name,dur,at,audio,talk) VALUES (?,?,?,?,?,?,?,?)')
+    .bind(ch, clean(who.sender, 80), who.kind, clean(b.name || who.name || '', 60), Math.min(60, Math.max(0, Number(b.dur) || 0)), now, a, clean(b.talk, 20)).run();
   if (Math.random() < 0.05) await db.prepare('DELETE FROM ptt WHERE at<?').bind(now - 864e5).run();
-  return { ok: true, n: r.meta && r.meta.last_row_id, at: now };
+  const n = r.meta && r.meta.last_row_id; await pttToChat(db, who, ch, n, Number(b.dur) || 0).catch(() => {});
+  return { ok: true, n, at: now };
 }
-async function pttList(db, p) {
+/* เก็บเสียงวอไว้ในแชทด้วย: ทีมพูด = แชทของทีมนั้น · ศูนย์พูดในช่องส่วนตัว = แชททีมนั้น · ศูนย์พูดในช่องรวม/War Room = แชทของทุกทีมในช่อง */
+async function pttToChat(db, who, ch, n, dur) {
+  if (!n) return;
+  const chName = ch === 'all' ? 'ช่องรวม' : ch.startsWith('wr:') ? 'War Room' : 'ส่วนตัว', text = `🎙️ วอ · ${chName} · ${Math.max(1, Math.round(dur))} วิ`, link = '/api?action=ptt_audio&n=' + n;
+  let teams = [];
+  if (who.kind === 'team') teams = [who.sender];
+  else if (ch.startsWith('tm:')) teams = [ch.slice(3)];
+  else if (ch === 'all') teams = (await db.prepare('SELECT name FROM roster WHERE active=1').all()).results.map(r => r.name);
+  else if (ch.startsWith('wr:')) teams = (await db.prepare('SELECT name FROM roster WHERE active=1 AND warroom=?').bind(ch.slice(3)).all()).results.map(r => r.name);
+  for (const team of teams.slice(0, 200)) await chatSend(db, { team, from: who.kind === 'team' ? 'team' : 'hq', name: who.kind === 'team' ? who.name : who.name || who.sender, text, kind: 'voice', link });
+}
+async function pttList(db, p, chans) {
   const since = Number(p.since) || 0;
-  const { results } = await db.prepare('SELECT n,sender,kind,name,dur,at FROM ptt WHERE n>? AND at>? ORDER BY n DESC LIMIT 40').bind(since, Date.now() - 6 * 3600e3).all();
-  return { ok: true, items: results.reverse(), now: Date.now() };
+  const { results } = await db.prepare('SELECT n,ch,sender,kind,name,dur,at,talk FROM ptt WHERE n>? AND at>? ORDER BY n DESC LIMIT 80').bind(since, Date.now() - 6 * 3600e3).all();
+  return { ok: true, items: results.filter(r => chans.includes(r.ch || 'all')).slice(0, 40).reverse(), now: Date.now() };
 }
 async function pttAudio(db, p) {
   const r = await db.prepare('SELECT audio FROM ptt WHERE n=?').bind(Number(p.n) || 0).first();
@@ -975,7 +1005,7 @@ const TEAM_POST = {
     await db.prepare(`UPDATE roster SET ${sets.join(',')} WHERE id=?`).bind(...vals, t.row.id).run();
     await bumpRev(db); return { ok: true };
   },
-  ptt_send: (db, t, b) => pttSend(db, { sender: t.name, kind: 'team', name: b.name }, b),
+  ptt_send: async (db, t, b) => { const au = await pttAuth(ENV, db, { ...b, tk: b.tk || '', team: t.name }, false); return pttSend(db, { sender: t.name, kind: 'team', name: b.name, chans: (au.chans || []).map(c => c.id) }, b); },
   team_ping: (db, t, b) => pingTeam(db, { ...b, team: t.name }),
   team_status: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
@@ -1282,8 +1312,8 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+const WR_POST_OK = new Set(['ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -2638,9 +2668,12 @@ async function chatSend(db, b) {
   const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (!team || (!text && lat == null)) return { ok: false, error: 'missing' };
-  const kind = ['call', 'sos'].includes(b.kind) ? b.kind : '', link = kind === 'call' && (String(b.link || '').startsWith(MEET) || /^\/call\/#[0-9a-f]{12}\.[0-9a-f]{24}$/.test(String(b.link || ''))) ? String(b.link).slice(0, 300) : '';
+  const kind = ['call', 'sos', 'case', 'voice'].includes(b.kind) ? b.kind : '';
+  const link = kind === 'call' && (String(b.link || '').startsWith(MEET) || /^\/call\/#[0-9a-f]{12}\.[0-9a-f]{24}$/.test(String(b.link || ''))) ? String(b.link).slice(0, 300)
+    : kind === 'voice' && /^\/api\?action=ptt_audio&n=\d+$/.test(String(b.link || '')) ? String(b.link) : '';
+  const read = kind === 'voice' || !!b.read; // เสียงวอ: ได้ยินสดไปแล้ว ไม่นับเป็นข้อความค้างอ่าน
   const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
-    .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' ? 1 : 0, from === 'team' ? 1 : 0, kind, link).run();
+    .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' || read ? 1 : 0, from === 'team' || read ? 1 : 0, kind, link).run();
   await setMeta(db, 'chat_rev', String(r.meta.last_row_id || Date.now()));
   return { ok: true, n: r.meta.last_row_id };
 }
@@ -2791,7 +2824,10 @@ async function api(request, env) {
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
-      case 'ptt_list': case 'ptt_audio': { const ok = vol || (p.tk || p.team) && await teamFrom(env, db, p); if (!ok) return json({ ok: false, error: 'not_volunteer' }); return p.action === 'ptt_list' ? json(await pttList(db, p)) : pttAudio(db, p); }
+      case 'ptt_auth': return json(vol || p.tk ? await pttAuth(env, db, p, vol) : { ok: false, error: 'not_volunteer' });
+      case 'ptt_list': case 'ptt_audio': { const au = vol || p.tk ? await pttAuth(env, db, p, vol) : null; if (!au || !au.ok) return json({ ok: false, error: 'not_volunteer' }); const chans = au.chans.map(c => c.id);
+        if (p.action === 'ptt_list') return json(await pttList(db, p, chans));
+        const row = await db.prepare('SELECT ch FROM ptt WHERE n=?').bind(Number(p.n) || 0).first(); if (!row || !chans.includes(row.ch || 'all')) return new Response('not found', { status: 404 }); return pttAudio(db, p); }
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
@@ -2824,7 +2860,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, request.headers.get('cf-connecting-ip') || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { ptt_send: (db, b) => pttSend(db, { sender: 'ศูนย์', kind: 'hq', name: clean(b.by, 60) }, b), kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     // คำขอจากหน้ามือถือของทีม (ลิงก์เฉพาะทีม หรือรหัสกลาง + ชื่อทีม)

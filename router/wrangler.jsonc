@@ -10,5 +10,7 @@
     { "pattern": "center.helpme4u.com", "custom_domain": true },
     { "pattern": "central.helpme4u.com", "custom_domain": true }
   ],
-  "triggers": { "crons": ["* * * * *"] }
+  "triggers": { "crons": ["* * * * *"] },
+  "durable_objects": { "bindings": [{ "name": "PTT", "class_name": "PttHub" }] },
+  "migrations": [{ "tag": "ptt-v1", "new_sqlite_classes": ["PttHub"] }]
 }

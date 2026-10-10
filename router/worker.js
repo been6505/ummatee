@@ -13,6 +13,8 @@ const under = (p, b) => p === b || p.startsWith(b + '/') || p.startsWith(b + '.'
 const isCenterPath = p => ['/api', '/admin', '/center', '/central', '/team', '/call'].some(b => under(p, b));
 const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 
+import { DurableObject } from 'cloudflare:workers';
+
 export default {
   // ซิงก์เคส Help Me (Google Sheet) เข้าฐานข้อมูล CENTRAL ทุก 1 นาที + ให้ AI ตรวจรูปผู้แจ้งทีละไม่กี่เคส
   // ทุก 30 วินาที (cron นาทีละครั้ง + อีกรอบหลังรอ 30 วิ) · เคสที่แจ้งผ่าน helpme4u.com ซิงก์ทันทีอยู่แล้ว (bc.js → hm_nudge)
@@ -20,8 +22,10 @@ export default {
     const hit = () => fetch(ADMIN + '/api?action=hm_sync', { headers: { 'user-agent': 'helpme4u-router-cron' } }).catch(() => {});
     ctx.waitUntil((async () => { await hit(); await new Promise(r => setTimeout(r, 30e3)); await hit(); })());
   },
-  async fetch(req) {
+  async fetch(req, env) {
     const url = new URL(req.url);
+    // วอเสียงสด: wss://central.helpme4u.com/ptt/ws?tk=…|key=… → ตรวจสิทธิ์กับ CENTRAL แล้วต่อเข้าห้องกลาง (Durable Object)
+    if (url.pathname === '/ptt/ws') return pttConnect(req, env, url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }
     if (OLD_HOSTS.includes(url.hostname) && !keepOnOld(url.pathname)) { url.hostname = CENTER_HOST; return Response.redirect(url.toString(), 301); }
     const center = url.hostname === CENTER_HOST || OLD_HOSTS.includes(url.hostname);
@@ -49,3 +53,60 @@ export default {
     return res;
   },
 };
+
+/* ---------- วอเสียงสด (Push-to-talk แบบ Zello) ----------
+   ห้องกลางเดียว (Durable Object "hub") รับ WebSocket ของทุกคน · แต่ละคนมีรายชื่อช่องที่ใช้ได้ (จาก CENTRAL ตอนเชื่อมต่อ)
+   ช่อง: all (รวม) · wr:<รหัส War Room> · tm:<ชื่อทีม> (ส่วนตัวศูนย์↔ทีม)
+   ข้อความ JSON: {t:'talk',ch} ขอพูด → granted / busy · {t:'end'} จบ · เสียง = binary (μ-law 8 kHz) ส่งต่อให้ทุกคนในช่องทันที
+   คนละช่องพูดพร้อมกันได้ · ช่องเดียวกันพูดได้ทีละคน (ค้างเกิน 40 วิ / หลุด = ปล่อยช่องเอง) */
+async function pttConnect(req, env, url) {
+  if (req.headers.get('upgrade') !== 'websocket') return new Response('expected websocket', { status: 426 });
+  const q = new URLSearchParams({ action: 'ptt_auth' });
+  for (const k of ['tk', 'key', 'team']) if (url.searchParams.get(k)) q.set(k, url.searchParams.get(k));
+  let who = null;
+  try { const r = await fetch((env.ADMIN_ORIGIN || ADMIN) + '/api?' + q, { headers: { 'user-agent': 'helpme4u-ptt' } }); who = await r.json(); } catch (e) {}
+  if (!who || !who.ok) return new Response('unauthorized', { status: 403 });
+  const id = env.PTT.idFromName('hub'), stub = env.PTT.get(id);
+  const h = new Headers(req.headers); h.set('x-ptt-who', encodeURIComponent(JSON.stringify({ name: who.name, kind: who.kind, chans: who.chans.map(c => c.id) })));
+  return stub.fetch(new Request('https://ptt/ws', { headers: h }));
+}
+export class PttHub extends DurableObject {
+  constructor(ctx, env) { super(ctx, env); this.floor = new Map(); // ch → { ws, id, at, name, kind }
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('{"t":"ping"}', '{"t":"pong"}')); }
+  async fetch(req) {
+    let who; try { who = JSON.parse(decodeURIComponent(req.headers.get('x-ptt-who') || '')); } catch (e) {}
+    if (!who) return new Response('bad', { status: 400 });
+    const [client, server] = Object.values(new WebSocketPair());
+    this.ctx.acceptWebSocket(server); server.serializeAttachment({ ...who, talk: null });
+    const busy = [...this.floor.entries()].filter(([ch]) => who.chans.includes(ch)).map(([ch, f]) => ({ ch, id: f.id, name: f.name, kind: f.kind }));
+    server.send(JSON.stringify({ t: 'hello', chans: who.chans, live: busy }));
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  peers(ch, except) { return this.ctx.getWebSockets().filter(w => w !== except && (w.deserializeAttachment() || {}).chans?.includes(ch)); }
+  release(ch, reason) { const f = this.floor.get(ch); if (!f) return; this.floor.delete(ch);
+    try { const a = f.ws.deserializeAttachment(); if (a) { a.talk = null; f.ws.serializeAttachment(a); } } catch (e) {}
+    const m = JSON.stringify({ t: 'end', ch, id: f.id, reason: reason || '' }); for (const w of this.peers(ch)) try { w.send(m); } catch (e) {} }
+  sweep() { const now = Date.now(); for (const [ch, f] of this.floor) if (now - f.at > 40e3) this.release(ch, 'timeout'); }
+  async webSocketMessage(ws, msg) {
+    const a = ws.deserializeAttachment() || {};
+    if (typeof msg !== 'string') { // เสียง: ส่งต่อให้ทุกคนในช่องที่ผู้ส่งถือไมค์อยู่
+      const ch = a.talk, f = ch && this.floor.get(ch); if (!f || f.ws !== ws) return;
+      const tag = new TextEncoder().encode(f.id + '|'), out = new Uint8Array(tag.length + msg.byteLength); out.set(tag); out.set(new Uint8Array(msg), tag.length);
+      for (const w of this.peers(ch, ws)) try { w.send(out); } catch (e) {}
+      return; }
+    let m; try { m = JSON.parse(msg); } catch (e) { return; }
+    this.sweep();
+    if (m.t === 'talk') {
+      const ch = String(m.ch || ''); if (!a.chans.includes(ch)) { ws.send(JSON.stringify({ t: 'denied', ch })); return; }
+      const f = this.floor.get(ch);
+      if (f && f.ws !== ws) { ws.send(JSON.stringify({ t: 'busy', ch, name: f.name, kind: f.kind })); return; }
+      if (a.talk && a.talk !== ch) this.release(a.talk);
+      const id = (Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+      this.floor.set(ch, { ws, id, at: Date.now(), name: a.name, kind: a.kind }); a.talk = ch; ws.serializeAttachment(a);
+      ws.send(JSON.stringify({ t: 'granted', ch, id }));
+      const s = JSON.stringify({ t: 'start', ch, id, name: a.name, kind: a.kind }); for (const w of this.peers(ch, ws)) try { w.send(s); } catch (e) {}
+    } else if (m.t === 'end') { if (a.talk) { const f = this.floor.get(a.talk); if (f && f.ws === ws) this.release(a.talk); } }
+  }
+  async webSocketClose(ws) { const a = ws.deserializeAttachment() || {}; if (a.talk) { const f = this.floor.get(a.talk); if (f && f.ws === ws) this.release(a.talk, 'drop'); } }
+  async webSocketError(ws) { return this.webSocketClose(ws); }
+}

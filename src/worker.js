@@ -566,12 +566,12 @@ async function liveStream(db, p) {
    ทีม: รวม · War Room ของทีม · ส่วนตัวกับศูนย์ | ศูนย์: ทุกช่อง | War Room ย่อย: ช่องห้องตัวเอง + ส่วนตัวกับทีมในห้อง */
 async function pttAuth(env, db, p, vol) {
   const rooms = (await db.prepare('SELECT id,name FROM warrooms WHERE active=1 ORDER BY name').all()).results;
-  const roomName = id => (rooms.find(r => r.id === id) || {}).name || id;
-  if (WRC) { const sc = await wrScope(db); return { ok: true, kind: 'hq', name: 'War Room ' + roomName(WRC.id), chans: [{ id: 'wr:' + WRC.id, label: 'War Room ' + roomName(WRC.id) }, ...[...sc.teams].map(t => ({ id: 'tm:' + t, label: 'ส่วนตัว · ' + t }))] }; }
+  const roomName = id => (rooms.find(r => r.id === id) || {}).name || id, wrl = id => { const n = roomName(id); return /^war\s*room/i.test(n) ? n : 'War Room ' + n; };
+  if (WRC) { const sc = await wrScope(db); return { ok: true, kind: 'hq', name: wrl(WRC.id), chans: [{ id: 'wr:' + WRC.id, label: wrl(WRC.id) }, ...[...sc.teams].map(t => ({ id: 'tm:' + t, label: 'ส่วนตัว · ' + t }))] }; }
   if (vol && !p.tk && !p.team) { const teams = (await db.prepare('SELECT name FROM roster WHERE active=1 ORDER BY name').all()).results;
-    return { ok: true, kind: 'hq', name: 'ศูนย์', chans: [{ id: 'all', label: 'ช่องรวม' }, ...rooms.map(r => ({ id: 'wr:' + r.id, label: 'War Room ' + r.name })), ...teams.map(t => ({ id: 'tm:' + t.name, label: 'ส่วนตัว · ' + t.name }))] }; }
+    return { ok: true, kind: 'hq', name: 'ศูนย์', chans: [{ id: 'all', label: 'ช่องรวม' }, ...rooms.map(r => ({ id: 'wr:' + r.id, label: wrl(r.id) })), ...teams.map(t => ({ id: 'tm:' + t.name, label: 'ส่วนตัว · ' + t.name }))] }; }
   const t = await teamFrom(env, db, p); if (!t) return { ok: false, error: 'bad_link' };
-  const ch = [{ id: 'all', label: 'ช่องรวม' }]; if (t.row && t.row.warroom) ch.push({ id: 'wr:' + t.row.warroom, label: 'War Room ' + roomName(t.row.warroom) });
+  const ch = [{ id: 'all', label: 'ช่องรวม' }]; if (t.row && t.row.warroom) ch.push({ id: 'wr:' + t.row.warroom, label: wrl(t.row.warroom) });
   ch.push({ id: 'tm:' + t.name, label: 'ส่วนตัวกับศูนย์' });
   return { ok: true, kind: 'team', name: t.name, chans: ch };
 }

@@ -28,12 +28,16 @@ const PTT=(()=>{
 .ptt-it small{color:#5B6386;font-size:12px}.ptt-hint{margin:0;color:#5B6386;font-size:12.5px;text-align:center}
 .ptt-toast{position:fixed;left:50%;top:90px;transform:translateX(-50%);z-index:9001;background:#161B3D;color:#fff;border-radius:999px;padding:10px 18px;font-weight:600}
 .ptt-press{transform:scale(.94)}
+.ptt-unlock{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translateX(-50%);z-index:9002;border:0;background:#161B3D;color:#fff;border-radius:999px;padding:12px 20px;font:inherit;font-weight:700;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.3);cursor:pointer;max-width:calc(100vw - 24px);animation:pttb 1.6s infinite}
 @keyframes pttb{50%{opacity:.3}}@keyframes pttw{0%,100%{height:5px}50%{height:18px}}`;
   const el=document.createElement('div');el.className='ptt-ui';el.innerHTML=`<div class="ptt-talk" hidden><span class="ptt-dot"></span><b class="ptt-tl">กำลังพูด…</b><span class="ptt-t">0.0</span><span class="ptt-lv"><i></i></span><small class="ptt-ts">ปล่อยเพื่อส่ง · ลากนิ้วออกเพื่อยกเลิก</small></div>
+    <button type="button" class="ptt-unlock" hidden>🔇 แตะที่นี่เพื่อเปิดเสียงวอ · เบราว์เซอร์ปิดเสียงไว้จนกว่าจะแตะหน้าจอ</button>
     <div class="ptt-now" hidden><span class="ptt-wave"><i></i><i></i><i></i></span><span class="ptt-who"></span><button type="button" class="ptt-x" aria-label="หยุด">✕</button></div>
     <div class="ptt-panel" hidden role="dialog" aria-label="วอ"><div class="ptt-ph"><span class="ptt-conn"></span><b>📻 วอ</b><button type="button" class="ptt-close" aria-label="ปิด">✕</button></div>
       <p class="ptt-sec">ช่อง · แตะเพื่อเลือกช่องที่จะพูด · 🔔 = ฟังอยู่</p><div class="ptt-chs"></div><p class="ptt-sec">ฟังย้อนหลัง</p><div class="ptt-list"></div><p class="ptt-hint">กดค้างปุ่ม วอ เพื่อพูด</p></div>`;
   const $=s=>el.querySelector(s),esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const PAL=['#2D45C8','#1F7A43','#B45309','#7C3AED','#0E7490','#BE185D','#4D7C0F','#9333EA','#C2410C','#0369A1','#A16207','#15803D'];
+  const col=it=>{if(it.kind==='hq')return '#E5383B';const k=String(it.sender||it.name||'');let h=0;for(const ch of k)h=(h*31+ch.codePointAt(0))>>>0;return PAL[h%PAL.length]};
   const hhmm=t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   const lab=id=>(P.chans.find(c=>c.id===id)||{}).label||(id==='all'?'ช่องรวม':id);
   const toast=m=>{if(typeof window.toast==='function')window.toast(m);else{const d=document.createElement('div');d.className='ptt-toast';d.textContent=m;document.body.append(d);setTimeout(()=>d.remove(),2600)}};
@@ -44,7 +48,9 @@ const PTT=(()=>{
       if(P.cfg&&P.cfg.native&&P.ctx.createMediaStreamDestination){P.out=P.ctx.createMediaStreamDestination();P.media=new Audio();P.media.srcObject=P.out.stream;P.media.setAttribute('playsinline','');}else P.out=P.ctx.destination}
     if(P.ctx.state!=='running')P.ctx.resume().catch(()=>{});if(P.media&&P.media.paused)P.media.play().catch(()=>{});return P.ctx}
   function beep(f,ms,at=0){try{const c=ctxGet(),o=c.createOscillator(),g=c.createGain();o.frequency.value=f;g.gain.value=.08;o.connect(g);g.connect(P.out);o.start(c.currentTime+at);o.stop(c.currentTime+at+ms/1000)}catch(e){}}
-  function unlock(){ctxGet();if(!P.clip){P.clip=new Audio();P.clip.preload='auto';P.clip.onended=clipDone;P.clip.onerror=clipDone}}
+  const canPlay=()=>P.ctx&&P.ctx.state==='running';
+  function lockUI(){const u=$('.ptt-unlock');if(u)u.hidden=!P.cfg||canPlay()}
+  function unlock(){ctxGet();setTimeout(lockUI,150);if(!P.clip){P.clip=new Audio();P.clip.preload='auto';P.clip.onended=clipDone;P.clip.onerror=clipDone}}
   /* ---------- เชื่อมต่อ ---------- */
   function connect(){if(!P.cfg||P.ws&&P.ws.readyState<2)return;let ws;try{ws=new WebSocket(P.cfg.ws())}catch(e){return later()}P.ws=ws;ws.binaryType='arraybuffer';
     ws.onopen=()=>{P.retry=1000;clearInterval(P.ping);P.ping=setInterval(()=>{try{ws.readyState===1&&ws.send('{"t":"ping"}')}catch(e){}},25000)};
@@ -58,7 +64,7 @@ const PTT=(()=>{
       t.pending.forEach(b=>send(b));t.pending=[];if(t.ended)endTx();return}
     if(m.t==='busy'){const t=P.tx;if(t&&t.ch===m.ch){stopTx(true);beep(420,90);beep(420,90,.15);toast(`ช่องไม่ว่าง · ${m.kind==='hq'?'ศูนย์':m.name} กำลังพูด`)}return}
     if(m.t==='denied'){stopTx(true);toast('พูดในช่องนี้ไม่ได้');return}
-    if(m.t==='start'){P.live.set(m.ch,m);P.heard.add(m.id);if(!P.muted.has(m.ch)){pauseClip();ctxGet();P.rx.set(m.id,{ch:m.ch,next:0});show(m,true);beep(1200,40)}state();return}
+    if(m.t==='start'){P.live.set(m.ch,m);if(!P.muted.has(m.ch)){pauseClip();ctxGet();if(canPlay())P.heard.add(m.id);else{lockUI();P.missed=Date.now()}P.rx.set(m.id,{ch:m.ch,next:0});show(m,true);beep(1200,40)}state();return}
     if(m.t==='end'){P.live.delete(m.ch);const r=P.rx.get(m.id);const left=r&&P.ctx?Math.max(0,(r.next-P.ctx.currentTime)*1000):0;setTimeout(()=>{P.rx.delete(m.id);if(!P.rx.size)hideNow();nextClip()},left+150);state()}}
   function onAudio(buf){const u=new Uint8Array(buf),i=u.indexOf(124);if(i<0)return;const id=new TextDecoder().decode(u.subarray(0,i)),r=P.rx.get(id);if(!r||P.muted.has(r.ch))return;
     const c=ctxGet(),n=u.length-i-1;if(n<=0)return;const ab=c.createBuffer(1,n,8000),d=ab.getChannelData(0);for(let k=0;k<n;k++)d[k]=ULAW[u[i+1+k]];
@@ -103,14 +109,14 @@ const PTT=(()=>{
   function nextClip(){if(P.playing||P.tx||P.rx.size||!P.queue.length)return;const it=P.queue.shift();P.playing=it;unlock();P.clip.src=it.blob||P.cfg.url(it.n);show(it,false);P.clip.play().catch(()=>{$('.ptt-who').textContent+=' · แตะเพื่อฟัง';$('.ptt-now').onclick=()=>P.clip.play().catch(()=>{})})}
   function clipDone(){P.playing=null;hideNow();setTimeout(nextClip,250)}
   function pauseClip(){if(P.playing){P.clip.pause();P.queue.unshift(P.playing);P.playing=null}}
-  function show(it,live){const n=$('.ptt-now');n.classList.toggle('live',!!live);$('.ptt-who').textContent=`${live?'🔴 สด · ':''}${it.kind==='hq'?(it.name&&it.name!=='ศูนย์'?it.name:'ศูนย์'):(it.name||it.sender)} · ${lab(it.ch||'all')}${live?'':' · '+hhmm(it.at)}`;n.hidden=false;n.onclick=null}
+  function show(it,live){const n=$('.ptt-now');n.classList.toggle('live',!!live);n.style.background=live?'':col(it);n.style.borderLeft=live?`8px solid ${col(it)}`:'';$('.ptt-who').textContent=`${live?'🔴 สด · ':''}${it.kind==='hq'?(it.name&&it.name!=='ศูนย์'?it.name:'ศูนย์'):(it.name||it.sender)} · ${lab(it.ch||'all')}${live?'':' · '+hhmm(it.at)}`;n.hidden=false;n.onclick=null}
   function hideNow(){if(!P.rx.size&&!P.playing)$('.ptt-now').hidden=true}
   /* ---------- หน้าตา ---------- */
   function state(){$('.ptt-conn').classList.toggle('on',P.up);LS('ptt_ch',P.ch);if(P.cfg&&P.cfg.onState)P.cfg.onState({up:P.up,ch:P.ch,label:lab(P.ch),live:P.live.has(P.ch)});draw()}
   function draw(){if($('.ptt-panel').hidden)return;
     $('.ptt-chs').innerHTML=P.chans.map(c=>{const lv=P.live.get(c.id);return `<div class="ptt-ch" role="button" tabindex="0" data-ch="${esc(c.id)}" aria-pressed="${c.id===P.ch}"><b>${esc(c.label)}</b>${lv?`<span class="lv">สด · ${esc(lv.kind==='hq'?'ศูนย์':lv.name)}</span>`:''}<button type="button" class="mu" data-mu="${esc(c.id)}" aria-label="${P.muted.has(c.id)?'เปิดเสียงช่อง':'ปิดเสียงช่อง'}">${P.muted.has(c.id)?'🔕':'🔔'}</button></div>`}).join('')||'<p class="ptt-hint">กำลังเชื่อมต่อ…</p>';
     const xs=P.list.filter(it=>(it.ch||'all')===P.ch).slice().reverse();
-    $('.ptt-list').innerHTML=xs.map(it=>`<button type="button" class="ptt-it${it.kind==='hq'?' hq':''}${P.mine.has(it.n)||P.mine.has(it.talk)||it.local?' me':''}" data-pn="${esc(it.n)}"><span class="ptt-pl">▶</span><b>${esc(it.kind==='hq'?(it.name||'ศูนย์'):it.sender)}</b><small>${hhmm(it.at)} · ${Number(it.dur||0).toFixed(0)} วิ${it.fail?' · อัปโหลดไม่สำเร็จ':it.local?' · กำลังบันทึก…':''}</small></button>`).join('')||'<p class="ptt-hint">ยังไม่มีเสียงในช่องนี้</p>'}
+    $('.ptt-list').innerHTML=xs.map(it=>`<button type="button" class="ptt-it${it.kind==='hq'?' hq':''}${P.mine.has(it.n)||P.mine.has(it.talk)||it.local?' me':''}" data-pn="${esc(it.n)}"><span class="ptt-pl" style="background:${col(it)}">▶</span><b style="color:${col(it)}">${esc(it.kind==='hq'?(it.name||'ศูนย์'):it.sender)}</b><small>${hhmm(it.at)} · ${Number(it.dur||0).toFixed(0)} วิ${it.fail?' · อัปโหลดไม่สำเร็จ':it.local?' · กำลังบันทึก…':''}</small></button>`).join('')||'<p class="ptt-hint">ยังไม่มีเสียงในช่องนี้</p>'}
   el.addEventListener('click',e=>{const t=e.target;
     if(t.closest('.ptt-close')){$('.ptt-panel').hidden=true;return}
     if(t.closest('.ptt-x')){e.stopPropagation();if(P.playing){P.clip.pause();clipDone()}P.queue=[];$('.ptt-now').hidden=true;return}
@@ -128,5 +134,6 @@ const PTT=(()=>{
   function init(cfg){if(P.cfg)return;P.cfg=cfg;document.head.append(st);document.body.append(el);loadChans();connect();poll();
     setInterval(()=>{if(!P.up||!document.hidden&&!$('.ptt-panel').hidden)poll()},6000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden){connect();ctxGet()}});addEventListener('online',()=>{P.retry=1000;connect()});
-    document.addEventListener('pointerdown',unlock,{once:true})}
+    const tryUnlock=()=>{if(canPlay()&&P.clip&&!(P.playing&&P.clip.paused))return;unlock();setTimeout(()=>{if(!canPlay())return;if(P.playing&&P.clip.paused)P.clip.play().catch(()=>{});if(P.missed){P.missed=0;poll()}},300)};['pointerdown','keydown','touchend'].forEach(ev=>document.addEventListener(ev,tryUnlock,true));
+    $('.ptt-unlock').addEventListener('click',()=>{unlock();setTimeout(()=>{lockUI();poll()},300)});setTimeout(()=>{ctxGet();lockUI()},1500)}
   return {init,bind,open:toggle,state:()=>({up:P.up,ch:P.ch,label:lab(P.ch)})}})();

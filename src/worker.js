@@ -2402,10 +2402,27 @@ async function fillProvinces(db, cases) {
    (Help Me เปลี่ยนสถานะ/ทีมหลังจากที่ศูนย์แก้ → ใช้ของ Help Me · ศูนย์แก้หลังจากนั้น → คงของศูนย์ · ไม่ส่งกลับไปที่ชีต Help Me) */
 const fnv = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 let hmSyncP = null;
+/* เรียลไทม์จาก helpme4u.com: หน้าบ้านแจ้งว่ามีคนส่ง/แก้เคส → ซิงก์ทันที (รอ 2 วิให้ Apps Script บันทึกเสร็จ)
+   กันถี่: ซิงก์ห่างกันอย่างน้อย 8 วิ · ระหว่างซิงก์อยู่มีคำขอใหม่ = ทำซ้ำอีกรอบเมื่อเสร็จ (ไม่ตกหล่นเคสที่เข้ามาระหว่างนั้น) */
+async function hmNudge(env, db) {
+  const now = Date.now(), last = Number(await getMeta(db, 'hm_nudge_at')) || 0;
+  if (now - last < 8e3) { await setMeta(db, 'hm_nudge_pending', '1'); return { ok: true, queued: true }; }
+  await setMeta(db, 'hm_nudge_at', String(now)); await setMeta(db, 'hm_nudge_pending', '');
+  const run = (async () => {
+    await new Promise(r => setTimeout(r, 2000));
+    for (let i = 0; i < 3; i++) {
+      try { await syncHelpme(env, db, true); } catch (e) {}
+      if (await getMeta(db, 'hm_nudge_pending') !== '1') break;
+      await setMeta(db, 'hm_nudge_pending', ''); await setMeta(db, 'hm_nudge_at', String(Date.now()));
+    }
+  })();
+  if (CTX && CTX.waitUntil) CTX.waitUntil(run.catch(() => {})); else await run;
+  return { ok: true, started: true };
+}
 async function syncHelpme(env, db, force) {
   if (hmSyncP) return hmSyncP;
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
-  if (!force && Date.now() - last < 45e3) return { ok: true, skipped: true, at: last };
+  if (!force && Date.now() - last < 25e3) return { ok: true, skipped: true, at: last };
   hmSyncP = (async () => {
     await setMeta(db, 'hm_sync_at', String(Date.now()));
     const src = await helpmeAllCases(env);
@@ -2668,9 +2685,11 @@ async function api(request, env) {
       case 'sheet_places': try { const [s, n] = await Promise.all([sheetPoints(env, db, 'shelters').catch(() => []), sheetPoints(env, db, 'network').catch(() => [])]);
         return json({ ok: true, shelters: s.filter(x => x.lat != null), network: n.filter(x => x.lat != null) }); } catch (e) { return json({ ok: false, error: 'sheet_unavailable' }); }
       case 'cctv_ai': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await cctvAiCheck(env, p)); } catch (e) { return json({ ok: false, error: 'cctv_ai_unavailable' }); }
-      case 'hm_sync': if (!vol && Date.now() - (Number(await getMeta(db, 'hm_tick_at')) || 0) < 45e3) return json({ ok: true, skipped: true }); // จำกัดความถี่ (คนนอกเรียกถี่ ๆ ไม่ได้)
+      case 'hm_nudge': return json(await hmNudge(env, db));
+      case 'hm_sync': if (!vol && Date.now() - (Number(await getMeta(db, 'hm_tick_at')) || 0) < 25e3) return json({ ok: true, skipped: true }); // จำกัดความถี่ (คนนอกเรียกถี่ ๆ ไม่ได้)
         await setMeta(db, 'hm_tick_at', String(Date.now()));
-        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null, intel = null; try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} let geo = null; try { geo = await geocodePass(env, db, 4); } catch (e) {} return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { let intel = null; try { intel = await intelTick(env, db); } catch (e2) {} return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120), intel }); } // ข้อมูลสถานการณ์เก็บต่อแม้ซิงก์ Help Me ล้ม
+        try { const r = await syncHelpme(env, db, false); let ai = 0, dc = null, intel = null, geo = null; const ex = Date.now() - (Number(await getMeta(db, 'hm_extra_at')) || 0) > 50e3; // งานเสริม (AI รูป ข่าว Discord พิกัด) คงเดิมนาทีละครั้ง
+        if (ex) { await setMeta(db, 'hm_extra_at', String(Date.now())); try { ai = await photoAiPass(env, db, 4); } catch (e) {} try { intel = await intelTick(env, db); } catch (e) {} try { dc = await discordTick(env, db); } catch (e) {} try { geo = await geocodePass(env, db, 4); } catch (e) {} } return json({ ...r, photoAi: ai, discord: dc && dc.ok ? dc.alerts : undefined, geo, intel }); } catch (e) { let intel = null; try { intel = await intelTick(env, db); } catch (e2) {} return json({ ok: false, error: 'sync_failed', detail: String(e.message || e).slice(0, 120), intel }); } // ข้อมูลสถานการณ์เก็บต่อแม้ซิงก์ Help Me ล้ม
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });

@@ -15,7 +15,11 @@ const keepOnOld = p => ['/api', '/team', '/call'].some(b => under(p, b));
 
 export default {
   // ซิงก์เคส Help Me (Google Sheet) เข้าฐานข้อมูล CENTRAL ทุก 1 นาที + ให้ AI ตรวจรูปผู้แจ้งทีละไม่กี่เคส
-  async scheduled(event, env, ctx) { ctx.waitUntil(fetch(ADMIN + '/api?action=hm_sync', { headers: { 'user-agent': 'helpme4u-router-cron' } }).catch(() => {})); },
+  // ทุก 30 วินาที (cron นาทีละครั้ง + อีกรอบหลังรอ 30 วิ) · เคสที่แจ้งผ่าน helpme4u.com ซิงก์ทันทีอยู่แล้ว (bc.js → hm_nudge)
+  async scheduled(event, env, ctx) {
+    const hit = () => fetch(ADMIN + '/api?action=hm_sync', { headers: { 'user-agent': 'helpme4u-router-cron' } }).catch(() => {});
+    ctx.waitUntil((async () => { await hit(); await new Promise(r => setTimeout(r, 30e3)); await hit(); })());
+  },
   async fetch(req) {
     const url = new URL(req.url);
     if (url.hostname === 'www.helpme4u.com') { url.hostname = 'helpme4u.com'; return Response.redirect(url.toString(), 301); }

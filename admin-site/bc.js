@@ -9,6 +9,12 @@
   const me=document.currentScript,MODE=(me&&me.dataset.mode)||'public',API=new URL('/api',me&&me.src?me.src:location.href).href;
   const LV={info:{t:'ข่าวสาร',i:'ℹ️',c:'#1f5fbf',bg:'#eaf1fd'},warn:{t:'เฝ้าระวัง',i:'⚠️',c:'#b45309',bg:'#fff4e0'},danger:{t:'อันตราย · อพยพ',i:'🚨',c:'#c62828',bg:'#fdeaea'}};
   const RANK={danger:0,warn:1,info:2};
+  /* หน้าบ้าน helpme4u.com: มีคนแจ้งเคส/แก้เคส (POST ไป Apps Script ของ Help Me) → บอก CENTRAL ให้ดึงเคสทันที (เรียลไทม์) */
+  if(MODE==='public'&&window.fetch){const of=window.fetch;window.fetch=function(u,o){const p=of.apply(this,arguments);
+    try{const url=String(u&&u.url||u),m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
+      if(m==='POST'&&/script\.google(usercontent)?\.com\/macros\//.test(url)){const b=String(o&&o.body||'');const a=(b.match(/"action"\s*:\s*"([a-z_]+)"/)||[])[1]||'';
+        if(!/^(list|ping|track|teams|network|outreach|stats)$/.test(a))p.then(()=>{try{of(API+'?action=hm_nudge&t='+Date.now(),{keepalive:true,mode:'no-cors',cache:'no-store'}).catch(()=>{})}catch(e){}}).catch(()=>{})}}catch(e){}
+    return p}}
   const BKK='พระนคร ดุสิต หนองจอก บางรัก บางเขน บางกะปิ ปทุมวัน ป้อมปราบศัตรูพ่าย พระโขนง มีนบุรี ลาดกระบัง ยานนาวา สัมพันธวงศ์ พญาไท ธนบุรี บางกอกใหญ่ ห้วยขวาง คลองสาน ตลิ่งชัน บางกอกน้อย บางขุนเทียน ภาษีเจริญ หนองแขม ราษฎร์บูรณะ บางพลัด ดินแดง บึงกุ่ม สาทร บางซื่อ จตุจักร บางคอแหลม ประเวศ คลองเตย สวนหลวง จอมทอง ดอนเมือง ราชเทวี ลาดพร้าว วัฒนา บางแค หลักสี่ สายไหม คันนายาว สะพานสูง วังทองหลาง คลองสามวา บางนา ทวีวัฒนา ทุ่งครุ บางบอน'.split(' ');
   const S={items:[],open:false,loaded:0,pos:null};
   const get=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}};

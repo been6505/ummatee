@@ -735,3 +735,9 @@ body::before{content:"";position:fixed;left:0;right:0;top:0;height:var(--sat);ba
 .ts-cc b{display:flex;align-items:center;gap:3px;font-size:12px;color:#1C2340;white-space:nowrap;overflow:hidden}.ts-cc b .ic{width:12px;height:12px;flex:none;color:#B42318}
 .ts-cc span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ts-cc em{font-style:normal;font-weight:800;color:#B42318;white-space:nowrap}.ts-cc small{color:#1F7A43;font-size:10.5px}
 .ts-cc.more{align-items:center;justify-content:center;font-weight:800;font-size:14px;border-left-color:#C7CCDA}
+
+.rte-top,.rte-body{display:flex;flex-direction:column;gap:10px}
+.rte-mini{flex:none;height:210px;border-radius:12px;overflow:hidden;border:1px solid #E3E6EF;background:#E9EEF5;z-index:0}
+.rte-pt.sm{width:18px;height:18px;font-size:10px}
+body.rte-on .rally-fab{display:none!important}
+@media(max-width:760px){.rte-mini{height:180px}.rte{max-height:72vh}}

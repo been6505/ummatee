@@ -1,6 +1,7 @@
 const RTE=(()=>{
   const E={on:false,team:'',c:null,from:null,via:[],avoid:[],auto:true,mode:'',opts:[],sel:0,note:'',busy:false,g:null,plans:{}};
-  const box=document.createElement('aside');box.className='rte';box.hidden=true;document.body.append(box);
+  const box=document.createElement('aside');box.className='rte';box.hidden=true;box.innerHTML='<div class="rte-top"></div><div class="rte-mini"></div><div class="rte-body"></div>';document.body.append(box);
+  const top=box.querySelector('.rte-top'),body=box.querySelector('.rte-body'),miniEl=box.querySelector('.rte-mini');let mini=null,mg=null;
   const fmt=x=>`${x.km.toFixed(1)} กม. · ~${Math.max(1,Math.round(x.min))} นาที`;
   const nav=()=>typeof ROUTE!=='undefined'&&ROUTE.nav;
   async function loadPlans(){try{const r=await apiGet({action:'route_list'});if(r&&r.ok){E.plans={};r.routes.forEach(x=>{E.plans[x.team]=x});if(typeof TRACK!=='undefined'&&TRACK.setPlans)TRACK.setPlans(E.plans)}}catch(e){}}
@@ -30,15 +31,25 @@ const RTE=(()=>{
       mk.on('dragend',()=>{const ll=mk.getLatLng();p.lat=ll.lat;p.lng=ll.lng;compute()});mk.on('click',()=>{(kind==='via'?E.via:E.avoid).splice(i,1);compute()})};
     E.via.forEach((p,i)=>pin(p,i,'via'));E.avoid.forEach((p,i)=>pin(p,i,'avoid'))}
   function draw(){if(!E.on)return;const pl=E.plans[E.team],sent=pl&&String(pl.caseId)===String(E.c.id);
-    box.innerHTML=`<div class="rte-h"><div><b>ปรับเส้นทาง · ${esc(E.team)}</b><small>ไปเคส #${esc(E.c.id)} · ${esc((E.c.needs||[]).slice(0,2).join(', ')||'เคส')}${E.c.district?' · '+esc(E.c.district):''}</small></div><button type="button" class="rte-x" data-rx aria-label="ปิด">✕</button></div>
-      ${sent?`<p class="rte-sent">ส่งให้ทีมแล้ว ${esc(ago(pl.at))}${pl.by?' · '+esc(pl.by):''} · ${pl.km} กม.</p>`:''}
-      <label class="rte-chk"><input type="checkbox" data-rauto ${E.auto?'checked':''}> เลี่ยงถนนน้ำท่วม / จุดรายงานน้ำท่วม / เซ็นเซอร์น้ำสูง</label>
+    top.innerHTML=`<div class="rte-h"><div><b>ปรับเส้นทาง · ${esc(E.team)}</b><small>ไปเคส #${esc(E.c.id)} · ${esc((E.c.needs||[]).slice(0,2).join(', ')||'เคส')}${E.c.district?' · '+esc(E.c.district):''}</small></div><button type="button" class="rte-x" data-rx aria-label="ปิด">✕</button></div>
+      ${sent?`<p class="rte-sent">ส่งให้ทีมแล้ว ${esc(ago(pl.at))}${pl.by?' · '+esc(pl.by):''} · ${pl.km} กม.</p>`:''}`;
+    body.innerHTML=`      <label class="rte-chk"><input type="checkbox" data-rauto ${E.auto?'checked':''}> เลี่ยงถนนน้ำท่วม / จุดรายงานน้ำท่วม / เซ็นเซอร์น้ำสูง</label>
       <div class="rte-tools"><button type="button" class="${E.mode==='via'?'on':''}" data-rmode="via">+ จุดผ่าน</button><button type="button" class="${E.mode==='avoid'?'on':''}" data-rmode="avoid">+ จุดอุปสรรค</button>${E.via.length||E.avoid.length?'<button type="button" data-rreset>ล้างจุด</button>':''}</div>
       ${E.mode?`<p class="rte-hint">แตะบนแผนที่เพื่อวาง${E.mode==='via'?'จุดที่ต้องผ่าน':'จุดอุปสรรค (ห้ามผ่าน)'}</p>`:''}
       <div class="rte-opts">${E.busy?'<p class="rte-hint">กำลังคำนวณเส้นทาง…</p>':E.err?`<p class="rte-err">${esc(E.err)}</p>`:E.opts.map((o,i)=>`<button type="button" class="rte-o${i===E.sel?' on':''}" data-ropt="${i}"><b>${i===0?'แนะนำ · ':''}${esc(o.tag)}</b><span>${fmt(o)}</span><em class="${o.hits?'bad':'ok'}">${o.hits?`ผ่านจุดน้ำท่วม ${o.hits} จุด`:'ไม่ผ่านจุดน้ำท่วม'}</em></button>`).join('')}</div>
       <label class="rte-note">หมายเหตุถึงทีม<textarea data-rnote rows="2" maxlength="300" placeholder="เช่น ถนนสุวินทวงศ์ช่วง กม.5 น้ำลึก ให้เข้าทางซอย 12 แทน">${esc(E.note)}</textarea></label>
       <div class="rte-act"><button type="button" class="btn primary" data-rsend ${E.opts.length&&!E.busy?'':'disabled'}>ส่งเส้นทางให้ทีม</button>${sent?'<button type="button" class="btn ghost" data-rclear>ยกเลิกเส้นทางที่ส่ง</button>':''}</div>`;
-    drawMap()}
+    drawMap();drawMini()}
+  function drawMini(){if(!mini){mini=L.map(miniEl,{zoomControl:false,attributionControl:false,dragging:true,scrollWheelZoom:false});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(mini);mg=L.layerGroup().addTo(mini)}
+    mg.clearLayers();const to=[+E.c.lat,+E.c.lng],fr=[E.from.lat,E.from.lng],o=E.opts[E.sel];let bd=L.latLngBounds([fr,to]);
+    E.opts.forEach((x,i)=>{if(i!==E.sel)L.polyline(x.coords,{color:'#5B6386',weight:3,opacity:.5,dashArray:'5 5'}).on('click',()=>{E.sel=i;draw()}).addTo(mg)});
+    if(o){L.polyline(o.coords,{color:'#fff',weight:8}).addTo(mg);const ln=L.polyline(o.coords,{color:'#1F7A43',weight:5}).addTo(mg);bd=bd.extend(ln.getBounds())}else if(!E.busy)L.polyline([fr,to],{color:'#E5383B',weight:3,dashArray:'6 6'}).addTo(mg);
+    (E.hz||[]).forEach(h=>{if(o&&nav()&&nav().hitsOn(o.coords,[h]).length)L.circleMarker([h.lat,h.lng],{radius:5,color:'#fff',weight:2,fillColor:'#2563EB',fillOpacity:.9}).addTo(mg)});
+    E.via.forEach((p,i)=>L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:`<div class="rte-pt via sm">${i+1}</div>`,iconSize:[18,18],iconAnchor:[9,9]})}).addTo(mg));
+    E.avoid.forEach(p=>L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="rte-pt avoid sm">✕</div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(mg));
+    L.circleMarker(fr,{radius:7,color:'#fff',weight:3,fillColor:'#2563EB',fillOpacity:1}).bindTooltip(esc(E.team)).addTo(mg);
+    L.marker(to,{icon:L.divIcon({className:'',html:'<div class="rte-goal"><i data-ic="flag"></i></div>',iconSize:null,iconAnchor:[14,28]})}).addTo(mg);
+    requestAnimationFrame(()=>{mini.invalidateSize();mini.fitBounds(bd,{padding:[18,18],maxZoom:16})})}
   box.addEventListener('click',async e=>{const t=e.target;
     if(t.closest('[data-rx]')){close();return}
     const md=t.closest('[data-rmode]');if(md){E.mode=E.mode===md.dataset.rmode?'':md.dataset.rmode;draw();return}

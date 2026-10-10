@@ -329,7 +329,11 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
     <p class="d-now">สถานะ: <b class="st-txt st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>
     ${c.teamIssue?`<div class="d-teamdone d-issue"><b>ทีมแจ้งปัญหา · ${esc(ago(c.teamIssueAt))}</b><span>${esc(c.teamIssue)} · ส่งทีมอื่นได้ที่ "เปลี่ยนทีม" หรือปิดเคส</span></div>`:''}
     ${rep?`<div class="d-teamdone"><b>ทีมแจ้งว่าช่วยเหลือแล้ว · ${esc(ago(c.teamDoneAt))}</b>${c.teamNote?`<span>${esc(c.teamNote)}</span>`:''}</div>`:''}
-    <label class="d-lbl">ทีม<select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select></label>
+    <label class="d-lbl">ทีม<span class="d-teamrow"><select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select>${done?'':'<button type="button" class="btn ghost sm" data-dact="newteam" title="สร้างทีมใหม่">+ ทีมใหม่</button>'}</span></label>
+    <div class="d-newteam" id="d-newteam" hidden><b>สร้างทีมใหม่</b>
+      <div class="d-nt-row"><input id="nt-name" maxlength="60" placeholder="ชื่อทีม *"><input id="nt-leader" maxlength="60" placeholder="หัวหน้าทีม"></div>
+      <div class="d-nt-row"><input id="nt-phone" type="tel" inputmode="tel" maxlength="20" placeholder="เบอร์โทร"><select id="nt-veh"><option value="">พาหนะ</option><option value="boat">เรือ</option><option value="truck">รถสูง / รถบรรทุก</option><option value="pickup">รถกระบะ</option><option value="car">รถเก๋ง / รถตู้</option><option value="motorbike">มอเตอร์ไซค์</option><option value="foot">เดินเท้า</option><option value="other">อื่น ๆ</option></select><input id="nt-mem" type="number" min="1" max="999" inputmode="numeric" placeholder="คน"></div>
+      <div class="d-nt-row"><button type="button" class="btn primary sm" data-dact="ntsave">สร้างและเลือกทีมนี้</button><button type="button" class="btn ghost sm" data-dact="ntcancel">ยกเลิก</button></div></div>
     <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="2" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
     ${stkBox(c,done)}
     <button type="button" class="btn d-save" data-dact="save" disabled><i data-ic="check"></i> บันทึก</button>
@@ -364,6 +368,13 @@ async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=s
     toast(val===''?'กลับไปใช้ระดับของระบบแล้ว':`ตั้งระดับเป็น "${URG[val]}" แล้ว`,true)}
   catch(e){Object.assign(c,prev);vrCache.delete(c.id);render();renderDrawer();toast('บันทึกไม่สำเร็จ')}}
 async function assignAct(c,act,btn){
+  if(act==='newteam'){const f=$('#d-newteam');f.hidden=!f.hidden;if(!f.hidden)$('#nt-name').focus();return}
+  if(act==='ntcancel'){$('#d-newteam').hidden=true;return}
+  if(act==='ntsave'){const name=$('#nt-name').value.trim();if(!name){toast('ใส่ชื่อทีมก่อน');$('#nt-name').focus();return}
+    btn.disabled=true;const r=await post({action:'roster_save',key:A.key,by:store.get('uh_staff')||'',team:{name,leader:$('#nt-leader').value.trim(),phone:$('#nt-phone').value.trim(),vehicle:$('#nt-veh').value,members:$('#nt-mem').value,status:'ready'}}).catch(()=>null);btn.disabled=false;
+    if(!r||!r.ok){toast(r&&r.error==='duplicate_name'?'มีทีมชื่อนี้แล้ว · เลือกจากรายการได้เลย':'สร้างทีมไม่สำเร็จ');return}
+    A.roster=null;await loadRoster();const sel=$('#d-team');if(sel){if(![...sel.options].some(o=>o.value===name))sel.insertAdjacentHTML('beforeend',`<option value="${esc(name)}">${esc(name)} · ว่าง</option>`);sel.value=name}
+    $('#d-newteam')&&($('#d-newteam').hidden=true);toast(`สร้างทีม "${name}" แล้ว · กด "มอบหมาย" เพื่อส่งเคสให้ทีมนี้`,true);return}
   if(act==='stkadd'){const id=$('#d-stk-item').value,q=Math.max(1,parseInt($('#d-stk-qty').value,10)||1);if(!id){toast('เลือกของก่อน');return}
     const it=A.stock.items.find(i=>String(i.id)===id);if(q>(+it.qty||0)){toast(`${it.name} เหลือ ${it.qty} ${it.unit||''}`);return}
     const L=stkPend(c),ex=L.find(x=>x.id===id);if(ex)ex.qty+=q;else L.push({id,name:it.name,qty:q});renderDrawer();return}

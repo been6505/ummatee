@@ -531,3 +531,10 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .bd-cases{display:flex;flex-wrap:wrap;gap:6px}.bd-case{display:inline-flex;gap:4px;align-items:center;background:#FFF1F3;color:#8E0F22;border-radius:999px;padding:3px 4px 3px 10px;font-size:13px}.bd-case button{border:0;background:rgba(0,0,0,.08);border-radius:50%;width:20px;height:20px;cursor:pointer}
 .bd-act{display:flex;gap:10px;align-items:center;justify-content:space-between;position:sticky;bottom:-16px;background:var(--surface,#fff);padding:10px 0}
 .btn.danger{color:#C62828}
+/* สร้างทีมใหม่จากกล่องมอบหมาย */
+.d-teamrow{display:flex;gap:6px;align-items:stretch}.d-teamrow select{flex:1;min-width:0}.d-teamrow .btn{flex:none;white-space:nowrap}
+.d-newteam{display:grid;gap:8px;padding:12px;border:1.5px dashed #F2B8BF;border-radius:14px;background:#FFF8F8}
+.d-nt-row{display:flex;gap:6px;flex-wrap:wrap}.d-nt-row>*{flex:1;min-width:110px}.d-nt-row .btn{flex:0 0 auto;min-width:0}
+.d-nt-row input,.d-nt-row select{font:inherit;font-size:15px;min-height:40px;border:1px solid var(--line,#e2e4ea);border-radius:10px;padding:6px 10px;background:var(--surface,#fff);color:inherit}
+@media(max-width:760px){.d-nt-row input,.d-nt-row select{font-size:16px}}
+body.noscroll .al-silent{display:none!important} /* เปิดรายละเอียดเคสอยู่: ซ่อนเตือนทีมเงียบ (SOS/สายเข้ายังแสดง) */

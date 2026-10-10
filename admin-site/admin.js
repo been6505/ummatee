@@ -483,6 +483,19 @@ window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});
 window.addEventListener('hm-rev',e=>{if(A.key&&e.detail.what.includes('rev')){A.rev=e.detail.rev;load()}});
 
 async function hoLoad(c){const el=$('#d-ho');if(!el)return;const id=apiId(c.id);let r=null;try{r=await api({action:'case_photos',key:A.key,id})}catch(e){}
-  if(!r||!r.ok||!r.photos.length||A.openId!==String(c.id)){if(c.teamDoneAt&&r&&r.ok&&!r.photos.length){el.hidden=false;el.innerHTML='<b><i data-ic="cam"></i> ภาพส่งมอบ</b><p class="muted small">ทีมแจ้งช่วยแล้วแต่ยังไม่มีภาพ</p>'}return}
-  const t=typeof HMT!=='undefined'?await HMT.get():'',u=n=>'/api?'+new URLSearchParams({action:'case_photo',n,t});
-  el.hidden=false;el.innerHTML=`<b><i data-ic="cam"></i> ภาพส่งมอบ · ${r.photos.length} รูป</b><small class="muted"> ${esc(r.photos[0].team||'')} · ${esc(ago(r.photos[r.photos.length-1].at))}</small><div class="d-ho-g">${r.photos.map(p=>`<a href="${u(p.n)}" target="_blank" rel="noopener"><img src="${u(p.n)}" alt="ภาพส่งมอบ" loading="lazy"></a>`).join('')}</div>`}
+  if(!r||!r.ok||A.openId!==String(c.id))return;
+  const head=(n,meta)=>`<div class="ho-hd"><span class="ho-ic"><i data-ic="cam"></i></span><div><b>ภาพส่งมอบ${n?` <em>${n} รูป</em>`:''}</b>${meta?`<small>${meta}</small>`:''}</div></div>`;
+  if(!r.photos.length){if(c.teamDoneAt){el.hidden=false;el.className='d-ho empty';el.innerHTML=head(0,'ทีมแจ้งช่วยแล้ว แต่ไม่ได้ถ่ายภาพ')}return}
+  const t=typeof HMT!=='undefined'?await HMT.get():'',u=n=>'/api?'+new URLSearchParams({action:'case_photo',n,t}),hm=x=>new Date(Number(x)).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const L=r.photos.map(p=>({src:u(p.n),team:p.team||'',at:p.at,lat:p.lat,lng:p.lng}));A.hoList=L;
+  el.hidden=false;el.className='d-ho';el.innerHTML=head(L.length,`${esc(L[0].team)} · ${esc(ago(L[L.length-1].at))}`)+`<div class="d-ho-g">${L.map((p,i)=>`<button type="button" class="ho-th" data-hov="${i}" aria-label="ดูภาพส่งมอบ ${i+1}"><img src="${p.src}" alt="" loading="lazy"><span class="ho-tm">${esc(hm(p.at))}</span>${p.lat?'<span class="ho-gps"><i data-ic="pin"></i></span>':''}</button>`).join('')}</div>`;
+  if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)})}
+function hoView(L,i){if(!L||!L.length)return;let k=i||0,sx=null;const d=document.createElement('div');d.className='ho-lb';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');
+  const draw=()=>{const p=L[k],dt=new Date(Number(p.at));d.innerHTML=`<button type="button" class="ho-x" data-hx aria-label="ปิด">✕</button>${L.length>1?'<button type="button" class="ho-nv prev" data-hp aria-label="ก่อนหน้า">‹</button><button type="button" class="ho-nv next" data-hn aria-label="ถัดไป">›</button>':''}
+    <figure><img src="${p.src}" alt="ภาพส่งมอบ ${k+1}"><figcaption><b>ภาพ ${k+1}/${L.length}</b><span>${esc([p.team,p.at?dt.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''].filter(Boolean).join(' · '))}</span>${p.lat?`<a href="https://maps.google.com/?q=${+p.lat},${+p.lng}" target="_blank" rel="noopener">จุดที่ถ่าย ↗</a>`:''}<a href="${p.src}" target="_blank" rel="noopener">เปิดภาพเต็ม ↗</a></figcaption></figure>
+    ${L.length>1?`<div class="ho-dots">${L.map((_,j)=>`<i class="${j===k?'on':''}"></i>`).join('')}</div>`:''}`};
+  const go=n=>{k=(k+n+L.length)%L.length;draw()},close=()=>{d.remove();removeEventListener('keydown',kb)},kb=e=>{if(e.key==='Escape')close();else if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1)};
+  d.addEventListener('click',e=>{if(e.target.closest('[data-hx]')||e.target===d)close();else if(e.target.closest('[data-hn]'))go(1);else if(e.target.closest('[data-hp]'))go(-1)});
+  d.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});d.addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)go(dx<0?1:-1)});
+  addEventListener('keydown',kb);draw();document.body.append(d)}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hov]');if(b){e.preventDefault();hoView(A.hoList,+b.dataset.hov)}});

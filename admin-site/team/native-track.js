@@ -95,7 +95,7 @@ window.NTRK = (() => {
     S.on = on || S.on;
     const same = S.cfg && JSON.stringify(S.cfg) === JSON.stringify(cfg);
     if (!same) S.svc = false;
-    S.cfg = cfg; put('ntrk_cfg', cfg);
+    S.cfg = cfg; { const { key, ...safe } = cfg; put('ntrk_cfg', cfg.tk ? safe : cfg); }
     if (!same && S.st.state === 'fatal') emit({ state: 'idle', err: '' });
     if (!S.wid && !S.watching) { S.watching = true; S.q = (await get('ntrk_q')) || []; await watch(); }
     if ((await get('ntrk_svc')) && !S.svc) svc();

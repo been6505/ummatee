@@ -30,7 +30,7 @@ function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.n
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
   const later=(a,f)=>api(a).then(x=>{f(x);if(D.loaded)render()}).catch(()=>{});
-  later({action:'stock',key:D.key},sk=>{D.stock=sk&&sk.ok?sk:D.stock});later({action:'leads',key:D.key,days:30},ld=>{D.leads=ld&&ld.ok?ld.leads:D.leads});later({action:'teams',key:D.key},tl=>{if(tl&&tl.ok)D.live=tl.teams||[]});
+  later({action:'stock',key:D.key},sk=>{D.stock=sk&&sk.ok?sk:D.stock});later({action:'teams',key:D.key},tl=>{if(tl&&tl.ok)D.live=tl.teams||[]});
   try{const r=await api({action:'list',key:D.key});if(!r||!r.ok)throw 0;
     api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
     api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});

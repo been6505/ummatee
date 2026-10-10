@@ -538,3 +538,45 @@ s.veh.run{animation:vehbob .45s ease-in-out infinite alternate}
 .d-nt-row input,.d-nt-row select{font:inherit;font-size:15px;min-height:40px;border:1px solid var(--line,#e2e4ea);border-radius:10px;padding:6px 10px;background:var(--surface,#fff);color:inherit}
 @media(max-width:760px){.d-nt-row input,.d-nt-row select{font-size:16px}}
 body.noscroll .al-silent{display:none!important} /* เปิดรายละเอียดเคสอยู่: ซ่อนเตือนทีมเงียบ (SOS/สายเข้ายังแสดง) */
+/* หน้าจัดการเคส: การ์ดสรุปเล็กลง · ตัวกรองรวมอยู่ในปุ่ม "ตัวกรอง" ทุกขนาดจอ */
+#stats.stats:has([data-sf="teams"]){grid-template-columns:repeat(auto-fill,minmax(118px,1fr))!important;gap:8px!important}
+#stats.stats:has([data-sf="teams"]) .stat{padding:8px 12px!important;min-height:0!important;border-radius:14px!important}
+#stats.stats:has([data-sf="teams"]) .stat b{font-size:20px!important;line-height:1.15}
+#stats.stats:has([data-sf="teams"]) .stat span{font-size:11.5px!important;line-height:1.3;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:1280px){#stats.stats:has([data-sf="teams"]){grid-template-columns:repeat(9,minmax(0,1fr))!important}}
+#f-toggle.f-toggle{display:inline-flex!important;min-height:42px;flex:none;align-items:center;gap:4px}
+#filters-box.filters-box{display:none!important;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;width:100%}
+#filters-box.filters-box.open{display:grid!important}
+#filters-box.filters-box select{min-height:40px;width:100%}
+/* ---------- รายละเอียดเคสบนจอคอม: จัดให้อ่านง่าย ----------
+   คอลัมน์ขวา: งานที่ทำบ่อยขึ้นก่อน (มอบหมายทีม → ติดต่อ/นำทาง → ข้อมูลเคส) · ข้อมูลเป็นตาราง 2 ช่องอ่านง่าย · ข้อความซิงก์ย่อเล็ก */
+@media (min-width:900px){
+  .drawer:has(>.d-grid) .d-grid{grid-template-columns:minmax(0,1fr) minmax(380px,.9fr)!important;gap:20px!important}
+  .drawer:has(>.d-grid) .d-col:last-child{display:flex;flex-direction:column;gap:12px}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-status{order:1;margin:0!important}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-act{order:2;margin:0!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-act>*{min-height:44px;justify-content:center;text-align:center;font-size:14px}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-rows{order:3;margin:0!important;display:grid!important;grid-template-columns:132px minmax(0,1fr)!important;gap:0!important;background:var(--surface,#fff);border:1px solid var(--line,#eceef3);border-radius:16px;padding:4px 14px}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-rows>dt,.drawer:has(>.d-grid) .d-col:last-child>.d-rows>dd{padding:9px 0;border-bottom:1px solid var(--line,#f0f1f4);margin:0;font-size:14.5px;line-height:1.45}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-rows>dt{color:var(--muted);font-weight:500}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-rows>dd{font-weight:600}
+  .drawer:has(>.d-grid) .d-col:last-child>.d-rows>dt:nth-last-of-type(1),.drawer:has(>.d-grid) .d-col:last-child>.d-rows>dd:last-child{border-bottom:0}
+  .drawer:has(>.d-grid) .d-col:last-child>.hm-sync{order:4;font-size:12px!important;line-height:1.5;margin:0!important;color:var(--muted)}
+  .drawer:has(>.d-grid) .d-status{border-radius:16px!important;padding:14px!important}
+  .drawer:has(>.d-grid) .hz-row{margin-top:10px}
+}
+/* รายละเอียดเคส: ข้อความน้อย · เลื่อนน้อย (รายละเอียดเต็มยังอยู่ใน "รายละเอียด / ตรวจเอง") */
+.vr-box>.vr-why:not(.vr-lv),.vr-box>.vr-note,.drawer .hm-sync,.cov-box>p:not(:first-of-type){display:none!important}
+.vr-box .vr-top p{display:none}
+.vr-fig-map{height:180px!important}
+.vr-pic-body{aspect-ratio:16/8!important}
+.vr-pic figcaption small{display:none}
+.cov-box li:nth-child(n+2){display:none}
+.d-photos img{max-height:110px}
+.drawer:has(>.d-grid) .d-notes{padding:8px 12px!important}
+/* กล่องมอบหมายทีมกระชับ: ป้ายหัวช่องซ่อน (ช่องมีคำอธิบายในตัวอยู่แล้ว) · หมายเหตุขยายเมื่อพิมพ์ */
+.d-status .d-lbl{font-size:0!important;gap:0!important}
+.d-status .d-lbl-t{display:none}
+.d-status #d-note{min-height:42px;transition:min-height .15s}.d-status #d-note:focus,.d-status #d-note:not(:placeholder-shown){min-height:84px}
+.d-status{gap:8px!important}
+.al-silent{padding-top:8px!important;padding-bottom:8px!important}.al-silent small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}

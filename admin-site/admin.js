@@ -296,7 +296,7 @@ function renderDrawer(){
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
-    <dl class="d-rows">${rows.map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
+    <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary" href="tel:${esc(t)}">โทรหาผู้แจ้ง</a>`:''}
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
@@ -334,7 +334,7 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
       <div class="d-nt-row"><input id="nt-name" maxlength="60" placeholder="ชื่อทีม *"><input id="nt-leader" maxlength="60" placeholder="หัวหน้าทีม"></div>
       <div class="d-nt-row"><input id="nt-phone" type="tel" inputmode="tel" maxlength="20" placeholder="เบอร์โทร"><select id="nt-veh"><option value="">พาหนะ</option><option value="boat">เรือ</option><option value="truck">รถสูง / รถบรรทุก</option><option value="pickup">รถกระบะ</option><option value="car">รถเก๋ง / รถตู้</option><option value="motorbike">มอเตอร์ไซค์</option><option value="foot">เดินเท้า</option><option value="other">อื่น ๆ</option></select><input id="nt-mem" type="number" min="1" max="999" inputmode="numeric" placeholder="คน"></div>
       <div class="d-nt-row"><button type="button" class="btn primary sm" data-dact="ntsave">สร้างและเลือกทีมนี้</button><button type="button" class="btn ghost sm" data-dact="ntcancel">ยกเลิก</button></div></div>
-    <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="2" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
+    <label class="d-lbl">หมายเหตุ<textarea id="d-note" rows="1" maxlength="500" placeholder="เช่น นำเรือไปด้วย · ผู้ป่วยติดเตียง 1 คน (ทีมเห็นข้อความนี้)">${esc(c.hqNote||'')}</textarea></label>
     ${stkBox(c,done)}
     <button type="button" class="btn d-save" data-dact="save" disabled><i data-ic="check"></i> บันทึก</button>
     <div class="d-st-btns">

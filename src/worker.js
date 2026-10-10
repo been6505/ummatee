@@ -537,6 +537,25 @@ async function updateCase(db, b) {
   await bumpRev(db);
   return { ok: true, bags, bagsSupported: true };
 }
+/* ตำแหน่งทีมแบบเรียลไทม์ (Server-Sent Events): ส่งเฉพาะทีมที่ขยับทันทีที่มีจุดใหม่ (ตรวจทุก 1 วิ)
+   ต่อครั้งเปิดไว้ ~40 วิ แล้วปิด · เบราว์เซอร์ต่อใหม่เองใน 0.8 วิ (ไม่เกินโควตาคำสั่งฐานข้อมูลต่อคำขอ) · War Room เห็นเฉพาะทีมของห้อง */
+async function liveStream(db, p) {
+  const sc = WRC ? await wrScope(db) : null, enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
+  let last = Number(p.since) || 0;
+  (async () => {
+    await w.write(enc.encode('retry: 800\n\n'));
+    for (let i = 0; i < 40; i++) {
+      const { results } = await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading FROM teams_live WHERE updatedAt>?').bind(last || Date.now() - TEAM_FRESH_MS).all();
+      const rows = sc ? results.filter(r => sc.teams.has(r.team)) : results;
+      if (results.length) last = Math.max(last, ...results.map(r => Number(r.updatedAt) || 0));
+      if (rows.length) await w.write(enc.encode('data: ' + JSON.stringify(rows.map(t => ({ ...t, caseId: t.caseId || '' }))) + '\n\n'));
+      else if (i % 10 === 9) await w.write(enc.encode(': hb\n\n'));
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    await w.close();
+  })().catch(() => { try { w.abort(); } catch (e) {} });
+  return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' } });
+}
 async function readTeams(db) {
   const { results } = await db.prepare('SELECT * FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS).all();
   return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
@@ -1224,7 +1243,7 @@ Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s =
    ลิงก์ห้อง/บัญชีห้องเรียกได้เฉพาะคำสั่งในรายการอนุญาต · อ่านได้เฉพาะเคส/ทีม/แชท/คลังในพื้นที่ของห้อง (ตรรกะเดียวกับหน้า War Room)
    ศูนย์จังหวัดเห็นทั้งจังหวัด + ใกล้เคียง 20 กม. · ห้องที่ตั้งเขต '*' เห็นเคสทุกพื้นที่ (แต่ทีมยังเป็นของห้องเอง) */
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -2671,6 +2690,7 @@ async function api(request, env) {
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
       case 'rev': { const r = await db.prepare("SELECT v FROM meta WHERE k='rev'").first(); return json({ ok: true, rev: r ? r.v : '0' }); }
+      case 'live_stream': return vol ? liveStream(db, p) : json({ ok: false, error: 'not_volunteer' });
       case 'teams': {
         const t = await readTeams(db);
         if (vol) return json({ ok: true, teams: t });

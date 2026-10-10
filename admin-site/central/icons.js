@@ -99,9 +99,13 @@ function umPin(k,o={}){
 
 /* หมุดทีมขยับลื่นแบบเรียลไทม์: เลื่อนจากตำแหน่งเดิมไปตำแหน่งใหม่ตลอดช่วงเวลารอข้อมูลรอบถัดไป (ไม่กระโดด)
    ระยะไกลเกิน 3 กม. หรือแท็บซ่อนอยู่ = ย้ายทันที */
-function glideTo(m,ll,ms=1900){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
-  if(!a||a.distanceTo(b)<0.3)return;if(a.distanceTo(b)>3000||document.hidden){m.setLatLng(b);return}
-  const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms);m.setLatLng([a.lat+(b.lat-a.lat)*k,a.lng+(b.lng-a.lng)*k]);if(k<1)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)}
+function glideTo(m,ll,ms=900,mv){if(!m||!window.L)return;const a=m.getLatLng(),b=L.latLng(ll);cancelAnimationFrame(m._glide);
+  const sp=mv&&Number(mv.speed)>=3&&mv.heading!=null&&isFinite(mv.heading)?Number(mv.speed)/3.6:0,hd=sp?Number(mv.heading)*Math.PI/180:0;
+  // ขยับต่อเนื่องตามความเร็ว/ทิศล่าสุด ระหว่างรอจุดถัดไป (สูงสุด 4 วิ / 50 ม.) · จุดจริงมาถึงค่อยเลื่อนเข้าหา
+  const drift=(p,t0)=>{if(!sp)return;const step=t=>{const s=Math.min(4,(t-t0)/1000),d=Math.min(50,sp*s),dy=d*Math.cos(hd)/111320,dx=d*Math.sin(hd)/(111320*Math.cos(p.lat*Math.PI/180));m.setLatLng([p.lat+dy,p.lng+dx]);if(s<4&&d<50)m._glide=requestAnimationFrame(step)};m._glide=requestAnimationFrame(step)};
+  if(!a||document.hidden||a.distanceTo(b)>3000){m.setLatLng(b);return}
+  if(a.distanceTo(b)<0.3){drift(b,performance.now());return}
+  const t0=performance.now(),step=t=>{const k=Math.min(1,(t-t0)/ms),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;m.setLatLng([a.lat+(b.lat-a.lat)*e,a.lng+(b.lng-a.lng)*e]);if(k<1)m._glide=requestAnimationFrame(step);else drift(b,t)};m._glide=requestAnimationFrame(step)}
 /* ลูกศรทิศทางเมื่อทีมกำลังเคลื่อนที่ (ความเร็ว ≥ 3 กม./ชม. และรู้ทิศ) */
 /* หมุดทีมบนแผนที่: ยานพาหนะ 3D ตามที่ทีมเลือก (Fluent Emoji 3D · MIT) · หันหน้าไปทางที่วิ่ง (ซ้าย/ขวา) · วิ่งอยู่ = เด้งเบา ๆ
    ใช้: headArrow(ตำแหน่งทีม, ชนิดยานพาหนะของทีม) */

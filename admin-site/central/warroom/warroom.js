@@ -295,7 +295,7 @@ function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos
     const tip=esc(`${l.team} · ${stale?'ตำแหน่งเมื่อ '+ago(l.updatedAt):'ออนไลน์'}${l.battery!=null?' · แบต '+l.battery+'%':''}${l.speed?' · '+Math.round(l.speed)+' กม./ชม.':''}`);
     let mk=W.tm.get(l.team);
     if(!mk){mk=L.marker([l.lat,l.lng],{icon:L.divIcon({className:cls,html,iconSize:[42,36],iconAnchor:[21,18]}),keyboard:false}).bindTooltip(tip,{direction:'top',offset:[0,-8]}).addTo(W.lt);mk._k=cls+html;W.tm.set(l.team,mk)}
-    else{glideTo(mk,[l.lat,l.lng]);if(mk._k!==cls+html){mk._k=cls+html;mk.setIcon(L.divIcon({className:cls,html,iconSize:[42,36],iconAnchor:[21,18]}))}mk.setTooltipContent(tip)}
+    else{glideTo(mk,[l.lat,l.lng],900,l);if(mk._k!==cls+html){mk._k=cls+html;mk.setIcon(L.divIcon({className:cls,html,iconSize:[42,36],iconAnchor:[21,18]}))}mk.setTooltipContent(tip)}
     mk.setZIndexOffset(s?3000:2000)});
   for(const [k,mk] of W.tm)if(!seen.has(k)){mk.remove();W.tm.delete(k)}
   return pts}
@@ -587,7 +587,8 @@ adminBoot({action:'chat_rev'},'rev',async()=>{document.body.classList.add('warro
   await Promise.all([loadCases(),loadTeams(),loadRooms(),loadWarn()]);render();
   const busy=()=>document.hidden||$('#dlg').open||(document.activeElement&&document.activeElement.matches('input,select,textarea'));
   setInterval(async()=>{if(busy())return;await loadTeams();if(W.tab==='over'||W.tab==='teams')render()},15000);
-  setInterval(pollLive,2000); // ตำแหน่งทีมแบบเรียลไทม์
+  setInterval(()=>{if(!(typeof LIVE!=='undefined'&&LIVE.ok()))pollLive()},2000); // สำรอง: ถามซ้ำเมื่อสายเรียลไทม์หลุด
+  if(typeof LIVE!=='undefined')LIVE.start(rows=>{W.live=mergeLive(W.live,rows);if(!document.hidden&&W.tab==='over')moveTeams(view())});
   setInterval(async()=>{if(busy())return;await Promise.all([loadCases(),loadRooms()]);render()},15000);
   document.addEventListener('visibilitychange',async()=>{if(document.hidden||busy())return;await Promise.all([loadCases(),loadTeams(),loadRooms()]);render()});
   setInterval(()=>{if(!document.hidden)loadWarn().then(()=>{if(W.tab==='over')alerts(view())})},10*60000)});

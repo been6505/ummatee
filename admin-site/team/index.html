@@ -255,8 +255,8 @@ body.on-chat .top .st{display:none!important}
 .ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
 </style>
 <script src="../central/verify.js?v=15"></script>
-<script src="../central/icons.js?v=14"></script>
-<script src="./native-track.js?v=3"></script>
+<script src="../central/icons.js?v=15"></script>
+<script src="./native-track.js?v=4"></script>
 <script>/* อยู่ในแอป Help Me ทีม: ซ่อนส่วนตั้งค่าการส่งตำแหน่งแบบเว็บ (Google Maps / จอไม่ดับ / Traccar) เพราะแอปส่งตำแหน่งเองแม้ล็อกจอ */
 (()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style>
@@ -544,7 +544,7 @@ function track(on){
   if(!navigator.geolocation){TR.err='เครื่องนี้หาตำแหน่งไม่ได้';locUI();return}
   if(TR.watch!=null)return;TR.want=true;st.set('uh_tm_loc','1');TR.err='';locUI();
   TR.watch=navigator.geolocation.watchPosition(p=>{TR.err='';TR.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading,at:Date.now()};
-      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>15000||(dist(TR.sentPos,TR.pos)>5&&now-TR.sentAt>2000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
+      const now=Date.now();if(!TR.sentPos||now-TR.sentAt>15000||(dist(TR.sentPos,TR.pos)>3&&now-TR.sentAt>1000))ping();locUI()}, // เคลื่อนที่: ส่งทุก ~3 วินาที ให้ศูนย์เห็นแบบเรียลไทม์
     e=>{TR.err=e.code===1?'ไม่ได้อนุญาตตำแหน่ง · เปิดในการตั้งค่าเบราว์เซอร์':'หาตำแหน่งไม่ได้ · ลองออกที่โล่ง';if(e.code===1){navigator.geolocation.clearWatch(TR.watch);TR.watch=null}locUI()},
     {enableHighAccuracy:true,maximumAge:2000,timeout:30000})}
 async function ping(){const p=TR.pos;if(!p)return;TR.sentAt=Date.now();TR.sentPos=p;

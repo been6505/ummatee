@@ -24,7 +24,7 @@ const TRACK=(()=>{
         html=`<span class="${cls}"><i>${headArrow(t,r&&r.vehicle)}</i><b class="nm">${esc(k)}${t.battery!=null&&t.battery<=20?`<small>แบต ${t.battery}%</small>`:''}</b></span>`;
       let m=mk.get(k);
       if(!m){m=L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}),keyboard:false}).addTo(pins);m._html=html;m.on('click',()=>focus(k));mk.set(k,m)}
-      else{glideTo(m,[+t.lat,+t.lng]);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}
+      else{glideTo(m,[+t.lat,+t.lng],900,t);if(m._html!==html){m._html=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}
       // ทีมที่เลือกอยู่: ต่อเส้นทางสดตามตำแหน่งใหม่
       if(sel===k&&live){const p=live.getLatLngs(),last=p[p.length-1];if(!last||L.latLng(last).distanceTo([+t.lat,+t.lng])>3)live.addLatLng([+t.lat,+t.lng])}
       m.setZIndexOffset(isSos(r)?3000:sel===k?2000:0);m.bindPopup(info(t,r))});

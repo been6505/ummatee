@@ -693,3 +693,9 @@ body.rl-open .rl-float{display:block}
 .ts-live{color:#E5383B;font-weight:700}.ts-bat.chg{color:#1F7A43;opacity:1}
 .dl-pop{min-width:230px;font-size:13px}.dl-pop .dl-h{font-size:15px;display:block}.dl-pop small{color:#6b7280}.dl-pop table{width:100%;border-collapse:collapse;margin:6px 0}.dl-pop td{padding:3px 0;vertical-align:top}.dl-pop td:first-child{color:#5B6386;white-space:nowrap;padding-right:10px}.dl-pop td .ic{width:14px;height:14px;vertical-align:-2px;margin-right:5px}
 .dl-case{background:#FDECEC;color:#B42318;border-radius:8px;padding:6px 8px;font-size:12.5px}.dl-case.idle{background:#F1F3F8;color:#5B6386}.dl-case .ic{width:14px;height:14px;vertical-align:-2px}
+
+.rally-fab{top:calc(env(safe-area-inset-top,0px) + 76px)!important;bottom:auto!important;right:16px!important;width:46px!important;height:46px!important}
+@media(max-width:760px){.rally-fab{top:calc(env(safe-area-inset-top,0px) + 160px)!important;right:12px!important}}
+.rally-fab{z-index:3600!important}
+.rl-float{top:130px!important}
+@media(max-width:760px){.rl-float{top:auto!important}}

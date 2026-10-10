@@ -21,11 +21,11 @@ setInterval(()=>{if(ADM.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIV
 let liveBusy=false;setInterval(async()=>{if(!ADM.key||document.hidden||!T.loaded||liveBusy||(typeof LIVE!=='undefined'&&LIVE.ok()))return;liveBusy=true;try{const r=await apiGet({action:'teams'});if(r&&r.ok){T.live=r.teams||[];liveUI()}}catch(e){}finally{liveBusy=false}},2000);
 function side(){const el=$('#trk-side');if(!el)return;const now=Date.now();
   const sig=a=>a==null?[0,'ไม่มีตำแหน่ง','off']:a<90e3?[4,'ดีมาก','on']:a<5*60e3?[3,'ดี','on']:a<15*60e3?[2,'อ่อน','idle']:a<30*60e3?[1,'อ่อนมาก','idle']:[0,'ขาดการติดต่อ','off'];
-  const dir=h=>h==null?'':['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'][Math.round(((+h%360)+360)%360/45)%8];
+  const dir=TK.dir;
   const rows=T.roster.map(t=>{const l=liveOf(t.name),age=l?now-Number(l.updatedAt):null,cs=teamCases(t.name).filter(c=>c.status==='going'&&!c.teamDoneAt),sos=sosOn(t);return {t,l,age,cs,sos}})
     .sort((a,b)=>(b.sos-a.sos)||((b.cs.length>0)-(a.cs.length>0))||((a.age??9e15)-(b.age??9e15)));
   const on=rows.filter(r=>r.age!=null&&r.age<30*60e3).length;
-  const NET={WIFI:'Wi-Fi',wifi:'Wi-Fi',cellular:'มือถือ','4g':'4G','3g':'3G','2g':'2G','slow-2g':'2G',OFFLINE:'ไม่มีเน็ต'};
+  const NET=TK.NET;
   el.innerHTML=`<div class="ts-h"><b>สถานะทีมสด</b><small>ออนไลน์ ${on}/${rows.length}${typeof LIVE!=='undefined'&&LIVE.ok()?' · <span class="ts-live">● สด</span>':''}</small></div><div class="ts-list">${rows.map(({t,l,age,cs,sos})=>{
     const fresh=sig(age),realSig=l&&l.sig!=null&&age!=null&&age<15*60e3,bars=realSig?Math.max(0,Math.min(4,+l.sig)):fresh[0],eta=TRACK.eta?TRACK.eta(t.name):null,bat=l&&l.battery!=null?+l.battery:null,sp=l&&l.speed!=null?Math.round(+l.speed):null;
     const net=l&&l.net?(NET[l.net]||String(l.net).toUpperCase()):'',alt=l&&l.alt!=null?Math.round(+l.alt):null;

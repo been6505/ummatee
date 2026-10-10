@@ -105,8 +105,8 @@ async function drawMap(L0){
     r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${escT(r.name)}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(M.flood))})}
   if($('#mt-flood').checked)M.flood.addTo(M.map);else M.flood.remove();
   if(typeof COVERED!=='undefined'&&typeof MAPL!=='undefined'&&M.covAt!==COVERED.C.loaded){M.covAt=COVERED.C.loaded;MAPL.refreshNet()}
-  if(!M.leads){M.leads=L.layerGroup();M.live=L.layerGroup()}
-  M.leads.clearLayers();M.live.clearLayers();
+  if(!M.leads)M.leads=L.layerGroup();
+  M.leads.clearLayers();
   (D.leads||[]).filter(l=>l.status==='new'&&l.lat!=null&&l.lng!=null).forEach(l=>{const u=Math.min(3,Math.max(1,+l.urgency||1));
     L.marker([+l.lat,+l.lng],{icon:L.divIcon({className:'lead-pin u'+u,html:'<span></span>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]}),zIndexOffset:300+u*100,keyboard:false})
       .bindPopup(`<b><i data-ic="megaphone"></i> ${escT(URG[u])} · รอคัด</b><br>${escT(l.title||'')}<br>${escT([l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · '))}${(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))?'<br><i data-ic="alert"></i> ติดธง ตรวจก่อนรับ':''}${(l.flags||[]).includes('approx_location')?'<br><i data-ic="pin"></i> ตำแหน่งโดยประมาณ':''}<br><a href="../../central.html#leads">คัดเคสนี้ที่หน้าเคสจากโซเชียล →</a>`).addTo(M.leads)});

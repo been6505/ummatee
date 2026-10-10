@@ -755,6 +755,7 @@ async function saveRoster(db, b) {
     ON CONFLICT(id) DO UPDATE SET name=excluded.name,leader=excluded.leader,phone=excluded.phone,members=excluded.members,vehicle=excluded.vehicle,zone=excluded.zone,status=excluded.status,note=excluded.note,active=excluded.active,updatedAt=excluded.updatedAt,by_=excluded.by_`)
     .bind(id, name, clean(t.leader, 60), clean(t.phone, 20).replace(/[^\d+\-\s]/g, ''), clampInt(t.members, 0, 999, null), VEHICLES.includes(t.vehicle) ? t.vehicle : '',
       clean(t.zone, 80), ROSTER_STATUS.includes(t.status) ? t.status : 'ready', clean(t.note, 300), t.active === false ? 0 : 1, Date.now(), clean(b.by, 60)).run();
+  await bumpRev(db);
   return { ok: true, id };
 }
 async function listRoster(db) {

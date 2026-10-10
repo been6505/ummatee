@@ -1,7 +1,7 @@
 const TRACK=(()=>{
   let map=null,pins=null,trail=null,sel=null,fitted=false,leafletP=null,live=null;
   const mk=new Map();
-  const tn=s=>String(s||'').replace(/^'/,'').trim();
+  const tn=TK.tn;
   function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;leafletP=new Promise((res,rej)=>{
     const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);
     const sc=document.createElement('script');sc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';sc.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';sc.crossOrigin='';sc.onload=res;sc.onerror=()=>{leafletP=null;rej()};document.head.append(sc)});return leafletP}
@@ -15,8 +15,8 @@ const TRACK=(()=>{
     map=L.map(el,{scrollWheelZoom:false,zoomControl:false}).setView([13.76,100.65],11);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
     if(typeof MAPFS!=='undefined')MAPFS.add(map);L.control.zoom({position:'topright'}).addTo(map);trail=L.layerGroup().addTo(map);pins=L.layerGroup().addTo(map);return true}
-  function update(live,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();
-    (live||[]).forEach(t=>{const r=byName.get(tn(t.team)),k=tn(t.team);seen.add(k);
+  function update(rows,roster){if(!map)return;const byName=new Map((roster||[]).map(r=>[tn(r.name),r])),seen=new Set();
+    (rows||[]).forEach(t=>{const r=byName.get(tn(t.team)),k=tn(t.team);seen.add(k);
       const mv=t.speed!=null&&t.speed>=3,cls=`trk-pin ${isSos(r)?'sos':fresh(t)}${sel===k?' sel':''}${mv?' mv':''}`,
         html=`<span class="${cls}"><i>${headArrow(t,r&&r.vehicle)}</i><b class="nm">${esc(k)}${t.battery!=null&&t.battery<=20?`<small>แบต ${t.battery}%</small>`:''}</b></span>`;
       let m=mk.get(k);
@@ -38,9 +38,7 @@ const TRACK=(()=>{
       document.getElementById('trk-clear').onclick=()=>{sel=null;live=null;trail.clearLayers();document.getElementById('trk-sel').textContent='กดหมุดหรือ "ติดตาม" บนการ์ดทีมเพื่อดูเส้นทาง';map.closePopup()}}
     catch(e){document.getElementById('trk-sel').textContent='โหลดเส้นทางไม่ได้'}}
   let rt=null,PL={};const RT=new Map();
-  async function osrm(a,b){const u=`https://router.project-osrm.org/route/v1/driving/${a.lng.toFixed(6)},${a.lat.toFixed(6)};${b.lng.toFixed(6)},${b.lat.toFixed(6)}?overview=full&geometries=geojson`;
-    const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);try{const j=await fetch(u,{signal:ctl.signal}).then(r=>r.json());if(j.code!=='Ok')throw 0;const r=j.routes[0];return {coords:r.geometry.coordinates.map(c=>[c[1],c[0]]),km:r.distance/1000,min:r.duration/60}}finally{clearTimeout(tm)}}
-  const hasPin=c=>c&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&isFinite(+c.lng);
+  const hasPin=TK.hasPin;
   let cp=null,cpKey='';function assigned(cases){if(!map)return;if(!cp)cp=L.layerGroup().addTo(map);
     const xs=(cases||[]).filter(c=>c.status==='going'&&hasPin(c)),key=xs.map(c=>c.id+':'+c.volunteer+':'+(c.teamDoneAt?1:0)).join('|');if(key===cpKey)return;cpKey=key;cp.clearLayers();
     xs.forEach(c=>{const team=tn(c.volunteer),done=!!c.teamDoneAt,lab=`#${esc(c.id)} · ${(c.needs||[]).slice(0,2).map(esc).join(', ')||'เคส'} · ${esc(c.people||1)} คน<br>ทีม: <b>${esc(team)}</b>${done?' · ช่วยแล้ว รอปิดเคส':''}`;
@@ -55,7 +53,7 @@ const TRACK=(()=>{
       if(r.plan){r.plan=null;r.at=0}
       const need=!r.at||r.cid!==String(tgt.id)||r.from.distanceTo(me)>150||Date.now()-r.at>180e3;
       if(need&&!r.busy){r.busy=true;r.cid=String(tgt.id);r.from=me;r.at=Date.now();const b={lat:+tgt.lat,lng:+tgt.lng};
-        osrm({lat:me.lat,lng:me.lng},b).then(x=>draw(k,r,tgt,me,x)).catch(()=>draw(k,r,tgt,me,null)).finally(()=>{r.busy=false})}
+        const ok=()=>!r.plan&&r.cid===String(tgt.id);TK.osrm({lat:me.lat,lng:me.lng},b).then(x=>{if(ok())draw(k,r,tgt,me,x)}).catch(()=>{if(ok())draw(k,r,tgt,me,null)}).finally(()=>{r.busy=false})}
       else if(r.line&&r.straight)r.line.setLatLngs([me,[+tgt.lat,+tgt.lng]])});
     for(const [k,r] of RT)if(!seen.has(k)){rt.removeLayer(r.g);RT.delete(k)}}
   function draw(k,r,c,me,x,pl){r.g.clearLayers();r.info={caseId:c.id,km:x?x.km:me.distanceTo([+c.lat,+c.lng])/1000,min:x?x.min:null,plan:!!pl,c};const end=[+c.lat,+c.lng],more=(x&&x.coords)||[[me.lat,me.lng],end];r.straight=!x;

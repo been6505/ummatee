@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="../theme.css?v=2">
 <link rel="stylesheet" href="../helpme-skin.css?v=35">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../hm-ui.css?v=62">
+<link rel="stylesheet" href="../hm-ui.css?v=63">
 <script src="../icons.js?v=13"></script>
 </head>
 <body>
@@ -52,7 +52,7 @@ const W={cases:[]};const room=()=>null,view=()=>({cases:W.cases});
 async function bdCases(){try{const [a,b]=await Promise.all([apiGet({action:'list'}).catch(()=>null),apiGet({action:'helpme_cases'}).catch(()=>null)]);
   W.cases=[...((b&&b.cases)||[]).map(c=>({...c,hmId:c.id})),...((a&&a.cases)||[])].map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}))}catch(e){}}
 adminBoot({action:'chat_rev'},'rev',()=>{BOARD.show();bdCases();$('#refresh').onclick=()=>BOARD.show()});</script>
-<script src="../warroom/board.js?v=3"></script>
+<script src="../warroom/board.js?v=4"></script>
 <script src="../theme-toggle.js?v=6"></script>
 <script src="../chat.js?v=13"></script>
 <script src="../feedback.js?v=1"></script>

@@ -580,3 +580,9 @@ body.noscroll .al-silent{display:none!important} /* เปิดรายละ�
 .d-status #d-note{min-height:42px;transition:min-height .15s}.d-status #d-note:focus,.d-status #d-note:not(:placeholder-shown){min-height:84px}
 .d-status{gap:8px!important}
 .al-silent{padding-top:8px!important;padding-bottom:8px!important}.al-silent small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch}
+/* ปุ่มไอคอน */
+.ic-btn{display:inline-flex!important;align-items:center;justify-content:center;gap:6px}
+.btn.sm.ic-btn{min-width:42px;padding:0 10px!important}
+.ic-btn svg,.seg [data-mode] svg,.seg [data-bv] svg,.d-act svg{width:20px;height:20px;flex:none}
+.seg [data-mode],.seg [data-bv]{display:inline-flex!important;align-items:center;justify-content:center;min-width:44px}
+#f-toggle b{margin-left:2px}

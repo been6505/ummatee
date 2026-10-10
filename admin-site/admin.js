@@ -298,9 +298,9 @@ function renderDrawer(){
     </div><div class="d-col d-col-b">
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
-      ${t.length>=9?`<a class="btn primary" href="tel:${esc(t)}">โทรหาผู้แจ้ง</a>`:''}
-      ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">นำทาง Google Maps</a>`:''}
-      <button class="btn ghost" id="d-copy">คัดลอกข้อมูลเคส</button>
+      ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
+      ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" aria-label="นำทาง Google Maps" title="นำทาง Google Maps"><i data-ic="nav"></i> <span>นำทาง</span></a>`:''}
+      <button class="btn ghost" id="d-copy" aria-label="คัดลอกข้อมูลเคส" title="คัดลอกข้อมูลเคส"><i data-ic="copy"></i> <span>คัดลอก</span></button>
     </div>
     ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}${`${assignBox(c)}`}
     </div></div>`;
@@ -329,7 +329,7 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
     <p class="d-now">สถานะ: <b class="st-txt st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>
     ${c.teamIssue?`<div class="d-teamdone d-issue"><b>ทีมแจ้งปัญหา · ${esc(ago(c.teamIssueAt))}</b><span>${esc(c.teamIssue)} · ส่งทีมอื่นได้ที่ "เปลี่ยนทีม" หรือปิดเคส</span></div>`:''}
     ${rep?`<div class="d-teamdone"><b>ทีมแจ้งว่าช่วยเหลือแล้ว · ${esc(ago(c.teamDoneAt))}</b>${c.teamNote?`<span>${esc(c.teamNote)}</span>`:''}</div>`:''}
-    <label class="d-lbl">ทีม<span class="d-teamrow"><select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select>${done?'':'<button type="button" class="btn ghost sm" data-dact="newteam" title="สร้างทีมใหม่">+ ทีมใหม่</button>'}</span></label>
+    <label class="d-lbl">ทีม<span class="d-teamrow"><select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select>${done?'':'<button type="button" class="btn ghost sm ic-btn" data-dact="newteam" title="สร้างทีมใหม่" aria-label="สร้างทีมใหม่"><i data-ic="plus"></i></button>'}</span></label>
     <div class="d-newteam" id="d-newteam" hidden><b>สร้างทีมใหม่</b>
       <div class="d-nt-row"><input id="nt-name" maxlength="60" placeholder="ชื่อทีม *"><input id="nt-leader" maxlength="60" placeholder="หัวหน้าทีม"></div>
       <div class="d-nt-row"><input id="nt-phone" type="tel" inputmode="tel" maxlength="20" placeholder="เบอร์โทร"><select id="nt-veh"><option value="">พาหนะ</option><option value="boat">เรือ</option><option value="truck">รถสูง / รถบรรทุก</option><option value="pickup">รถกระบะ</option><option value="car">รถเก๋ง / รถตู้</option><option value="motorbike">มอเตอร์ไซค์</option><option value="foot">เดินเท้า</option><option value="other">อื่น ๆ</option></select><input id="nt-mem" type="number" min="1" max="999" inputmode="numeric" placeholder="คน"></div>
@@ -352,7 +352,7 @@ function stkBox(c,done){const items=(A.stock&&A.stock.items||[]).filter(i=>!i.ki
   const unit=i=>i.unit||'';
   return `<div class="d-stk"><span class="d-lbl-t">ของจากสต็อกที่ส่งไปกับทีม</span>
     ${sent.length?`<ul class="d-stk-sent">${sent.map(l=>`<li><i data-ic="box"></i> ${esc(l.item)} <b>${Math.abs(l.delta)}</b> · ${esc(l.team||'')} <small>${esc(ago(l.time))}</small></li>`).join('')}</ul>`:''}
-    ${done?'':`<div class="d-stk-add"><select id="d-stk-item" aria-label="เลือกของจากสต็อก"><option value="">${A.stock?'— เลือกของ —':'กำลังโหลดสต็อก…'}</option>${items.filter(i=>(+i.qty||0)>0).map(i=>`<option value="${esc(i.id)}">${esc(i.name)} · เหลือ ${esc(i.qty)} ${esc(unit(i))}</option>`).join('')}</select><input id="d-stk-qty" type="number" min="1" value="1" inputmode="numeric" aria-label="จำนวน"><button type="button" class="btn ghost sm" data-dact="stkadd">+ เพิ่ม</button></div>
+    ${done?'':`<div class="d-stk-add"><select id="d-stk-item" aria-label="เลือกของจากสต็อก"><option value="">${A.stock?'— เลือกของ —':'กำลังโหลดสต็อก…'}</option>${items.filter(i=>(+i.qty||0)>0).map(i=>`<option value="${esc(i.id)}">${esc(i.name)} · เหลือ ${esc(i.qty)} ${esc(unit(i))}</option>`).join('')}</select><input id="d-stk-qty" type="number" min="1" value="1" inputmode="numeric" aria-label="จำนวน"><button type="button" class="btn ghost sm" data-dact="stkadd" aria-label="เพิ่มของ" title="เพิ่มของ"><i data-ic="plus"></i></button></div>
     ${pend.length?`<div class="d-stk-pend">${pend.map((x,i)=>`<span class="d-stk-chip">${esc(x.name)} × ${x.qty}<button type="button" data-stkdel="${i}" aria-label="เอาออก">×</button></span>`).join('')}</div>
       <small class="muted">กด "บันทึก" เพื่อตัดสต็อกเข้าเคสนี้${c.status==='open'?' หรือกด "มอบหมาย" เพื่อส่งไปกับทีม':''}</small>`:''}`}
   </div>`}

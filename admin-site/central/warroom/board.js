@@ -33,7 +33,7 @@ const BOARD=(()=>{
       ${undated.length?`<p class="bd-und">ยังไม่กำหนดวัน: ${undated.map(c=>`<button type="button" class="bd-ev" data-card="${esc(c.id)}" style="--c:${COLOR[c.color]||COLOR['']}">${esc(c.title)}</button>`).join('')}</p>`:''}`}
   function draw(){const el=$('#p-board');if(!el||el.hidden)return;const r=typeof room==='function'?room():null;
     el.innerHTML=`<div class="bd-top"><div><h2>บอร์ดงาน · ${esc(r?r.name:'CENTRAL')}</h2><small class="muted">วางแผนงานทีมงานศูนย์ · ${B.cards.filter(c=>c.status!=='done').length} งานค้าง</small></div>
-      <div class="bd-tools"><div class="seg" role="tablist"><button type="button" data-bv="board" aria-selected="${B.view==='board'}">บอร์ด</button><button type="button" data-bv="cal" aria-selected="${B.view==='cal'}">ปฏิทิน</button></div><button type="button" class="btn primary" data-new="">+ งานใหม่</button></div></div>
+      <div class="bd-tools"><div class="seg" role="tablist"><button type="button" data-bv="board" aria-selected="${B.view==='board'}" aria-label="บอร์ด" title="บอร์ด"><i data-ic="board"></i></button><button type="button" data-bv="cal" aria-selected="${B.view==='cal'}" aria-label="ปฏิทิน" title="ปฏิทิน"><i data-ic="calendar"></i></button></div><button type="button" class="btn primary" data-new="">+ งานใหม่</button></div></div>
       ${B.view==='cal'?calView():boardView()}`;
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});loadImgs(el)}
   /* ---------- ตัวแก้การ์ด ---------- */

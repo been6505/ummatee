@@ -53,6 +53,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS warrooms (id TEXT PRIMARY KEY, name TEXT, color TEXT, lat REAL, lng REAL, radius INTEGER, districts TEXT, address TEXT, phone TEXT, lead TEXT, note TEXT, active INTEGER, createdAt INTEGER, updatedAt INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS intel (kind TEXT, k TEXT, at INTEGER, seen INTEGER, title TEXT, body TEXT, level TEXT, src TEXT, province TEXT, lat REAL, lng REAL, val REAL, data TEXT, PRIMARY KEY (kind, k))`,
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
+  `CREATE TABLE IF NOT EXISTS case_photo (n INTEGER PRIMARY KEY AUTOINCREMENT, caseId TEXT, team TEXT, kind TEXT, at INTEGER, lat REAL, lng REAL, size INTEGER, img BLOB)`,
+  `CREATE INDEX IF NOT EXISTS case_photo_case ON case_photo(caseId, n)`,
   `CREATE TABLE IF NOT EXISTS team_route (team TEXT PRIMARY KEY, caseId TEXT, data TEXT, at INTEGER, by_ TEXT)`,
   `CREATE TABLE IF NOT EXISTS ptt (n INTEGER PRIMARY KEY AUTOINCREMENT, ch TEXT, sender TEXT, kind TEXT, name TEXT, dur REAL, at INTEGER, audio BLOB)`,
   `CREATE INDEX IF NOT EXISTS ptt_at ON ptt(at)`,
@@ -532,6 +534,12 @@ function teamStream(db, team) {
   })().catch(() => { try { w.abort(); } catch (e) {} });
   return new Response(readable, { headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store' } });
 }
+async function casePhotos(db, id) { const { results } = await db.prepare('SELECT n,team,kind,at,lat,lng,size FROM case_photo WHERE caseId=? ORDER BY n').bind(clean(id, 40)).all(); return { ok: true, photos: results }; }
+async function casePhotoImg(db, n, team) {
+  const r = await db.prepare('SELECT img,caseId FROM case_photo WHERE n=?').bind(Number(n) || 0).first(); if (!r) return new Response('not found', { status: 404 });
+  if (team) { const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(r.caseId).first(); if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== team) return new Response('forbidden', { status: 403 }); }
+  return new Response(new Uint8Array(r.img), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=604800' } });
+}
 function cleanPts(a, max) { return (Array.isArray(a) ? a : []).slice(0, max).map(p => Array.isArray(p) ? [num(p[0], -90, 90), num(p[1], -180, 180)] : [num(p && p.lat, -90, 90), num(p && p.lng, -180, 180)]).filter(p => p[0] != null && p[1] != null).map(p => [Math.round(p[0] * 1e5) / 1e5, Math.round(p[1] * 1e5) / 1e5]); }
 async function routeSet(db, b) {
   const team = clean(b.team, MAX.volunteer), caseId = clean(b.caseId, 40);
@@ -983,6 +991,16 @@ const TEAM_POST = {
     await db.prepare('UPDATE roster SET status=?, updatedAt=? WHERE id=?').bind(b.status, Date.now(), t.row.id).run();
     return { ok: true, status: b.status };
   },
+  case_photo_add: async (db, t, b) => {
+    const c = await db.prepare('SELECT id,volunteer,status FROM cases WHERE id=?').bind(clean(b.id, 30)).first();
+    if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== t.name) return { ok: false, error: 'not_your_case' };
+    let a; try { a = b64bytes(b.img); } catch (e) { return { ok: false, error: 'bad_image' }; }
+    if (a.length < 2000 || a.length > 1500e3 || a[0] !== 0xFF || a[1] !== 0xD8) return { ok: false, error: 'bad_image' };
+    const n = await db.prepare('SELECT COUNT(*) n FROM case_photo WHERE caseId=?').bind(c.id).first();
+    if (n && n.n >= 20) return { ok: false, error: 'too_many' };
+    const r = await db.prepare('INSERT INTO case_photo (caseId,team,kind,at,lat,lng,size,img) VALUES (?,?,?,?,?,?,?,?)').bind(c.id, t.name, 'handoff', Date.now(), num(b.lat, -90, 90), num(b.lng, -180, 180), a.length, a).run();
+    await bumpRev(db); return { ok: true, n: r.meta && r.meta.last_row_id, count: (n ? n.n : 0) + 1 };
+  },
   team_case: async (db, t, b) => {
     const c = await db.prepare('SELECT id,volunteer,status FROM cases WHERE id=?').bind(clean(b.id, 30)).first();
     if (!c || String(c.volunteer || '').replace(/^'/, '').trim() !== t.name) return { ok: false, error: 'not_your_case' };
@@ -991,11 +1009,13 @@ const TEAM_POST = {
       await db.prepare('UPDATE cases SET teamIssue=?, teamIssueAt=?, updatedAt=? WHERE id=?').bind(why + (b.note ? ' · ' + clean(b.note, 200) : ''), Date.now(), Date.now(), c.id).run(); await bumpRev(db);
       await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `แจ้งปัญหาเคส #${c.id}: ${why}${b.note ? ' · ' + clean(b.note, 200) : ''}`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
     if (b.step !== 'done' || c.status !== 'going') return { ok: false, error: 'bad_step' };
+    const ph = await db.prepare("SELECT COUNT(*) n FROM case_photo WHERE caseId=? AND kind='handoff'").bind(c.id).first(), phn = ph ? ph.n : 0;
+    if (phn < 3) return { ok: false, error: 'need_photos', have: phn };
     const sets = ['teamDoneAt=?', 'teamNote=?', 'updatedAt=?', 'teamIssue=NULL', 'teamIssueAt=NULL'], vals = [Date.now(), clean(b.note, 300), Date.now()];
     if (b.bags !== undefined && b.bags !== '' && b.bags !== null) { sets.push('bags=?'); vals.push(clampInt(b.bags, 0, 9999, 0)); }
     await db.prepare(`UPDATE cases SET ${sets.join(',')} WHERE id=?`).bind(...vals, c.id).run();
     await bumpRev(db);
-    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือเคส #${c.id} แล้ว · รอศูนย์ปิดเคส${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
+    await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ช่วยเหลือเคส #${c.id} แล้ว · รอศูนย์ปิดเคส · ภาพส่งมอบ ${phn} รูป${b.bags ? ` · แจก ${clampInt(b.bags, 0, 9999, 0)} ถุง` : ''}${b.note ? ' · ' + clean(b.note, 300) : ''}`, caseId: c.id });
     return { ok: true, teamDone: true };
   },
   team_sos: async (db, t, b) => {
@@ -1248,7 +1268,7 @@ const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
 const WR_POST_OK = new Set(['route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
@@ -1313,7 +1333,7 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2712,6 +2732,8 @@ async function api(request, env) {
       case 'leads': return json(vol ? await listLeads(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat': { if (p.tk) { const t = await teamFrom(env, db, p); return json(t ? await chatList(db, { ...p, team: t.name }) : { ok: false, error: 'bad_link' }); }
         return json(vol ? await chatList(db, p) : { ok: false, error: 'not_volunteer' }); }
+      case 'case_photos': { if (vol) return json(await casePhotos(db, p.id)); const t = p.tk && await teamFrom(env, db, p); if (!t) return json({ ok: false, error: 'not_volunteer' }); const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return json(c && String(c.volunteer || '').replace(/^'/, '').trim() === t.name ? await casePhotos(db, p.id) : { ok: false, error: 'not_your_case' }); }
+      case 'case_photo': { if (vol) return casePhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? casePhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }
       case 'route_list': return json(vol ? await routeList(db) : { ok: false, error: 'not_volunteer' });
       case 'ptt_auth': return json(vol || p.tk ? await pttAuth(env, db, p, vol) : { ok: false, error: 'not_volunteer' });
       case 'ptt_list': case 'ptt_audio': { const au = vol || p.tk ? await pttAuth(env, db, p, vol) : null; if (!au || !au.ok) return json({ ok: false, error: 'not_volunteer' }); const chans = au.chans.map(c => c.id);

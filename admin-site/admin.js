@@ -260,6 +260,7 @@ function renderDrawer(){
     <div class="d-grid"><div class="d-col d-col-a">
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
+    <div class="d-ho" id="d-ho" hidden></div>
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
     ${intakeBox(c)}
@@ -271,7 +272,7 @@ function renderDrawer(){
     </div>
     ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}${`${assignBox(c)}`}
     </div></div>`;
-  $('#d-close').onclick=closeDrawer;
+  $('#d-close').onclick=closeDrawer;hoLoad(c);
   d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');
     (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast('คัดลอกแล้ว',true)).catch(()=>toast('คัดลอกไม่สำเร็จ'))};
@@ -479,3 +480,8 @@ function vrFig(){const el=document.getElementById('vr-map');
 window.addEventListener('hermes:done',()=>{if(typeof load==='function')load()});
 
 window.addEventListener('hm-rev',e=>{if(A.key&&e.detail.what.includes('rev')){A.rev=e.detail.rev;load()}});
+
+async function hoLoad(c){const el=$('#d-ho');if(!el)return;const id=apiId(c.id);let r=null;try{r=await api({action:'case_photos',key:A.key,id})}catch(e){}
+  if(!r||!r.ok||!r.photos.length||A.openId!==String(c.id)){if(c.teamDoneAt&&r&&r.ok&&!r.photos.length){el.hidden=false;el.innerHTML='<b><i data-ic="cam"></i> ภาพส่งมอบ</b><p class="muted small">ทีมแจ้งช่วยแล้วแต่ยังไม่มีภาพ</p>'}return}
+  const t=typeof HMT!=='undefined'?await HMT.get():'',u=n=>'/api?'+new URLSearchParams({action:'case_photo',n,t});
+  el.hidden=false;el.innerHTML=`<b><i data-ic="cam"></i> ภาพส่งมอบ · ${r.photos.length} รูป</b><small class="muted"> ${esc(r.photos[0].team||'')} · ${esc(ago(r.photos[r.photos.length-1].at))}</small><div class="d-ho-g">${r.photos.map(p=>`<a href="${u(p.n)}" target="_blank" rel="noopener"><img src="${u(p.n)}" alt="ภาพส่งมอบ" loading="lazy"></a>`).join('')}</div>`}

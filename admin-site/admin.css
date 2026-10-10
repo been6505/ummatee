@@ -247,3 +247,4 @@ button,input,select{font:inherit}button{cursor:pointer}[hidden]{display:none!imp
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .d-teamdone{background:#0f2e1d;color:#8fe0b0;border-color:#1e5236}:root:not([data-theme="light"]) .td-tag{color:#8fe0b0}}
 :root[data-theme="dark"] .d-teamdone{background:#0f2e1d;color:#8fe0b0;border-color:#1e5236}:root[data-theme="dark"] .td-tag{color:#8fe0b0}
 @media (max-width:760px){.d-lbl select,.d-lbl textarea{font-size:16px}}
+.d-teamdone.memo{background:#FFF6E5;color:#7A4A00;border-color:#F3D9A4}

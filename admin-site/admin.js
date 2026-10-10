@@ -323,6 +323,7 @@ function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=
   return `<fieldset class="d-status"><legend>มอบหมายทีม</legend>
     <p class="d-now">สถานะ: <b class="st-txt st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>
     ${c.teamIssue?`<div class="d-teamdone d-issue"><b>ทีมแจ้งปัญหา · ${esc(ago(c.teamIssueAt))}</b><span>${esc(c.teamIssue)} · ส่งทีมอื่นได้ที่ "เปลี่ยนทีม" หรือปิดเคส</span></div>`:''}
+    ${c.teamMemo?`<div class="d-teamdone memo"><b>หมายเหตุจากทีม · ${esc(ago(c.teamMemoAt))}</b><span>${esc(c.teamMemo)}</span></div>`:''}
     ${rep?`<div class="d-teamdone"><b>ทีมแจ้งว่าช่วยเหลือแล้ว · ${esc(ago(c.teamDoneAt))}</b>${c.teamNote?`<span>${esc(c.teamNote)}</span>`:''}</div>`:''}
     <label class="d-lbl">ทีม<span class="d-teamrow"><select id="d-team" ${done?'disabled':''}>${teamOpts(c)}</select>${done?'':'<button type="button" class="btn ghost sm ic-btn" data-dact="newteam" title="สร้างทีมใหม่" aria-label="สร้างทีมใหม่"><i data-ic="plus"></i></button>'}</span></label>
     <div class="d-newteam" id="d-newteam" hidden><b>สร้างทีมใหม่</b>

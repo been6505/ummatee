@@ -684,3 +684,5 @@ body.dv-on .bar-row>.seg,body.dv-on #export,body.dv-on #count,body.dv-on #f-stat
 .kb-show{font-size:12.5px}
 .kb-hide{margin-left:4px;border:0;background:none;padding:2px;cursor:pointer;color:var(--muted,#6b7280);display:inline-flex}.kb-hide .ic{width:16px;height:16px}
 @media (max-width:760px){.kb-cols.fold{grid-template-columns:repeat(3,82vw) 150px}}
+
+.kb-mark{height:4px;border-radius:4px;background:#2D45C8;margin:-2px 4px;flex:none;box-shadow:0 0 0 3px rgba(45,69,200,.15)}

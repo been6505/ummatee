@@ -4,7 +4,13 @@
    ใช้ตัวแปรจาก admin.js: A, filtered, sev, URG, stOf, changeStatus, openDrawer, loadRoster, esc, toast, ago */
 const KANBAN=(()=>{
   const COLS=[['open','รอความช่วยเหลือ'],['going','ทีมกำลังไป'],['helped','ช่วยเหลือแล้ว · รอปิด'],['done','ปิดเคส (24 ชม.)']];
-  const K={drag:null,ghost:null,timer:null,start:null,moved:false};
+  const K={drag:null,ghost:null,timer:null,start:null,moved:false,order:{},orderAt:0};
+  /* ลำดับที่ศูนย์ลากจัดเอง (ใช้ร่วมกันทุกเครื่อง) · การ์ดที่ยังไม่ถูกจัดเรียงตามความเร่งด่วน */
+  async function loadOrder(force){if(!force&&Date.now()-K.orderAt<20000)return;K.orderAt=Date.now();try{const r=await api({action:'kb_order',key:A.key});if(r&&r.ok){const ch=JSON.stringify(r.order||{})!==JSON.stringify(K.order);K.order=r.order||{};if(ch)draw()}}catch(e){}}
+  const rk=c=>K.order[c.id]!=null?Number(K.order[c.id]):null;
+  function idxAt(col,y){const cs=[...col.querySelectorAll('.kb-card:not(.dragging)')];const i=cs.findIndex(c=>{const r=c.getBoundingClientRect();return y<r.top+r.height/2});return i<0?cs.length:i}
+  function mark(col,y){document.querySelectorAll('.kb-mark').forEach(m=>m.remove());if(!col||col.classList.contains('kb-fold'))return;const l=col.querySelector('.kb-list'),cs=[...l.querySelectorAll('.kb-card:not(.dragging)')],i=idxAt(col,y),m=document.createElement('div');m.className='kb-mark';if(cs[i])cs[i].before(m);else{const last=cs[cs.length-1];if(last)last.after(m);else l.prepend(m)}}
+  async function reorder(to,id,idx){const col=document.querySelector(`#kanban-view [data-kbcol="${to}"]`);if(!col)return;const ids=[...col.querySelectorAll('.kb-card')].map(c=>c.dataset.kb).filter(x=>x!==String(id));ids.splice(Math.min(idx,ids.length),0,String(id));ids.forEach((x,i)=>{K.order[x]=i});draw();try{const r=await post({action:'kb_order',key:A.key,ids});if(!r||!r.ok)throw 0}catch(e){toast('บันทึกลำดับไม่สำเร็จ')}}
   const box=()=>document.getElementById('kanban-view');
   const vol=c=>String(c.volunteer||'').replace(/^'/,'').trim();
   function list(){const st=$('#f-status');const keep=st.value;st.value='all';let cs;try{cs=filtered()}finally{st.value=keep}
@@ -15,19 +21,19 @@ const KANBAN=(()=>{
       <div class="kb-tx"><span class="urg urg-${s}">${URG[s]}</span><b>${esc((c.needs||[]).slice(0,2).join(' · ')||'ขอความช่วยเหลือ')}</b>
       <small>${esc(c.people||1)} คน${c.district?' · '+esc(c.district):''}</small>${vol(c)&&c.status!=='open'?`<small class="kb-team"><i data-ic="users"></i> ${esc(vol(c))}</small>`:''}
       ${c.teamIssue&&c.status==='going'?`<small class="kb-iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}<small class="kb-ago">${esc(ago(c.createdAt))}</small></div></article>`}
-  function draw(){const el=box();if(!el||el.hidden)return;if(K.drag||K.ghost||document.querySelector('.kb-pick')){K.pend=true;return}K.pend=false;const sx=(el.querySelector('.kb-cols')||{}).scrollLeft||0,sy=[...el.querySelectorAll('.kb-list')].map(x=>x.scrollTop);const cs=list();
-    el.innerHTML=`<div class="kb-cols${K.showDone?'':' fold'}">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt));
+  function draw(){const el=box();if(!el||el.hidden)return;loadOrder();if(K.drag||K.ghost||document.querySelector('.kb-pick')){K.pend=true;return}K.pend=false;const sx=(el.querySelector('.kb-cols')||{}).scrollLeft||0,sy=[...el.querySelectorAll('.kb-list')].map(x=>x.scrollTop);const cs=list();
+    el.innerHTML=`<div class="kb-cols${K.showDone?'':' fold'}">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>{const ra=rk(a),rb=rk(b);if(ra!=null||rb!=null)return ra==null?1:rb==null?-1:ra-rb;return sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt)});
       if(k==='done'&&!K.showDone)return `<section class="kb-col kb-done kb-fold" data-kbcol="done"><h3>ปิดเคส <span>${xs.length}</span></h3><div class="kb-list"><p class="kb-empty"><i data-ic="check"></i><br>ลากการ์ดมาวาง<br>เพื่อปิดเคส</p>${xs.length?`<button type="button" class="btn ghost sm kb-show" data-kbshow>ดูเคสที่ปิด (24 ชม.)</button>`:''}</div></section>`;
       return `<section class="kb-col kb-${k}" data-kbcol="${k}"><h3>${t} <span>${xs.length}</span>${k==='done'?'<button type="button" class="kb-hide" data-kbshow aria-label="ซ่อนเคสที่ปิด" title="ซ่อนเคสที่ปิด"><i data-ic="eyeoff"></i></button>':''}</h3><div class="kb-list">${xs.slice(0,150).map(card).join('')||'<p class="kb-empty">วางการ์ดที่นี่</p>'}${xs.length>150?`<p class="kb-empty">+${xs.length-150} เคส · ใช้ตัวกรองเพื่อดูเพิ่ม</p>`:''}</div></section>`}).join('')}</div>`;
     const nc=el.querySelector('.kb-cols');if(nc)nc.scrollLeft=sx;el.querySelectorAll('.kb-list').forEach((x,i)=>{x.scrollTop=sy[i]||0});
     if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)})}
   /* วางลงคอลัมน์ */
-  async function drop(id,to){const c=A.cases.find(x=>String(x.id)===String(id));if(!c||stOf(c)===to)return;
+  async function drop(id,to,idx){const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;if(stOf(c)===to){if(idx!=null&&(to!=='done'||K.showDone))await reorder(to,id,idx==null?0:idx);return}const before=c.status+'|'+(c.teamDoneAt||'');
     if((to==='going'&&!(stOf(c)==='helped'&&vol(c)))||(to==='helped'&&(!vol(c)||c.status!=='going'))){const team=await pickTeam(c);if(!team)return;await changeStatus(c.id,to,null,team)}
     else if(to==='done'){if(!c.teamDoneAt&&c.status==='going'&&!confirm('ทีมยังไม่ได้แจ้งว่าช่วยเหลือแล้ว · ปิดเคสเลยหรือไม่?'))return;await changeStatus(c.id,'done')}
     else if(to==='open'){if(c.status!=='open'&&!confirm('คืนเคสเป็น "รอความช่วยเหลือ" และเอาออกจากทีม?'))return;await changeStatus(c.id,'open')}
     else await changeStatus(c.id,to);
-    draw()}
+    if(idx!=null&&stOf(c)===to&&(to!=='done'||K.showDone)&&before!==c.status+'|'+(c.teamDoneAt||''))await reorder(to,id,idx);else draw()}
   /* เลือกทีมตอนวางลง "ทีมกำลังไป" */
   function pickTeam(c){return new Promise(async res=>{if(!A.roster)await loadRoster();
     const d=document.createElement('dialog');d.className='kb-pick';const load={};A.cases.forEach(x=>{if(x.status==='going'&&vol(x))load[vol(x)]=(load[vol(x)]||0)+1});
@@ -37,16 +43,16 @@ const KANBAN=(()=>{
     d.onclick=e=>{const b=e.target.closest('[data-t]');if(b){d.close();res(b.dataset.t)}else if(e.target.closest('[data-x]')||e.target===d){d.close();res(null)}};d.onclose=()=>{d.remove();res(null);if(K.pend)setTimeout(draw,50)}})}
   /* ลาก: เมาส์ (HTML5) */
   document.addEventListener('dragstart',e=>{const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c)return;K.drag=c.dataset.kb;e.dataTransfer.effectAllowed='move';c.classList.add('dragging')});
-  document.addEventListener('dragend',e=>{K.drag=null;if(K.pend)setTimeout(draw,50);document.querySelectorAll('.kb-card.dragging').forEach(x=>x.classList.remove('dragging'));document.querySelectorAll('.kb-col.over').forEach(x=>x.classList.remove('over'))});
-  document.addEventListener('dragover',e=>{const col=e.target.closest&&e.target.closest('#kanban-view [data-kbcol]');if(!col||!K.drag)return;e.preventDefault();document.querySelectorAll('.kb-col.over').forEach(x=>x!==col&&x.classList.remove('over'));col.classList.add('over')});
-  document.addEventListener('drop',e=>{const col=e.target.closest&&e.target.closest('#kanban-view [data-kbcol]');if(!col||!K.drag)return;e.preventDefault();const id=K.drag;K.drag=null;col.classList.remove('over');drop(id,col.dataset.kbcol)});
+  document.addEventListener('dragend',e=>{K.drag=null;document.querySelectorAll('.kb-mark').forEach(m=>m.remove());if(K.pend)setTimeout(draw,50);document.querySelectorAll('.kb-card.dragging').forEach(x=>x.classList.remove('dragging'));document.querySelectorAll('.kb-col.over').forEach(x=>x.classList.remove('over'))});
+  document.addEventListener('dragover',e=>{const col=e.target.closest&&e.target.closest('#kanban-view [data-kbcol]');if(!col||!K.drag)return;e.preventDefault();document.querySelectorAll('.kb-col.over').forEach(x=>x!==col&&x.classList.remove('over'));col.classList.add('over');mark(col,e.clientY)});
+  document.addEventListener('drop',e=>{const col=e.target.closest&&e.target.closest('#kanban-view [data-kbcol]');if(!col||!K.drag)return;e.preventDefault();const id=K.drag,idx=idxAt(col,e.clientY);K.drag=null;col.classList.remove('over');document.querySelectorAll('.kb-mark').forEach(m=>m.remove());drop(id,col.dataset.kbcol,idx)});
   /* ลาก: นิ้ว (แตะค้าง 250 มิลลิวินาที แล้วลาก) */
   document.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c)return;K.start={x:e.clientX,y:e.clientY,id:c.dataset.kb,el:c};K.moved=false;
     clearTimeout(K.timer);K.timer=setTimeout(()=>{if(!K.start)return;const r=c.getBoundingClientRect();K.ghost=c.cloneNode(true);K.ghost.className+=' kb-ghost';K.ghost.style.width=r.width+'px';document.body.append(K.ghost);c.classList.add('dragging');try{navigator.vibrate&&navigator.vibrate(20)}catch(err){}move(e.clientX,e.clientY)},250)},{passive:true});
-  function move(x,y){if(!K.ghost)return;K.ghost.style.transform=`translate(${x-K.ghost.offsetWidth/2}px,${y-30}px)`;const col=document.elementFromPoint(x,y);document.querySelectorAll('.kb-col.over').forEach(c=>c.classList.remove('over'));const kc=col&&col.closest&&col.closest('#kanban-view [data-kbcol]');if(kc)kc.classList.add('over');
+  function move(x,y){if(!K.ghost)return;K.ghost.style.transform=`translate(${x-K.ghost.offsetWidth/2}px,${y-30}px)`;const col=document.elementFromPoint(x,y);document.querySelectorAll('.kb-col.over').forEach(c=>c.classList.remove('over'));const kc=col&&col.closest&&col.closest('#kanban-view [data-kbcol]');if(kc)kc.classList.add('over');mark(kc,y);const kl=kc&&kc.querySelector('.kb-list');if(kl){const r=kl.getBoundingClientRect();if(y>r.bottom-50)kl.scrollTop+=12;else if(y<r.top+50)kl.scrollTop-=12}
     const cols=document.querySelector('#kanban-view .kb-cols');if(cols){const r=cols.getBoundingClientRect();if(x>r.right-40)cols.scrollLeft+=14;else if(x<r.left+40)cols.scrollLeft-=14}}
   document.addEventListener('pointermove',e=>{if(!K.start)return;if(!K.ghost){if(Math.hypot(e.clientX-K.start.x,e.clientY-K.start.y)>10){clearTimeout(K.timer);K.start=null}return}e.preventDefault();K.moved=true;move(e.clientX,e.clientY)},{passive:false});
-  const end=e=>{clearTimeout(K.timer);if(K.ghost){const col=document.elementFromPoint(e.clientX,e.clientY),kc=col&&col.closest&&col.closest('#kanban-view [data-kbcol]'),id=K.start&&K.start.id;K.ghost.remove();K.ghost=null;document.querySelectorAll('.kb-card.dragging,.kb-col.over').forEach(x=>x.classList.remove('dragging','over'));K.start=null;if(kc&&id)drop(id,kc.dataset.kbcol);else if(K.pend)draw();K.justDragged=Date.now();return}K.start=null};
+  const end=e=>{clearTimeout(K.timer);if(K.ghost){const col=document.elementFromPoint(e.clientX,e.clientY),kc=col&&col.closest&&col.closest('#kanban-view [data-kbcol]'),id=K.start&&K.start.id;K.ghost.remove();K.ghost=null;document.querySelectorAll('.kb-card.dragging,.kb-col.over').forEach(x=>x.classList.remove('dragging','over'));K.start=null;const tidx=kc?idxAt(kc,e.clientY):null;document.querySelectorAll('.kb-mark').forEach(m=>m.remove());if(kc&&id)drop(id,kc.dataset.kbcol,tidx);else if(K.pend)draw();K.justDragged=Date.now();return}K.start=null};
   document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
   document.addEventListener('touchmove',e=>{if(K.ghost)e.preventDefault()},{passive:false});
   document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#kanban-view [data-kbshow]')){K.showDone=!K.showDone;draw();return}const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c||Date.now()-(K.justDragged||0)<400)return;openDrawer(c.dataset.kb)});

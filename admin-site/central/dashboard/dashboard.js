@@ -110,10 +110,8 @@ async function drawMap(L0){
   (D.leads||[]).filter(l=>l.status==='new'&&l.lat!=null&&l.lng!=null).forEach(l=>{const u=Math.min(3,Math.max(1,+l.urgency||1));
     L.marker([+l.lat,+l.lng],{icon:L.divIcon({className:'lead-pin u'+u,html:'<span></span>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]}),zIndexOffset:300+u*100,keyboard:false})
       .bindPopup(`<b><i data-ic="megaphone"></i> ${escT(URG[u])} · รอคัด</b><br>${escT(l.title||'')}<br>${escT([l.address,l.district?'เขต'+l.district:''].filter(Boolean).join(' · '))}${(l.flags||[]).some(f=>/^(asks_money|account_reused|past_year_text)/.test(f))?'<br><i data-ic="alert"></i> ติดธง ตรวจก่อนรับ':''}${(l.flags||[]).includes('approx_location')?'<br><i data-ic="pin"></i> ตำแหน่งโดยประมาณ':''}<br><a href="../../central.html#leads">คัดเคสนี้ที่หน้าเคสจากโซเชียล →</a>`).addTo(M.leads)});
-  (D.live||[]).forEach(t=>L.marker([+t.lat,+t.lng],{icon:L.divIcon({className:'live-tm',html:`<span><i data-ic="live"></i> ${escT(t.team)}</span>`,iconSize:null}),zIndexOffset:1500,keyboard:false})
-    .bindPopup(`<b><i data-ic="live"></i> ${escT(t.team)}</b><br>แชร์ตำแหน่ง ${escT(ago(t.updatedAt))}${t.caseId?'<br>ถือเคส #'+escT(t.caseId):''}`).addTo(M.live));
+  if(typeof DLIVE!=='undefined')DLIVE.upd(D.live);
   if($('#mt-leads').checked)M.leads.addTo(M.map);else M.leads.remove();
-  if($('#mt-live').checked)M.live.addTo(M.map);else M.live.remove();
   const dl=$('#dleg');if(dl){dl.querySelector('.lg-leads').hidden=!$('#mt-leads').checked||!D.leads;dl.querySelector('.lg-live').hidden=!$('#mt-live').checked;dl.querySelector('.lg-done').hidden=!showDone;dl.querySelector('.lg-flood').hidden=!$('#mt-flood').checked;dl.querySelector('.lg-cov').hidden=typeof COVERED==='undefined'||!$('#mt-cov').checked}
   setTimeout(()=>M.map.invalidateSize(),60);
 }

@@ -161,7 +161,7 @@ function openForm(t){t=t||{status:'ready'};const d=$('#drawer');
 function closeForm(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeForm()});
 
-adminBoot({action:'roster'},'roster',r=>{setTimeout(()=>{if(typeof ROUTE!=='undefined')ROUTE.init();if(typeof RALLY!=='undefined'){RALLY.load();const q=new URLSearchParams(location.search).get('rally');if(q!==null)setTimeout(()=>RALLY.start(q),1500)}},500);T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||'';if(typeof TRACK!=='undefined')TRACK.init($('#trk-map')).then(liveUI);render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{});if(typeof COVERED!=='undefined')COVERED.load(API_URL,ADM.key).then(render,()=>{})});
+adminBoot({action:'roster'},'roster',r=>{setTimeout(()=>{if(typeof ROUTE!=='undefined')ROUTE.init();if(typeof RALLY!=='undefined'){RALLY.load();const q=new URLSearchParams(location.search).get('rally');if(q!==null)setTimeout(()=>RALLY.start(q),1500)}},500);T.roster=r.roster||[];T.live=r.live||[];T.hqPhone=r.hqPhone||'';if(typeof TRACK!=='undefined')TRACK.init($('#trk-map')).then(()=>{liveUI();if(typeof RALLY!=='undefined')RALLY.load()});render();loadAll();if(typeof VERIFY!=='undefined')VERIFY.load().then(render,()=>{});if(typeof COVERED!=='undefined')COVERED.load(API_URL,ADM.key).then(render,()=>{})});
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
 
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copylive]');if(!b)return;try{await navigator.clipboard.writeText(b.dataset.copylive);toast('คัดลอกลิงก์ติดตามแล้ว',true)}catch(err){b.previousElementSibling.select()}});

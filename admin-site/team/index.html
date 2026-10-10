@@ -376,7 +376,7 @@ async function boot(){
   if(NATIVE)nativeTrack(); // เริ่มติดตามก่อนติดต่อศูนย์ ไม่มีเน็ตก็เก็บตำแหน่งไว้ในคิว
   try{const r=await api({action:'team_me'});
     if(!r.ok){if(r.error==='bad_link'){st.set('uh_tm_tk','');screen('#bad')}else{st.set('uh_chat_team','');S.team='';screen('#login');$('.lk-code').open=true;$('#err').textContent='รหัสทีมไม่ถูกต้อง'}return}
-    S.me=r;S.offline=false;saveMe(r);S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
+    obOverlay(r);S.me=r;S.offline=false;saveMe(r);S.team=r.team.name;if(NATIVE)nativeTrack();document.title=S.team+' · Helpme+';
     if(!S.name&&r.team.leader)S.name=r.team.leader;
     if(NATIVE){TR.skip=true;TR.want=false;start();return} // แอป: ใช้ตัวติดตามเบื้องหลังของแอปแทนตำแหน่งในเว็บ
     if(TR.want||TR.skip)start();else{screen('#gate');$('#g-team').textContent=S.team}
@@ -472,7 +472,9 @@ function bgTrack(){gmUI();const d=$('#bg-trk');if(!d)return;
   $('#trk-id').textContent=S.tk;
   const l=S.me&&S.me.live;$('#trk-last').textContent=l&&l.updatedAt?'ศูนย์ได้รับตำแหน่งล่าสุด '+new Date(l.updatedAt).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):''}
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy]');if(!b)return;const v=$('#'+b.dataset.copy).textContent;try{await navigator.clipboard.writeText(v);b.textContent='คัดลอกแล้ว';setTimeout(()=>b.textContent='คัดลอก',1500)}catch(err){const r=document.createRange();r.selectNodeContents($('#'+b.dataset.copy));getSelection().removeAllRanges();getSelection().addRange(r)}});
-async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
+/* คำตอบรวมพลที่ยังค้างในกล่องขาออก: ใช้ค่าที่ตอบไว้แทนค่าจากเซิร์ฟเวอร์ (กันเตือนซ้ำ) */
+function obOverlay(r){const q=OB.get().filter(x=>x.b&&x.b.action==='rally_resp');(r.rallies||[]).forEach(x=>{const m=q.filter(y=>y.b.id===x.id).pop();if(m)x.my=m.b.status})}
+async function refresh(){try{const r=await api({action:'team_me'});if(r.ok){obOverlay(r);S.me=r;S.offline=false;saveMe(r);render();obUI();obFlush()}else if(r.error==='bad_link'){screen('#bad')}}catch(e){S.offline=true;obUI()}}
 
 /* ---------- ตำแหน่ง: ส่งทุก 30 วิ หรือเมื่อขยับเกิน 25 ม. ---------- */
 const TR={want:st.get('uh_tm_loc')==='1',skip:false,watch:null,pos:null,sentAt:0,sentPos:null,err:'',batt:null,fail:0,wl:null};
@@ -598,7 +600,7 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
   const kmTo=(a,b)=>{const R=6371,x=(b.lat-a.lat)*Math.PI/180,y=(b.lng-a.lng)*Math.PI/180,h=Math.sin(x/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
   document.addEventListener('click',async e=>{const r=e.target.closest('[data-rl]');if(r){r.disabled=true;const p=TR.pos||H.np,st=r.dataset.st;
       const res=await opost({action:'rally_resp',id:r.dataset.rl,status:st,lat:p?+(+p.lat).toFixed(6):'',lng:p?+(+p.lng).toFixed(6):''},'ตอบรวมพล').catch(()=>({}));
-      const x=((S.me&&S.me.rallies)||[]).find(y=>y.id===r.dataset.rl);if(x)x.my=st;saveMe(S.me);draw();toast(res.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':res.ok?({going:'แจ้งศูนย์แล้ว · กำลังไป',arrived:'แจ้งศูนย์แล้ว · ถึงจุดรวมพล',declined:'แจ้งศูนย์แล้ว'}[st]):'ส่งไม่ได้ ลองใหม่');return}
+      const x=((S.me&&S.me.rallies)||[]).find(y=>y.id===r.dataset.rl);if(x&&(res.ok||res.queued)){x.my=st;saveMe(S.me)}else{r.disabled=false}draw();toast(res.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':res.ok?({going:'แจ้งศูนย์แล้ว · กำลังไป',arrived:'แจ้งศูนย์แล้ว · ถึงจุดรวมพล',declined:'แจ้งศูนย์แล้ว'}[st]):'ส่งไม่ได้ ลองใหม่');return}
     const g=e.target.closest('[data-rlgo]');if(g){const x=((S.me&&S.me.rallies)||[]).find(y=>y.id===g.dataset.rlgo);if(x&&!x.my){opost({action:'rally_resp',id:x.id,status:'going'},'ตอบรวมพล').catch(()=>{});x.my='going';saveMe(S.me);setTimeout(draw,300)}}
   });
   document.addEventListener('click',e=>{const b=e.target.closest('[data-hl]');if(b){const k=b.dataset.hl,on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));layer(k,on);return}
@@ -617,10 +619,10 @@ $('#nav-sos')&&($('#nav-sos').onclick=()=>$('#sos').click());
   sel.addEventListener('mousedown',open);sel.addEventListener('touchstart',open,{passive:false});sel.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')open(e)});
   document.addEventListener('click',e=>{if(!e.target.closest('.st-pop')&&e.target!==sel)close()})}}
 // ซิงก์จุดบนหัวกับแถบสถานะตำแหน่ง: ปกติ = จุดเขียว (ซ่อนแถบ) · มีปัญหา = จุดส้ม/แดง + แสดงแถบพร้อมปุ่มแก้
-{const lb=$('#locbar'),ld=$('#locdot');if(lb&&ld){let busy=false;const sync=()=>{if(busy)return;busy=true;const off=lb.classList.contains('off'),wait=lb.classList.contains('wait'),ok=!off&&!wait;
-  ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok);busy=false};
+{const lb=$('#locbar'),ld=$('#locdot');if(lb&&ld){let busy=false;let reveal=0;const sync=()=>{if(busy)return;busy=true;const off=lb.classList.contains('off'),wait=lb.classList.contains('wait'),ok=!off&&!wait;
+  ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
-  ld.onclick=()=>{lb.classList.remove('ok-hide');toast(ld.title||'สถานะตำแหน่ง');setTimeout(sync,4000)}}}
+  ld.onclick=()=>{reveal=Date.now()+4000;lb.classList.remove('ok-hide');setTimeout(sync,4100)}}}
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');if(v==='home')HOME.show();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
@@ -628,7 +630,7 @@ function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-
 function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
-    const call=m.kind==='call'&&m.link&&Date.now()-m.at>3*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
+    const call=m.kind==='call'&&m.link&&Date.now()-m.at>30*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
     return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text?`<p>${esc(m.text)}</p>`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
 async function pollChat(first){try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh(); // เรียกรวมพล: โหลดงานใหม่ทันที

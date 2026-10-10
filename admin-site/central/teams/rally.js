@@ -6,7 +6,7 @@ const RALLY=(()=>{
   const ST={going:['กำลังไป','go'],arrived:['ถึงแล้ว','ok'],declined:['ไม่สะดวก','no'],'':['ยังไม่ตอบ','wait']};
   const dkm=(a,b)=>km(a.lat,a.lng,b.lat,b.lng);
   const live=n=>T.live.find(l=>tname(l.team)===tname(n));
-  async function load(){try{const r=await apiGet({action:'rallies'});if(r&&r.ok){R.list=r.rallies||[];draw()}}catch(e){}}
+  async function load(){try{const r=await apiGet({action:'rallies'});if(r&&r.ok){R.list=r.rallies||[];if(R.open){const l=document.querySelector('#rl-panel .rl-list');if(l)l.innerHTML=active()}else draw();if(typeof TRACK!=='undefined'&&TRACK.rallies)TRACK.rallies(R.list)}}catch(e){}}
   function form(){const p=R.pt,teams=T.roster.filter(t=>t.status!=='rest').map(t=>{const l=live(t.name);return {t,d:p&&l?dkm(p,{lat:+l.lat,lng:+l.lng}):null}}).sort((a,b)=>(a.d??1e9)-(b.d??1e9));
     const cases=T.cases.filter(c=>c.status!=='done'&&hasPin(c)).slice(0,200);
     return `<div class="rl-form">
@@ -47,6 +47,6 @@ const RALLY=(()=>{
     if(t.dataset.rt){t.checked?R.sel.add(t.dataset.rt):R.sel.delete(t.dataset.rt);return}
     if(t.id==='rl-case'&&t.value){const c=T.cases.find(x=>String(x.id)===t.value);if(c)setPt({lat:+c.lat,lng:+c.lng,label:'เคส #'+c.id,caseId:c.id,why:'เคส #'+c.id+' ต้องการกำลังเสริม'});return}
     if(t.id==='rl-team'&&t.value){const l=live(t.value);if(l){R.sel.delete(t.value);setPt({lat:+l.lat,lng:+l.lng,label:'ตำแหน่งล่าสุดของ '+t.value,why:t.value+' ขาดการติดต่อ · จุดล่าสุด'})}}});
-  setInterval(()=>{if(!document.hidden&&!R.open)load()},15000);
+  setInterval(()=>{if(!document.hidden)load()},15000);
   return {load,start(team){R.open=true;R.all=false;R.sel=new Set();const l=team&&live(team);R.pt=l?{lat:+l.lat,lng:+l.lng,label:'ตำแหน่งล่าสุดของ '+team,why:team+' ขาดการติดต่อ · จุดล่าสุด'}:null;draw();const p=$('#rl-panel');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})}};
 })();

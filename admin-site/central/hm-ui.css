@@ -825,3 +825,8 @@ body.kb-dragging,body.kb-dragging *{cursor:grabbing!important;user-select:none!i
 html body .wr-hero-n b{font-size:clamp(18px,5.6vw,28px)!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;letter-spacing:-.3px;display:block}
 html body .wr-hero-n span{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;display:block;font-size:12.5px!important;line-height:1.3}
 @media(max-width:420px){html body .wr-hero-n>div{padding:0 8px!important}html body .wr-hero-n>div:first-child{padding-left:0!important}}
+
+.ts-hqbar{display:flex;gap:6px;margin:0 0 8px;flex-wrap:wrap}.ts-hqbtn,.ts-hqsort{display:inline-flex;align-items:center;gap:6px;border:1px solid #DCE2F5;background:#fff;color:#2D45C8;font:inherit;font-size:12.5px;font-weight:700;border-radius:999px;padding:5px 12px;cursor:pointer}.ts-hqbtn .ic{width:14px;height:14px}
+.ts-hqbtn[aria-pressed="true"],.ts-hqsort[aria-pressed="true"]{background:#2D45C8;color:#fff;border-color:#2D45C8}
+.ts-hqd{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#3C4466;margin-top:6px}.ts-hqd .ic{width:14px;height:14px;color:#2D45C8;flex:none}.ts-hqd b{color:#1C2340}
+.hq-pin{display:inline-block;background:#2D45C8;color:#fff;font-weight:800;font-size:12px;border-radius:999px;padding:4px 10px;border:2px solid #fff;box-shadow:0 4px 12px rgba(45,69,200,.4);white-space:nowrap}

@@ -11,7 +11,7 @@ const DLIVE=(()=>{
     return `<div class="dl-pop"><b class="dl-h">${e(k)}</b><small>${e(VN[r.vehicle]||'')}${r.members?' · '+e(r.members)+' คน':''} · ส่งตำแหน่ง ${e(ago(t.updatedAt))}</small>
       <table>${row('wifi','สัญญาณ',e(sig)+(t.net?' · '+e(TK.NET[t.net]||t.net):'')+(t.carrier?' · '+e(t.carrier):''))}${row('box','แบตเตอรี่',t.battery!=null?e(t.battery)+'%'+(t.charging?' · กำลังชาร์จ':''):'')}
       ${row('nav','ความเร็ว',sp!=null?sp+' กม./ชม.'+(sp>=3&&t.heading!=null?' · มุ่ง'+TK.dir(t.heading):' · จอดอยู่'):'')}${row('mountain','ความสูง',t.alt!=null?Math.round(+t.alt)+' ม.':'')}${row('locate','ความแม่นยำ GPS',t.accuracy?'±'+Math.round(+t.accuracy)+' ม.':'')}
-      ${row('sun','อุณหภูมิ',t.temp!=null?(+t.temp).toFixed(1)+'°C':'')}${row('drop','ความชื้น',t.hum!=null?Math.round(+t.hum)+'%':'')}${row('phone','เบอร์',r.phone?`<a href="tel:${e(String(r.phone).replace(/[^\d+]/g,''))}">${e(r.phone)}</a>`:'')}</table>
+      ${row('sun','อุณหภูมิ',t.temp!=null?(+t.temp).toFixed(1)+'°C':'')}${row('drop','ความชื้น',t.hum!=null?Math.round(+t.hum)+'%':'')}${(()=>{const d=TK.hq&&TK.hq.to(k,t.lat,t.lng);return d?row('home','ห่างศูนย์',TK.hq.label(d)):''})()}${row('phone','เบอร์',r.phone?`<a href="tel:${e(String(r.phone).replace(/[^\d+]/g,''))}">${e(r.phone)}</a>`:'')}</table>
       ${cs?`<div class="dl-case"><i data-ic="flag"></i> ไปเคส #${e(cs.id)} · ${e((cs.needs||[]).slice(0,2).join(', ')||'เคส')}${rt&&rt.km!=null?`<br><b>${TK.eta(rt.km,rt.min)}</b>${rt.plan?' · เส้นทางที่ศูนย์กำหนด':''}`:''}</div>`:'<div class="dl-case idle">ยังไม่ได้ถือเคส</div>'}</div>`}
   function drop(k){const r=RT.get(k);if(r){rg.removeLayer(r.g);RT.delete(k)}}
   function route(t){const k=tn(t.team),cs=myCase(k);if(!cs.length){drop(k);return}
@@ -35,6 +35,9 @@ const DLIVE=(()=>{
       else{glideTo(m,[+t.lat,+t.lng],900,t);if(m._h!==html){m._h=html;m.setIcon(L.divIcon({className:'',html,iconSize:null,iconAnchor:[17,0]}))}}
       m._t=t;if(m.isPopupOpen())m.setPopupContent(info(t));if(on)route(t)});
     for(const [k,m] of MK)if(!seen.has(k)){m.remove();MK.delete(k);drop(k)}}
+  let HQM=null;function hq(){if(!M.map)return;const p=TK.hq&&TK.hq.on&&TK.hq.pos;if(!p){if(HQM){HQM.remove();HQM=null}return}
+    if(!HQM)HQM=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="hq-pin">ศูนย์</div>',iconSize:null,iconAnchor:[24,14]}),zIndexOffset:1600}).bindTooltip('ตำแหน่งเครื่องศูนย์').addTo(M.map);else HQM.setLatLng([p.lat,p.lng])}
+  addEventListener('hm-hq',()=>{hq();for(const m of MK.values())if(m.isPopupOpen())m.setPopupContent(info(m._t))});setInterval(hq,5000);
   async function start(){started=true;const leg=v=>{const l=document.getElementById('dleg');if(l)l.style.visibility=v};
     if(!M._dlEv){M._dlEv=1;M.map.on('popupopen',ev=>{if(ev.popup._source&&ev.popup._source._team)leg('hidden')});M.map.on('popupclose',()=>leg(''));
       if(typeof LIVE!=='undefined')LIVE.start(rows=>{if(!D.key)return;D.live=mergeLive(D.live,rows);upd(D.live)});

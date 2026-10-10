@@ -38,7 +38,10 @@ function side(){const el=$('#trk-side');if(!el||el.querySelector('.ptt-press'))r
     .sort((a,b)=>(b.sos-a.sos)||((b.cs.length>0)-(a.cs.length>0))||((a.age??9e15)-(b.age??9e15)));
   const on=rows.filter(r=>r.age!=null&&r.age<30*60e3).length;
   const NET=TK.NET;
-  el.innerHTML=`<div class="ts-h"><b>สถานะทีมสด</b><small>ออนไลน์ ${on}/${rows.length}${typeof LIVE!=='undefined'&&LIVE.ok()?' · <span class="ts-live">● สด</span>':''}</small></div><div class="ts-list">${rows.map(({t,l,age,cs,sos})=>{
+  const HQ=TK.hq;rows.forEach(r=>{r.hq=r.l?HQ.to(r.t.name,r.l.lat,r.l.lng):null});if(HQ.on&&T.hqSort)rows.sort((a,b)=>(b.sos-a.sos)||((a.hq?(a.hq.road??a.hq.km):9e9)-(b.hq?(b.hq.road??b.hq.km):9e9)));
+  el.innerHTML=`<div class="ts-h"><b>สถานะทีมสด</b><small>ออนไลน์ ${on}/${rows.length}${typeof LIVE!=='undefined'&&LIVE.ok()?' · <span class="ts-live">● สด</span>':''}</small></div>
+    <div class="ts-hqbar"><button type="button" class="ts-hqbtn" data-hq aria-pressed="${HQ.on}"><i data-ic="home"></i> ${HQ.on?(HQ.pos?'ระยะจากศูนย์':HQ.err==='denied'?'ไม่ได้อนุญาตตำแหน่ง':'กำลังหาตำแหน่งศูนย์…'):'คำนวณระยะจากศูนย์'}</button>${HQ.on&&HQ.pos?`<button type="button" class="ts-hqsort" data-hqsort aria-pressed="${!!T.hqSort}">เรียงใกล้ศูนย์</button>`:''}</div>
+    <div class="ts-list">${rows.map(({t,l,age,cs,sos,hq})=>{
     const fresh=sig(age),realSig=l&&l.sig!=null&&age!=null&&age<15*60e3,bars=realSig?Math.max(0,Math.min(4,+l.sig)):fresh[0],eta=TRACK.eta?TRACK.eta(t.name):null,bat=l&&l.battery!=null?+l.battery:null,sp=l&&l.speed!=null?Math.round(+l.speed):null;
     const net=l&&l.net?(NET[l.net]||String(l.net).toUpperCase()):'',alt=l&&l.alt!=null?Math.round(+l.alt):null;
     return `<button type="button" class="ts ${sos?'sos':''}" data-tsel="${esc(t.name)}"><div class="ts-1"><span class="ts-dot ${fresh[2]}"></span><b>${esc(t.name)}</b><small class="ts-age" data-age="${l?Number(l.updatedAt):''}">${age!=null?(age<60e3?Math.round(age/1000)+' วิ':Math.round(age/60e3)+' นาที'):'–'}</small>${sos?'<span class="ts-sos">SOS</span>':`<span class="ts-st ${esc(t.status||'ready')}">${esc(TST[t.status]||'พร้อม')}</span>`}</div>
@@ -51,11 +54,17 @@ function side(){const el=$('#trk-side');if(!el||el.querySelector('.ptt-press'))r
         <span title="ความชื้นสัมพัทธ์ ณ จุดทีม (สถานีอากาศ)"><i data-ic="drop"></i>${l&&l.hum!=null?Math.round(+l.hum)+'%':'–'}</span>
       </div>
       ${cs.length?(()=>{const ord=eta?[...cs.filter(c=>String(c.id)===String(eta.caseId)),...cs.filter(c=>String(c.id)!==String(eta.caseId))]:cs;return `<div class="ts-cases" data-n="${ord.length}">${ord.map((c,i)=>{const id=String(c.id),sh=id.length>8?id.split('-').pop():id,lv=c.sevSet||c.urgency||1,go=eta&&String(eta.caseId)===id;return `<div class="ts-cc u${esc(lv)}${go?' go':''}" title="เคส #${esc(id)}"><small class="ts-tag">${i===0?'ตอนนี้':i===1?'ถัดไป':'ลำดับ '+(i+1)}</small><b><i data-ic="flag"></i>#${esc(sh)}</b><span>${esc((c.needs||[]).slice(0,2).join(', ')||'เคส')}</span>${go?`<em>${eta.km.toFixed(1)} กม.${eta.min!=null?` · ~${Math.max(1,Math.round(eta.min))} น.`:''}</em>${eta.plan?'<small>ศูนย์กำหนด</small>':''}`:''}</div>`}).join('')}</div>${ord.length>2?`<small class="ts-more">เลื่อนดูอีก ${ord.length-2} เคส →</small>`:''}`})():''}
+      ${hq?`<div class="ts-hqd"><i data-ic="home"></i><span>ห่างศูนย์ <b>${HQ.label(hq)}</b></span></div>`:''}
       ${t.vehicle||t.members||typeof PTT!=='undefined'?`<small class="ts-x">${esc([VEH[t.vehicle]||'',t.members?t.members+' คน':'',t.phone?tel(t.phone):''].filter(Boolean).join(' · '))}</small>`:''}${typeof PTT!=='undefined'?`<span class="ts-ptt" role="button" tabindex="0" data-ptt="${esc(t.name)}" title="วอ ถึง ${esc(t.name)} · กดค้างเพื่อพูด" aria-label="วอ ถึง ${esc(t.name)}"><i data-ic="mic"></i></span>`:''}</button>`}).join('')||'<p class="muted small">ยังไม่มีทีม</p>'}</div>`;
   if(typeof PTT!=='undefined')el.querySelectorAll('.ts-ptt').forEach(b=>{const n=b.dataset.ptt;PTT.bind(b,{ch:()=>'tm:'+n,tap:()=>{if(typeof toast==='function')toast('กดค้างไว้เพื่อพูดกับทีม '+n)}})})}
 setInterval(()=>{if(document.hidden)return;const now=Date.now();document.querySelectorAll('#trk-side .ts-age[data-age]').forEach(x=>{const t=+x.dataset.age;if(!t)return;const a=now-t;x.textContent=a<60e3?Math.round(a/1000)+' วิ':Math.round(a/60e3)+' นาที'})},1000);
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#trk-side [data-tsel]');if(!b||e.target.closest('.ts-ptt'))return;const n=b.dataset.tsel;if(typeof TRACK!=='undefined'){TRACK.focus(n);const eta=TRACK.eta&&TRACK.eta(n);if(eta&&e.target.closest('.ts-cc')&&TRACK.edit)TRACK.edit(n)}});
 setInterval(()=>{if(T.loaded&&!document.hidden)side()},5000);
+addEventListener('hm-hq',()=>{if(T.loaded)side();hqMark()});
+document.addEventListener('click',e=>{if(!e.target.closest)return;if(e.target.closest('#trk-side [data-hq]')){e.stopPropagation();TK.hq.set(!TK.hq.on);return}if(e.target.closest('#trk-side [data-hqsort]')){e.stopPropagation();T.hqSort=!T.hqSort;side()}},true);
+let hqM=null;function hqMark(){const m=typeof TRACK!=='undefined'&&TRACK.map&&TRACK.map(),p=TK.hq.on&&TK.hq.pos;if(!m)return;if(!p){if(hqM){hqM.remove();hqM=null}return}
+  if(!hqM)hqM=L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div class="hq-pin">ศูนย์</div>',iconSize:null,iconAnchor:[24,14]}),zIndexOffset:1200}).bindTooltip('ตำแหน่งเครื่องศูนย์'+(p.acc?` (±${p.acc} ม.)`:'')).addTo(m);else hqM.setLatLng([p.lat,p.lng])}
+setTimeout(hqMark,3000);
 setInterval(()=>{if(T.loaded&&!document.hidden&&typeof TRACK!=='undefined'&&TRACK.routes)TRACK.routes(T.live,allCases())},5000);
 if(typeof LIVE!=='undefined')LIVE.start(rows=>{if(!T.loaded)return;T.live=mergeLive(T.live,rows);liveUI()});
 function liveUI(){if(typeof TRACK!=='undefined'){TRACK.update(T.live,T.roster);if(TRACK.routes)TRACK.routes(T.live,allCases())}side();

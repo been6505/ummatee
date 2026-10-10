@@ -238,7 +238,7 @@ body.on-chat .top .st{display:none!important}
 .ac-b{padding:0 14px 14px}.ac-b dl{display:grid;grid-template-columns:84px 1fr;gap:7px 10px;margin:2px 0 14px;font-size:14px;background:#fff;border-radius:14px;padding:12px;box-shadow:inset 0 0 0 1px var(--line)}.ac-b dt{color:var(--muted)}.ac-b dd{margin:0;word-break:break-word}
 .ac-act{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}.ac-act .btn{min-height:46px;font-size:15px;border-radius:999px}
 .ac-more{width:100%}
-#v-chat{padding-bottom:calc(var(--sab) + 108px)!important}
+#v-chat{padding-bottom:0!important}#v-chat form.send{padding-bottom:calc(var(--sab) + 90px);background:#fff}
 .ik-team{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0;padding:10px 12px;background:#F4F6FC;border-radius:14px;font-size:14px}.ik-team dt{color:var(--muted);white-space:nowrap}.ik-team dd{margin:0;font-weight:600;word-break:break-word}
 .db-edit{flex:none;border:0;background:var(--tint);color:var(--primary);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;margin-left:6px}.db-edit .ic{width:18px;height:18px}
 .db-team .db-st{margin-left:auto}
@@ -514,7 +514,7 @@ function otConfig(){const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'h
     monitoring:2,locatorInterval:10,locatorDisplacement:10,pubExtendedData:true,ignoreInaccurateLocations:200,cmd:false,remoteConfiguration:false}}
 function b64(str){return btoa(String.fromCharCode(...new TextEncoder().encode(str)))}
 function autoTrackUI(){const h=$('#at-hero');if(!h)return;
-  if(NATIVE){h.hidden=true;const mini=$('#at-mini'),m=NT.at?Math.round((Date.now()-NT.at)/60000):null;mini.hidden=false;
+  if(NATIVE){h.hidden=true;const mini=$('#at-mini'),m=NT.at?Math.round((Date.now()-NT.at)/60000):null;mini.hidden=!NT.err;
     mini.innerHTML=NT.err==='denied'?'⚠️ ยังไม่ได้อนุญาตตำแหน่ง · <a href="#" id="nt-set">เปิดการตั้งค่า</a>':NT.err==='bad_link'||NT.err==='bad_key'?'⚠️ ลิงก์ทีมใช้ไม่ได้แล้ว (ศูนย์อาจเปลี่ยนลิงก์) · ขอลิงก์ใหม่จากศูนย์':NT.err==='offline'?`📴 ยังส่งไม่ได้ (ไม่มีสัญญาณ) · เก็บไว้ ${NT.q} จุด จะส่งเองเมื่อมีสัญญาณ`:NT.err?'⚠️ ส่งตำแหน่งไม่ได้: '+esc(NT.err):NT.at?`📱 แอปกำลังส่งตำแหน่ง (ทำงานแม้ล็อกจอ) · ล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:'📱 กำลังเริ่มส่งตำแหน่ง…';return}
   if(!S.tk){h.hidden=true;return}
   $('#at-store').href=IOS?'https://apps.apple.com/app/owntracks/id692424691':'https://play.google.com/store/apps/details?id=org.owntracks.android';
@@ -525,7 +525,7 @@ function autoTrackUI(){const h=$('#at-hero');if(!h)return;
   let later=false;try{later=Date.now()-(+localStorage.getItem('uh_at_later')||0)<6*3600e3}catch(e){}
   h.hidden=ok||later||!(S.me&&S.me.team&&S.me.team.inRoster!==false);
   $('#at-st').textContent=app?(ok?`✓ แอปส่งตำแหน่งแล้ว · ล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:`แอปส่งล่าสุด ${m} นาทีก่อน · เปิดแอป OwnTracks ให้ทำงาน`):'รอแอปส่งตำแหน่งแรก…';$('#at-st').className='at-st'+(ok?' ok':'');
-  const mini=$('#at-mini');mini.hidden=!app;if(app)mini.innerHTML=ok?`📡 ติดตามอัตโนมัติทำงานอยู่ · แอปส่งล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:`⚠️ แอปติดตามไม่ได้ส่งมา ${m} นาที · <a href="#" id="at-show">ตั้งค่าใหม่</a>`;
+  const mini=$('#at-mini');mini.hidden=!app||ok;if(app)mini.innerHTML=ok?`📡 ติดตามอัตโนมัติทำงานอยู่ · แอปส่งล่าสุด ${m<1?'ไม่ถึง 1':m} นาทีก่อน`:`⚠️ แอปติดตามไม่ได้ส่งมา ${m} นาที · <a href="#" id="at-show">ตั้งค่าใหม่</a>`;
   if(typeof iconize==='function')iconize(mini)}
 $('#at-later').onclick=()=>{try{localStorage.setItem('uh_at_later',String(Date.now()))}catch(e){}$('#at-hero').hidden=true};
 $('#at-file').onclick=e=>{e.preventDefault();const bl=new Blob([JSON.stringify(otConfig(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download='helpme-team.otrc';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)};

@@ -47,11 +47,17 @@ const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
 const allCases=r=>r&&r.districts.includes('*');
+const MERGED=r=>(r&&r.districts||[]).filter(d=>/^จ\./.test(d)).map(d=>d.slice(2));
+const PINNED=r=>(r&&r.districts||[]).filter(d=>/^#/.test(d)).map(d=>d.slice(1));
+const SPECIAL=d=>/^(จ\.|#)/.test(d);
+const pinRoom=c=>W.rooms.find(r=>isProv(r)&&PINNED(r).includes(String(c.id)));
+function provG(c){const pr=pinRoom(c);if(pr)return pr.province;const p=provOf(c),m=p&&W.rooms.find(r=>isProv(r)&&MERGED(r).includes(p));return m?m.province:p}
 function inRoom(c,r){if(!r||allCases(r))return true;
   const pv=provOf(c);
-  if(isProv(r))return pv===r.province||(hasPin(c)&&(()=>{const ctr=provCenter(r);return ctr&&km(ctr[0],ctr[1],+c.lat,+c.lng)<=NEAR_KM})());
+  if(isProv(r)){const pin=pinRoom(c);if(pin)return pin.id===r.id;
+    return pv===r.province||MERGED(r).includes(pv)||(hasPin(c)&&(()=>{const ctr=provCenter(r);return ctr&&km(ctr[0],ctr[1],+c.lat,+c.lng)<=NEAR_KM})())}
   if(r.province&&pv&&pv!==r.province)return false;
-  if(r.districts.length&&c.district&&r.districts.some(d=>normD(d).replace(/^อำเภอ/,'')===normD(c.district).replace(/^อำเภอ/,'')))return true;
+  if(r.districts.length&&c.district&&r.districts.filter(d=>!SPECIAL(d)).some(d=>normD(d).replace(/^อำเภอ/,'')===normD(c.district).replace(/^อำเภอ/,'')))return true;
   if(r.radius&&r.lat!=null&&hasPin(c))return km(r.lat,r.lng,+c.lat,+c.lng)*1000<=r.radius;
   return false}
 function view(){const r=room();
@@ -206,7 +212,7 @@ function stats(cs,names){const act=cs.filter(c=>c.status!=='done');const live=ne
     low:W.items.filter(i=>i.warroom&&i.min!==''&&Number(i.qty)<=Number(i.min)).length}}
 function chipsOf(st){return `<span class="k">${st.act} เคสค้าง</span>${st.crit?`<span class="k cr">${st.crit} วิกฤต</span>`:''}<span class="k">${st.going} กำลังไป</span><span class="k">ทีม ${st.on}/${st.teams} ออนไลน์</span>`}
 function treeCases(list,label){const open=list.filter(c=>c.status!=='done').sort((a,b)=>sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0));if(!open.length)return '';
-  const row=c=>{const ph=photos(c);return `<a class="tc u${sev(c)}" href="${caseLink(c)}"><span class="tph">${ph.length?`<img src="${thumb(ph[0],96)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w96" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span>
+  const row=c=>{const ph=photos(c);return `<a class="tc u${sev(c)}" href="${caseLink(c)}" draggable="true" data-dcase="${esc(c.id)}" title="ลากไปวางที่ศูนย์ประสานงานจังหวัดอื่นเพื่อย้ายเคส"><span class="tph">${ph.length?`<img src="${thumb(ph[0],96)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w96" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}</span>
     <span class="tt"><b>${esc((c.needs||[]).slice(0,2).join(', ')||'ขอความช่วยเหลือ')}</b><small>${esc(c.people||1)} คน · ${esc(c.district||provOf(c)||'')} · ${c.status==='going'?'กำลังไป':'รอ '+esc(waitTxt(c.createdAt))}</small></span><span class="tl">${URG[sev(c)]}</span></a>`};
   return `<details class="tcs"${open.length<=4?' open':''}><summary>${esc(label)} <b>${open.length}</b>${open.some(c=>sev(c)===3)?` <span class="k cr">วิกฤต ${open.filter(c=>sev(c)===3).length}</span>`:''}</summary><div class="tcl">${open.slice(0,12).map(row).join('')}${open.length>12?`<span class="muted small">และอีก ${open.length-12} เคส · เปิด War Room เพื่อดูทั้งหมด</span>`:''}</div></details>`}
 const APPK={warroom:'หน่วยงาน',volunteer:'จิตอาสา'},APPS={pending:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ'};
@@ -232,17 +238,19 @@ document.addEventListener('click',async e=>{const ok=e.target.closest('[data-app
   if(r&&r.ok){await Promise.all([loadRooms(),loadTeams()]);W.appsAt='';render()}});
 function structTab(){if(W.appsAt!=='s'){W.appsAt='s';appsCard($('#st-apps'),'central')}const open=W.cases.filter(c=>c.status!=='done'),zones=W.rooms.filter(r=>!isProv(r));
   const covered=c=>W.rooms.some(r=>inRoom(c,r)),orphan=open.filter(c=>!covered(c)),freeTeams=W.roster.filter(t=>!t.warroom||!zones.some(z=>z.id===t.warroom));
-  const provs=[...new Set(W.rooms.map(r=>r.province||'').concat(open.map(provOf).filter(Boolean)))].sort((a,b)=>(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:0)||a.localeCompare(b,'th'));
+  const provs=[...new Set(W.rooms.map(r=>r.province||'').concat(open.map(provG).filter(Boolean)))].sort((a,b)=>(a==='กรุงเทพมหานคร'?-1:b==='กรุงเทพมหานคร'?1:0)||a.localeCompare(b,'th'));
   $('#st-sum').innerHTML=[[W.rooms.length,'War Room ทั้งหมดทั่วประเทศ'],[new Set(W.rooms.map(r=>r.province).filter(Boolean)).size,'จังหวัดที่มี War Room'],[W.rooms.filter(isProv).length,'ศูนย์ประสานงานจังหวัด'],[zones.length,'War Room โซน'],[W.roster.length,'ทีมทั้งหมด'],[orphan.length,'เคสค้างที่ยังไม่มี War Room ดูแล',orphan.length?'crit':''],[freeTeams.length,'ทีมยังไม่สังกัดโซน',freeTeams.length?'warn':'']]
     .map(([v,l,c])=>`<div class="wr-kpi ${c||''}"><b>${v}</b><span>${l}</span></div>`).join('');
   $('#st-tree').innerHTML=`<div class="node central"><b>HELP ME CENTRAL</b><span class="muted small">Common Operating Picture · ข้อมูล / มาตรฐาน / สนับสนุน</span><div class="kk">${chipsOf(stats(W.cases,W.roster.map(t=>t.name)))}</div></div>
-    <div class="lvl">${provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv),pc=W.cases.filter(c=>pv?provOf(c)===pv:!provOf(c));
+    <div class="lvl">${provs.map(pv=>{const pr=W.rooms.find(r=>isProv(r)&&r.province===pv),zs=W.rooms.filter(r=>!isProv(r)&&(r.province||'')===pv),pc=W.cases.filter(c=>pv?provG(c)===pv:!provG(c));
       const pnames=W.roster.filter(t=>zs.some(z=>z.id===t.warroom)).map(t=>t.name),po=pc.filter(c=>c.status!=='done'&&!zs.some(z=>inRoom(c,z))).length;
-      return `<div class="branch"><div class="node prov${pr?'':' missing'}">${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>${pr.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(pr))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
+      const mg=pr?MERGED(pr):[],pn=pr?PINNED(pr).filter(id=>W.cases.some(c=>String(c.id)===id&&c.status!=='done')):[],targets=W.rooms.filter(r=>isProv(r)&&r.province!==pv);
+      return `<div class="branch"><div class="node prov${pr?'':' missing'}" data-dprov="${esc(pv)}" data-droom="${pr?esc(pr.id):''}"${!pr&&pv?` draggable="true" data-mprov="${esc(pv)}" title="ลากไปวางที่ศูนย์ประสานงานจังหวัดอื่นเพื่อรวมจังหวัดนี้"`:''}>${pr?`<button type="button" class="lnk ttl" data-go="${esc(pr.id)}"><i class="rdot" style="background:${esc(pr.color)}"></i> ${esc(pr.name)}</button>${pr.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(pr))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}`:`<b>${pv?'จังหวัด'+esc(pv):'ไม่ระบุจังหวัด'}</b>`}
           <span class="muted small">${pv?'Provincial Coordination':'เคส/โซนที่ยังไม่ระบุจังหวัด'}${pr&&pr.lead?' · '+esc(pr.lead):''}${pr&&pr.phone?` · <a href="tel:${esc(telOf(pr.phone))}">${esc(pr.phone)}</a>`:''}</span>
           <div class="kk">${chipsOf(stats(pc,pnames))}${po?`<span class="k warn">${po} เคสนอกโซน</span>`:''}</div>
           ${treeCases(pc.filter(c=>!zs.some(z=>inRoom(c,z))),zs.length?'เคสในจังหวัด/ใกล้เคียง ที่ยังไม่มีโซนดูแล':'เคสในจังหวัด/ใกล้เคียง')}
-          ${!pr&&pv?`<button type="button" class="btn ghost sm" data-newprov=""${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>`:''}</div>
+          ${mg.length||pn.length?`<div class="mg">${mg.map(x=>`<span class="mgc">รวม จ.${esc(x)} ไว้ที่นี่<button type="button" data-unmerge="${esc(pr.id)}" data-x="${esc('จ.'+x)}" aria-label="แยก จ.${esc(x)} ออก">✕</button></span>`).join('')}${pn.length?`<span class="mgc">ย้ายเคสมา ${pn.length} เคส<button type="button" data-unmerge="${esc(pr.id)}" data-x="#" aria-label="ย้ายเคสกลับจังหวัดเดิม">✕</button></span>`:''}</div>`:''}
+          ${!pr&&pv?`<div class="mg-act"><button type="button" class="btn ghost sm" data-newprov="${esc(pv)}">+ ตั้งศูนย์ประสานงานจังหวัด</button>${targets.length?`<label class="mg-sel"><span>หรือรวมกับ</span><select data-mergeto="${esc(pv)}"><option value="">เลือกศูนย์จังหวัด…</option>${targets.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></label>`:''}</div>`:''}</div>
         <div class="lvl">${zs.map(z=>{const tn=W.roster.filter(t=>t.warroom===z.id);return `<div class="branch"><div class="node zone"><button type="button" class="lnk ttl" data-go="${esc(z.id)}"><i class="rdot" style="background:${esc(z.color)}"></i> ${esc(z.name)}</button>${z.linkKey?`<button type="button" class="btn ghost sm" data-wlcopy="${esc(wrUrl(z))}"><i data-ic="link"></i> คัดลอกลิงก์ทีม</button>`:''}
             <span class="muted small">War Room โซน${z.lead?' · '+esc(z.lead):''}${z.districts.length?' · '+esc(z.districts.slice(0,4).join(', '))+(z.districts.length>4?'…':''):''}</span>
             <div class="kk">${chipsOf(stats(W.cases.filter(c=>inRoom(c,z)),tn.map(t=>t.name)))}</div>
@@ -254,6 +262,33 @@ function structTab(){if(W.appsAt!=='s'){W.appsAt='s';appsCard($('#st-apps'),'cen
 $('#p-struct').addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){W.room=g.dataset.go;W.tab='over';W.fitted='';try{history.replaceState(null,'','?wr='+encodeURIComponent(W.room))}catch(err){}render();return}
   const np=e.target.closest('[data-newprov]');if(np){roomForm({kind:'province',province:np.dataset.newprov,districts:[]});return}
   const nz=e.target.closest('[data-newzone]');if(nz)roomForm({kind:'zone',province:nz.dataset.newzone,districts:[]})});
+
+async function saveDists(r,dists,msg){const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id,kind:r.kind,province:r.province,name:r.name,lead:r.lead||'',phone:r.phone||'',address:r.address||'',
+    lat:r.lat??'',lng:r.lng??'',radius:r.radius||'',districts:dists.join(', '),color:r.color,note:r.note||''}}).catch(()=>null);
+  if(!res||!res.ok){toast('บันทึกไม่สำเร็จ'+(res&&res.error?' ('+res.error+')':''));return false}if(msg)toast(msg,true);return true}
+async function mergeProv(pv,roomId){const r=W.rooms.find(x=>x.id===roomId);if(!r||!pv||r.province===pv)return;
+  if(MERGED(r).includes(pv)){toast('รวมไว้แล้ว');return}
+  if(!confirm(`รวม จ.${pv} เข้ากับ ${r.name}?\nเคสใน จ.${pv} จะไปอยู่ใต้ศูนย์นี้ และเจ้าหน้าที่ของศูนย์นี้จะเห็นเคสเหล่านั้น`))return;
+  if(await saveDists(r,[...r.districts,'จ.'+pv],`รวม จ.${pv} เข้ากับ ${r.name} แล้ว`)){await loadRooms();render()}}
+async function pinCase(id,roomId){const r=W.rooms.find(x=>x.id===roomId),c=W.cases.find(x=>String(x.id)===String(id));if(!r||!c)return;
+  const cur=pinRoom(c);if(cur&&cur.id===r.id){toast('เคสนี้อยู่ที่ศูนย์นี้แล้ว');return}if(!cur&&provG(c)===r.province){toast('เคสนี้อยู่ในจังหวัดนี้อยู่แล้ว');return}
+  if(!confirm(`ย้ายเคส "${(c.needs||[]).slice(0,2).join(', ')||'ขอความช่วยเหลือ'}" (${provG(c)||'ไม่ระบุจังหวัด'}) ไปที่ ${r.name}?`))return;
+  if(cur&&!(await saveDists(cur,cur.districts.filter(d=>d!=='#'+c.id))))return;
+  if(await saveDists(r,[...r.districts,'#'+c.id],`ย้ายเคสไป ${r.name} แล้ว`)){await loadRooms();render()}}
+(()=>{const T=$('#p-struct');let drag=null;
+  const tgt=e=>{const n=e.target.closest&&e.target.closest('.node.prov[data-droom]');return n&&n.dataset.droom?n:null};
+  T.addEventListener('dragstart',e=>{const c=e.target.closest('[data-dcase]'),p=e.target.closest('[data-mprov]');drag=c?{kind:'case',v:c.dataset.dcase}:p?{kind:'prov',v:p.dataset.mprov}:null;
+    if(!drag)return;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',drag.v)}catch(x){}T.classList.add('dragging')});
+  T.addEventListener('dragend',()=>{drag=null;T.classList.remove('dragging');T.querySelectorAll('.drop-on').forEach(n=>n.classList.remove('drop-on'))});
+  T.addEventListener('dragover',e=>{const n=tgt(e);if(!drag||!n)return;if(drag.kind==='prov'&&n.dataset.dprov===drag.v)return;e.preventDefault();e.dataTransfer.dropEffect='move';
+    T.querySelectorAll('.drop-on').forEach(x=>x!==n&&x.classList.remove('drop-on'));n.classList.add('drop-on')});
+  T.addEventListener('dragleave',e=>{const n=tgt(e);if(n&&!n.contains(e.relatedTarget))n.classList.remove('drop-on')});
+  T.addEventListener('drop',e=>{const n=tgt(e);if(!drag||!n)return;e.preventDefault();const d=drag;drag=null;n.classList.remove('drop-on');T.classList.remove('dragging');
+    if(d.kind==='prov')mergeProv(d.v,n.dataset.droom);else pinCase(d.v,n.dataset.droom)});
+  T.addEventListener('change',e=>{const s=e.target.closest('[data-mergeto]');if(!s||!s.value)return;const v=s.value;s.value='';mergeProv(s.dataset.mergeto,v)});
+  T.addEventListener('click',async e=>{const u=e.target.closest('[data-unmerge]');if(!u)return;e.preventDefault();const r=W.rooms.find(x=>x.id===u.dataset.unmerge);if(!r)return;const x=u.dataset.x;
+    if(!confirm(x==='#'?`ย้ายเคสที่ย้ายมาที่ ${r.name} กลับไปจังหวัดเดิม?`:`แยก ${x} ออกจาก ${r.name}?`))return;
+    if(await saveDists(r,r.districts.filter(d=>x==='#'?!d.startsWith('#'):d!==x),'บันทึกแล้ว')){await loadRooms();render()}})})();
 
 W.tm=new Map();
 function moveTeams(V){if(!W.map||!W.lt)return [];const sos=new Set((W.alerts.sos||[]).map(s=>s.name)),seen=new Set(),pts=[];
@@ -425,7 +460,7 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     <label class="addr-wrap">ที่ตั้ง (พิมพ์ชื่อสถานที่/ที่อยู่ แล้วเลือกจากรายการ)<input name="address" maxlength="200" value="${esc(r.address||'')}" placeholder="เช่น โรงเรียนรีเจ้นท์ ลาดกระบัง"></label>
     <fieldset><legend>พื้นที่รับผิดชอบ (ใส่อย่างใดอย่างหนึ่งหรือทั้งสอง)</legend>
       <label class="chk-row"><input type="checkbox" name="allcases"${(r.districts||[]).includes('*')?' checked':''}> ดูแลทุกเคสในระบบ (ไม่จำกัดพื้นที่)</label>
-      <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).filter(d=>d!=='*').join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
+      <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).filter(d=>d!=='*'&&!SPECIAL(d)).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
       <div class="row"><label>จุดที่ตั้ง (ละติจูด, ลองจิจูด)<input name="ll" maxlength="40" value="${r.lat!=null?esc(r.lat+', '+r.lng):''}" placeholder="13.7563, 100.5018"></label><label>รัศมี (กม.)<input name="radius" type="number" min="0" step="0.5" inputmode="decimal" value="${r.radius?esc(r.radius/1000):''}"></label></div>
       <div class="acts"><button type="button" class="btn ghost sm" id="ll-map">ใช้จุดกลางแผนที่ตอนนี้</button><button type="button" class="btn ghost sm" id="ll-me">ใช้ตำแหน่งของฉัน</button></div></fieldset>
     <label>สี<span class="colors">${COLORS.map(x=>`<label class="sw"><input type="radio" name="color" value="${x}"${x===(r.color||COLORS[W.rooms.length%COLORS.length])?' checked':''}><i style="background:${x}"></i></label>`).join('')}</span></label>
@@ -435,7 +470,7 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     if(rad&&!m){toast('ใส่จุดที่ตั้งก่อนกำหนดรัศมี');return false}
     const kind=f.kind.value,pv=f.province.value.trim();if(kind==='province'&&!pv){toast('ศูนย์ประสานงานจังหวัดต้องระบุจังหวัด');return false}
     if(kind==='zone'&&!f.name.value.trim()){toast('ใส่ชื่อ War Room โซน');return false}
-    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,districts:(f.allcases.checked?'*, ':'')+f.districts.value,color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
+    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,districts:(f.allcases.checked?'*, ':'')+f.districts.value+((r.districts||[]).filter(SPECIAL).length?', '+(r.districts||[]).filter(SPECIAL).join(', '):''),color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
     if(!res.ok){toast(res.error==='province_exists'?'จังหวัดนี้มีศูนย์ประสานงานแล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     toast('บันทึกแล้ว',true);await loadRooms();W.room=res.id;W.fitted='';if(!r.id)W.tab='prof';try{history.replaceState(null,'','?wr='+encodeURIComponent(res.id))}catch(e){}render()});
   const f=$('#dlg-f');

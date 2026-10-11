@@ -1353,15 +1353,17 @@ async function wrScope(db) {
     const zones = new Set([r.id]);
     if (r.kind === 'province') { const { results } = await db.prepare('SELECT id FROM warrooms WHERE active=1 AND province=?').bind(r.province || '').all(); results.forEach(z => zones.add(z.id)); }
     const { results: tm } = await db.prepare(`SELECT name FROM roster WHERE active=1 AND warroom IN (${[...zones].map(() => '?').join(',')})`).bind(...zones).all();
-    sc = { r, all: d.includes('*'), d: d.map(normDist), zones, teams: new Set(tm.map(t => t.name)) };
+    sc = { r, all: d.includes('*'), d: d.filter(x => !/^(จ\.|#)/.test(x)).map(normDist), zones, teams: new Set(tm.map(t => t.name)),
+      xprov: new Set(d.filter(x => x.startsWith('จ.')).map(x => x.slice(2))), pins: new Set(d.filter(x => x.startsWith('#')).map(x => x.slice(1))) };
   }
   if (st) st.scope = sc; return sc;
 }
 function inScope(c, sc) {
   if (!sc || sc.none) return false; if (sc.all) return true;
   const v = String(c.volunteer || '').replace(/^'/, '').trim(); if (v && sc.teams.has(v)) return true;
+  if (sc.pins && sc.pins.has(String(c.id))) return true;
   const r = sc.r, pv = caseProv(c), lat = Number(c.lat), lng = Number(c.lng), pin = isFinite(lat) && isFinite(lng) && lat !== 0;
-  if (r.kind === 'province') { if (pv && pv === r.province) return true; const ctr = r.lat != null ? [r.lat, r.lng] : PROV_LL[r.province]; return !!(pin && ctr && kmDist(ctr[0], ctr[1], lat, lng) <= 20); }
+  if (r.kind === 'province') { if (pv && (pv === r.province || (sc.xprov && sc.xprov.has(pv)))) return true; const ctr = r.lat != null ? [r.lat, r.lng] : PROV_LL[r.province]; return !!(pin && ctr && kmDist(ctr[0], ctr[1], lat, lng) <= 20); }
   if (r.province && pv && pv !== r.province) return false;
   if (sc.d.length && c.district && sc.d.includes(normDist(c.district))) return true;
   return !!(r.radius && r.lat != null && pin && kmDist(r.lat, r.lng, lat, lng) * 1000 <= r.radius);

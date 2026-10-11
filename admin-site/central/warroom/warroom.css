@@ -288,3 +288,35 @@ body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{di
 .ab{grid-template-columns:minmax(0,1fr)}.af,.aa{min-width:0;max-width:100%}.aa input,.aa select{min-width:0;max-width:100%}
 .wr-tree .tc{flex-direction:row!important;flex:initial!important;border:0!important;font-size:inherit;scroll-snap-align:none;padding:6px 10px 6px 6px!important;border-radius:14px!important;background:var(--bg,#f5f5f7)!important;width:100%;box-sizing:border-box}
 .aa label{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;max-width:100%;flex:1 1 180px}.aa label select{flex:1 1 140px;width:100%}
+@media(max-width:640px){
+  .wr-rooms{flex-wrap:wrap!important;gap:8px!important;justify-content:flex-end}
+  .wr-rooms>.wr-roomtabs{order:-1;flex:1 1 100%!important;max-width:100%}
+  .wr-sub{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;overflow:visible!important}
+  .wr-sub button{flex:none!important;justify-content:center;min-width:0;padding-left:6px!important;padding-right:6px!important}
+  #st-sum.wr-sum>*:first-child{grid-column:1/-1}
+  .wr-st{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+  .wr-st .wr-sti{padding:10px 12px!important;border-radius:16px!important;gap:0 8px!important;min-width:0;grid-template-columns:auto minmax(0,1fr);align-items:center}
+  .wr-st .wr-sti i{grid-row:1/3}.wr-st .wr-sti b{font-size:26px!important;line-height:1.1}.wr-st .wr-sti span{font-size:13px!important;line-height:1.25;overflow-wrap:anywhere}
+  #p-stock .wr-tw{overflow:visible!important}
+  #p-stock .wr-tbl{display:block;width:100%;min-width:0!important}
+  #p-stock .wr-tbl thead{display:none}
+  #p-stock .wr-tbl tbody{display:grid;gap:8px}
+  #p-stock .wr-tbl tr{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm q" "ct mn" "io ed";gap:4px 10px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--bg,#f5f5f7)}
+  #p-stock .wr-tbl tr:has(td[colspan]){display:block}
+  #p-stock .wr-tbl td{display:block;padding:0!important;border:0!important;background:none!important;white-space:normal}
+  #p-stock .wr-tbl td:nth-child(1){grid-area:nm;font-weight:700;font-size:15px}
+  #p-stock .wr-tbl td:nth-child(2){grid-area:ct;font-size:12.5px;color:var(--muted)}
+  #p-stock .wr-tbl td:nth-child(3){grid-area:q;font-size:20px;font-weight:800;text-align:right}
+  #p-stock .wr-tbl td:nth-child(4){grid-area:mn;font-size:12.5px;color:var(--muted);text-align:right}#p-stock .wr-tbl td:nth-child(4)::before{content:"ขั้นต่ำ "}
+  #p-stock .wr-tbl td:nth-child(5){grid-area:io;display:flex;flex-wrap:wrap;gap:6px}
+  #p-stock .wr-tbl td:nth-child(6){grid-area:ed;justify-self:end}
+}
+.wr-tree .mg{display:flex;flex-wrap:wrap;gap:6px}
+.wr-tree .mgc{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 4px 2px 10px;background:#EEF1FD;color:#2D45C8}
+.wr-tree .mgc button{border:0;background:rgba(45,69,200,.12);color:inherit;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;padding:0}
+.wr-tree .mg-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.wr-tree .mg-sel{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.wr-tree .mg-sel select{font:inherit;font-size:13.5px;min-height:34px;border:1px solid var(--line,#e1e9eb);border-radius:999px;padding:2px 10px;background:var(--surface,#fff);color:var(--ink);max-width:220px}
+.wr-tree [data-dcase],.wr-tree .node.prov[data-mprov]{cursor:grab}
+#p-struct.dragging .node.prov[data-droom]:not([data-droom=""]){outline:2px dashed #9fb0ff;outline-offset:2px}
+.wr-tree .node.prov.drop-on{outline:3px solid #2D45C8!important;outline-offset:2px;background:#EEF1FD}

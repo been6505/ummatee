@@ -1041,3 +1041,9 @@ main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .r
 .drawer .d-col-c>.d-status{margin:0!important}
 @media(min-width:1100px){.drawer .d-col-c>.d-intake{order:1}.drawer .d-col-c>.d-act{order:2}.drawer .d-col-c>.d-status{order:3}}
 @media(max-width:1099px){.drawer .d-col-c>.d-act{order:1}.drawer .d-col-c>.d-status{order:2}.drawer .d-col-c>.d-intake{order:3}}
+/* stock rows: amount box beside + / − */
+#view-stock table.gt td.act{white-space:nowrap}
+#view-stock table.gt td.act .qa{width:76px;height:38px;min-height:38px;padding:0 10px;margin-right:6px;border-radius:12px;border:1px solid var(--line,#E4E6EE);background:var(--surface,#fff);font:inherit;font-size:15px;font-weight:700;text-align:center;vertical-align:middle;-moz-appearance:textfield}
+#view-stock table.gt td.act .qa::-webkit-outer-spin-button,#view-stock table.gt td.act .qa::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#view-stock table.gt td.act .qa:focus{outline:2px solid #C9D3F5;border-color:#2D45C8}
+@media(max-width:760px){#view-stock table.gt td.act .qa{width:74px;padding:0 6px;margin:0;font-size:16px}}

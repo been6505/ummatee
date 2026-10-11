@@ -26,7 +26,10 @@ const stChip=i=>Number(i.qty)<=0?'<span class="schip zero">หมด</span>':low
 function filtered(){const q=$('#q').value.trim().toLowerCase();
   return S.items.filter(i=>{if(isBag(i))return false;if(q&&!(i.name+' '+i.category+' '+i.note+' '+(i.location||'')).toLowerCase().includes(q))return false;
     if(S.cat==='low')return low(i)||Number(i.qty)<=0;if(S.cat==='need')return i.needed;if(S.cat!=='all'&&i.category!==S.cat)return false;return true})}
-function render(){
+// keep amounts typed in the rows (and the caret) across the 20-second refresh
+function render(){const keep={},fo=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.qa;document.querySelectorAll('[data-qa]').forEach(x=>{if(x.value!=='')keep[x.dataset.qa]=x.value});
+  renderMain();document.querySelectorAll('[data-qa]').forEach(x=>{if(keep[x.dataset.qa]!=null)x.value=keep[x.dataset.qa];if(fo&&x.dataset.qa===fo)x.focus()})}
+function renderMain(){
   $('#sync').textContent=S.loaded?'อัปเดต '+new Date(S.loaded).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
   $$('.views [data-view]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===S.view)));$('#view-stock').hidden=S.view!=='stock';$('#view-bags').hidden=S.view!=='bags';
   const bagQty=S.items.filter(isBag).reduce((a,i)=>a+(Number(i.qty)||0),0);$('#bag-badge').textContent=nf(bagQty);
@@ -47,7 +50,7 @@ function render(){
       <td class="r">${nf(m.start)}</td><td class="r add">${m.add?'+'+nf(m.add):'<span class="muted">-</span>'}</td><td class="r sub">${m.sub?'−'+nf(m.sub):'<span class="muted">-</span>'}</td>
       <td class="r q">${nf(q)}<span class="qbar ${cls}" title="เหลือ ${Math.round(Math.max(0,q)/Math.max(1,m.start+m.add,q)*100)}% ของที่มี"><i style="width:${Math.min(100,Math.round(Math.max(0,q)/Math.max(1,m.start+m.add,q)*100))}%"></i></span>${stChip(i)?stChip(i):''}</td><td class="muted">${esc(i.unit||'')}</td>
       <td class="c"><button class="needbtn" data-need="${esc(i.id)}" aria-pressed="${!!i.needed}" title="กดเพื่อ${i.needed?'เอาออกจาก':'เพิ่มใน'}รายการต้องการ">${i.needed?'<i data-ic="check"></i> ต้องการ':'+'}</button></td>
-      <td class="r act"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="เพิ่ม (รับเข้า)" aria-label="เพิ่ม ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="ลด (จ่ายออก)" aria-label="ลด ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}"><i data-ic="note"></i></button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
+      <td class="r act"><input class="qa" type="number" min="1" inputmode="numeric" placeholder="จำนวน" data-qa="${esc(i.id)}" aria-label="จำนวนที่จะเพิ่มหรือลด ${esc(i.name)}"><button class="ib in" data-mv="in" data-item="${esc(i.id)}" title="เพิ่ม (รับเข้า)" aria-label="เพิ่ม ${esc(i.name)}">＋</button><button class="ib out" data-mv="out" data-item="${esc(i.id)}" title="ลด (จ่ายออก)" aria-label="ลด ${esc(i.name)}">−</button><button class="ib" data-ed="${esc(i.id)}" title="แก้ไข" aria-label="แก้ไข ${esc(i.name)}"><i data-ic="note"></i></button></td></tr>`}).join('')}</tbody></table></div>`:'<p class="empty">ไม่มีรายการ</p>';
   const need=I.filter(i=>i.needed||Number(i.qty)<=0||low(i));
   $('#need-list').innerHTML=need.length?need.map(i=>`<li><b>${esc(i.name)}</b> <small>${i.needed?'ต้องการ':''}${Number(i.qty)<=0?(i.needed?' · ':'')+'หมด':low(i)?(i.needed?' · ':'')+'เหลือ '+nf(i.qty)+' '+esc(i.unit):''}</small></li>`).join(''):'<li class="muted">ยังไม่มี</li>';
   $('#log').innerHTML=S.log.length?S.log.slice(0,80).map(l=>`<div class="lg lg-${esc(l.type)}"><span class="lg-d">${l.type==='set'?'=':Number(l.delta)>0?'+':''}${nf(l.type==='set'?l.after:l.delta)}</span><div><b>${esc(l.item)}</b> <small>${esc(TYPE[l.type]||l.type)} · เหลือ ${nf(l.after)}${l.note?' · '+esc(l.note):''}${l.team?' · <i data-ic="car"></i> '+esc(l.team):''}${l.caseId?' · เคส #'+esc(l.caseId):''}</small><small class="muted">${esc(ago(l.time))}${l.by?' · '+esc(l.by):''}</small></div></div>`).join(''):'<p class="muted small">ยังไม่มีการรับเข้า / จ่ายออก</p>';
@@ -60,7 +63,9 @@ document.addEventListener('click',e=>{
   const c=e.target.closest('[data-cat]');if(c){S.cat=c.dataset.cat;render();return}
   const kb=e.target.closest('[data-kit]');if(kb){openKit(S.items.find(i=>i.id===kb.dataset.kit));return}
   const ld=e.target.closest('[data-load]');if(ld){openLoad(S.roster.find(t=>t.id===ld.dataset.load),ld.dataset.mode||'out');return}
-  const m=e.target.closest('[data-mv]');if(m){openMove(S.items.find(i=>i.id===m.dataset.item),m.dataset.mv);return}
+  const m=e.target.closest('[data-mv]');if(m){const it=S.items.find(i=>i.id===m.dataset.item),qa=m.closest('td')&&m.closest('td').querySelector('[data-qa]'),a=qa&&qa.value!==''?Math.round(Number(qa.value)):0;
+    if(it&&a>0&&!(m.dataset.mv==='in'&&isBag(it)&&kitOf(it).length)){quickMove(it,m.dataset.mv,a,qa,m);return}
+    openMove(it,m.dataset.mv);if(a>0){const am=document.querySelector('#mform [name=amount]');if(am){am.value=a;am.dispatchEvent(new Event('input'))}}return}
   const ed=e.target.closest('[data-ed]');if(ed){openItem(S.items.find(i=>i.id===ed.dataset.ed));return}
 });
 $('#add-item').addEventListener('click',()=>openItem(null));
@@ -150,6 +155,12 @@ function openTeam(){
 function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;$('#drawer-bg').hidden=false;$('#d-close').onclick=closeD;$('#drawer-bg').onclick=closeD;setTimeout(()=>{const f=d.querySelector('input');if(f)f.focus()},50)}
 function closeD(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
+// amount typed in the row: + / − record it straight away, no dialog
+async function quickMove(it,t,a,inp,btn){const q=Number(it.qty)||0;if(t==='out'&&a>q){toast(`ของไม่พอ เหลือ ${nf(q)} ${it.unit||''}`);inp.focus();return}
+  btn.disabled=true;try{const r=await apiPost({action:'stock_move',itemId:it.id,type:t,amount:a,note:'',caseId:'',by:staffName()});
+    if(!r.ok){toast(r.error==='not_enough'?`ของไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));return}
+    it.qty=r.qty;inp.value='';toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);render();loadAll()}
+  catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{btn.disabled=false}}
 function openMove(it,type){if(!it)return;
   drawer(`<div class="d-head"><div><small class="muted">${esc(it.category||'')}</small><h2>${esc(it.name)}</h2><small>คงเหลือ <b>${nf(it.qty)}</b> ${esc(it.unit||'')}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="mform" class="form-grid">

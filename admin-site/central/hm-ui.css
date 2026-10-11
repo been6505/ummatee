@@ -936,3 +936,17 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 .team-list .call-btn:hover{filter:brightness(.96)}
 .team-list .team-f{margin-top:0!important;padding-top:10px;border-top:1px solid var(--line,#E8E8EC)}
 .team-list .tc-jump{width:100%;justify-content:center;margin-top:0;min-height:38px;font-size:13px}
+/* stock: level bars, tinted actions, row states */
+#view-stock .gt .qbar{display:block;width:76px;height:6px;border-radius:99px;background:var(--bg,#F2F3F7);margin:5px 0 3px auto;overflow:hidden}
+#view-stock .gt .qbar i{display:block;height:100%;border-radius:inherit;background:#2E9E57}
+#view-stock .gt .qbar.low i{background:#E8890C}#view-stock .gt .qbar.zero i{background:#E5383B}
+#view-stock .gt td.q .schip{display:inline-block;margin-top:2px}
+#view-stock .gt .ib{border:0!important;border-radius:10px!important;font-weight:800;box-shadow:none!important}
+#view-stock .gt .ib.in{background:#E3F5E9!important;color:#1F7A43!important}
+#view-stock .gt .ib.out{background:#FDECEC!important;color:#C62828!important}
+#view-stock .gt .ib[data-ed]{background:var(--bg,#F2F3F7)!important;color:var(--ink,#1d1d1f)!important}
+#view-stock .gt .ib:hover{filter:brightness(.95)}
+#view-stock .gt tbody tr:hover td{background:#F7F8FD!important}
+#view-stock .gt tbody tr.zero td{background:#FFF6F6!important}#view-stock .gt tbody tr.low td{background:#FFFAF2!important}
+#view-stock .gt thead th{font-size:12px;letter-spacing:.02em}
+@media(max-width:640px){#view-stock table.gt td.q .qbar{margin-left:auto}}

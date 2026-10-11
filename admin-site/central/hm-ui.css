@@ -1112,3 +1112,20 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .drawer .d-status>legend{background:#2D45C8;color:#fff;border-radius:999px;padding:3px 14px!important;font-size:14px}
 .drawer .d-intake{background:#FFF8EC!important;border:1px solid #F3DDB2!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #E08A00}
 .drawer :is(.d-status,.d-intake) :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:#fff!important}
+/* reporter photos inside the area check on phones (the separate block is hidden there) */
+.vr-box .vr-photos{display:none}
+@media(max-width:1099px){
+  .vr-box .vr-photos{display:grid;gap:8px;margin:4px 0 10px}
+  .vr-box .vr-photos>b{font-size:14px}
+  .vr-box .vr-photos>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .vr-box .vr-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;background:#E9ECF2}
+  .drawer>.d-grid .d-photos{display:none!important}
+}
+/* case drawer: each section gets its own tint and side stripe */
+.drawer .d-sum{background:#FFF6F6!important;border-color:#F6D3D5!important;box-shadow:inset 4px 0 0 #DD2027,0 1px 3px rgba(22,27,61,.05)!important}
+.drawer .d-sum .ds-r{border-top-color:#F6DCDD}
+.drawer .vr-box{background:#F1FAF6!important;border:1px solid #CDEBDD!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #2E9E57!important}
+.drawer .d-rows{background:#F6F7FB!important;border:1px solid #E1E5EF!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #7A84A6!important;padding:6px 14px 6px 18px!important}
+.drawer .d-rows>dt,.drawer .d-rows>dd{border-bottom-color:#E6E9F2!important}
+.drawer .d-ho:not(.empty){background:#F6F2FF!important;border:1px solid #DED3FA!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #7C3AED!important}
+.drawer :is(.d-sum,.d-rows) :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:#fff!important}

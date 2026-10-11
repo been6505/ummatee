@@ -73,7 +73,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS feedback (n INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER, page TEXT, by_ TEXT, room TEXT, text TEXT, done INTEGER DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS broadcasts (id TEXT PRIMARY KEY, level TEXT, title TEXT, body TEXT, link TEXT, scope TEXT, provinces TEXT, districts TEXT, lat REAL, lng REAL, radiusKm REAL, createdAt INTEGER, expiresAt INTEGER, cancelledAt INTEGER, by_ TEXT, warroom TEXT)`,
   `CREATE TABLE IF NOT EXISTS hazard_reports (id TEXT PRIMARY KEY, type TEXT, lat REAL, lng REAL, radiusM INTEGER, note TEXT, level TEXT, createdAt INTEGER, expiresAt INTEGER, closedAt INTEGER, by_ TEXT)`,
-  `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`
+  `CREATE TABLE IF NOT EXISTS warroom_staff (id TEXT PRIMARY KEY, wr TEXT, name TEXT, role TEXT, phone TEXT, shift TEXT, note TEXT, active INTEGER, updatedAt INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS knowledge (id TEXT PRIMARY KEY, topic TEXT, category TEXT, title TEXT, content TEXT, keywords TEXT, sources TEXT, checkedAt TEXT, updatedAt INTEGER)`
 ];
 const BACKUP_TABLES = { cases: 'id', roster: 'id', stock: 'id', places: 'id', stock_log: 'n', zones: 'id' };
 const BACKUP_OMIT = { cases: ['token', 'ipHash', 'clientId'], roster: ['token'] };
@@ -328,6 +329,7 @@ async function aiChat(db, b) {
   const msgs = (Array.isArray(b.messages) ? b.messages : []).slice(-16).map(m => ({ role: ['system', 'user', 'assistant'].includes(m.role) ? m.role : 'user', content: String(m.content || '').slice(0, 16000) }));
   if (!msgs.length) return { ok: false, error: 'empty' };
   if (!WRC) await withIntel(db, msgs);
+  await withKnowledge(db, msgs);
   trimMsgs(msgs);
   let err = '';
   for (const model of HERMES_MODELS) {
@@ -347,13 +349,14 @@ function trimMsgs(msgs, max = 22000) {
   const first = msgs.findIndex(m => m.role === 'user');
   while (total > max) { const i = msgs.findIndex((m, k) => k !== first && k < msgs.length - 1 && m.role !== 'system'); if (i < 0) break; total -= msgs[i].content.length; msgs.splice(i, 1); }
   if (total > max) { const n = msgs.find(m => m._intel); if (n) { const cut = Math.max(800, n.content.length - (total - max)); total -= n.content.length - cut; n.content = n.content.slice(0, cut); } }
-  msgs.forEach(m => { delete m._intel; });
+  msgs.forEach(m => { delete m._intel; delete m._kb; });
 }
 async function aiStream(b, db) {
   if (!ENV || !ENV.AI) return null;
   const msgs = aiMsgs(b);
   if (!msgs.length) return null;
   if (db && !WRC) await withIntel(db, msgs);
+  if (db) await withKnowledge(db, msgs);
   trimMsgs(msgs);
   for (const model of HERMES_MODELS) {
     try {
@@ -441,6 +444,32 @@ async function intelBrief(db) {
 async function withIntel(db, msgs) {
   try { const b = await intelBrief(db); if (!b.text) return;
     const note = { _intel: true, role: 'system', content: b.text.slice(0, 4000) + '\nใช้ข้อมูลนี้ประกอบการวิเคราะห์ (อ้างแหล่งที่มาเมื่อใช้ เช่น GISTDA, ThaiWater, กรมอุตุฯ) · ถ้าข้อมูลขัดกับรายงานผู้แจ้ง ให้บอกและแนะนำให้โทรยืนยัน' };
+    const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
+  } catch (e) {}
+}
+// คลังความรู้อ้างอิง (เช่น นักสังคมสงเคราะห์) โหลดจาก knowledge/*.json ด้วย scripts/load-knowledge.mjs
+// ภาษาไทยไม่เว้นวรรค จึงให้คะแนนจากคีย์เวิร์ด/คำที่พบ (ตรงกับ helpme/knowledge.py ของ Hermes)
+const kbAll = db => cached('kb-all-v1', 300, async () => (await db.prepare('SELECT id,topic,category,title,content,keywords,sources,checkedAt FROM knowledge ORDER BY id').all()).results
+  .map(e => ({ ...e, keywords: JSON.parse(e.keywords || '[]'), sources: JSON.parse(e.sources || '[]') })));
+function kbScore(e, query) {
+  const q = query.toLowerCase(), title = e.title.toLowerCase(), body = e.content.toLowerCase();
+  let s = e.keywords.reduce((a, k) => a + (k.length >= 2 && q.includes(k.toLowerCase()) ? 3 + (k.length >> 2) : 0), 0);
+  for (const w of new Set(q.split(/[\s,.;:!?()"'/|·-]+/).filter(w => w.length >= 2))) s += title.includes(w) ? 2 : body.includes(w) ? 1 : 0;
+  return s;
+}
+async function kbSearch(db, query, { topic = '', category = '', limit = 4, min = 1 } = {}) {
+  const all = (await kbAll(db)).filter(e => (!topic || e.topic === topic) && (!category || e.category === category));
+  if (!String(query || '').trim()) return all.slice(0, limit);
+  return all.map(e => [kbScore(e, String(query)), e]).filter(x => x[0] >= min).sort((a, b) => b[0] - a[0]).slice(0, limit).map(x => x[1]);
+}
+async function withKnowledge(db, msgs) {
+  try {
+    const last = [...msgs].reverse().find(m => m.role === 'user');
+    if (!last) return;
+    const hits = await kbSearch(db, last.content.slice(-600), { limit: 3, min: 3 });
+    if (!hits.length) return;
+    const text = hits.map(e => `### ${e.title}\n${e.content}\nที่มา: ${e.sources.map(x => x.name + ' ' + x.url).join(' · ')}`).join('\n\n').slice(0, 5000);
+    const note = { _kb: true, role: 'system', content: 'ความรู้อ้างอิงจากแหล่งทางการ (คลังความรู้ Helpme+):\n' + text + '\nตอบเรื่องนี้จากข้อมูลข้างบนเท่านั้นและอ้างที่มา · ห้ามเดาเบอร์โทร จำนวนเงิน หรือเงื่อนไขสิทธิ์ที่ไม่มีในข้อมูล ให้แนะนำโทร 1300 (ศูนย์ช่วยเหลือสังคม พม.) แทน' };
     const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
   } catch (e) {}
 }
@@ -2863,6 +2892,7 @@ async function api(request, env) {
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'staff_list': return json(vol ? await staffList(db) : { ok: false, error: 'not_volunteer' });
+      case 'kb_search': return json(vol ? { ok: true, results: await kbSearch(db, clean(p.q, 300), { topic: clean(p.topic, 40), category: clean(p.category, 40), limit: Math.min(Number(p.limit) || 5, 10) }) } : { ok: false, error: 'not_volunteer' });
       case 'staff_me': { const st = RQ.getStore(); return json(vol ? { ok: true, staff: st && st.staff || null, admin: staffAdmin() } : { ok: false, error: 'not_volunteer' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });

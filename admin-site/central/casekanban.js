@@ -69,7 +69,7 @@ const KANBAN=(()=>{
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&D.on)finish(false)});
   document.addEventListener('touchmove',e=>{if(D.on)e.preventDefault()},{passive:false});
   document.addEventListener('dragstart',e=>{if(e.target.closest&&e.target.closest('#kanban-view'))e.preventDefault()});
-  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#kanban-view [data-kbshow]')){K.showDone=!K.showDone;draw();return}const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c||Date.now()-(K.justDragged||0)<400)return;openDrawer(c.dataset.kb)});
+  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#kanban-view [data-kbshow]')){const y=scrollY,cl=document.querySelector('#kanban-view .kb-cols'),sl=cl?cl.scrollLeft:0;K.showDone=!K.showDone;draw();scrollTo(0,y);const c2=document.querySelector('#kanban-view .kb-cols');if(c2)c2.scrollLeft=sl;if(K.showDone){const d=document.querySelector('#kanban-view [data-kbcol="done"]');if(d)d.scrollIntoView({block:'nearest',inline:'nearest'})}return}const c=e.target.closest&&e.target.closest('#kanban-view .kb-card');if(!c||Date.now()-(K.justDragged||0)<400)return;openDrawer(c.dataset.kb)});
   document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('#kanban-view [data-kbho]');if(!a||typeof hoView!=='function')return;e.preventDefault();e.stopPropagation();const c=A.cases.find(x=>String(x.id)===a.dataset.kbho);hoView((PH.m[a.dataset.kbho]||[]).map(n=>({src:phU(n),team:c?vol(c):'',at:null})),+a.dataset.i)},true);
   document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('#kanban-view .kb-card'))e.preventDefault()});
   return {draw};

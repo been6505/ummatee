@@ -1049,7 +1049,7 @@ const TEAM_POST = {
   },
   team_rename: async (db, t, b) => {
     if (!t.row || !t.row.id) return { ok: false, error: 'not_in_roster' };
-    const old = t.name, name = clean(b.name, MAX.volunteer).replace(/^'+/, '').trim();
+    const old = t.name, name = clean(b.newName, MAX.volunteer).replace(/^'+/, '').trim();
     if (name.length < 2) return { ok: false, error: 'too_short' };
     if (name === old) return { ok: true, name };
     if (!await quota(db, 'rename:' + t.row.id, 5, 86400e3)) return { ok: false, error: 'too_many' };
@@ -1065,7 +1065,7 @@ const TEAM_POST = {
       db.prepare('UPDATE rallies SET teams=REPLACE(teams,?,?) WHERE teams LIKE ?').bind(JSON.stringify(old), JSON.stringify(name), '%' + JSON.stringify(old) + '%'),
     ]);
     await bumpRev(db);
-    await chatSend(db, { team: name, from: 'team', name: b.name_by || '', text: `เปลี่ยนชื่อทีมจาก "${old}" เป็น "${name}"`, read: false });
+    await chatSend(db, { team: name, from: 'team', name: b.name || '', text: `เปลี่ยนชื่อทีมจาก "${old}" เป็น "${name}"`, read: false });
     return { ok: true, name };
   },
   team_profile: async (db, t, b) => {

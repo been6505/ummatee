@@ -976,7 +976,7 @@ function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
     const profile={leader:$('#pf-leader').value.trim(),phone:$('#pf-phone').value.trim(),members:$('#pf-mem').value.trim(),vehicle:v?v.dataset.pfveh:(t.vehicle||''),zone:$('#pf-zone').value.trim()};
     const nn=$('#pf-name').value.trim();if(nn.length<2){toast('ชื่อทีมสั้นเกินไป');return}
     b.disabled=true;b.textContent='กำลังบันทึก…';
-    if(nn!==t.name){let rn=null;try{rn=await post({action:'team_rename',name:nn})}catch(x){}
+    if(nn!==t.name){let rn=null;try{rn=await post({action:'team_rename',newName:nn})}catch(x){}
       if(!rn||!rn.ok){b.disabled=false;b.textContent='บันทึก';toast(rn&&rn.error==='taken'?'มีทีมอื่นใช้ชื่อนี้แล้ว':rn&&rn.error==='too_many'?'เปลี่ยนชื่อได้วันละ 5 ครั้ง':'เปลี่ยนชื่อไม่สำเร็จ');return}
       t.name=rn.name;if(!S.tk){S.team=rn.name;st.set('uh_chat_team',rn.name)}}
     try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}

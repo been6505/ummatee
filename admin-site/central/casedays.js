@@ -1,5 +1,5 @@
 const CASEDAYS=(()=>{
-  const D={n:14,day:null};
+  const D={n:14,day:null,init:false};
   const box=()=>document.getElementById('days-view');
   const key=t=>{const d=new Date(Number(t));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
   const helpedAt=c=>Number(c.teamDoneAt)||(c.status==='done'?Number(c.doneAt||c.updatedAt)||0:0);
@@ -13,19 +13,16 @@ const CASEDAYS=(()=>{
     cs.forEach(c=>{const a=by.get(key(c.createdAt));if(a&&Number(c.createdAt))a.inn.push(c);const h=helpedAt(c);if(h){const b=by.get(key(h));if(b)b.out.push(c)}});
     const tin=days.reduce((s,d)=>s+d.inn.length,0),tout=days.reduce((s,d)=>s+d.out.length,0),max=Math.max(1,...days.map(d=>Math.max(d.inn.length,d.out.length)));
     const wait=cs.filter(c=>c.status==='open').length;
+    if(!D.init){D.init=true;D.day=days[0].k}
     if(D.day&&!by.has(D.day))D.day=null;
-    const sel=D.day&&by.get(D.day);
-    el.innerHTML=`<div class="dv-top"><div class="dv-sum"><div><small>เคสเข้ามา</small><b>${tin}</b></div><div class="ok"><small>ช่วยแล้ว</small><b>${tout}</b></div><div class="wt"><small>ยังรอตอนนี้</small><b>${wait}</b></div></div>
+        el.innerHTML=`<div class="dv-top"><div class="dv-sum"><div><small>เคสเข้ามา</small><b>${tin}</b></div><div class="ok"><small>ช่วยแล้ว</small><b>${tout}</b></div><div class="wt"><small>ยังรอตอนนี้</small><b>${wait}</b></div></div>
       <div class="seg dv-n" role="tablist" aria-label="ช่วงวัน">${[7,14,30].map(n=>`<button type="button" role="tab" data-dvn="${n}" aria-selected="${D.n===n}">${n} วัน</button>`).join('')}</div></div>
       <div class="dv-legend"><span class="i"></span>เข้ามา <span class="o"></span>ช่วยแล้ว</div>
       <div class="dv-chart">${days.slice().reverse().map(d=>`<button type="button" class="dv-bar${D.day===d.k?' on':''}" data-dvd="${d.k}" title="${esc(label(d.k))}: เข้ามา ${d.inn.length} · ช่วยแล้ว ${d.out.length}"><span class="dv-bs"><i class="i" style="height:${d.inn.length/max*100}%"><em>${d.inn.length||''}</em></i><i class="o" style="height:${d.out.length/max*100}%"><em>${d.out.length||''}</em></i></span><small>${new Date(d.k+'T00:00').getDate()}</small></button>`).join('')}</div>
-      ${sel?`<section class="dv-day"><h3>${esc(label(sel.k))} <button type="button" class="btn ghost sm" data-dvd="${sel.k}" aria-label="ปิด"><i data-ic="close"></i></button></h3>
-        <div class="dv-two"><div><h4>เข้ามา <span>${sel.inn.length}</span></h4>${sel.inn.sort((a,b)=>sev(b)-sev(a)).map(c=>row(c)).join('')||'<p class="muted small">ไม่มีเคสเข้ามา</p>'}</div>
-        <div><h4 class="ok">ช่วยแล้ว <span>${sel.out.length}</span></h4>${sel.out.map(c=>row(c,1)).join('')||'<p class="muted small">ยังไม่มีเคสที่ช่วย</p>'}</div></div></section>`:''}
-      <table class="dv-tbl"><thead><tr><th>วันที่</th><th>เข้ามา</th><th>ช่วยแล้ว</th><th>ส่วนต่าง</th></tr></thead><tbody>${days.map(d=>{const df=d.out.length-d.inn.length;return `<tr data-dvd="${d.k}" class="${D.day===d.k?'on':''}"><td>${esc(label(d.k))}</td><td>${d.inn.length}</td><td class="ok">${d.out.length}</td><td class="${df>0?'ok':df<0?'bad':''}">${df>0?'+':''}${df}</td></tr>`}).join('')}</tbody></table>`}
+      <table class="dv-tbl"><thead><tr><th>วันที่</th><th>เข้ามา</th><th>ช่วยแล้ว</th><th>ส่วนต่าง</th></tr></thead><tbody>${days.map(d=>{const df=d.out.length-d.inn.length;return `<tr data-dvd="${d.k}" class="${D.day===d.k?'on':''}"><td><i class="dv-car">${D.day===d.k?'▾':'▸'}</i> ${esc(label(d.k))}</td><td>${d.inn.length}</td><td class="ok">${d.out.length}</td><td class="${df>0?'ok':df<0?'bad':''}">${df>0?'+':''}${df}</td></tr>`+(D.day===d.k?`<tr class="dv-exp"><td colspan="4"><div class="dv-two"><div><h4>เข้ามา <span>${d.inn.length}</span></h4>${d.inn.slice().sort((a,b)=>sev(b)-sev(a)).map(c=>row(c)).join('')||'<p class="muted small">ไม่มีเคสเข้ามา</p>'}</div><div><h4 class="ok">ช่วยแล้ว <span>${d.out.length}</span></h4>${d.out.map(c=>row(c,1)).join('')||'<p class="muted small">ยังไม่มีเคสที่ช่วย</p>'}</div></div></td></tr>`:'')}).join('')}</tbody></table>`}
   document.addEventListener('click',e=>{const t=e.target;if(!t.closest||!t.closest('#days-view'))return;
     const n=t.closest('[data-dvn]');if(n){D.n=Number(n.dataset.dvn);draw();return}
     const c=t.closest('[data-dv]');if(c){openDrawer(c.dataset.dv);return}
-    const d=t.closest('[data-dvd]');if(d){D.day=D.day===d.dataset.dvd?null:d.dataset.dvd;draw();if(D.day){const s=box().querySelector('.dv-day');if(s)s.scrollIntoView({behavior:'smooth',block:'nearest'})}}});
+    const d=t.closest('[data-dvd]');if(d){D.day=D.day===d.dataset.dvd?null:d.dataset.dvd;draw();if(D.day){const s=box().querySelector('tr.dv-exp');if(s)s.scrollIntoView({behavior:'smooth',block:'nearest'})}}});
   return {draw};
 })();

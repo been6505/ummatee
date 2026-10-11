@@ -1050,3 +1050,17 @@ main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .r
 /* chat: photos sent by teams */
 .chat-m .chat-img{display:block;margin:2px 0 4px;border-radius:12px;overflow:hidden;max-width:220px}
 .chat-m .chat-img img{display:block;width:100%;height:auto;max-height:280px;object-fit:cover}
+/* case page summary tiles: look and feel like buttons */
+#stats button.stat{cursor:pointer;transition:transform .12s,box-shadow .15s,background .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+@media(hover:hover){#stats button.stat:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,27,61,.10),inset 0 0 0 1px var(--line,#E4E6EE)}}
+#stats button.stat:active{transform:scale(.97)}
+#stats button.stat[aria-pressed="true"]{background:#FFF1F2!important;box-shadow:inset 0 0 0 2.5px #DD2027!important}
+#stats button.stat[aria-pressed="true"] span{color:#B3121F;font-weight:700}
+/* days view: the chosen day opens its cases right under its row */
+.dv-tbl tr[data-dvd]{cursor:pointer}
+.dv-tbl .dv-car{font-style:normal;color:var(--muted);display:inline-block;width:14px}
+.dv-tbl tr.dv-exp>td{padding:6px 8px 14px!important;background:var(--bg,#F5F6FA)}
+.dv-tbl tr.dv-exp .dv-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dv-tbl tr.dv-exp .dv-two>div{display:grid;gap:6px;align-content:start;min-width:0}
+.dv-tbl tr.dv-exp h4{margin:4px 0;font-size:14px}.dv-tbl tr.dv-exp h4.ok{color:#1F7A43}
+@media(max-width:760px){.dv-tbl tr.dv-exp .dv-two{grid-template-columns:1fr}}

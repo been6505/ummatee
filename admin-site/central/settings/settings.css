@@ -92,3 +92,14 @@ main:not([data-view="menu"]) .st-card>h2{display:none}
 [data-theme="dark"] .st-card .seg button{background:var(--bg);color:var(--ink)}
 [data-theme="dark"] .st-wrap .btn.ghost{background:transparent!important;color:var(--ink)!important;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18)!important}
 [data-theme="dark"] .st-wrap .btn.ghost:hover{background:rgba(255,255,255,.06)!important}
+main[data-view="staff"] .st-card:not([data-page="staff"]){display:none!important}
+@media(max-width:640px){
+  .st-card{padding:14px 12px;border-radius:18px}
+  .sf-row{flex-wrap:wrap;gap:8px}.sf-row>div{flex:1 1 100%}.sf-row .btn{flex:1;justify-content:center}
+  #ai-preset{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:none!important;box-shadow:none!important;padding:0!important;border-radius:0!important;overflow:visible!important}
+  #ai-preset button{width:100%;min-width:0;margin:0!important;flex:none!important;border-radius:12px!important;min-height:40px;text-align:center}#ai-preset button:first-child{grid-column:1/-1}
+  #lg-cat{flex-wrap:wrap!important;overflow:visible!important;gap:6px}
+  .lg-list{max-height:none;overflow:visible;margin:0;padding:0}
+  .lg-it{grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 8px}.lg-it .lg-r{justify-self:start}.lg-it .lg-m{grid-column:1/-1}
+  .lg-d{margin:0 0 8px;grid-template-columns:minmax(0,1fr)}.lg-d dt{margin-top:4px}
+}

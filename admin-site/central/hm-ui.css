@@ -1077,3 +1077,38 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .kb-card .kb-who{color:var(--ink,#1b1f3b);font-weight:600}
 .kb-card .kb-addr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kb-card .kb-id{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink,#1b1f3b);background:var(--bg,#F2F3F7);border-radius:6px;padding:0 6px;justify-self:start;width:max-content}
+/* AI location card: fit narrow drawers */
+.drawer .aip,.drawer .aip-out,.drawer .aip-card{min-width:0;max-width:100%}
+.drawer .aip-card{overflow:hidden}
+.drawer .aip-c>div{min-width:0}
+.drawer .aip-c b{overflow-wrap:anywhere}
+@media(max-width:760px){
+  .drawer .d-rows>dt:has(+dd .aip){grid-column:1/-1;padding-bottom:0!important;border-bottom:0!important}
+  .drawer .d-rows>dd:has(.aip){grid-column:1/-1}
+  .drawer .aip-c{flex-wrap:wrap;row-gap:8px}
+  .drawer .aip-c>div{flex:1 1 calc(100% - 32px)}
+  .drawer .aip-c>.aip-view{margin-left:28px}
+  .drawer .aip-c>.aip-use{flex:1}
+  .drawer .aip-map{height:180px}
+}
+/* single-column drawer: area check right under the case summary, then details, actions, handover, then photos */
+@media(max-width:1099px){
+  .drawer>.d-grid>:is(.d-col-a,.d-col-b,.d-col-c){display:contents!important}
+  .drawer>.d-grid>*>*{margin-top:0!important;min-width:0}
+  .drawer>.d-grid .d-sum{order:1!important}
+  .drawer>.d-grid .vr-box{order:2!important}
+  .drawer>.d-grid .d-rows{order:3!important}
+  .drawer>.d-grid .d-act{order:4!important}
+  .drawer>.d-grid .d-status{order:5!important}
+  .drawer>.d-grid .d-intake{order:6!important}
+  .drawer>.d-grid .hm-sync{order:7!important}
+  .drawer>.d-grid .d-notes{order:8!important}
+  .drawer>.d-grid .d-photos{order:9!important}
+  .drawer>.d-grid .d-ho{order:10!important}
+  .drawer>.d-grid>.d-col-a>*:not(.vr-box):not(.d-notes):not(.d-photos):not(.d-ho){order:11!important}
+}
+/* drawer: tint the team assignment and handover sections so they stand apart */
+.drawer .d-status{background:#F2F5FF!important;border:1px solid #D7DEFA!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #2D45C8}
+.drawer .d-status>legend{background:#2D45C8;color:#fff;border-radius:999px;padding:3px 14px!important;font-size:14px}
+.drawer .d-intake{background:#FFF8EC!important;border:1px solid #F3DDB2!important;border-radius:18px!important;box-shadow:inset 4px 0 0 #E08A00}
+.drawer :is(.d-status,.d-intake) :is(input:not([type=checkbox]):not([type=radio]),textarea,select){background:#fff!important}

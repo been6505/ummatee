@@ -431,7 +431,7 @@ body:has(#v-prof:not([hidden])) .top-prof{box-shadow:0 0 0 3px var(--hm-red,#C81
     </section>
   </main>
   <button class="sos" id="sos" type="button" aria-label="ขอความช่วยเหลือด่วน SOS">SOS</button>
-  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก</button><button role="tab" data-v="work" aria-selected="false"><i data-ic="list"></i>งาน<b class="badge" id="b-work" hidden></b></button><button type="button" class="nav-sos nav-ptt" id="nav-ptt" aria-label="วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด"><span><i data-ic="mic"></i><b>วอ</b><small class="ptt-chl">ช่องรวม</small></span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" data-v="call" aria-selected="true"><i data-ic="home"></i>หน้าแรก<b class="badge" id="b-work" hidden></b></button><button role="tab" data-v="cases" aria-selected="false"><i data-ic="list"></i>รวมเคส</button><button type="button" class="nav-sos nav-ptt" id="nav-ptt" aria-label="วอ · กดค้างเพื่อพูด แตะเพื่อดูเสียงล่าสุด"><span><i data-ic="mic"></i><b>วอ</b><small class="ptt-chl">ช่องรวม</small></span></button><button role="tab" data-v="chat" aria-selected="false"><i data-ic="chat"></i>แชท<b class="badge" id="b-chat" hidden></b></button><button role="tab" data-v="home" aria-selected="false"><i data-ic="map"></i>แผนที่</button></nav>
 </div>
 <div id="layer"></div>
 
@@ -729,7 +729,7 @@ const HOME=(()=>{const H={map:null,me:null,cases:null,L:{},on:{cases:true,roads:
     if(c){const s=sev(c),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district].filter(Boolean).join(' '),p=tel(c.phone),rep=!!c.teamDoneAt;
       top=`${navCard(c,cs.length)}
       <div class="hs-r3">${dest?`<a class="hs-pill nav" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="hs-pill" href="tel:${esc(p)}"><i data-ic="phone"></i> โทร</a>`:`<button class="hs-pill" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`}${rep?'<button class="hs-pill gray" type="button" disabled>รอปิดเคส</button>':`<button class="hs-pill gray" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยแล้ว</button>`}</div>`}
-    else top=`<button class="hs-big idle" type="button" data-go="work"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>`;
+    else top=`<button class="hs-big idle" type="button" data-go="call"><i data-ic="clock"></i> ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</button>`;
     el.innerHTML=top;
     if(typeof ic==='function')el.querySelectorAll('[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)});
     document.documentElement.style.setProperty('--hs-h',el.offsetHeight+'px')}
@@ -769,7 +769,7 @@ $('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
   ld.className='locdot '+(ok?'ok':off?'off':'wait');document.querySelectorAll('[data-locdot]').forEach(x=>x.className=ld.className);ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
   ld.onclick=()=>{reveal=Date.now()+4000;lb.classList.remove('ok-hide');setTimeout(sync,4100)}}}
-function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call','prof'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();if(v==='call')DASH();if(v==='prof')PROF();
+function go(v){if(v==='cases'){S.dtab='cases';v='call'}else if(v==='call'||v==='work'){S.dtab='over';v='call'}S.view=v;const nv=v==='call'&&S.dtab==='cases'?'cases':v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===nv)));['home','work','chat','call','prof'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();if(v==='call')DASH();if(v==='prof')PROF();
   document.body.classList.toggle('chatting',v==='chat');if(v==='chat'){drawChat(true);markRead()}}
 
 function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scrollTop-box.clientHeight<80;let ld='';
@@ -846,8 +846,8 @@ function PROF(){const el=$('#prof'),r=S.me;if(!el||!r)return;const t=r.team;
     el.innerHTML=`<h2 class="prof-h">โปรไฟล์ทีม</h2><section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<button type="button" class="db-edit" data-pfedit aria-label="แก้โปรไฟล์ทีม" title="แก้โปรไฟล์ทีม"><i data-ic="edit"></i></button>`:''}
       <div class="db-ctl"><button type="button" class="${esc(($('#locdot')||{}).className||'locdot')}" data-locdot aria-label="สถานะการส่งตำแหน่ง"><i></i></button><span class="db-loc">${esc(locTxt)}</span>${t.inRoster?`<select class="st ${esc(t.status||'ready')}" data-tstatus aria-label="สถานะทีม">${Object.entries(STN).map(([k,v])=>`<option value="${k}"${(t.status||'ready')===k?' selected':''}>${v}</option>`).join('')}</select>`:''}</div></section>
     <div class="db-tiles">
-      <button type="button" class="db-tile go" data-dgo="work"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
-      <button type="button" class="db-tile" data-dgo="work"><small>รอศูนย์ปิดเคส</small><b>${waitClose.length}</b></button>
+      <button type="button" class="db-tile go" data-dgo="call"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
+      <button type="button" class="db-tile" data-dgo="call"><small>รอศูนย์ปิดเคส</small><b>${waitClose.length}</b></button>
       <div class="db-tile ok"><small>ช่วยแล้ววันนี้</small><b>${todayN}</b><small>${todayP} คน</small></div>
       <div class="db-tile pp"><small>ช่วยแล้วทั้งหมด</small><b>${st.helped}</b><small>${st.people} คน${st.since?' · ตั้งแต่ '+new Date(st.since).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''}</small></div>
     </div>
@@ -876,7 +876,7 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
 const AC={list:null,at:0,open:'',sort:'near',lim:30,busy:false,q:'',srch:false,rad:0};
 async function loadAll(force){if(AC.busy||(!force&&AC.list&&Date.now()-AC.at<60000))return;AC.busy=true;try{const r=await api({action:'team_cases'});if(r&&r.ok){AC.list=r.cases;AC.at=Date.now();if(S.view==='call'&&S.dtab==='cases'){if(document.activeElement&&document.activeElement.id==='ac-q'){const x=$('#ac-res');if(x)x.innerHTML=acRes()}else DASH()}}}catch(e){}finally{AC.busy=false}}
 function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const tab=S.dtab||'over';
-  const seg=`<div class="db-seg" role="tablist"><button type="button" role="tab" data-dtab="over" aria-selected="${tab==='over'}">เคสที่ต้องไป${(()=>{const n=(r.cases||[]).filter(c=>c.status==='going').length;return n?` <b>${n}</b>`:''})()}</button><button type="button" role="tab" data-dtab="cases" aria-selected="${tab==='cases'}">รวมเคส${AC.list?` <b>${AC.list.length}</b>`:''}</button></div>`;
+  const seg='';
   const ct=document.querySelector('.db-contact');if(ct)ct.hidden=tab==='cases';
   if(tab==='cases'){el.innerHTML=seg+allCases();loadAll()}else{dashOverview(el);el.insertAdjacentHTML('afterbegin',seg);if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)});loadAll()}}
 function myPos(){if(TR.pos)return TR.pos;const l=S.me&&S.me.live;return l&&l.lat!=null?{lat:+l.lat,lng:+l.lng}:null}
@@ -933,7 +933,7 @@ function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
     b.disabled=true;b.textContent='กำลังบันทึก…';
     try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}
     catch(err){b.disabled=false;b.textContent='บันทึก';toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}}}
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit]'))profileSheet()});
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit],#prof [data-pfedit]'))profileSheet()});
 const VM={a:null,btn:null};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#msgs [data-vsrc]');if(!b)return;
   if(VM.btn===b&&VM.a&&!VM.a.paused){VM.a.pause();return}

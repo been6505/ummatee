@@ -263,6 +263,7 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',{h:(hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด')+(!addr(c)?'':`<div class="aip"><button type="button" class="aip-btn" data-aipin="${esc(c.id)}"><i data-ic="sparkle"></i> ให้ AI ตรวจตำแหน่ง/เส้นทางจากข้อความ</button><div class="aip-out" id="aip-out"></div></div>`)}],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
+  const who=!!(c.name||t.length>=9);
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="d-grid"><div class="d-col d-col-a">
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
@@ -270,8 +271,9 @@ function renderDrawer(){
     <div class="d-ho" id="d-ho" hidden></div>
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
+    ${who?`<div class="d-who"><i data-ic="user"></i><b>${esc(c.name||'ไม่ระบุชื่อ')}</b>${t.length>=9?`<a class="d-who-tel" href="tel:${esc(t)}" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i>${esc(String(c.phone).replace(/^'/,''))}</a>`:''}</div>`:''}
     ${intakeBox(c)}
-    <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
+    <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ',...(who?['ผู้ติดต่อ','เบอร์โทร']:[])].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" aria-label="นำทาง Google Maps" title="นำทาง Google Maps"><i data-ic="nav"></i> <span>นำทาง</span></a>`:''}

@@ -967,3 +967,6 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
   .drawer:has(>.d-grid)>.d-grid>.d-col-b{grid-column:2;grid-row:1/span 2;min-height:0;overflow:auto;padding-top:48px}
   .drawer:has(>.d-grid) #d-close{position:absolute;top:16px;right:22px}
 }
+/* floating buttons: close the gap left by the old AI button */
+.ptt-fab{bottom:86px}.rally-fab{bottom:150px}
+@media(max-width:760px){.ptt-fab{bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b,0px))}.rally-fab{bottom:calc(var(--tab-h,64px) + 148px + var(--safe-b,0px))}}

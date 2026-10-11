@@ -271,7 +271,7 @@ function renderDrawer(){
     <div class="d-ho" id="d-ho" hidden></div>
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
-    ${who?`<div class="d-who"><i data-ic="user"></i><b>${esc(c.name||'ไม่ระบุชื่อ')}</b>${t.length>=9?`<a class="d-who-tel" href="tel:${esc(t)}" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i>${esc(String(c.phone).replace(/^'/,''))}</a>`:''}</div>`:''}
+    ${who?`<div class="d-who"><span class="d-who-av"><i data-ic="user"></i></span><span class="d-who-n"><small>ผู้แจ้ง</small>${c.name?`<b>${esc(c.name)}</b>`:'<b class="none">ไม่ระบุชื่อ</b>'}</span>${t.length>=9?`<a class="d-who-tel" href="tel:${esc(t)}" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i><span>${esc(/^0\d{9}$/.test(t)?t.replace(/^(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'):/^0\d{8}$/.test(t)?t.replace(/^(\d{2})(\d{3})(\d{4})$/,'$1-$2-$3'):t)}</span></a>`:''}</div>`:''}
     ${intakeBox(c)}
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ',...(who?['ผู้ติดต่อ','เบอร์โทร']:[])].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">

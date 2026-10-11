@@ -993,11 +993,18 @@ main.wrap #list#list#list .tbl tbody td[data-l="ทีม"] .team-sel{min-height
 main.wrap #list#list#list .tbl tbody td.time small{display:inline-block!important;margin-top:3px;font-size:11.5px!important;font-weight:700;color:var(--ink,#1d1d1f)!important;background:var(--bg,#F2F3F7);border-radius:8px;padding:1px 8px;font-variant-numeric:tabular-nums}
 main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .row-photos em{box-shadow:0 1px 3px rgba(22,27,61,.12)}
 /* case drawer: reporter name and phone at the top of the info column */
-.drawer .d-who{order:-3!important;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:12px 16px;border:1px solid var(--line,#E4E6EE);border-radius:16px;background:var(--surface,#fff)}
-.drawer .d-who>.ic{width:20px;height:20px;flex:none;color:var(--muted)}
-.drawer .d-who>b{font-size:18px;line-height:1.3;min-width:0;overflow-wrap:anywhere}
-.drawer .d-who-tel{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#FDECEC;color:#C62828;border-radius:999px;padding:6px 14px;font-size:16px;font-weight:800;text-decoration:none;font-variant-numeric:tabular-nums;white-space:nowrap}
-.drawer .d-who-tel .ic{width:16px;height:16px}
+.drawer .d-who{order:-3!important;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 12px;border:1px solid var(--line,#E4E6EE);border-radius:18px;background:linear-gradient(135deg,var(--tint,#EEF1FD),var(--surface,#fff) 70%);box-shadow:0 1px 2px rgba(22,27,61,.05)}
+.drawer .d-who-av{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--surface,#fff);color:var(--primary,#2D45C8);box-shadow:0 0 0 1px var(--line,#E4E6EE)}
+.drawer .d-who-av .ic{width:20px;height:20px}
+.drawer .d-who-n{display:grid;gap:1px;min-width:0;flex:1}
+.drawer .d-who-n small{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+.drawer .d-who-n b{font-size:17px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer .d-who-n b.none{font-weight:500;color:var(--muted);font-style:italic}
+.drawer .d-who-tel{flex:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 16px;border-radius:14px;background:linear-gradient(180deg,#EE4B4E,#D32F2F);color:#fff!important;font-size:16px;font-weight:800;letter-spacing:.02em;text-decoration:none;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 4px 12px rgba(211,47,47,.28);transition:transform .12s,box-shadow .12s}
+.drawer .d-who-tel:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(211,47,47,.34)}
+.drawer .d-who-tel:active{transform:none}
+.drawer .d-who-tel .ic{width:17px;height:17px}
+@media(max-width:380px){.drawer .d-who-tel{padding:0 12px;font-size:15px}}
 @media(min-width:1100px){
   .drawer:has(>.d-grid)>.d-grid>.d-col-b:has(>.d-who){padding-top:12px}
   .drawer:has(>.d-grid)>.d-grid>.d-col-b>.d-who{margin-right:48px}

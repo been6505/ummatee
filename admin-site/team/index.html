@@ -314,6 +314,13 @@ body.on-chat .top-call .ic{width:22px;height:22px}
 .db-av .av-cam{position:absolute;right:-6px;bottom:-6px;width:26px;height:26px;border-radius:50%;background:var(--hm-red,#C8102E);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
 .db-av .av-cam .ic{width:14px;height:14px}
 .top-prof .tp-av img.av{width:100%;height:100%;object-fit:cover}
+button.db-tile{font:inherit;text-align:left;cursor:pointer;border:0;color:inherit}
+.hl-list{display:grid;gap:10px;max-height:60vh;overflow:auto;margin:8px 0 12px}
+.hl-sum{margin:0;font-weight:700;color:var(--muted)}
+.hl{background:var(--bg,#F2F3F7);border-radius:14px;padding:10px 12px;box-shadow:inset 4px 0 0 #2E9E57}
+.hl-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.hl-h b{font-size:15px}.hl-h small{color:var(--muted);white-space:nowrap}
+.hl-m,.hl-a{font-size:13.5px;color:var(--muted)}
+.hl .c-ph{display:flex;gap:6px;overflow-x:auto;margin-top:8px}.hl .c-ph a{flex:none;width:64px;height:64px;border-radius:10px;overflow:hidden;background:#E9ECF2}.hl .c-ph img{width:100%;height:100%;object-fit:cover}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=23"></script>
@@ -325,7 +332,7 @@ body.on-chat .top-call .ic{width:22px;height:22px}
 .top .hdr-sos{width:var(--hh)!important;height:var(--hh)!important;font-size:13px!important;border-width:3px!important;box-sizing:border-box;flex:none}
 .top .locdot{width:var(--hh)!important;height:var(--hh)!important;flex:none}
 .top .st:not([hidden]){height:var(--hh)!important;min-width:0;max-width:34vw;box-sizing:border-box;padding:0 30px 0 14px!important;font-size:15px!important;background-position:right 10px center!important;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;flex:0 1 auto!important}
-@media(max-width:380px){.top{--hh:44px}.top .brandpill{padding:0 10px!important}}.top:has(.tp-n) .brandpill{flex:none!important}.top>.hdr-sos{position:absolute!important;left:50%;top:50%;transform:translate(-50%,-50%);margin:0!important;z-index:2}.top-prof:has(.tp-n){max-width:min(34vw,200px)!important}.top>.hdr-sos+.locdot,.top>.top-prof{margin-left:auto!important}</style>
+@media(max-width:380px){.top{--hh:44px}.top .brandpill{padding:0 10px!important}}.top:has(.tp-n) .brandpill{flex:none!important}.top{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center!important}.top>.brandpill{justify-self:start;max-width:100%}.top>.hdr-sos{justify-self:center;margin:0!important}.top>.top-prof,.top>.top-call{justify-self:end;margin-left:0!important}.top-prof:has(.tp-n){max-width:min(34vw,200px)!important}.top>.hdr-sos+.locdot,.top>.top-prof{margin-left:auto!important}</style>
 <script>(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
   const probe=()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';document.documentElement.append(d);const h=d.getBoundingClientRect().height;d.remove();return h};
   const set=()=>{if(probe()<1){r.style.setProperty('--sat','36px');r.style.setProperty('--sab','24px')}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',set):set()})();</script>
@@ -884,8 +891,8 @@ function PROF(){const el=$('#prof'),r=S.me;if(!el||!r)return;const t=r.team;
     <div class="db-tiles">
       <button type="button" class="db-tile go" data-dgo="call"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
       <button type="button" class="db-tile" data-dgo="call"><small>รอศูนย์ปิดเคส</small><b>${waitClose.length}</b></button>
-      <div class="db-tile ok"><small>ช่วยแล้ววันนี้</small><b>${todayN}</b><small>${todayP} คน</small></div>
-      <div class="db-tile pp"><small>ช่วยแล้วทั้งหมด</small><b>${st.helped}</b><small>${st.people} คน${st.since?' · ตั้งแต่ '+new Date(st.since).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''}</small></div>
+      <button type="button" class="db-tile ok" data-helped="today"><small>ช่วยแล้ววันนี้</small><b>${todayN}</b><small>${todayP} คน</small></button>
+      <button type="button" class="db-tile pp" data-helped="all"><small>ช่วยแล้วทั้งหมด</small><b>${st.helped}</b><small>${st.people} คน${st.since?' · ตั้งแต่ '+new Date(st.since).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):''}</small></button>
     </div>
     <section class="db-card"><h3>ช่วยแล้ว 7 วันล่าสุด <small>${cnt.reduce((a,b)=>a+b,0)} เคส</small></h3><div class="db-bars">${days.map((d,i)=>`<div class="${i===6?'td':''}"><i class="${cnt[i]?'':'z'}" style="height:${cnt[i]/max*100}%">${cnt[i]?`<em>${cnt[i]}</em>`:''}</i><small>${i===6?'วันนี้':new Date(d).toLocaleDateString('th-TH',{weekday:'narrow'})}</small></div>`).join('')}</div></section>`;
   el.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)})}
@@ -957,7 +964,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 document.addEventListener('input',e=>{if(e.target.id!=='ac-q')return;AC.q=e.target.value;AC.lim=30;const r=$('#ac-res');if(r)r.innerHTML=acRes()});
 const PF_VEH=[['car','รถเก๋ง / รถตู้'],['pickup','รถกระบะ'],['truck','รถสูง / รถบรรทุก'],['boat','เรือ'],['motorbike','มอเตอร์ไซค์'],['foot','เดินเท้า'],['other','อื่น ๆ']];
 function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
-  sheet(`<h2>แก้โปรไฟล์ทีม</h2><p class="hint">ชื่อทีม "${esc(t.name)}" แก้ได้ที่ศูนย์ (ผูกกับเคสและแชท)</p>
+  sheet(`<h2>แก้โปรไฟล์ทีม</h2><label class="pf-f">ชื่อทีม<input id="pf-name" maxlength="40" value="${esc(t.name||'')}" placeholder="ชื่อทีม"></label><p class="hint">เปลี่ยนชื่อแล้ว เคส แชท และประวัติของทีมจะย้ายไปใช้ชื่อใหม่ทั้งหมด</p>
     <label class="pf-f">หัวหน้าทีม<input id="pf-leader" maxlength="60" value="${esc(t.leader||'')}" placeholder="ชื่อหัวหน้าทีม"></label>
     <label class="pf-f">เบอร์ติดต่อ<input id="pf-phone" type="tel" inputmode="tel" maxlength="20" value="${esc(t.phone||'')}" placeholder="08x-xxx-xxxx"></label>
     <label class="pf-f">จำนวนคนในทีม<input id="pf-mem" type="number" inputmode="numeric" min="0" max="999" value="${esc(t.members??'')}" placeholder="เช่น 4"></label>
@@ -967,7 +974,11 @@ function profileSheet(){const t=S.me&&S.me.team;if(!t)return;
   const L=$('#layer');L.querySelectorAll('[data-pfveh]').forEach(b=>b.onclick=()=>L.querySelectorAll('[data-pfveh]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))));
   $('#pf-save').onclick=async e=>{const b=e.currentTarget,v=L.querySelector('[data-pfveh][aria-pressed=true]');
     const profile={leader:$('#pf-leader').value.trim(),phone:$('#pf-phone').value.trim(),members:$('#pf-mem').value.trim(),vehicle:v?v.dataset.pfveh:(t.vehicle||''),zone:$('#pf-zone').value.trim()};
+    const nn=$('#pf-name').value.trim();if(nn.length<2){toast('ชื่อทีมสั้นเกินไป');return}
     b.disabled=true;b.textContent='กำลังบันทึก…';
+    if(nn!==t.name){let rn=null;try{rn=await post({action:'team_rename',name:nn})}catch(x){}
+      if(!rn||!rn.ok){b.disabled=false;b.textContent='บันทึก';toast(rn&&rn.error==='taken'?'มีทีมอื่นใช้ชื่อนี้แล้ว':rn&&rn.error==='too_many'?'เปลี่ยนชื่อได้วันละ 5 ครั้ง':'เปลี่ยนชื่อไม่สำเร็จ');return}
+      t.name=rn.name;if(!S.tk){S.team=rn.name;st.set('uh_chat_team',rn.name)}}
     try{const r=await post({action:'team_profile',profile});if(!r||!r.ok)throw 0;Object.assign(S.me.team,profile,{members:profile.members===''?'':Number(profile.members)});saveMe(S.me);closeSheet();render();toast('บันทึกโปรไฟล์แล้ว');refresh()}
     catch(err){b.disabled=false;b.textContent='บันทึก';toast('บันทึกไม่สำเร็จ ตรวจอินเทอร์เน็ต')}}}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#dash [data-pfedit],#prof [data-pfedit]'))profileSheet()});
@@ -1033,6 +1044,21 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scop
   document.addEventListener('keydown',e=>{if(!v||v.hidden)return;if(e.key==='Escape')close();else if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1)});
   document.addEventListener('click',e=>{const ci=e.target.closest&&e.target.closest('[data-cimg]');if(ci){e.preventDefault();e.stopPropagation();open([ci.dataset.cimg],0);return}const a=e.target.closest&&e.target.closest('.c-ph a');if(!a)return;e.preventDefault();e.stopPropagation();
     const as=[...a.closest('.c-ph').querySelectorAll('a')],ids=as.map(x=>(x.href.match(/\/d\/([-\w]{25,})/)||[])[1]).filter(Boolean);if(ids.length)open(ids,Math.max(0,as.indexOf(a)))},true)})();
+</script>
+<script>
+/* helped tiles on the profile page open the list of cases this team helped */
+(()=>{const ago=t=>new Date(Number(t)).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  async function show(kind){sheet(`<h2>${kind==='today'?'ช่วยแล้ววันนี้':'ช่วยแล้วทั้งหมด'}</h2><div class="hl-list"><p class="hint">กำลังโหลด…</p></div><button type="button" class="btn" data-x>ปิด</button>`);
+    let r=null;try{r=await api({action:'team_helped'})}catch(e){}const box=document.querySelector('#layer .hl-list');if(!box)return;
+    if(!r||!r.ok){box.innerHTML='<p class="hint">โหลดไม่ได้ · ตรวจสัญญาณแล้วลองใหม่</p>';return}
+    const t0=new Date();t0.setHours(0,0,0,0);const L=r.cases.filter(c=>kind!=='today'||Number(c.helpedAt)>=t0.getTime()),ppl=L.reduce((a,c)=>a+Math.max(1,Number(c.people)||1),0);
+    box.innerHTML=L.length?`<p class="hl-sum">${L.length} เคส · ${ppl} คน</p>`+L.map(c=>`<article class="hl">
+      <div class="hl-h"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b><small>${esc(ago(c.helpedAt))}</small></div>
+      <div class="hl-m">${esc(c.people||1)} คน${c.name?' · '+esc(c.name):''} · #${esc(c.id)}</div>
+      <div class="hl-a">${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
+      ${c.photos&&c.photos.length?`<div class="c-ph">${c.photos.map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" aria-label="รูปที่ ${i+1}"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w300" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}
+    </article>`).join(''):`<p class="hint">${kind==='today'?'วันนี้ยังไม่มีเคสที่ช่วยแล้ว':'ยังไม่มีเคสที่ช่วยแล้ว'}</p>`}
+  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-helped]');if(b)show(b.dataset.helped)})})();
 </script>
 </body>
 </html>

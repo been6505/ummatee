@@ -877,6 +877,11 @@ async function teamCases(db) {
     return { ...o, photos: ph }; }), now: Date.now() };
 }
 async function teamRoute(db, name) { const r = await db.prepare('SELECT caseId,data,at,by_ FROM team_route WHERE team=? AND at>?').bind(name, Date.now() - 24 * 3600e3).first(); if (!r) return null; try { return { ...JSON.parse(r.data), at: r.at, by: r.by_ }; } catch (e) { return null; } }
+async function teamHelped(db, name) {
+  const DONE = "(status='done' OR COALESCE(teamDoneAt,0)>0)", AT = 'COALESCE(teamDoneAt,doneAt,updatedAt)';
+  const { results } = await db.prepare(`SELECT *, ${AT} helpedAt FROM cases WHERE volunteer IN (?,?) AND ${DONE} AND COALESCE(dupOf,'')='' ORDER BY ${AT} DESC LIMIT 300`).bind(name, "'" + name).all();
+  return { ok: true, cases: results.map(c => ({ ...outCase(c, true), helpedAt: c.helpedAt, photos: (String(c.photos || '').match(/[-\w]{25,}/g) || []).slice(0, 6) })) };
+}
 async function teamStats(db, name, now) {
   const DONE = "(status='done' OR COALESCE(teamDoneAt,0)>0)", AT = 'COALESCE(teamDoneAt,doneAt,updatedAt)';
   const a = await db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN ${DONE} THEN 1 ELSE 0 END) helped, SUM(CASE WHEN ${DONE} THEN MAX(COALESCE(people,1),1) ELSE 0 END) ppl, MIN(createdAt) since FROM cases WHERE volunteer IN (?,?) AND COALESCE(dupOf,'')=''`).bind(name, "'" + name).first() || {};
@@ -1041,6 +1046,27 @@ const TEAM_POST = {
     const at = Date.now();
     await db.prepare('INSERT INTO team_avatar (team,at,img) VALUES (?,?,?) ON CONFLICT(team) DO UPDATE SET at=excluded.at, img=excluded.img').bind(t.name, at, a).run();
     return { ok: true, avatarAt: at };
+  },
+  team_rename: async (db, t, b) => {
+    if (!t.row || !t.row.id) return { ok: false, error: 'not_in_roster' };
+    const old = t.name, name = clean(b.name, MAX.volunteer).replace(/^'+/, '').trim();
+    if (name.length < 2) return { ok: false, error: 'too_short' };
+    if (name === old) return { ok: true, name };
+    if (!await quota(db, 'rename:' + t.row.id, 5, 86400e3)) return { ok: false, error: 'too_many' };
+    const dup = await db.prepare('SELECT id FROM roster WHERE lower(name)=lower(?) AND id<>?').bind(name, t.row.id).first();
+    if (dup) return { ok: false, error: 'taken' };
+    const now = Date.now(), U = (tbl, col = 'team') => db.prepare(`UPDATE ${tbl} SET ${col}=? WHERE ${col}=?`).bind(name, old);
+    await db.batch([
+      db.prepare('UPDATE roster SET name=?, updatedAt=?, by_=? WHERE id=?').bind(name, now, clean('ทีม ' + old, 60), t.row.id),
+      db.prepare("UPDATE cases SET volunteer=?, updatedAt=? WHERE volunteer IN (?,?)").bind(name, now, old, "'" + old),
+      db.prepare('DELETE FROM teams_live WHERE team=?').bind(name), db.prepare('DELETE FROM team_avatar WHERE team=?').bind(name), db.prepare('DELETE FROM team_route WHERE team=?').bind(name),
+      U('teams_live'), U('team_avatar'), U('team_route'), U('chat'), U('team_track'), U('calls'), U('case_photo'), U('chat_photo'), U('road_q'), U('rally_resp'), U('stock_log'),
+      db.prepare('UPDATE ptt SET ch=? WHERE ch=?').bind('tm:' + name, 'tm:' + old),
+      db.prepare('UPDATE rallies SET teams=REPLACE(teams,?,?) WHERE teams LIKE ?').bind(JSON.stringify(old), JSON.stringify(name), '%' + JSON.stringify(old) + '%'),
+    ]);
+    await bumpRev(db);
+    await chatSend(db, { team: name, from: 'team', name: b.name_by || '', text: `เปลี่ยนชื่อทีมจาก "${old}" เป็น "${name}"`, read: false });
+    return { ok: true, name };
   },
   team_profile: async (db, t, b) => {
     if (!t.row) return { ok: false, error: 'not_in_roster' };
@@ -2878,6 +2904,7 @@ async function api(request, env) {
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_stream': { const t = await teamFrom(env, db, p); return t ? teamStream(db, t.name) : json({ ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
+      case 'team_helped': { const t = await teamFrom(env, db, p); return json(t ? await teamHelped(db, t.name) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_track': return json(vol ? await teamTrack(db, p) : { ok: false, error: 'not_volunteer' });
       case 'chat_threads': return json(vol ? await chatThreads(db) : { ok: false, error: 'not_volunteer' });
       case 'chat_rev': return json(vol ? { ok: true, rev: await getMeta(db, 'chat_rev') || '0' } : { ok: false, error: 'not_volunteer' });
@@ -2917,7 +2944,7 @@ async function api(request, env) {
     const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_photo: (db, b) => chatPhotoAdd(db, clean(b.team, MAX.volunteer), b.from === 'team' ? 'team' : 'hq', b), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
-    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'team_avatar_set'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {
+    if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'team_avatar_set', 'team_rename'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {
       const t = await teamFrom(env, db, b);
       if (!t) return json({ ok: false, error: b.tk ? 'bad_link' : 'not_volunteer' });
       return json(await TEAM_POST[b.action](db, t, b));

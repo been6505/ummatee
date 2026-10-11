@@ -47,6 +47,23 @@ const zonesOf=prov=>W.rooms.filter(r=>r.kind!=='province'&&r.province===prov);
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.alt&&i.src!==i.dataset.alt){i.src=i.dataset.alt;delete i.dataset.alt}},true);
 
 const allCases=r=>r&&r.districts.includes('*');
+// ศักยภาพที่ War Room ทำได้ · m = คำในความต้องการของเคสที่ต้องใช้ศักยภาพนี้
+const CAPS={boat:{t:'เรือ / ลุยน้ำสูง',i:'🚤',m:/เรือ|ลุยน้ำ|น้ำสูง|ติดน้ำ/},evac:{t:'อพยพคน',i:'🧍',m:/อพยพ|ย้ายออก|ติดอยู่|ติดค้าง/},truck:{t:'รถยกสูง / ขนย้าย',i:'🚚',m:/รถสูง|ขนย้าย|ขนของ/},
+  med:{t:'ปฐมพยาบาล / แพทย์',i:'🩺',m:/แพทย์|หมอ|พยาบาล|บาดเจ็บ|ป่วย/},bed:{t:'ผู้ป่วยติดเตียง / ผู้สูงอายุ',i:'🛏️',m:/ติดเตียง|ผู้สูงอายุ|คนแก่|พิการ|คนชรา/},
+  food:{t:'อาหาร / น้ำดื่ม / ถุงยังชีพ',i:'🍱',m:/อาหาร|ข้าว|น้ำดื่ม|ถุงยังชีพ/},drug:{t:'ยา / เวชภัณฑ์',i:'💊',m:/(^|[\s,·/])ยา|เวชภัณฑ์/},
+  shelter:{t:'ศูนย์พักพิง / ที่พัก',i:'🏠',m:/พักพิง|ที่พัก|ที่นอน/},animal:{t:'สัตว์เลี้ยง',i:'🐾',m:/สัตว์|หมา|แมว/},
+  rescue:{t:'ค้นหา-กู้ภัย / ดำน้ำ',i:'🛟',m:/กู้ภัย|ค้นหา|สูญหาย|ดำน้ำ/},power:{t:'ไฟฟ้า / ปั่นไฟ / ชาร์จ',i:'🔌',m:/ไฟฟ้า|ปั่นไฟ|ชาร์จ|แบต/},
+  supply:{t:'ของใช้จำเป็น',i:'🧴',m:/ของใช้|ผ้าอ้อม|ผ้าห่ม|เสื้อผ้า/},clean:{t:'ล้างบ้าน / ฟื้นฟู',i:'🧹',m:/ล้างบ้าน|ทำความสะอาด|ซ่อม|ฟื้นฟู/}};
+const capsOf=r=>(r&&r.caps)||[];
+const capLabel=k=>CAPS[k]?CAPS[k].i+' '+CAPS[k].t:k;
+const kmTxt=m=>(m/1000).toLocaleString('th-TH',{maximumFractionDigits:1});
+// ศักยภาพที่เคสค้างในห้องต้องการ แต่ห้องยังไม่ได้ระบุว่าทำได้
+function capGaps(r,cases){const have=new Set(capsOf(r)),need={};
+  cases.filter(c=>c.status!=='done').forEach(c=>{const t=(c.needs||[]).join(' ')+' '+(c.note||'');Object.entries(CAPS).forEach(([k,v])=>{if(!have.has(k)&&v.m.test(t))need[k]=(need[k]||0)+1})});
+  return Object.entries(need).sort((a,b)=>b[1]-a[1])}
+function areaTxt(r){if(allCases(r))return 'ทุกเคสในระบบ (ไม่จำกัดพื้นที่)';const d=r.districts.filter(x=>!SPECIAL(x)),mg=MERGED(r),out=[];
+  if(isProv(r))out.push('ทั้งจังหวัด'+r.province+(mg.length?' + '+mg.join(', '):''));else if(d.length)out.push((r.province==='กรุงเทพมหานคร'?'เขต ':'')+d.join(', '));
+  if(r.radius)out.push('รัศมี '+kmTxt(r.radius)+' กม. จากจุดที่ตั้ง');return out.join(' · ')}
 const MERGED=r=>(r&&r.districts||[]).filter(d=>/^จ\./.test(d)).map(d=>d.slice(2));
 const PINNED=r=>(r&&r.districts||[]).filter(d=>/^#/.test(d)).map(d=>d.slice(1));
 const SPECIAL=d=>/^(จ\.|#)/.test(d);
@@ -191,7 +208,7 @@ async function drawMap(V){
   const dl=$('#dleg');if(dl){dl.querySelector('.lg-done').hidden=!on('mt-done');dl.querySelector('.lg-flood').hidden=!on('mt-flood');dl.querySelector('.lg-live').hidden=!on('mt-live')}
   W.lc.clearLayers();W.lr.clearLayers();const pts=[],t0=today0(),showDone=$('#mt-done').checked;let nopin=0;
   (V.r?[V.r]:W.rooms).forEach(r=>{if(r.lat==null||!r.radius)return;
-    L.circle([r.lat,r.lng],{radius:r.radius,color:r.color,weight:2,fillColor:r.color,fillOpacity:V.r?.04:.07,dashArray:'6 6',interactive:!V.r}).bindTooltip(esc(r.name),{sticky:true}).on('click',()=>{if(!V.r){W.room=r.id;W.fitted='';render()}}).addTo(W.lr);
+    L.circle([r.lat,r.lng],{radius:r.radius,color:r.color,weight:2,fillColor:r.color,fillOpacity:V.r?.04:.07,dashArray:'6 6',interactive:!V.r}).bindTooltip(`<b>${esc(r.name)}</b> · รัศมี ${kmTxt(r.radius)} กม.${capsOf(r).length?'<br>'+capsOf(r).map(k=>esc(capLabel(k))).join(' · '):''}`,{sticky:true}).on('click',()=>{if(!V.r){W.room=r.id;W.fitted='';render()}}).addTo(W.lr);
     if(V.r)pts.push([r.lat,r.lng])});
   V.cases.filter(c=>c.status!=='done'||(showDone&&(c.doneAt||c.updatedAt)>=t0)).sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(!hasPin(c)){if(c.status!=='done')nopin++;return}
     const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open',ph=photos(c);pts.push([+c.lat,+c.lng]);
@@ -419,7 +436,7 @@ function itemForm(it){const r=room();if(!r)return;it=it||{};
     const q=f.qty&&Math.round(Number(f.qty.value));if(!it.id&&q>0)await apiPost({action:'stock_move',itemId:res.id,type:'set',amount:q,by:staffName()||'War Room',note:'ยอดตั้งต้น War Room: '+r.name});
     toast('บันทึกแล้ว',true);await loadStock();render()})}
 
-function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);if(W.uAt!==r.id){W.uAt=r.id;usersCard()}
+function profTab(V){const r=V.r,staff=W.staff.filter(s=>s.wr===r.id);if(W.uAt!==r.id){W.uAt=r.id;usersCard()}capCard(V);
   const crit=V.cases.filter(c=>c.status!=='done'&&sev(c)===3).length,act=V.cases.filter(c=>c.status!=='done').length;
   $('#pf-info').innerHTML=`<div class="wr-tools"><h2 style="margin:0"><i class="rdot" style="background:${esc(r.color)}"></i> ${esc(r.name)}</h2><button type="button" class="btn ghost sm" id="pf-edit">แก้ไขข้อมูล War Room</button></div>
     <dl class="wr-dl"><dt>ประเภท</dt><dd>${isProv(r)?'ศูนย์ประสานงานจังหวัด (Provincial Coordination)':'War Room โซน'}${r.province?' · จังหวัด'+esc(r.province):''}</dd>${isProv(r)?`<dt>War Room โซน</dt><dd>${zonesOf(r.province).map(z=>`<button type="button" class="lnk" data-gozone2="${esc(z.id)}">${esc(z.name)}</button>`).join(' · ')||'ยังไม่มี'}</dd>`:''}<dt>หัวหน้า</dt><dd>${esc(r.lead||'—')}</dd><dt>เบอร์ติดต่อ</dt><dd>${r.phone?`<a href="tel:${esc(telOf(r.phone))}">${esc(r.phone)}</a>`:'—'}</dd>
@@ -463,6 +480,10 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
       <label>เขต / อำเภอ (คั่นด้วยจุลภาค · ศูนย์จังหวัดไม่ต้องใส่ ดูแลทั้งจังหวัด)<input name="districts" maxlength="600" value="${esc((r.districts||[]).filter(d=>d!=='*'&&!SPECIAL(d)).join(', '))}" placeholder="เช่น ลาดกระบัง, ประเวศ, มีนบุรี"></label>
       <div class="row"><label>จุดที่ตั้ง (ละติจูด, ลองจิจูด)<input name="ll" maxlength="40" value="${r.lat!=null?esc(r.lat+', '+r.lng):''}" placeholder="13.7563, 100.5018"></label><label>รัศมี (กม.)<input name="radius" type="number" min="0" step="0.5" inputmode="decimal" value="${r.radius?esc(r.radius/1000):''}"></label></div>
       <div class="acts"><button type="button" class="btn ghost sm" id="ll-map">ใช้จุดกลางแผนที่ตอนนี้</button><button type="button" class="btn ghost sm" id="ll-me">ใช้ตำแหน่งของฉัน</button></div></fieldset>
+    <fieldset><legend>ศักยภาพที่ทีม War Room นี้ทำได้</legend>
+      <div class="cap-pick">${Object.entries(CAPS).map(([k,v])=>`<label class="cp"><input type="checkbox" name="cap" value="${k}"${capsOf(r).includes(k)?' checked':''}><span>${v.i} ${esc(v.t)}</span></label>`).join('')}</div>
+      <label>อื่น ๆ (คั่นด้วยจุลภาค)<input name="capx" maxlength="200" value="${esc(capsOf(r).filter(k=>!CAPS[k]).join(', '))}" placeholder="เช่น ล่ามภาษามือ, โดรนสำรวจ"></label>
+      <label>รายละเอียดศักยภาพ / ขีดจำกัด<input name="capNote" maxlength="500" value="${esc(r.capNote||'')}" placeholder="เช่น เรือ 3 ลำ · รับได้ ~40 เคส/วัน · ทำงาน 06:00–20:00"></label></fieldset>
     <label>สี<span class="colors">${COLORS.map(x=>`<label class="sw"><input type="radio" name="color" value="${x}"${x===(r.color||COLORS[W.rooms.length%COLORS.length])?' checked':''}><i style="background:${x}"></i></label>`).join('')}</span></label>
     <label>หมายเหตุ<input name="note" maxlength="500" value="${esc(r.note||'')}"></label>
     ${r.id?'<button type="button" class="btn ghost sm danger" id="wr-del">ปิดศูนย์ / War Room นี้</button>':''}`,async f=>{
@@ -470,7 +491,8 @@ function roomForm(r){const cur=room();r=r||{kind:'zone',province:cur?cur.provinc
     if(rad&&!m){toast('ใส่จุดที่ตั้งก่อนกำหนดรัศมี');return false}
     const kind=f.kind.value,pv=f.province.value.trim();if(kind==='province'&&!pv){toast('ศูนย์ประสานงานจังหวัดต้องระบุจังหวัด');return false}
     if(kind==='zone'&&!f.name.value.trim()){toast('ใส่ชื่อ War Room โซน');return false}
-    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,districts:(f.allcases.checked?'*, ':'')+f.districts.value+((r.districts||[]).filter(SPECIAL).length?', '+(r.districts||[]).filter(SPECIAL).join(', '):''),color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value}});
+    const res=await apiPost({action:'warroom_save',by:staffName()||'',warroom:{id:r.id||'',kind,province:pv,name:f.name.value,lead:f.lead.value,phone:f.phone.value,address:f.address.value,lat:m?+m[1]:'',lng:m?+m[2]:'',radius:rad,districts:(f.allcases.checked?'*, ':'')+f.districts.value+((r.districts||[]).filter(SPECIAL).length?', '+(r.districts||[]).filter(SPECIAL).join(', '):''),color:(f.querySelector('[name=color]:checked')||{}).value,note:f.note.value,
+      caps:[...f.querySelectorAll('[name=cap]:checked')].map(x=>x.value).concat(f.capx.value.split(',').map(x=>x.trim()).filter(Boolean)),capNote:f.capNote.value}});
     if(!res.ok){toast(res.error==='province_exists'?'จังหวัดนี้มีศูนย์ประสานงานแล้ว':'บันทึกไม่สำเร็จ: '+(res.error||''));return false}
     toast('บันทึกแล้ว',true);await loadRooms();W.room=res.id;W.fitted='';if(!r.id)W.tab='prof';try{history.replaceState(null,'','?wr='+encodeURIComponent(res.id))}catch(e){}render()});
   const f=$('#dlg-f');
@@ -524,12 +546,30 @@ function dlg(html,onSave){const d=$('#dlg'),f=$('#dlg-f');
   d.showModal();setTimeout(()=>{const i=f.querySelector('input');if(i)i.focus()},30)}
 
 function render(){roomsBar();const V=view();chatScope(V);
-  if(W.tab==='over'){kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
+  if(W.tab==='over'){capBar(V);kpis(V);alerts(V);queue(V);teams(V);feed(V);drawMap(V)}
   else if(!V.r&&W.tab==='struct')structTab();
   else if(W.tab==='board'){if(typeof BOARD!=='undefined')BOARD.show()}
   else if(V.r&&W.tab==='cases')casesTab(V);else if(V.r&&W.tab==='teams')teamsTab(V);else if(V.r&&W.tab==='stock')stockTab(V);else if(V.r&&W.tab==='prof')profTab(V);
   $("#status").textContent=`${V.r?V.r.name+' · ':''}อัปเดต ${new Date(W.at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · เคส ${V.cases.length} · อัปเดตเองทุก 30 วินาที`;}
 
+function capBar(V){const el=$('#wr-cap');if(!el)return;const r=V.r;if(!r){el.hidden=true;return}el.hidden=false;
+  const caps=capsOf(r),gaps=capGaps(r,V.cases),area=areaTxt(r);
+  el.innerHTML=`<span class="cb-l"><i data-ic="pin"></i> พื้นที่</span><span class="cb-v">${area?esc(area):'<span class="lowt">ยังไม่ได้กำหนด</span>'}</span>
+    <span class="cb-l"><i data-ic="hand"></i> ศักยภาพ</span><span class="cb-v caps">${caps.length?caps.map(k=>`<span class="cap">${esc(capLabel(k))}</span>`).join(''):'<span class="lowt">ยังไม่ได้ระบุ</span>'}${gaps.length?`<span class="cap gap" title="เคสค้างที่ต้องการ แต่ห้องนี้ยังไม่ได้ระบุว่าทำได้">ขาด: ${gaps.slice(0,3).map(([k,n])=>esc(CAPS[k].t)+' '+n).join(' · ')}</span>`:''}</span>
+    <button type="button" class="lnk" id="cb-edit">แก้ไข</button>`;
+  $('#cb-edit').onclick=()=>roomForm(r)}
+function capCard(V){const el=$('#pf-cap');if(!el)return;const r=V.r,caps=capsOf(r),gaps=capGaps(r,V.cases);
+  const open=V.cases.filter(c=>c.status!=='done'),inRad=r.radius&&r.lat!=null?open.filter(c=>hasPin(c)&&km(r.lat,r.lng,+c.lat,+c.lng)*1000<=r.radius).length:null;
+  const veh={};V.roster.forEach(t=>{if(t.vehicle)veh[t.vehicle]=(veh[t.vehicle]||0)+1});const ppl=V.roster.reduce((a,t)=>a+(Number(t.members)||0),0);
+  el.innerHTML=`<div class="wr-tools"><h2 style="margin:0">พื้นที่ · รัศมี · ศักยภาพ</h2><button type="button" class="btn ghost sm" id="cap-edit">แก้ไข</button></div>
+    <dl class="wr-dl"><dt>พื้นที่รับผิดชอบ</dt><dd>${esc(areaTxt(r))||'<span class="lowt">ยังไม่ได้กำหนด · เคสจะไม่ขึ้นในห้องนี้</span>'}</dd>
+      <dt>รัศมีปฏิบัติการ</dt><dd>${r.radius?`<b>${kmTxt(r.radius)} กม.</b>${r.lat!=null?` · <button type="button" class="lnk" data-fly2="${+r.lat},${+r.lng}">ดูวงบนแผนที่</button>`:''}${inRad!=null?` · เคสค้างในรัศมี ${inRad}`:''}`:'<span class="muted">ไม่ได้กำหนด</span>'}</dd>
+      <dt>ทรัพยากรจากทีม</dt><dd>${V.roster.length?`${V.roster.length} ทีม${ppl?' · '+ppl+' คน':''}${Object.keys(veh).length?' · '+Object.entries(veh).map(([k,n])=>esc(VEH[k]||k)+' '+n).join(' · '):''}`:'<span class="muted">ยังไม่มีทีม</span>'}</dd></dl>
+    <h3 class="wr-h3">ศักยภาพที่ทีมทำได้</h3>
+    <div class="caps">${caps.length?caps.map(k=>`<span class="cap">${esc(capLabel(k))}</span>`).join(''):'<span class="muted">ยังไม่ได้ระบุ · กด "แก้ไข" เพื่อเลือกสิ่งที่ทีมนี้ช่วยได้ (ใช้ช่วยส่งเคสให้ถูกห้อง)</span>'}</div>
+    ${r.capNote?`<p class="cap-note">${esc(r.capNote)}</p>`:''}
+    ${gaps.length?`<p class="cap-gap"><b>เคสค้างที่ห้องนี้ยังไม่มีศักยภาพรองรับ:</b> ${gaps.map(([k,n])=>`${esc(capLabel(k))} <b>${n}</b> เคส`).join(' · ')} <span class="muted">— เพิ่มศักยภาพ หรือส่งต่อ War Room อื่น</span></p>`:''}`;
+  $('#cap-edit').onclick=()=>roomForm(r)}
 function chatScope(V){if(typeof CHAT==='undefined'||!CHAT.setScope)return;const r=V.r;
   const info=name=>{const t=W.roster.find(x=>x.name===name),cs=V.cases.filter(c=>c.status==='going'&&vol(c)===name),l=W.live.find(x=>x.team===name),on=l&&mins(l.updatedAt)<10;
     if(!t&&!cs.length)return null;const field=cs.length>0||(t&&t.status==='out');

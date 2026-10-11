@@ -353,3 +353,20 @@ body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{di
 .wr-apps .app[open]{box-shadow:inset 0 0 0 1px #C9D3F5,0 4px 14px rgba(22,27,61,.07)}
 .wr-apps .app summary b{font-size:15px}
 @media(max-width:760px){.wr-sub:not(:has(>button:not([hidden]):nth-of-type(3))){grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* พื้นที่ · รัศมี · ศักยภาพ */
+.wr-capbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;background:var(--surface,#fff);border-radius:16px;padding:8px 14px;box-shadow:inset 0 0 0 1px var(--line,#e1e9eb);font-size:13.5px}
+.wr-capbar .cb-l{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:var(--muted,#5e7279);white-space:nowrap}
+.wr-capbar .cb-v{min-width:0}.wr-capbar .cb-v+.cb-l{padding-left:10px;border-left:1px solid var(--line,#e1e9eb)}
+.wr-capbar .lnk{margin-left:auto}
+.caps{display:flex;flex-wrap:wrap;gap:6px}
+.cap{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 10px;background:var(--tint,#eef0ff);color:var(--primary,#2D45C8)}
+.cap.gap{background:#fff1e6;color:#c2410c}
+.wr-capc .wr-h3{margin-top:12px}
+.cap-note{margin:8px 0 0;font-size:14px;white-space:pre-wrap}
+.cap-gap{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13.5px}
+.wr-dlg .cap-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
+.wr-dlg .cap-pick .cp{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink,#1b1f3b);border:1px solid var(--line,#dce6e9);border-radius:10px;padding:6px 10px;cursor:pointer}
+.wr-dlg .cap-pick .cp input{min-height:0;width:18px;height:18px;padding:0;margin:0;flex:none}
+.wr-dlg .cap-pick .cp:has(input:checked){border-color:var(--primary,#2D45C8);background:var(--tint,#eef0ff)}
+@media(max-width:600px){.wr-capbar .cb-v+.cb-l{padding-left:0;border-left:0}.wr-capbar .cb-v{flex-basis:100%}}

@@ -15,6 +15,9 @@
   Cache-Control: public, max-age=86400
 /team/*.js
   Cache-Control: public, max-age=86400
+/team/sw.js
+  ! Cache-Control
+  Cache-Control: no-cache
 /assets/*
   Cache-Control: public, max-age=604800
 /app/*.apk

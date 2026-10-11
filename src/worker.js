@@ -606,6 +606,24 @@ async function updateCase(db, b) {
   await bumpRev(db);
   return { ok: true, bags, bagsSupported: true };
 }
+/* ค่าที่ทุก stream/poll อ่านซ้ำ ๆ (rev, chat_rev, teams_live) อ่านจาก D1 ครั้งเดียวแล้วแชร์:
+ * ในหน่วยความจำของ isolate (SHARED) + Cache API ของดาต้าเซ็นเตอร์ (x-at บอกอายุ) · ไม่ว่ามีกี่ connection D1 โดน ~1 ครั้งต่อ ttl ต่อ colo */
+const SHARED = new Map();
+function shared(key, ttl, load) {
+  const now = Date.now(), m = SHARED.get(key);
+  if (m && now - m.at < ttl) return m.p;
+  const p = (async () => {
+    const cache = globalThis.caches && caches.default, req = new Request('https://umplus.cache/sh/' + key);
+    if (cache) { try { const hit = await cache.match(req); if (hit && Date.now() - Number(hit.headers.get('x-at')) < ttl) return await hit.json(); } catch (e) {} }
+    const data = await load();
+    if (cache) cache.put(req, new Response(JSON.stringify(data), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=10', 'x-at': String(Date.now()) } })).catch(() => {});
+    return data;
+  })();
+  SHARED.set(key, { at: now, p }); p.catch(() => { if (SHARED.get(key)?.p === p) SHARED.delete(key); });
+  return p;
+}
+const revMeta = db => shared('meta-rev-v1', 1000, async () => { const { results } = await db.prepare("SELECT k,v FROM meta WHERE k IN ('rev','chat_rev') OR (k>='chat_rev:' AND k<'chat_rev;')").all(); return Object.fromEntries(results.map(x => [x.k, x.v])); });
+const liveRows = db => shared('teams-live-v1', 1000, async () => (await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS - 600e3).all()).results);
 async function liveStream(db, p) {
   const sc = WRC ? await wrScope(db) : null, enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
   let last = Number(p.since) || 0;
@@ -613,9 +631,9 @@ async function liveStream(db, p) {
     await w.write(enc.encode('retry: 800\n\n'));
     let rv = '', cr = '';
     for (let i = 0; i < 30; i++) {
-      if (i % 2 === 0) { const { results: mm } = await db.prepare("SELECT k,v FROM meta WHERE k IN ('rev','chat_rev')").all(); const m = Object.fromEntries(mm.map(x => [x.k, x.v]));
+      if (i % 2 === 0) { const m = await revMeta(db);
         if (i === 0 || (m.rev || '') !== rv || (m.chat_rev || '') !== cr) { rv = m.rev || ''; cr = m.chat_rev || ''; await w.write(enc.encode('event: rev\ndata: ' + JSON.stringify({ rev: rv, chat: cr }) + '\n\n')); } }
-      const { results } = await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt FROM teams_live WHERE updatedAt>?').bind(last || Date.now() - TEAM_FRESH_MS).all();
+      const since = last || Date.now() - TEAM_FRESH_MS, results = (await liveRows(db)).filter(r => r.updatedAt > since);
       const rows = sc ? results.filter(r => sc.teams.has(r.team)) : results;
       if (results.length) last = Math.max(last, ...results.map(r => Number(r.updatedAt) || 0));
       if (rows.length) await w.write(enc.encode('data: ' + JSON.stringify(rows.map(t => ({ ...t, caseId: t.caseId || '' }))) + '\n\n'));
@@ -632,8 +650,7 @@ function teamStream(db, team) {
     await w.write(enc.encode('retry: 1500\n\n'));
     let rv = null, cr = null;
     for (let i = 0; i < 25; i++) {
-      const { results } = await db.prepare('SELECT k,v FROM meta WHERE k IN (?,?)').bind('rev', 'chat_rev:' + team).all();
-      const m = Object.fromEntries(results.map(x => [x.k, x.v])), r = m.rev || '', c = m['chat_rev:' + team] || '';
+      const m = await revMeta(db), r = m.rev || '', c = m['chat_rev:' + team] || '';
       if (rv !== null && c !== cr) await w.write(enc.encode('event: chat\ndata: ' + c + '\n\n'));
       if (rv !== null && r !== rv) await w.write(enc.encode('event: rev\ndata: ' + r + '\n\n'));
       if (rv === null || (i % 10 === 9)) await w.write(enc.encode(': hb\n\n'));
@@ -2956,7 +2973,7 @@ async function api(request, env) {
         if (vol) { const fx = fixOwnPins(db, results.map(r => ({ ...r }))).catch(() => {}); if (CTX && CTX.waitUntil) CTX.waitUntil(fx); }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
-      case 'rev': { const r = await db.prepare("SELECT v FROM meta WHERE k='rev'").first(); return json({ ok: true, rev: r ? r.v : '0' }); }
+      case 'rev': { const m = await revMeta(db); return json({ ok: true, rev: m.rev || '0' }); }
       case 'live_stream': return vol ? liveStream(db, p) : json({ ok: false, error: 'not_volunteer' });
       case 'teams': {
         const t = await readTeams(db);

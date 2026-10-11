@@ -30,3 +30,15 @@
 .bc-tabs button svg{width:18px;height:18px}
 .bc-tabs button[aria-selected=true]{background:var(--ink,#111827);color:#fff}
 @media (max-width:560px){.bc-tabs{width:100%}.bc-tabs button{flex:1;justify-content:center;padding:9px 10px;font-size:14px}}
+@media(max-width:640px){
+  .bc-card{padding:14px 12px;border-radius:16px}
+  #bf fieldset{border:0;padding:0;border-radius:0;gap:6px}#bf legend{padding:0;margin-bottom:2px;font-size:13.5px;color:var(--muted,#5e7279)}
+  .lv{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .lv label{min-width:0}.lv span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;border-radius:14px;padding:8px 4px;font-size:13px;line-height:1.25;min-height:56px}
+  .lv span svg{width:18px;height:18px}
+  #bf #scope{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:none!important;box-shadow:none!important;padding:0!important;border-radius:0!important;overflow:visible!important}
+  #bf #scope button{border-radius:12px!important;min-height:42px;min-width:0;width:100%;flex:none!important;margin:0!important;background:var(--bg,#f2f3f7);font-weight:700}
+  #bf #scope button[aria-pressed=true]{background:var(--primary,#2D45C8)!important;color:#fff!important}
+  .lh{align-items:flex-start}.lh #flt{flex-wrap:wrap;max-width:100%}
+  .bc-tabs{width:100%}.bc-tabs button{flex:1;justify-content:center;padding:9px 10px;font-size:14px}
+}

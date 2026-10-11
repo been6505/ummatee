@@ -1924,6 +1924,10 @@ async function newsData() {
       });
     });
     out.news.sort((a, b) => (b.time || 0) - (a.time || 0)); out.news = out.news.slice(0, 80);
+    const lg = caches.default, keep = (k, v) => lg.put(new Request('https://umplus.cache/news-lastgood-' + k), new Response(JSON.stringify({ at: out.time, v }), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=172800' } })).catch(() => {});
+    const last = async k => { try { const h = await lg.match(new Request('https://umplus.cache/news-lastgood-' + k)); return h ? await h.json() : null; } catch (e) { return null; } };
+    if (w.status === 'fulfilled') await keep('warn', out.warnings); else { const g = await last('warn'); if (g) { out.warnings = (g.v || []).filter(x => !x.end || x.end > Date.now() - 864e5); out.warnAt = g.at; } }
+    if (q.status === 'fulfilled') await keep('quake', out.quakes); else { const g = await last('quake'); if (g) { out.quakes = (g.v || []).filter(x => Date.now() - x.time < 3 * 864e5); out.quakeAt = g.at; } }
     return out;
   });
 }

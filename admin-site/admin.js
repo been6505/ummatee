@@ -206,9 +206,9 @@ function vrSection(c){
   const v=vr(c),cc=v.cctv,ll=hasPin(c)?`${(+c.lat).toFixed(5)},${(+c.lng).toFixed(5)}`:'';
   const rd=v.road,reps=v.reports.slice(0,3);
   return `<section class="vr-box vr-b-${v.result.k}${v.manual?' vr-manual':''}">
-    <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
     <div class="vr-why vr-lv lv${v.level}"><p class="lv-cur" title="${esc(v.levelWhy||'')}"><small>${v.manual?'เจ้าหน้าที่กำหนดระดับ':'ระบบกำหนดระดับ'}</small><b>${esc(URG[v.level]||'')}</b></p>
       <div class="lv-set" role="group" aria-label="เปลี่ยนระดับความเร่งด่วนเอง"><span>เปลี่ยนเอง:</span>${[1,2,3].map(n=>`<button type="button" class="lv-b lv${n}" data-sev="${n}" aria-pressed="${!!v.manual&&v.level===n}">${URG[n]}</button>`).join('')}${v.manual?'<button type="button" class="lv-b lv-auto" data-sev="">ใช้ระดับของระบบ</button>':''}</div></div>
+    <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
     <p class="vr-why"><b>ข้อมูลจากผู้แจ้ง:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>

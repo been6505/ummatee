@@ -271,6 +271,8 @@ async function aiPin(db, b) {
   const c = await db.prepare('SELECT id,address,district,province,notes,lat,lng,glat,glng,intake FROM cases WHERE id=?').bind(clean(b.id, 40)).first(); if (!c) return { ok: false, error: 'not_found' };
   let ik = {}; try { ik = JSON.parse(c.intake || '{}') || {}; } catch (e) {}
   const txt = [c.address, ik.car && 'จุดรถถึง: ' + ik.car, ik.handoff && 'จุดส่งมอบ: ' + ik.handoff, c.notes && 'โน้ตผู้แจ้ง: ' + String(c.notes).slice(0, 600)].filter(Boolean).join('\n');
+  const ck = new Request('https://umplus.cache/aipin-' + await sha([c.id, txt, c.district, c.province, c.lat, c.lng, c.glat, c.glng].join('|')));
+  if (!b.fresh) { try { const hit = await caches.default.match(ck); if (hit) { const r = await hit.json(); r.cached = true; return r; } } catch (e) {} }
   let j = null;
   for (const m of HERMES_MODELS) { try {
     const out = await ENV.AI.run(m, { messages: [
@@ -286,7 +288,9 @@ async function aiPin(db, b) {
   const cands = [];
   for (const q of qs) { if (cands.length >= 3) break; const hit = await geoLookup(q, prov, []); if (hit && !cands.some(k => dk([k.lat, k.lng], [hit.lat, hit.lng]) < 0.2)) cands.push({ ...hit, q, km: cur ? +dk(cur, [hit.lat, hit.lng]).toFixed(2) : null }); }
   const steps = (Array.isArray(j.steps) ? j.steps : []).map(x => clean(String(x), 160)).filter(Boolean).slice(0, 6);
-  return { ok: true, parsed: { province: prov, amphoe: am, tambon: tb, road: clean(j.road, 80), soi: clean(j.soi, 80), place: clean(j.place, 120), house: clean(j.house, 40) }, steps, warn: clean(j.warn, 200), confidence: Math.max(0, Math.min(100, Number(j.confidence) || 0)), cands, cur, pinType: c.lat ? 'pin' : c.glat != null ? 'geocoded' : 'none' };
+  const res = { ok: true, at: Date.now(), parsed: { province: prov, amphoe: am, tambon: tb, road: clean(j.road, 80), soi: clean(j.soi, 80), place: clean(j.place, 120), house: clean(j.house, 40) }, steps, warn: clean(j.warn, 200), confidence: Math.max(0, Math.min(100, Number(j.confidence) || 0)), cands, cur, pinType: c.lat ? 'pin' : c.glat != null ? 'geocoded' : 'none' };
+  try { await caches.default.put(ck, new Response(JSON.stringify(res), { headers: { 'content-type': 'application/json', 'cache-control': 'max-age=86400' } })); } catch (e) {}
+  return res;
 }
 async function aiPinSet(db, b) {
   const lat = num(b.lat, 5, 21), lng = num(b.lng, 97, 106); if (lat == null || lng == null) return { ok: false, error: 'bad_pin' };

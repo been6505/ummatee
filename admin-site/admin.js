@@ -286,6 +286,7 @@ function renderDrawer(){
   if(keep&&keep.ik){const f=d.querySelector('.d-intake');if(f){f.classList.add('dirty');keep.ik.forEach(([k,v])=>{const i=f.querySelector(`[data-ik="${k}"]`);if(i)i.value=v})}}
   if(keep){(keep.ed||[]).forEach(([id,v])=>{const i=d.querySelector('#'+id);if(i)i.value=v});const t=d.querySelector('#d-team');if(t&&keep.team&&[...t.options].some(o=>o.value===keep.team))t.value=keep.team;const nt=d.querySelector('#d-note');if(nt&&keep.note!=null)nt.value=keep.note;d.querySelectorAll('details').forEach((x,i)=>{if(keep.open[i])x.open=true});d.scrollTop=keep.top;d.querySelectorAll('.d-col').forEach((x,i)=>{x.scrollTop=keep.cols[i]||0});if(keep.focus){const f=document.getElementById(keep.focus);if(f)f.focus({preventScroll:true})}}
   d.querySelectorAll('[data-dact]').forEach(b=>b.onclick=()=>assignAct(c,b.dataset.dact,b));
+  aipAuto(c);
   d.querySelectorAll('[data-sev]').forEach(b=>b.onclick=()=>setSev(c,b.dataset.sev,b));
   {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const busy=!!(A.stkBusy&&A.stkBusy[c.id]),dirty=!busy&&(nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig));sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
@@ -497,21 +498,28 @@ async function hoLoad(c){const el=$('#d-ho');if(!el)return;const id=apiId(c.id);
   const L=r.photos.map(p=>({src:u(p.n),team:p.team||'',at:p.at,lat:p.lat,lng:p.lng}));A.hoList=L;
   el.hidden=false;el.className='d-ho';el.innerHTML=head(L.length,`${esc(L[0].team)} · ${esc(ago(L[L.length-1].at))}`)+`<div class="d-ho-g">${L.map((p,i)=>`<button type="button" class="ho-th" data-hov="${i}" aria-label="ดูภาพส่งมอบ ${i+1}"><img src="${p.src}" alt="" loading="lazy"><span class="ho-tm">${esc(hm(p.at))}</span>${p.lat?'<span class="ho-gps"><i data-ic="pin"></i></span>':''}</button>`).join('')}</div>`;
   if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)})}
-async function aiPinRun(id,btn){const out=$('#aip-out');if(!out)return;btn.disabled=true;btn.classList.add('busy');out.innerHTML='<p class="aip-wait"><span class="aip-sp"></span> AI กำลังอ่านที่อยู่ จุดสังเกต และค้นแผนที่…</p>';
-  let r=null;try{r=await post({action:'ai_pin',key:A.key,id:apiId(id)})}catch(e){}btn.disabled=false;btn.classList.remove('busy');
-  if(!r||!r.ok){out.innerHTML=`<p class="aip-err">ตรวจไม่ได้ (${esc((r&&r.error)||'เครือข่าย')}) · ลองใหม่</p>`;return}
+A.aipRes={};A.aipBusy={};
+function aipAuto(c){if(!c||!addr(c)||!$('#aip-out'))return;const id=String(c.id),r=A.aipRes[id];if(A.aipBusy[id])aipWait();else if(r&&(!r.err||Date.now()-r.errAt<60000))aipRender(id);else aiPinRun(id,$('[data-aipin]'),false)}
+function aipWait(){const out=$('#aip-out'),btn=$('[data-aipin]');if(btn){btn.disabled=true;btn.classList.add('busy')}if(out)out.innerHTML='<p class="aip-wait"><span class="aip-sp"></span> AI กำลังอ่านที่อยู่ จุดสังเกต และค้นแผนที่…</p>'}
+async function aiPinRun(id,btn,fresh){id=String(id);if(A.aipBusy[id])return;A.aipBusy[id]=true;aipWait();
+  let r=null;try{r=await post({action:'ai_pin',key:A.key,id:apiId(id),fresh:!!fresh})}catch(e){}A.aipBusy[id]=false;
+  if(r&&r.ok)A.aipRes[id]=r;else A.aipRes[id]={err:(r&&r.error)||'เครือข่าย',errAt:Date.now()};
+  const d=$('#drawer');if(d&&!d.hidden&&String(d.dataset.case)===id)aipRender(id)}
+function aipRender(id){const out=$('#aip-out'),btn=$('[data-aipin]'),r=A.aipRes[id];if(!out||!r)return;
+  if(btn){btn.disabled=false;btn.classList.remove('busy');btn.innerHTML=(typeof ic==='function'?ic('sparkle'):'')+' ตรวจใหม่';btn.dataset.fresh='1'}
+  if(r.err){out.innerHTML=`<p class="aip-err">ตรวจไม่ได้ (${esc(r.err)}) · กด "ตรวจใหม่"</p>`;return}
   const P=r.parsed||{},kv=(l,v)=>v?`<span><em>${l}</em>${esc(v)}</span>`:'',cf=r.confidence,cc=cf>=75?'ok':cf>=50?'mid':'low';
   A.aip={id,r};
-  out.innerHTML=`<div class="aip-card"><div class="aip-h"><b>ผล AI</b><span class="aip-cf ${cc}">มั่นใจ ${cf}%</span></div>
+  out.innerHTML=`<div class="aip-card"><div class="aip-h"><b>ผล AI${r.at?` <small class="muted">· ตรวจเมื่อ ${esc(ago(r.at))}</small>`:''}</b><span class="aip-cf ${cc}">มั่นใจ ${cf}%</span></div>
     <div class="aip-kv">${kv('บ้านเลขที่',P.house)}${kv('ซอย',P.soi)}${kv('ถนน',P.road)}${kv('จุดสังเกต',P.place)}${kv('แขวง/ตำบล',P.tambon)}${kv('เขต/อำเภอ',P.amphoe)}${kv('จังหวัด',P.province)}</div>
     ${r.steps&&r.steps.length?`<div class="aip-st"><b>เส้นทางเข้าถึงตามข้อความ</b><ol>${r.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`:''}
     ${r.warn?`<p class="aip-warn"><i data-ic="alert"></i> ${esc(r.warn)}</p>`:''}
     <div class="aip-cs"><b>ตำแหน่งที่ค้นเจอ</b>${r.cands.length?r.cands.map((k,i)=>`<div class="aip-c"><div><b>${esc(k.label)}</b><small>ค้นด้วย “${esc(k.q)}”${k.km!=null?` · ห่างหมุดเดิม ${k.km<1?Math.round(k.km*1000)+' ม.':k.km.toFixed(1)+' กม.'}`:''}</small></div><a class="btn ghost sm" href="https://maps.google.com/?q=${k.lat},${k.lng}" target="_blank" rel="noopener">ดู ↗</a><button type="button" class="btn sm aip-use" data-aipuse="${i}">ใช้ตำแหน่งนี้</button></div>`).join(''):'<p class="muted small">ค้นแผนที่ไม่เจอตำแหน่งที่ชัดกว่าเดิม · ใช้ข้อมูลเส้นทางด้านบนประกอบ</p>'}</div>
     <button type="button" class="btn ghost sm aip-note" data-aipnote>ใส่เส้นทางนี้ในหมายเหตุศูนย์ (ทีมเห็น)</button></div>`;
   if(typeof ic==='function')out.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)})}
-document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-aipin]');if(b){aiPinRun(b.dataset.aipin,b);return}
+document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-aipin]');if(b){aiPinRun(b.dataset.aipin,b,!!b.dataset.fresh);return}
   const u=e.target.closest&&e.target.closest('[data-aipuse]');if(u&&A.aip){const {id,r}=A.aip,k=r.cands[+u.dataset.aipuse];if(!k)return;const rep=r.pinType==='pin';if(rep&&isHM(id)){toast('เคสจาก Help Me มีหมุดจากผู้แจ้ง · ย้ายไม่ได้ (จะถูกซิงก์ทับ)');return}if(rep&&!confirm('เคสนี้มีหมุดที่ผู้แจ้งปักไว้แล้ว · ย้ายหมุดไปตำแหน่งที่ AI ค้นเจอ?'))return;
-    u.disabled=true;const x=await post({action:'ai_pin_set',key:A.key,id:apiId(id),lat:k.lat,lng:k.lng,label:k.label,replace:rep}).catch(()=>null);if(x&&x.ok){toast('ย้ายหมุดแล้ว',true);load()}else{u.disabled=false;toast('ย้ายหมุดไม่สำเร็จ')}return}
+    u.disabled=true;const x=await post({action:'ai_pin_set',key:A.key,id:apiId(id),lat:k.lat,lng:k.lng,label:k.label,replace:rep}).catch(()=>null);if(x&&x.ok){delete A.aipRes[String(id)];toast('ย้ายหมุดแล้ว',true);load()}else{u.disabled=false;toast('ย้ายหมุดไม่สำเร็จ')}return}
   const n=e.target.closest&&e.target.closest('[data-aipnote]');if(n&&A.aip){const {id,r}=A.aip,c=findCase(id);if(!c)return;const t=['เส้นทาง: '+(r.steps||[]).join(' → '),r.warn?'ระวัง: '+r.warn:''].filter(Boolean).join(' · ').slice(0,280);
     n.disabled=true;const x=await post({action:'update',key:A.key,id:apiId(id),status:c.status,volunteer:c.volunteer||'',hqNote:[c.hqNote,t].filter(Boolean).join(' · ').slice(0,300),metaOnly:true}).catch(()=>null);if(x&&x.ok){toast('บันทึกในหมายเหตุศูนย์แล้ว',true);load()}else{n.disabled=false;toast('บันทึกไม่สำเร็จ')}}});
 function hoView(L,i){if(!L||!L.length)return;let k=i||0,sx=null;const d=document.createElement('div');d.className='ho-lb';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');

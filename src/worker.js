@@ -871,7 +871,7 @@ async function teamMe(db, t) {
 }
 async function teamCases(db) {
   const { results } = await db.prepare("SELECT * FROM cases WHERE status='open' AND COALESCE(dupOf,'')='' ORDER BY urgency DESC, createdAt DESC LIMIT 400").all();
-  return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).length, o = outCase(c, true);
+  return { ok: true, cases: results.map(c => { const ph = (String(c.photos || '').match(/[-\w]{25,}/g) || []).slice(0, 6), o = outCase(c, true);
     return { ...o, photos: ph }; }), now: Date.now() };
 }
 async function teamRoute(db, name) { const r = await db.prepare('SELECT caseId,data,at,by_ FROM team_route WHERE team=? AND at>?').bind(name, Date.now() - 24 * 3600e3).first(); if (!r) return null; try { return { ...JSON.parse(r.data), at: r.at, by: r.by_ }; } catch (e) { return null; } }

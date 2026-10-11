@@ -6,7 +6,11 @@
   if(MODE==='public'&&window.fetch){const of=window.fetch;window.fetch=function(u,o){const p=of.apply(this,arguments);
     try{const url=String(u&&u.url||u),m=String((o&&o.method)||(u&&u.method)||'GET').toUpperCase();
       if(m==='POST'&&/script\.google(usercontent)?\.com\/macros\//.test(url)){const b=String(o&&o.body||'');const a=(b.match(/"action"\s*:\s*"([a-z_]+)"/)||[])[1]||'';
-        if(!/^(list|ping|track|teams|network|outreach|stats)$/.test(a))p.then(()=>{try{of(API+'?action=hm_nudge&t='+Date.now(),{keepalive:true,mode:'no-cors',cache:'no-store'}).catch(()=>{})}catch(e){}}).catch(()=>{})}}catch(e){}
+        /* ส่งคำขอสองทาง: สำเนาเข้า D1 ทันที (ไม่รอ Apps Script) แล้วผูก id จริงเมื่อ Apps Script ตอบ · รูปไม่ส่งซ้ำ (keepalive จำกัด 64KB) */
+        const post=d=>{try{of(API,{method:'POST',body:JSON.stringify(d),keepalive:true,mode:'no-cors',cache:'no-store',headers:{'Content-Type':'text/plain;charset=utf-8'}}).catch(()=>{})}catch(e){}};
+        let j=null;if(a==='create'){try{j=JSON.parse(b)}catch(e){}if(j&&j.clientId){const{photos,...d}=j;post({...d,action:'hm_direct',photoCount:(photos||[]).length})}}
+        if(!/^(list|ping|track|teams|network|outreach|stats)$/.test(a))p.then(r=>{if(j&&j.clientId)r.clone().json().then(x=>{if(x&&x.ok&&x.id)post({action:'hm_link',clientId:j.clientId,id:String(x.id)})}).catch(()=>{});
+          try{of(API+'?action=hm_nudge&t='+Date.now(),{keepalive:true,mode:'no-cors',cache:'no-store'}).catch(()=>{})}catch(e){}}).catch(()=>{})}}catch(e){}
     return p}}
   const BKK='พระนคร ดุสิต หนองจอก บางรัก บางเขน บางกะปิ ปทุมวัน ป้อมปราบศัตรูพ่าย พระโขนง มีนบุรี ลาดกระบัง ยานนาวา สัมพันธวงศ์ พญาไท ธนบุรี บางกอกใหญ่ ห้วยขวาง คลองสาน ตลิ่งชัน บางกอกน้อย บางขุนเทียน ภาษีเจริญ หนองแขม ราษฎร์บูรณะ บางพลัด ดินแดง บึงกุ่ม สาทร บางซื่อ จตุจักร บางคอแหลม ประเวศ คลองเตย สวนหลวง จอมทอง ดอนเมือง ราชเทวี ลาดพร้าว วัฒนา บางแค หลักสี่ สายไหม คันนายาว สะพานสูง วังทองหลาง คลองสามวา บางนา ทวีวัฒนา ทุ่งครุ บางบอน'.split(' ');
   const S={items:[],open:false,loaded:0,pos:null};

@@ -92,7 +92,7 @@ async function init(db) {
     for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run();
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -1463,7 +1463,7 @@ function inScope(c, sc) {
 async function wrGet(env, db, p) {
   const sc = await wrScope(db);
   switch (p.action) {
-    case 'list': { const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme'").bind(Number(p.since) || 0).all();
+    case 'list': { const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'') NOT IN ('helpme','hm_direct','hm_merged')").bind(Number(p.since) || 0).all();
       return { ok: true, cases: results.filter(c => inScope(c, sc)).map(r => outCase(r, true)), volunteer: true }; }
     case 'helpme_cases': { const r = await helpmeCases(env, db); if (r && r.cases) r.cases = r.cases.filter(c => inScope(c, sc)); return r; }
     case 'roster': { const r = await listRoster(db); r.roster = r.roster.filter(t => sc.teams.has(t.name)); r.live = (r.live || []).filter(l => sc.teams.has(l.team)); return r; }
@@ -1506,7 +1506,7 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_token', 'warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'chat_photo', 'team_avatar_set', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'intel_dams', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'chat_photo', 'team_avatar_set', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'intel_dams', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer', 'hm_direct', 'hm_link']);
 const AUDIT_TH = { team_token: 'เปิดดูลิงก์ทีม', warroom_token: 'เปิดดูลิงก์ War Room', ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2642,6 +2642,64 @@ async function hmNudge(env, db) {
   if (CTX && CTX.waitUntil) CTX.waitUntil(run.catch(() => {})); else await run;
   return { ok: true, started: true };
 }
+/* Help Me สองทาง: หน้าเว็บสาธารณะส่งคำขอเข้า Apps Script ตามเดิม และ bc.js ส่งสำเนาตรงเข้า D1 (src='hm_direct') พร้อมกัน
+ * ศูนย์จึงเห็นเคสทันทีแม้ Apps Script ช้า/ล่ม · เมื่อ Apps Script ตอบ id จริง bc.js ส่ง hm_link มา แล้ว syncHelpme รวมแถวเข้ากับเคสจริง (adoptDirect) */
+const HM_ID = /^[A-Z]\d{6,10}-[A-Z0-9]{2,8}$/;
+const CASE_REFS = ['teams_live', 'stock_log', 'leads', 'chat', 'case_photo', 'team_route', 'rallies'];
+async function hmDirect(db, b, ip) {
+  if (b.website) return { ok: true, id: 'ignored' };
+  const cid = clean(b.clientId, 40).replace(/[^\w-]/g, '');
+  if (!cid) return { ok: false, error: 'no_client_id' };
+  const lvText = clean(b.level, 60), lv = LEVELS.includes(lvText) ? lvText : hmLevelCode(lvText);
+  const c = { name: clean(b.name, MAX.name), phone: clean(b.phone, MAX.phone).replace(/[^\d+\-\s]/g, ''), people: clampInt(b.people, 1, 999, 1), address: clean(b.address, MAX.address),
+    lat: num(b.lat, -90, 90), lng: num(b.lng, -180, 180), level: lv, needs: list(b.needs), vulnerable: [], notes: clean(b.notes || b.details, MAX.notes), urgencyLabel: clean(b.urgencyLabel, 60) };
+  if (c.phone.replace(/\D/g, '').length < 9 || (!c.address && (c.lat == null || c.lng == null))) return { ok: false, error: 'missing' };
+  if (HM_TEST.test([c.name, c.notes, c.address, c.needs.join(' ')].join(' '))) return { ok: true, id: 'ignored' };
+  const d = await db.prepare('SELECT id FROM cases WHERE clientId=?').bind(cid).first();
+  if (d) return { ok: true, id: d.id, duplicate: true };
+  const ipHash = ip ? await sha('um+' + ip) : '';
+  if (ipHash) { const r = await db.prepare('SELECT COUNT(*) n FROM cases WHERE ipHash=? AND createdAt>?').bind(ipHash, Date.now() - 10 * 60e3).first(); if (r.n >= 15) return { ok: false, error: 'too_many' }; }
+  const now = Date.now(), id = 'D' + caseId().slice(1), notes = c.notes + (Number(b.photoCount) > 0 ? `${c.notes ? '\n' : ''}[มีรูป ${clampInt(b.photoCount, 1, 20, 1)} รูป · รอข้อมูลจาก Help Me]` : '');
+  await db.prepare(`INSERT INTO cases (id,createdAt,status,urgency,name,phone,people,address,lat,lng,level,levelText,needs,notes,volunteer,updatedAt,token,clientId,ipHash,src)
+    VALUES (?,?,'open',?,?,?,?,?,?,?,?,?,?,?,'',?,?,?,?,'hm_direct')`)
+    .bind(id, now, urgency(c), c.name, c.phone, c.people, c.address, c.lat, c.lng, c.level, lvText, c.needs.join(', '), clean(notes, MAX.notes + 60), now, rand(16), cid, ipHash).run();
+  await bumpRev(db);
+  return { ok: true, id };
+}
+async function hmLinkSet(db, b) {
+  const cid = clean(b.clientId, 40).replace(/[^\w-]/g, ''), id = clean(b.id, 30);
+  if (!cid || !HM_ID.test(id)) return { ok: false, error: 'bad' };
+  await db.prepare("UPDATE cases SET hmLink=? WHERE clientId=? AND src='hm_direct'").bind(id, cid).run();
+  return { ok: true };
+}
+/* รวมแถว hm_direct เข้ากับเคส Apps Script: จับคู่ด้วย hmLink (id ที่ Apps Script ตอบ) หรือ ถ้ายังไม่มี link ใช้เบอร์โทรเดียวกันภายใน 30 นาที
+ * ต้องเบอร์ตรงกันเสมอ (กันการ link มั่ว) · ถ้าเคสจริงยังไม่อยู่ใน D1 → เปลี่ยน id แถวเดิม (เก็บงานที่ศูนย์ทำไว้) · ถ้ามีแล้ว → ซ่อนแถวสำเนา */
+async function adoptDirect(db, cases, known, skipIds = []) {
+  const { results: tmp } = await db.prepare("SELECT id,phone,createdAt,hmLink,status,volunteer,localAt FROM cases WHERE src='hm_direct' ORDER BY createdAt").all();
+  if (!tmp.length) return 0;
+  const tail = s => String(s || '').replace(/\D/g, '').slice(-9), byId = new Map(cases.map(c => [String(c.id), c])), claimed = new Set();
+  let n = 0; const skip = new Set(skipIds.map(String)), hide = tmp.filter(t => t.hmLink && skip.has(t.hmLink));
+  if (hide.length) { await db.batch(hide.map(t => db.prepare("UPDATE cases SET src='hm_merged', hmStatus='skip', dupOf=? WHERE id=?").bind(t.hmLink, t.id))); n += hide.length; }
+  for (const t of tmp) {
+    if (t.hmLink && skip.has(t.hmLink)) continue;
+    const ph = tail(t.phone);
+    if (ph.length < 9) continue;
+    let c = t.hmLink ? byId.get(t.hmLink) : null;
+    if (c && tail(c.phone) !== ph) c = null;
+    if (!c && !t.hmLink) c = cases.find(x => !known.has(String(x.id)) && !claimed.has(String(x.id)) && tail(x.phone) === ph && Math.abs((Number(x.createdAt) || 0) - t.createdAt) < 30 * 60e3);
+    if (!c) continue;
+    const real = String(c.id); claimed.add(real);
+    const refs = CASE_REFS.flatMap(tb => [db.prepare(`UPDATE ${tb} SET caseId=? WHERE caseId=?`).bind(real, t.id), db.prepare(`UPDATE ${tb} SET caseId=? WHERE caseId=?`).bind('hm-' + real, 'hm-' + t.id)]);
+    if (known.has(real)) await db.batch([db.prepare("UPDATE cases SET src='hm_merged', hmStatus='skip', dupOf=? WHERE id=?").bind(real, t.id), ...refs]);
+    else {
+      await db.batch([db.prepare("UPDATE cases SET id=?, src='helpme', hmLink=NULL WHERE id=?").bind(real, t.id), ...refs]);
+      known.set(real, { id: real, hmHash: null, status: t.status, volunteer: t.volunteer, hmStatus: null, hmVolunteer: null, localAt: t.localAt });
+    }
+    n++;
+  }
+  if (n) await bumpRev(db);
+  return n;
+}
 async function syncHelpme(env, db, force) {
   if (hmSyncP) return hmSyncP;
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
@@ -2660,6 +2718,7 @@ async function syncHelpme(env, db, force) {
       const part = ids.slice(i, i + 90), { results } = await db.prepare(`SELECT id,hmHash,status,volunteer,hmStatus,hmVolunteer,localAt FROM cases WHERE id IN (${part.map(() => '?').join(',')})`).bind(...part).all();
       results.forEach(r => known.set(r.id, r));
     }
+    await adoptDirect(db, cases, known, skipIds);
     const now = Date.now(), stmts = []; let inserted = 0, updated = 0;
     for (const c of cases) {
       const level = hmLevelCode(c.level), needs = (c.needs || []).join(', '), photos = JSON.stringify(c.photos || []), pin = c.pinCheck ? JSON.stringify(c.pinCheck) : '';
@@ -2727,12 +2786,12 @@ async function photoAiPass(env, db, max = 4) {
   return n;
 }
 async function helpmeCases(env, db) {
-  let { results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
+  let { results } = await db.prepare("SELECT * FROM cases WHERE src IN ('helpme','hm_direct') AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
-  if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src='helpme' AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all()); }
+  if (!results.length) { try { await syncHelpme(env, db, true); } catch (e) {} ({ results } = await db.prepare("SELECT * FROM cases WHERE src IN ('helpme','hm_direct') AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all()); }
   else if (Date.now() - last > 180e3 && CTX && CTX.waitUntil) CTX.waitUntil(syncHelpme(env, db).catch(() => {}));
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
-  return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
+  return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, direct: c.src === 'hm_direct', createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
     name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', teamDoneAt: c.teamDoneAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
@@ -2893,7 +2952,7 @@ async function api(request, env) {
     switch (p.action) {
       case 'list': {
         const since = Number(p.since) || 0;
-        const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'')<>'helpme' ORDER BY createdAt").bind(since).all();
+        const { results } = await db.prepare("SELECT * FROM cases WHERE updatedAt>? AND COALESCE(src,'') NOT IN ('helpme','hm_direct','hm_merged') ORDER BY createdAt").bind(since).all();
         if (vol) { const fx = fixOwnPins(db, results.map(r => ({ ...r }))).catch(() => {}); if (CTX && CTX.waitUntil) CTX.waitUntil(fx); }
         return json({ ok: true, cases: results.map(r => outCase(r, vol)), volunteer: vol });
       }
@@ -3007,6 +3066,8 @@ async function api(request, env) {
     }
     if (b.action === 'create') return json(await createCase(db, b, clientIp(request) || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
+    if (b.action === 'hm_direct') return json(await hmDirect(db, b, clientIp(request) || ''));
+    if (b.action === 'hm_link') return json(await hmLinkSet(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), intel_dams: intelDams, audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_photo: (db, b) => chatPhotoAdd(db, clean(b.team, MAX.volunteer), b.from === 'team' ? 'team' : 'hq', b), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,

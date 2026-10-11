@@ -43,7 +43,7 @@ const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
 const apiId=id=>isHM(id)?String(id).slice(3):id;
-function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);A.fromLink=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h)}}
+function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);const fl=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h,fl)}}
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
     if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render();openFromHash()}
@@ -245,10 +245,10 @@ async function saveCctv(id,val){
   catch(e){c.cctv=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}}
 
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
-function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
-function closeDrawer(){const d=$('#drawer');if(A.fromLink&&A.openId){A.fromLink=false;A.openId=null;history.back();return}A.fromLink=false;A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
+function openDrawer(id,fromLink){const m=findCase(id);A.fromLink=!!fromLink;A.openId=m?String(m.id):String(id);if(m)aiCheck(m);$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll');renderDrawer()}
+function closeDrawer(){const d=$('#drawer');if(A.aipM){try{A.aipM.remove()}catch(e){}A.aipM=null;A.aipMEl=null}if(A.fromLink&&A.openId){A.fromLink=false;A.openId=null;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');history.back();return}A.fromLink=false;A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
 // a refresh that redraws the drawer between press and release would swap the button under the pointer and drop the click
-document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#drawer')){A.dPress=true;A.dPressAt=Date.now()}},true);
+document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#drawer')){A.dPress=true;A.dPressAt=Date.now();clearTimeout(A.dPT);A.dPT=setTimeout(()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;if(A.openId)renderDrawer()}},4100)}},true);
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;setTimeout(()=>{if(A.openId)renderDrawer()},0)}},true));
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#drawer #d-close')&&A.openId)closeDrawer()});
 $('#drawer-bg').addEventListener('click',closeDrawer);
@@ -273,7 +273,7 @@ function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${ic
     ${notesOf(c)?row('note','รายละเอียด',`<b class="ds-note">${esc(notesOf(c))}</b>`):''}
   </div>`}
 function renderDrawer(){
-  const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
+  const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){A.fromLink=false;closeDrawer();return}
   if(A.dPress&&Date.now()-A.dPressAt<4000&&!d.hidden&&d.dataset.case===String(c.id)){A.dPend=true;return}
   const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
   d.dataset.case=String(c.id);
@@ -537,14 +537,16 @@ function aipRender(id){const out=$('#aip-out'),btn=$('[data-aipin]'),r=A.aipRes[
     <button type="button" class="btn ghost sm aip-note" data-aipnote>ใส่เส้นทางนี้ในหมายเหตุศูนย์ (ทีมเห็น)</button></div>`;
   if(typeof ic==='function')out.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)});
   aipMap(r)}
-function aipMap(r){if(A.aipM){try{A.aipM.remove()}catch(e){}A.aipM=null}const el=$('#aip-map');if(!el||!r.cands.length)return;
+function aipMap(r){const el=$('#aip-map');
+  if(A.aipM&&A.aipMR===r&&A.aipMEl&&el){if(el!==A.aipMEl)el.replaceWith(A.aipMEl);setTimeout(()=>{try{A.aipM.invalidateSize()}catch(e){}},60);return}
+  if(A.aipM){try{A.aipM.remove()}catch(e){}A.aipM=null;A.aipMEl=null}if(!el||!r.cands.length)return;
   if(!window.L){loadLeaflet().then(()=>{if($('#aip-map')===el)aipMap(r)}).catch(()=>{el.hidden=true});return}
-  const m=L.map(el,{attributionControl:false,scrollWheelZoom:false,zoomControl:true});A.aipM=m;A.aipMk=[];
+  const m=L.map(el,{attributionControl:false,scrollWheelZoom:false,zoomControl:true});A.aipM=m;A.aipMR=r;A.aipMEl=el;A.aipMk=[];
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
   const pts=[];if(r.cur){L.circleMarker(r.cur,{radius:7,color:'#fff',weight:3,fillColor:'#E5383B',fillOpacity:1}).addTo(m).bindTooltip('หมุดเดิม');pts.push(r.cur)}
   r.cands.forEach((k,i)=>{const mk=L.marker([k.lat,k.lng],{icon:L.divIcon({className:'aip-mk',html:`<b>${i+1}</b>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(m).bindTooltip(k.label);mk.on('click',()=>aipFocus(i));A.aipMk.push(mk);pts.push([k.lat,k.lng])});
   if(r.cur&&r.cands[0])L.polyline([r.cur,[r.cands[0].lat,r.cands[0].lng]],{color:'#2D45C8',weight:2,dashArray:'5 6',opacity:.7}).addTo(m);
-  m.fitBounds(pts,{padding:[28,28],maxZoom:16});setTimeout(()=>{try{m.invalidateSize()}catch(e){}},60)}
+  m.fitBounds(pts,{padding:[28,28],maxZoom:16});setTimeout(()=>{try{m.invalidateSize();m.fitBounds(pts,{padding:[28,28],maxZoom:16})}catch(e){}},80)}
 function aipFocus(i){const r=A.aip&&A.aip.r,k=r&&r.cands[i];if(!k||!A.aipM)return;A.aipM.flyTo([k.lat,k.lng],16,{duration:.6});const mk=A.aipMk[i];if(mk)mk.openTooltip();
   document.querySelectorAll('.aip-c').forEach(x=>x.classList.toggle('on',x.dataset.aipc===String(i)));document.querySelectorAll('.aip-mk').forEach((x,j)=>x.classList.toggle('on',j===i));
   const el=$('#aip-map');if(el&&el.getBoundingClientRect().top<0)el.scrollIntoView({block:'nearest',behavior:'smooth'})}

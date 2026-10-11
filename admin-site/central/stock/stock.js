@@ -156,11 +156,12 @@ function drawer(html){const d=$('#drawer');d.innerHTML=html;d.hidden=false;$('#d
 function closeD(){$('#drawer').hidden=true;$('#drawer-bg').hidden=true}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeD()});
 // amount typed in the row: + / − record it straight away, no dialog
-async function quickMove(it,t,a,inp,btn){const q=Number(it.qty)||0;if(t==='out'&&a>q){toast(`ของไม่พอ เหลือ ${nf(q)} ${it.unit||''}`);inp.focus();return}
-  btn.disabled=true;try{const r=await apiPost({action:'stock_move',itemId:it.id,type:t,amount:a,note:'',caseId:'',by:staffName()});
-    if(!r.ok){toast(r.error==='not_enough'?`ของไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));return}
-    it.qty=r.qty;inp.value='';toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);render();loadAll()}
-  catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{btn.disabled=false}}
+async function quickMove(it,t,a,inp,btn){S.qBusy=S.qBusy||{};if(S.qBusy[it.id])return;const q=Number(it.qty)||0;if(t==='out'&&a>q){toast(`ของไม่พอ เหลือ ${nf(q)} ${it.unit||''}`);inp.focus();return}
+  S.qBusy[it.id]=true;btn.disabled=true;inp.value='';try{const r=await apiPost({action:'stock_move',itemId:it.id,type:t,amount:a,note:'',caseId:'',by:staffName()});
+    if(!r.ok){toast(r.error==='not_enough'?`ของไม่พอ (เหลือ ${nf(r.qty)})`:'บันทึกไม่สำเร็จ: '+(r.error||''));qaBack(it.id,a);return}
+    it.qty=r.qty;toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);render();loadAll()}
+  catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่');qaBack(it.id,a)}finally{S.qBusy[it.id]=false;btn.disabled=false}}
+function qaBack(id,a){const x=document.querySelector(`[data-qa="${CSS.escape(id)}"]`);if(x&&x.value==='')x.value=a}
 function openMove(it,type){if(!it)return;
   drawer(`<div class="d-head"><div><small class="muted">${esc(it.category||'')}</small><h2>${esc(it.name)}</h2><small>คงเหลือ <b>${nf(it.qty)}</b> ${esc(it.unit||'')}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
   <form id="mform" class="form-grid">

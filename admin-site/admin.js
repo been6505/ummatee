@@ -75,6 +75,7 @@ function filtered(){
   const q=norm($('#q').value.trim()),st=$('#f-status').value,u=$('#f-urg').value,nd=$('#f-need').value,so=$('#f-sort').value;
   return A.cases.filter(c=>{
     if(q){const h=hay(c);const ok=q.split(/\s+/).every(t=>{if(h.includes(t))return true;const d=digits(t);return /^[\d+\-\s]+$/.test(t)&&d.length>=3&&digits(c.phone).includes(d)});if(!ok)return false}
+    if(A.today&&!((Number(c.createdAt)||0)>=dayStart()))return false;
     if(st==='active'&&c.status==='done')return false;
     if(st==='helped'){if(stOf(c)!=='helped')return false}else if(['open','going','done'].includes(st)&&c.status!==st)return false;
     if(u&&String(sev(c))!==u)return false;
@@ -87,8 +88,9 @@ function filtered(){
       if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
       return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||(vrRank(a)-vrRank(b))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(vr(b).score-vr(a).score)||(ca-cb)});
 }
-['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{fCount();render()}));
-function fCount(){const n=($('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
+['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{if(s!=='#q')A.today=false;fCount();render()}));
+const dayStart=()=>new Date().setHours(0,0,0,0);
+function fCount(){const n=!!A.today+(!A.today&&$('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
 $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classList.contains('open');$('#filters-box').classList.toggle('open',o);$('#f-toggle').setAttribute('aria-expanded',String(o))});
 
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};
@@ -123,19 +125,19 @@ VERIFY.onUpdate=()=>render();
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
   return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
-const SF={all:{st:'all',u:''},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},done:{st:'done',u:''},active:{st:'active',u:''}};
-function statKey(){const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
+const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},done:{st:'done',u:''},active:{st:'active',u:''}};
+function statKey(){if(A.today)return 'today';const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
 $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
  const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
-  $('#f-status').value=f.st;$('#f-urg').value=f.u;$('#f-need').value='';$('#f-vr').value='';
-  if(f.sort)$('#f-sort').value=f.sort;else if($('#f-sort').value==='team')$('#f-sort').value='urg';
+  const wasToday=!!A.today;A.today=!!f.today;$('#f-status').value=f.st;$('#f-urg').value=f.u;$('#f-need').value='';$('#f-vr').value='';
+  if(f.sort)$('#f-sort').value=f.sort;else if($('#f-sort').value==='team'||(wasToday&&$('#f-sort').value==='new'))$('#f-sort').value='urg';
   const sw=document.querySelector('.view-sw [data-view="cases"]');if(sw&&sw.getAttribute('aria-selected')!=='true')sw.click();
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
 function render(){
   const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>c.status===s).length,act=base.filter(c=>c.status!=='done');
-  const crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
+  const t0=dayStart(),today=base.filter(c=>(Number(c.createdAt)||0)>=t0).length,crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   const cur=statKey();
-  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['เคสเข้าใหม่วันนี้',today,'today','today'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f&&f!=='active'}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);
@@ -419,7 +421,7 @@ async function drawMap(list){
     const ph=photosOf(c);
     L.marker([+c.lat,+c.lng],{icon:umPin(k,{extra:ph.length?`<span class="pin-thumb"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(ph[0])}=w200" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w200" alt="" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b aria-label="มีรูป ${ph.length} รูป">${ph.length}</b>`:''}</span>`:''}),zIndexOffset:PZ[k]+(ph.length?50:0),keyboard:false}).bindTooltip(esc(`${URG[sev(c)]} · ${vr(c).result.t} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน`)+(ph.length?`<span class="tip-photos">${ph.slice(0,3).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w240" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w240" alt="รูปที่ ${i+1} จากผู้แจ้ง" referrerpolicy="no-referrer">`).join('')}${ph.length>3?`<em>+${ph.length-3}</em>`:''}</span>`:''),{direction:'top',offset:[0,-4]}).on('click',()=>openDrawer(c.id)).addTo(A.layer)});
   if(pts.length&&!A.fitted){A.map.fitBounds(pts,{padding:[40,40],maxZoom:14});A.fitted=true}
-  const miss=list.length-pts.length;$('#count').textContent+=miss?` · ${miss} เคสไม่มีหมุด (ดูในรายการ)`:'';
+  const miss=list.length-pts.length,cn=$('#count');cn.textContent=cn.textContent.replace(/ · \d+ เคสไม่มีหมุด \(ดูในรายการ\)/g,'')+(miss?` · ${miss} เคสไม่มีหมุด (ดูในรายการ)`:'');
   if(typeof MX!=='undefined')MX.refresh(list);
 }
 

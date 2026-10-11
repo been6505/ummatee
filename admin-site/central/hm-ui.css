@@ -1153,3 +1153,6 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 #kanban-view .kb-fold .kb-list{border-color:color-mix(in srgb,var(--kc) 30%,transparent);background:rgba(255,255,255,.6)}
 #kanban-view .kb-top .btn{border-radius:999px}
 #kanban-view .kb-card{flex-shrink:0}
+/* space between the drawer header (AI buttons) and the first section */
+.drawer>.d-head{margin-bottom:14px!important}
+.drawer>.d-head .hz-row{margin-top:8px}

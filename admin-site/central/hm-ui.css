@@ -61,19 +61,19 @@ h1,h2,h3{letter-spacing:-.01em}
   main.wrap:has(>#map-wrap.compact:not([hidden]))>#list{grid-column:2;margin-top:0}
   main.wrap>.stats{margin-bottom:8px!important}
 }
-@media(min-width:1024px){
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl thead{display:none}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list :is(.tbl,.tbl tbody,.tbl tr,.tbl td){display:block;width:100%}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl{border-spacing:0}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr{background:#fff;border:0;border-left:5px solid #e0a800;border-radius:16px;margin-bottom:10px;padding:12px 14px;display:grid;grid-template-columns:auto auto 1fr;gap:6px 10px;box-shadow:var(--shadow-soft)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.u3{border-left-color:var(--red)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.u2{border-left-color:var(--orange)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr.s-done{opacity:.65}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td{border:0!important;border-radius:0!important;padding:0!important;background:none!important;max-width:none}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl :is(td.needs,td.addr,td[data-l="ผู้ติดต่อ"],td.num){grid-column:1/-1}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs b{font-size:16px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ทีม"]::before{content:"ทีม: ";color:var(--muted)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.act{text-align:right}
+@media(min-width:901px){
+  main.wrap:has(>#list:not([hidden])) #list .tbl thead{display:none}
+  main.wrap:has(>#list:not([hidden])) #list :is(.tbl,.tbl tbody,.tbl tr,.tbl td){display:block;width:100%}
+  main.wrap:has(>#list:not([hidden])) #list .tbl{border-spacing:0}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tr{background:#fff;border:0;border-left:5px solid #e0a800;border-radius:16px;margin-bottom:10px;padding:12px 14px;display:grid;grid-template-columns:auto auto 1fr;gap:6px 10px;box-shadow:var(--shadow-soft)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tr.u3{border-left-color:var(--red)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tr.u2{border-left-color:var(--orange)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tr.s-done{opacity:.65}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td{border:0!important;border-radius:0!important;padding:0!important;background:none!important;max-width:none}
+  main.wrap:has(>#list:not([hidden])) #list .tbl :is(td.needs,td.addr,td[data-l="ผู้ติดต่อ"],td.num){grid-column:1/-1}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.needs b{font-size:16px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td[data-l="ทีม"]::before{content:"ทีม: ";color:var(--muted)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.act{text-align:right}
 }
 @media(min-width:1024px){
   #main:has(>.dcol){display:flex;flex-direction:column}
@@ -98,12 +98,12 @@ h1,h2,h3{letter-spacing:-.01em}
   .tbl td.vr-cell .vr-score{font-size:12px}
   .tbl td.needs{grid-row:3}
 }
-@media(min-width:1024px){
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tr{grid-template-columns:auto auto minmax(0,1fr)!important;align-items:start}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ระดับ"]{grid-column:1;grid-row:1}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="สถานะ"]{grid-column:2;grid-row:1;display:flex!important;flex-wrap:wrap;gap:4px;align-items:center}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell{grid-column:3;grid-row:1;text-align:right;display:flex!important;flex-direction:column;align-items:flex-end;gap:2px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs{grid-row:2}
+@media(min-width:901px){
+  main.wrap:has(>#list:not([hidden])) #list .tbl tr{grid-template-columns:auto auto minmax(0,1fr)!important;align-items:start}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td[data-l="ระดับ"]{grid-column:1;grid-row:1}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td[data-l="สถานะ"]{grid-column:2;grid-row:1;display:flex!important;flex-wrap:wrap;gap:4px;align-items:center}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.vr-cell{grid-column:3;grid-row:1;text-align:right;display:flex!important;flex-direction:column;align-items:flex-end;gap:2px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.needs{grid-row:2}
 }
 @media(max-width:760px){
   .wr-rooms{flex-wrap:nowrap;gap:6px}
@@ -198,40 +198,40 @@ main p.muted:not([id]):not(form *):not(.wr-empty),main .wr-tools>span.muted.smal
 }
 .stat .hm-tag{display:none!important}
 
-@media(min-width:1024px){
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
+@media(min-width:901px){
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody tr{grid-template-columns:minmax(0,1fr) auto!important;grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team time";
     gap:8px 10px!important;padding:14px 16px!important;border-radius:20px!important;border:0!important;box-shadow:inset 5px 0 0 var(--lc,#E0B53A),0 1px 3px rgba(22,27,61,.06)!important;background:var(--surface,#fff)!important;margin-bottom:12px!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.u3{--lc:#E5383B}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.u2{--lc:#F57C00}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.s-going{--lc:#7B8CE8}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody tr.s-done{--lc:#2E9E57}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td{min-width:0;max-width:none!important;text-align:left!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(1){grid-area:lv!important;display:flex!important;align-items:center;gap:6px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(2){grid-area:chips!important;display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-start!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(3){grid-area:st!important;display:flex!important;align-items:center;justify-content:flex-end;gap:6px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(4){grid-area:needs}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(5){grid-area:ppl!important;align-self:center;font-weight:700}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(6){grid-area:bag!important;display:flex!important;align-items:center;gap:6px;justify-content:flex-end}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(7){grid-area:addr!important;color:var(--muted);font-size:14px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(8){grid-area:who!important;font-size:14.5px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td:nth-child(11){display:none!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos{margin-top:8px;gap:6px}main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos img,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .cov,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr,main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.bag small{font-size:13px;color:var(--muted)}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.time small{display:block;font-size:11px}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl td.addr small{display:inline-block;margin-left:6px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody tr.u3{--lc:#E5383B}main.wrap:has(>#list:not([hidden])) #list .tbl tbody tr.u2{--lc:#F57C00}main.wrap:has(>#list:not([hidden])) #list .tbl tbody tr.s-going{--lc:#7B8CE8}main.wrap:has(>#list:not([hidden])) #list .tbl tbody tr.s-done{--lc:#2E9E57}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td{min-width:0;max-width:none!important;text-align:left!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(1){grid-area:lv!important;display:flex!important;align-items:center;gap:6px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(2){grid-area:chips!important;display:flex!important;flex-wrap:wrap;align-items:center;gap:6px;justify-content:flex-start!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(3){grid-area:st!important;display:flex!important;align-items:center;justify-content:flex-end;gap:6px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(4){grid-area:needs}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(5){grid-area:ppl!important;align-self:center;font-weight:700}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(6){grid-area:bag!important;display:flex!important;align-items:center;gap:6px;justify-content:flex-end}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(7){grid-area:addr!important;color:var(--muted);font-size:14px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(8){grid-area:who!important;font-size:14.5px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(9){grid-area:team!important;font-size:13.5px;color:var(--muted)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(10){grid-area:time!important;text-align:right!important;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td:nth-child(11){display:none!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl .urg{font-size:13px;padding:3px 12px;border-radius:999px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td:nth-child(3) .hm-tag{order:-1;font-size:11.5px;padding:2px 8px;border-radius:999px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl .st-sel{min-height:34px!important;height:34px;padding:2px 26px 2px 12px!important;font-size:13px!important;font-weight:700;border-radius:999px!important;max-width:150px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.needs b{font-size:16.5px;line-height:1.35;display:block}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.needs small{display:inline-block;margin:4px 8px 0 0;font-size:13px;color:var(--muted)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl .row-photos{margin-top:8px;gap:6px}main.wrap:has(>#list:not([hidden])) #list .tbl .row-photos img,main.wrap:has(>#list:not([hidden])) #list .tbl .row-photos em{width:64px;height:64px;border-radius:12px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.vr-cell .cov,main.wrap:has(>#list:not([hidden])) #list .tbl td.vr-cell .vr,main.wrap:has(>#list:not([hidden])) #list .tbl td.vr-cell .vr-chip{margin:0!important;font-size:12px;padding:3px 10px;border-radius:999px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.vr-cell .vr-score{font-size:11.5px;color:var(--muted);display:inline!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.num small{display:inline;margin-left:6px;font-weight:400;color:var(--muted)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.bag::before{content:"ถุงยังชีพ"!important;color:var(--muted);font-size:13px;margin:0!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.bag .bag-in{width:64px;min-height:34px;height:34px;border-radius:12px;text-align:center;padding:2px 6px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.bag small{font-size:13px;color:var(--muted)}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td[data-l="ผู้ติดต่อ"] .tel{font-weight:700;margin-left:8px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.time small{display:block;font-size:11px}
+  main.wrap:has(>#list:not([hidden])) #list .tbl td.addr small{display:inline-block;margin-left:6px}
 }
-@media(min-width:1024px){main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
-  main.wrap:has(>#map-wrap.compact:not([hidden])) #list .tbl tbody td.vr-cell>*{margin:0!important}}
+@media(min-width:901px){main.wrap:has(>#list:not([hidden])) #list .tbl tbody td.vr-cell{flex-direction:row!important;justify-content:flex-start!important;align-items:center!important;text-align:left!important}
+  main.wrap:has(>#list:not([hidden])) #list .tbl tbody td.vr-cell>*{margin:0!important}}
 button.stat{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%;appearance:none;-webkit-appearance:none;transition:box-shadow .15s,transform .1s}
 :root:not([data-x]) button.stat:hover{box-shadow:0 0 0 2px var(--tint-2,#F9D5D7),var(--shadow-soft)!important}button.stat:active{transform:scale(.98)}
 :root:not([data-x]) button.stat[aria-pressed=true]{box-shadow:0 0 0 2.5px var(--primary,#DD2027),var(--shadow-soft)!important}
@@ -970,3 +970,25 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 /* floating buttons: close the gap left by the old AI button */
 .ptt-fab{bottom:86px}.rally-fab{bottom:150px}
 @media(max-width:760px){.ptt-fab{bottom:calc(var(--tab-h,64px) + 84px + var(--safe-b,0px))}.rally-fab{bottom:calc(var(--tab-h,64px) + 148px + var(--safe-b,0px))}}
+
+/* Case list: cards everywhere, grid of cards when the list is full width */
+@media(min-width:901px){
+  main.wrap:not(:has(>#map-wrap.compact:not([hidden]))) #list .tbl tbody{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;align-items:start}
+  main.wrap:not(:has(>#map-wrap.compact:not([hidden]))) #list .tbl tbody tr{margin:0!important;height:100%}
+}
+main.wrap #list#list#list .tbl tbody tr{position:relative;overflow:hidden;transition:box-shadow .18s,transform .18s;border-radius:20px!important;box-shadow:0 1px 3px rgba(22,27,61,.06),0 0 0 1px rgba(22,27,61,.04)!important;padding-left:20px!important}
+main.wrap #list#list#list .tbl tbody tr::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--lc,#E0B53A)}
+@media(hover:hover){
+  main.wrap #list#list#list .tbl tbody tr:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(22,27,61,.10),0 0 0 1px rgba(22,27,61,.05)!important}
+  main.wrap #list#list#list .tbl tbody tr:hover td{background:none!important}
+}
+main.wrap #list#list#list .tbl tbody tr.u3{background:linear-gradient(180deg,#FFF5F5,var(--surface,#fff) 90px)!important}
+main.wrap #list#list#list .tbl tbody td.needs b{font-size:17px;letter-spacing:-.01em}
+main.wrap #list#list#list .tbl tbody td.addr{background:var(--bg,#F2F3F7)!important;border-radius:12px!important;padding:8px 12px!important;font-size:13.5px;line-height:1.5;display:-webkit-box!important;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+main.wrap #list#list#list .tbl tbody td.num{font-size:15px}
+main.wrap #list#list#list .tbl tbody td[data-l="ผู้ติดต่อ"]{display:flex!important;align-items:center;flex-wrap:wrap;gap:6px 8px;padding-top:10px!important;border-top:1px dashed var(--line,#E4E6EE)!important;border-radius:0!important}
+main.wrap #list#list#list .tbl tbody td[data-l="ผู้ติดต่อ"] .tel{margin:0!important;display:inline-flex;align-items:center;background:#FDECEC;color:#C62828;border-radius:999px;padding:3px 12px;font-size:14px;font-weight:800;text-decoration:none;font-variant-numeric:tabular-nums}
+main.wrap #list#list#list .tbl tbody td[data-l="ผู้ติดต่อ"] .tel::before{content:"";width:14px;height:14px;margin-right:6px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/%3E%3C/svg%3E") center/contain no-repeat}
+main.wrap #list#list#list .tbl tbody td[data-l="ทีม"] .team-sel{min-height:36px;height:36px;border-radius:999px;font-size:13px;font-weight:700;padding:2px 30px 2px 14px;max-width:100%}
+main.wrap #list#list#list .tbl tbody td.time small{display:inline-block!important;margin-top:3px;font-size:11.5px!important;font-weight:700;color:var(--ink,#1d1d1f)!important;background:var(--bg,#F2F3F7);border-radius:8px;padding:1px 8px;font-variant-numeric:tabular-nums}
+main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .row-photos em{box-shadow:0 1px 3px rgba(22,27,61,.12)}

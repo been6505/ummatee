@@ -58,7 +58,7 @@
         <select id="f-zone" aria-label="โซน"><option value="">ทุกโซน</option></select>
         <select id="f-sort" aria-label="เรียงตาม"><option value="urg">เรียง: วิกฤตก่อน</option><option value="new">เรียง: ใหม่สุด</option><option value="old">เรียง: รอนานสุด</option><option value="ppl">เรียง: คนมากสุด</option><option value="team">เรียง: ตามทีม</option><option value="score">เรียง: คะแนนวิกฤต (ตรวจพื้นที่)</option></select>
         </div>
-        <div class="seg" role="tablist" aria-label="มุมมอง"><button role="tab" data-mode="both" aria-selected="true" aria-label="แผนที่ + รายการ" title="แผนที่ + รายการ"><i data-ic="layers"></i></button><button role="tab" data-mode="list" aria-selected="false" aria-label="รายการ" title="รายการ"><i data-ic="list"></i></button><button role="tab" data-mode="map" aria-selected="false" aria-label="แผนที่เต็ม" title="แผนที่เต็ม"><i data-ic="map"></i></button></div>
+        <div class="seg" role="tablist" aria-label="มุมมอง" hidden><button role="tab" data-mode="both" aria-selected="true" aria-label="แผนที่ + รายการ" title="แผนที่ + รายการ"><i data-ic="layers"></i></button><button role="tab" data-mode="list" aria-selected="false" aria-label="รายการ" title="รายการ"><i data-ic="list"></i></button><button role="tab" data-mode="map" aria-selected="false" aria-label="แผนที่เต็ม" title="แผนที่เต็ม"><i data-ic="map"></i></button></div>
         <button class="btn ghost sm ic-btn" id="export" aria-label="ดาวน์โหลด CSV" title="ดาวน์โหลด CSV"><i data-ic="download"></i></button>
         <button class="btn ghost sm f-toggle ic-btn" id="f-toggle" aria-expanded="false" aria-controls="filters-box" aria-label="ตัวกรอง" title="ตัวกรอง"><i data-ic="filter"></i><b id="f-n" hidden></b></button>
       </div>
@@ -89,7 +89,7 @@
 
 <script src="./central/verify.js?v=15"></script>
 <script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=85"></script>
+<script src="./admin.js?v=86"></script>
 <script src="./central/ofm.js?v=1"></script>
 <script src="./central/camlive.js?v=8"></script>
 <script src="./central/mapx.js?v=14"></script>

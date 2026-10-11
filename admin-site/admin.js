@@ -8,7 +8,7 @@ const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / หลังคา'};
 const store={get(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}},
   set(k,v,remember){try{if(!v){localStorage.removeItem(k);sessionStorage.removeItem(k);return}(remember?localStorage:sessionStorage).setItem(k,v)}catch(e){}}};
-const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:['both','list','map'].includes(store.get('uh_view'))?store.get('uh_view'):'both',map:null,layer:null,openId:null,rev:null};
+const A={key:store.get('uh_vol_key'),cases:[],loaded:0,loading:false,mode:'both',map:null,layer:null,openId:null,rev:null};
 
 const sev=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);

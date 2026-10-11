@@ -2021,12 +2021,25 @@ async function damData() {
     return { ok: true, time: Date.now(), large, medium };
   });
 }
+// สถานีวัดน้ำ จ.ยะลา จาก YALA FLOOD ALERT (เทศบาลนครยะลา + ThaiWater) ปักบนชั้น "ระดับน้ำคลอง" ของแผนที่ CENTRAL
+const YALA_API = 'https://yala-flood-alert.vercel.app/api';
+const YALA_RISK = { critical: [5, 'วิกฤต'], high: [5, 'เสี่ยงสูง'], watch: [4, 'เฝ้าระวัง'], normal: [3, 'ปกติ'] };
+const YALA_TREND = { rising: 'เพิ่มขึ้น', falling: 'ลดลง', steady: 'ทรงตัว' };
+function yalaStations(j) {
+  return ((j && j.stations) || []).filter(x => !x.simulated && isFinite(+x.lat) && isFinite(+x.lon)).map(x => {
+    const lv = x.level_msl == null ? null : Number(x.level_msl), bank = x.bank_level == null ? null : Number(x.bank_level), [situation, label] = YALA_RISK[x.risk] || [0, 'ยังประเมินไม่ได้'];
+    return { id: 'yala:' + x.id, name: x.name || '', lat: Number(x.lat), lng: Number(x.lon), level: lv, bank, diff: lv != null && bank != null ? +(lv - bank).toFixed(2) : null, situation, label,
+      trend: YALA_TREND[x.trend] || '', margin: x.margin_to_critical == null ? null : +Number(x.margin_to_critical).toFixed(2), t: Date.parse(x.observed_at) || 0,
+      agency: x.agency || '', area: [x.tumbon && 'ต.' + x.tumbon, x.amphoe && 'อ.' + x.amphoe].filter(Boolean).join(' '), src: 'yala' };
+  });
+}
 async function waterData() {
-  return cached('water-v1', 300, async () => {
+  return cached('water-v2', 300, async () => {
     const out = { ok: true, time: Date.now(), sensors: [], stations: [], errors: [] };
-    const [dds, tw] = await Promise.allSettled([
+    const [dds, tw, yala] = await Promise.allSettled([
       fetch('https://floodbangkok.bangkok.go.th/bkk/dds/services/api/floods/v1/items/sensor_now?limit=-1&fields=flood_now,flood_max,timestamp,sensor_profile.code,sensor_profile.name,sensor_profile.road,sensor_profile.district,sensor_profile.lat,sensor_profile.long,sensor_profile.device_status', { headers: UA }).then(r => r.json()),
-      fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10', { headers: UA }).then(r => r.json())
+      fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10', { headers: UA }).then(r => r.json()),
+      fetch(YALA_API + '/water/latest', { headers: UA, signal: AbortSignal.timeout(15000) }).then(r => r.json())
     ]);
     if (dds.status === 'fulfilled') out.sensors = (dds.value.data || []).map(x => { const p = x.sensor_profile || {}; return {
       code: p.code || '', name: p.name || '', road: p.road || '', district: p.district || '', lat: Number(p.lat), lng: Number(p.long),
@@ -2038,6 +2051,8 @@ async function waterData() {
       level: x.waterlevel_msl == null ? null : Number(x.waterlevel_msl), bank: st.min_bank == null ? null : Number(st.min_bank), diff: x.diff_wl_bank == null ? null : Number(x.diff_wl_bank),
       situation: Number(x.situation_level) || 0, t: x.waterlevel_datetime ? Date.parse(x.waterlevel_datetime.replace(' ', 'T') + ':00+07:00') : 0, agency: ((x.agency || {}).agency_shortname || {}).th || '' }; }).filter(x => isFinite(x.lat) && isFinite(x.lng));
     else out.errors.push('thaiwater');
+    if (yala.status === 'fulfilled') out.stations.push(...yalaStations(yala.value));
+    else out.errors.push('yala');
     return out;
   });
 }
@@ -2877,6 +2892,7 @@ async function api(request, env) {
       case 'board_img': return json(vol ? await boardImg(db, p) : { ok: false, error: 'not_volunteer' });
       case 'rallies': return json(vol ? await rallyList(db) : { ok: false, error: 'not_volunteer' });
       case 'kb_order': return json(vol ? await kbOrderGet(db) : { ok: false, error: 'not_volunteer' });
+      case 'kb_search': return json(vol ? { ok: true, results: await kbSearch(db, clean(p.q, 300), { topic: clean(p.topic, 40), category: clean(p.category, 40), limit: Math.min(Number(p.limit) || 5, 10) }) } : { ok: false, error: 'not_volunteer' });
       case 'intel_brief': return json(vol ? { ok: true, ...(await intelBrief(db)) } : { ok: false, error: 'not_volunteer' });
       case 'dams': try { return json(await damData()); } catch (e) { return json({ ok: false, error: 'dams_unavailable' }); }
       case 'water': try { return json(await waterData()); } catch (e) { return json({ ok: false, error: 'water_unavailable' }); }
@@ -2892,7 +2908,6 @@ async function api(request, env) {
       case 'helpme_cases': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeCases(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'helpme_stats': if (!vol) return json({ ok: false, error: 'not_volunteer' }); try { return json(await helpmeStats(env, db)); } catch (e) { return json({ ok: false, error: 'helpme_unavailable' }); }
       case 'staff_list': return json(vol ? await staffList(db) : { ok: false, error: 'not_volunteer' });
-      case 'kb_search': return json(vol ? { ok: true, results: await kbSearch(db, clean(p.q, 300), { topic: clean(p.topic, 40), category: clean(p.category, 40), limit: Math.min(Number(p.limit) || 5, 10) }) } : { ok: false, error: 'not_volunteer' });
       case 'staff_me': { const st = RQ.getStore(); return json(vol ? { ok: true, staff: st && st.staff || null, admin: staffAdmin() } : { ok: false, error: 'not_volunteer' }); }
       case 'audit_list': return json(vol ? await auditList(db, p) : { ok: false, error: 'not_volunteer' });
       case 'gistda_status': return json({ ok: true, enabled: !!env.GISTDA_KEY, layers: Object.keys(GISTDA_LAYERS) });

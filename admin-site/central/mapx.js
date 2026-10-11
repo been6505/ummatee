@@ -71,9 +71,9 @@ const MX=(()=>{
         L.circleMarker([x.lat,x.lng],{radius:d>=30?9:d>=15?8:d>=5?7:3,color:'#fff',weight:d>0?1.5:.5,fillColor:depthCol(d),fillOpacity:d>0?.95:.45})
           .bindTooltip(`<b>${esc(x.name)}</b><br>น้ำบนถนน <b>${d} ซม.</b>${x.max!=null?` · สูงสุดวันนี้ ${x.max} ซม.`:''}<br>${esc(x.district?'เขต'+x.district:'')} · ${fmtT(x.t)}`).addTo(S.L.sensors)})}
     if(S.on.stations&&S.drawn.stations!==F.loaded+':'+F.stations.length){S.drawn.stations=F.loaded+':'+F.stations.length;S.L.stations.clearLayers();
-      F.stations.forEach(x=>{const [col,lab]=TW[x.situation]||['#78909c','ไม่ทราบ'];
+      F.stations.forEach(x=>{const [col,dl]=TW[x.situation]||['#78909c','ไม่ทราบ'],lab=x.label||dl,ex=x.src==='yala'?`${x.trend?' · '+x.trend:''}${x.margin!=null&&(x.diff==null||Math.abs(x.margin+x.diff)>=.01)?` · เหลือ ${x.margin.toFixed(2)} ม. ถึงวิกฤต`:''}<br>${esc(x.area)} · ที่มา YALA FLOOD ALERT<br>`:'<br>';
         L.marker([x.lat,x.lng],{icon:L.divIcon({className:'wl-ic',html:`<i style="background:${col}"></i>`,iconSize:[18,18]})})
-          .bindTooltip(`<b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}<br>${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
+          .bindTooltip(`<b>${esc(x.name)}</b><br>${esc(lab)} · ระดับน้ำ ${x.level!=null?x.level.toFixed(2):'-'} ม.รทก.${x.diff!=null?` · ${x.diff>0?'สูงกว่าตลิ่ง':'ต่ำกว่าตลิ่ง'} ${Math.abs(x.diff).toFixed(2)} ม.`:''}${ex}${esc(x.agency)} · ${fmtT(x.t)}`).addTo(S.L.stations)})}
     if(S.on.cams&&S.drawn.cams!==F.cams.length){S.drawn.cams=F.cams.length;if(S.camLayer)S.camLayer.remove();S.camLayer=CAMLIVE.layer(S.map,F.cams)}
     if(!S.on.cams&&S.camLayer){S.camLayer.remove();S.camLayer=null;S.drawn.cams=-1}
     drawZones();legend()}

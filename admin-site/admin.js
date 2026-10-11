@@ -43,7 +43,10 @@ const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
 const apiId=id=>isHM(id)?String(id).slice(3):id;
-function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);const fl=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h,fl)}}
+function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));
+  // links like central.html#sf=open (dashboard tiles) open the case list with that tile's filter
+  if(/^sf=\w+$/.test(h)){const b=document.querySelector(`#stats [data-sf="${h.slice(3)}"]`);if(b){history.replaceState(null,'',location.pathname);if(b.getAttribute('aria-pressed')!=='true')b.click()}return}
+  if(h&&findCase(h)){history.replaceState(null,'',location.pathname);const fl=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h,fl)}}
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
     if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render();openFromHash()}

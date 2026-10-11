@@ -337,6 +337,6 @@ const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" str
     if(D.loaded)render()});
   sync()})();
 if(typeof VERIFY!=='undefined')VERIFY.onUpdate=()=>render();
-$('#sumbox').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(b)location.href='../../central.html'});
+$('#sumbox').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(b)location.href='../../central.html#sf='+encodeURIComponent(b.dataset.cst)});
 
 window.addEventListener('hm-rev',e=>{if(D.key&&e.detail.what.includes('rev')){D.rev=e.detail.rev;load()}});

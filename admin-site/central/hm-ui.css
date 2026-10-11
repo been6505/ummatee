@@ -1005,7 +1005,3 @@ main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .r
 .drawer .d-who-tel:active{transform:none}
 .drawer .d-who-tel .ic{width:17px;height:17px}
 @media(max-width:380px){.drawer .d-who-tel{padding:0 12px;font-size:15px}}
-@media(min-width:1100px){
-  .drawer:has(>.d-grid)>.d-grid>.d-col-b:has(>.d-who){padding-top:12px}
-  .drawer:has(>.d-grid)>.d-grid>.d-col-b>.d-who{margin-right:48px}
-}

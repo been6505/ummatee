@@ -89,7 +89,7 @@ async function init(db) {
     for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
     try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {}
     try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
-    for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'speed REAL'],
+    for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'hidAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
       ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
@@ -623,7 +623,7 @@ function shared(key, ttl, load) {
   return p;
 }
 const revMeta = db => shared('meta-rev-v1', 1000, async () => { const { results } = await db.prepare("SELECT k,v FROM meta WHERE k IN ('rev','chat_rev') OR (k>='chat_rev:' AND k<'chat_rev;')").all(); return Object.fromEntries(results.map(x => [x.k, x.v])); });
-const liveRows = db => shared('teams-live-v1', 1000, async () => (await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS - 600e3).all()).results);
+const liveRows = db => shared('teams-live-v1', 1000, async () => (await db.prepare('SELECT team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading,alt,charging,sig,net,carrier,temp,hum,devAt,appAt,hidAt FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS - 600e3).all()).results);
 async function liveStream(db, p) {
   const sc = WRC ? await wrScope(db) : null, enc = new TextEncoder(), { readable, writable } = new TransformStream(), w = writable.getWriter();
   let last = Number(p.since) || 0;
@@ -731,7 +731,7 @@ async function readTeams(db) {
   const { results } = await db.prepare('SELECT * FROM teams_live WHERE updatedAt>?').bind(Date.now() - TEAM_FRESH_MS).all();
   return results.map(t => ({ team: t.team, lat: t.lat, lng: t.lng, accuracy: t.accuracy, caseId: t.caseId || '', updatedAt: t.updatedAt,
     battery: t.battery == null ? null : t.battery, speed: t.speed == null ? null : t.speed, heading: t.heading == null ? null : t.heading,
-    alt: t.alt ?? null, charging: t.charging ?? null, sig: t.sig ?? null, net: t.net || null, carrier: t.carrier || null, temp: t.temp ?? null, hum: t.hum ?? null, devAt: t.devAt || null }));
+    alt: t.alt ?? null, charging: t.charging ?? null, sig: t.sig ?? null, net: t.net || null, carrier: t.carrier || null, temp: t.temp ?? null, hum: t.hum ?? null, devAt: t.devAt || null, appAt: t.appAt || null, hidAt: t.hidAt || null }));
 }
 async function smsIn(db, request, url) {
   const q = Object.fromEntries(url.searchParams); let b = {};
@@ -827,6 +827,7 @@ async function pingTeam(db, b) {
   const now = Date.now(), acc = clampInt(b.accuracy, 0, 100000, null), batt = clampInt(b.battery, 0, 100, null), speed = num(b.speed, 0, 200), heading = num(b.heading, 0, 360);
   await db.prepare('INSERT INTO teams_live (team,lat,lng,accuracy,caseId,updatedAt,battery,speed,heading) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(team) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,caseId=excluded.caseId,updatedAt=excluded.updatedAt,battery=excluded.battery,speed=excluded.speed,heading=excluded.heading')
     .bind(team, lat, lng, acc, clean(b.caseId, 30), now, batt, speed, heading).run();
+  await db.prepare('UPDATE teams_live SET hidAt=? WHERE team=?').bind(b.hidden ? now : null, team).run();
   await saveTele(db, team, b, lat, lng).catch(() => {});
   const last = await db.prepare('SELECT lat,lng,at FROM team_track WHERE team=? ORDER BY n DESC LIMIT 1').bind(team).first();
   if (!last || km(last.lat, last.lng, lat, lng) > 0.02 || now - last.at > 120e3) {

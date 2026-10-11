@@ -2,6 +2,10 @@ const TK={
   tn:s=>String(s||'').replace(/^'/,'').trim(),
   NET:{WIFI:'Wi-Fi',wifi:'Wi-Fi',cellular:'มือถือ','4g':'4G','3g':'3G','2g':'2G','slow-2g':'2G',OFFLINE:'ไม่มีเน็ต'},
   dir:h=>h==null?'':['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'][Math.round(((+h%360)+360)%360/45)%8],
+  mode(l){if(!l)return null;const now=Date.now(),m=t=>{const x=Math.max(0,Math.round((now-t)/60e3));return x<1?'เมื่อสักครู่':x<60?x+' นาทีก่อน':Math.round(x/60)+' ชม.ก่อน'};
+    if(l.appAt&&now-l.appAt<30*60e3)return {k:'bg',t:'แอปส่งเบื้องหลัง · ล็อกจอได้',tip:'ส่งตำแหน่งต่อเนื่องแม้ปิดหน้าจอ'};
+    if(l.hidAt&&Number(l.hidAt)>=Number(l.updatedAt)-15e3)return {k:'off',t:'ปิดจอ/สลับแอป '+m(l.hidAt)+' · ตำแหน่งหยุดอัปเดต',tip:'ใช้ผ่านเบราว์เซอร์ จะส่งต่อเมื่อเปิดหน้าแอปทีมอีกครั้ง'};
+    return {k:'web',t:'เบราว์เซอร์ · ต้องเปิดจอค้างไว้',tip:'ถ้าปิดจอจะหยุดส่ง · แนะนำให้ทีมติดตั้งแอป Help Me ทีม'}},
   hasPin:c=>c&&c.lat!==''&&c.lat!=null&&isFinite(+c.lat)&&isFinite(+c.lng),
   async osrm(a,b){const u=`https://router.project-osrm.org/route/v1/driving/${a.lng.toFixed(6)},${a.lat.toFixed(6)};${b.lng.toFixed(6)},${b.lat.toFixed(6)}?overview=full&geometries=geojson`;
     const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),12000);try{const j=await fetch(u,{signal:ctl.signal}).then(r=>r.json());if(j.code!=='Ok')throw 0;const r=j.routes[0];return {coords:r.geometry.coordinates.map(c=>[c[1],c[0]]),km:r.distance/1000,min:r.duration/60}}finally{clearTimeout(tm)}},

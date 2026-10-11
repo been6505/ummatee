@@ -49,13 +49,15 @@ window.NTRK = (() => {
   async function svc() {
     const d = DS(); if (!d || !d.trackStart || !S.cfg || !S.cfg.tk || S.svc) return;
     try { await d.trackStart({ host: S.cfg.host, tk: S.cfg.tk }); } catch (e) { return; }
-    S.svc = true; put('ntrk_svc', 1); flush();
+    S.svc = true; S.svcAt = Date.now(); put('ntrk_svc', 1); flush();
     const BG = PL('BackgroundGeolocation'); if (BG && S.wid) { try { await BG.removeWatcher({ id: S.wid }); } catch (e) {} S.wid = null; put('ntrk_wid', null); }
     clearInterval(S.beatT); clearInterval(S.retryT);
     const poll = async () => { try { const r = await d.trackStatus(); if (r.fix) { S.fix = { ...r.fix, t: r.fix.t || r.fixAt }; put('ntrk_fix', S.fix); }
       if (r.err === 'denied') emit({ state: 'error', err: 'denied' }); else if (r.err === 'bad_link') emit({ state: 'fatal', err: 'bad_link' });
       else if (r.err === 'offline') emit({ state: 'offline', err: 'offline', queued: r.queued }); else if (r.okAt) emit({ state: 'ok', at: r.okAt, err: '' });
-      S.battOpt = !!r.battOpt; if (!r.on && S.cfg) d.trackStart({ host: S.cfg.host, tk: S.cfg.tk }).catch(() => {}); } catch (e) {} };
+      if (r.err === 'need_bg') emit({ state: 'error', err: 'need_bg' });
+      S.battOpt = !!r.battOpt; S.bg = r.bg;
+      if (r.bg === false && Date.now() - S.svcAt > 12000 && !S.bgAsked && !(await get('ntrk_bg'))) { S.bgAsked = true; put('ntrk_bg', 1); d.bgLocation && d.bgLocation().catch(() => {}); } if (!r.on && S.cfg) d.trackStart({ host: S.cfg.host, tk: S.cfg.tk }).catch(() => {}); } catch (e) {} };
     clearInterval(S.pollT); S.pollT = setInterval(poll, 4000); poll();
     if (!(await get('ntrk_bopt'))) { put('ntrk_bopt', 1); setTimeout(() => d.batteryOpt().catch(() => {}), 3000); }
   }
@@ -116,6 +118,6 @@ window.NTRK = (() => {
   function smsHref(body) { const hq = String((S.cfg && S.cfg.hq) || '').replace(/[^\d+]/g, ''); return `sms:${hq}${/iPhone|iPad|Mac/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(body)}`; }
   async function lastFix() { return S.fix || (await get('ntrk_fix')) || (S.q.length ? S.q[S.q.length - 1] : null); }
   async function resume(on) { const c = await get('ntrk_cfg'); return c ? start(c, on) : false; }
-  return { native, start, resume, flush, smsText, smsHref, lastFix, offlineFor: () => S.offSince ? Date.now() - S.offSince : 0, status: () => ({ ...S.st, queued: S.q.length }), battOpt: () => !!S.battOpt, fixBatt: () => { const d = DS(); if (d && d.batteryOpt) d.batteryOpt().catch(() => {}); },
+  return { native, start, resume, flush, smsText, smsHref, lastFix, offlineFor: () => S.offSince ? Date.now() - S.offSince : 0, status: () => ({ ...S.st, queued: S.q.length }), battOpt: () => !!S.battOpt, bgOk: () => S.bg !== false, fixBg: () => { const d = DS(); if (d && d.bgLocation) d.bgLocation().catch(() => {}); }, fixBatt: () => { const d = DS(); if (d && d.batteryOpt) d.batteryOpt().catch(() => {}); },
     openSettings: () => { const BG = PL('BackgroundGeolocation'); if (BG) BG.openSettings(); } };
 })();

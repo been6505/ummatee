@@ -1156,3 +1156,10 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 /* space between the drawer header (AI buttons) and the first section */
 .drawer>.d-head{margin-bottom:14px!important}
 .drawer>.d-head .hz-row{margin-top:8px}
+/* โหมดส่งตำแหน่งของเครื่องทีม: แอปเบื้องหลัง / เบราว์เซอร์ / ปิดจอแล้ว */
+.ts-mode{display:flex;align-items:center;gap:5px;margin-top:6px;padding:3px 8px;border-radius:999px;font-size:11.5px;font-weight:600;width:max-content;max-width:100%;line-height:1.35}
+.ts-mode i{width:13px;height:13px;flex:0 0 auto}
+.ts-mode.m-bg{background:#E7F6EC;color:#17663A}.ts-mode.m-web{background:#EEF1F5;color:#4A5565}.ts-mode.m-off{background:#FFF1E0;color:#9A4A00}
+.dl-pop .ts-mode{margin:4px 0 6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ts-mode.m-bg{background:#123524;color:#8FE0AE}:root:not([data-theme="light"]) .ts-mode.m-web{background:#232a33;color:#B7C0CC}:root:not([data-theme="light"]) .ts-mode.m-off{background:#3a2610;color:#FFC27A}}
+:root[data-theme="dark"] .ts-mode.m-bg{background:#123524;color:#8FE0AE}:root[data-theme="dark"] .ts-mode.m-web{background:#232a33;color:#B7C0CC}:root[data-theme="dark"] .ts-mode.m-off{background:#3a2610;color:#FFC27A}

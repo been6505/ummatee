@@ -9,6 +9,7 @@ const DLIVE=(()=>{
     const sig=t.sig!=null&&age<15*60e3?['ไม่มี','อ่อนมาก','อ่อน','ดี','ดีมาก'][Math.max(0,Math.min(4,+t.sig))]:age<5*60e3?'ดี (ประมาณ)':'อ่อน (ประมาณ)';
     const row=(i,l,v)=>v==null||v===''?'':`<tr><td><i data-ic="${i}"></i>${l}</td><td><b>${v}</b></td></tr>`;
     return `<div class="dl-pop"><b class="dl-h">${e(k)}</b><small>${e(VN[r.vehicle]||'')}${r.members?' · '+e(r.members)+' คน':''} · ส่งตำแหน่ง ${e(ago(t.updatedAt))}</small>
+      ${(()=>{const md=TK.mode(t);return md?`<small class="ts-mode m-${md.k}" title="${e(md.tip)}">${e(md.t)}</small>`:''})()}
       <table>${row('wifi','สัญญาณ',e(sig)+(t.net?' · '+e(TK.NET[t.net]||t.net):'')+(t.carrier?' · '+e(t.carrier):''))}${row('box','แบตเตอรี่',t.battery!=null?e(t.battery)+'%'+(t.charging?' · กำลังชาร์จ':''):'')}
       ${row('nav','ความเร็ว',sp!=null?sp+' กม./ชม.'+(sp>=3&&t.heading!=null?' · มุ่ง'+TK.dir(t.heading):' · จอดอยู่'):'')}${row('mountain','ความสูง',t.alt!=null?Math.round(+t.alt)+' ม.':'')}${row('locate','ความแม่นยำ GPS',t.accuracy?'±'+Math.round(+t.accuracy)+' ม.':'')}
       ${row('sun','อุณหภูมิ',t.temp!=null?(+t.temp).toFixed(1)+'°C':'')}${row('drop','ความชื้น',t.hum!=null?Math.round(+t.hum)+'%':'')}${(()=>{const d=TK.hq&&TK.hq.to(k,t.lat,t.lng);return d?row('home','ห่างศูนย์',TK.hq.label(d)):''})()}${row('phone','เบอร์',r.phone?`<a href="tel:${e(String(r.phone).replace(/[^\d+]/g,''))}">${e(r.phone)}</a>`:'')}</table>

@@ -92,6 +92,8 @@ function filtered(){
 ['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{if(s!=='#q')A.today=false;fCount();render()}));
 const dayStart=()=>new Date().setHours(0,0,0,0);
 function fCount(){const n=!!A.today+(!A.today&&$('#f-status').value!=='active')+!!$('#f-urg').value+!!$('#f-need').value+!!$('#f-vr').value+!!$('#f-zone').value+($('#f-sort').value!=='urg');$('#f-n').textContent=n;$('#f-n').hidden=!n}
+// download and filter sit on the view-tabs row
+{const vr=document.querySelector('.view-row'),t=document.createElement('div');t.className='vr-tools';t.append($('#export'),$('#f-toggle'));if(vr)vr.append(t)}
 $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classList.contains('open');$('#filters-box').classList.toggle('open',o);$('#f-toggle').setAttribute('aria-expanded',String(o))});
 
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};

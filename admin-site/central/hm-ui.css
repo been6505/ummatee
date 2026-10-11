@@ -1066,3 +1066,14 @@ main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .r
 @media(max-width:760px){.dv-tbl tr.dv-exp .dv-two{grid-template-columns:1fr}}
 /* drawer controls: no double-tap delay on touch screens */
 .drawer :is(button,a,select,input,label),#drawer-bg{touch-action:manipulation}
+/* case page: download + filter buttons on the view-tabs row */
+.view-row{align-items:center}
+.view-row>.vr-tools{margin-left:auto;display:flex;gap:8px;align-items:center}
+main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!important}
+@media(max-width:760px){.view-row:has(>.vr-tools){flex-wrap:nowrap}.view-row:has(>.vr-tools)>.view-sw{flex:none;overflow:visible}.view-row:has(>.vr-tools)>.view-sw button{padding-left:10px!important;padding-right:10px!important;gap:4px!important;font-size:13.5px!important}.view-row>.vr-tools{gap:6px}.view-row>.vr-tools .btn{width:40px;height:40px;min-height:40px;padding:0}}
+/* board cards: reporter, address and case code */
+.kb-card .kb-who,.kb-card .kb-addr{display:flex;align-items:flex-start;gap:5px;min-width:0}
+.kb-card .kb-who .ic,.kb-card .kb-addr .ic{flex:none;width:13px;height:13px;margin-top:2px;color:var(--muted)}
+.kb-card .kb-who{color:var(--ink,#1b1f3b);font-weight:600}
+.kb-card .kb-addr{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kb-card .kb-id{font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink,#1b1f3b);background:var(--bg,#F2F3F7);border-radius:6px;padding:0 6px;justify-self:start;width:max-content}

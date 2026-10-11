@@ -134,6 +134,7 @@ $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');i
   const sw=document.querySelector('.view-sw [data-view="cases"]');if(sw&&sw.getAttribute('aria-selected')!=='true')sw.click();
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
 function render(){
+  if(!A.roster&&A.key){A.listNeedsRoster=true;loadRoster()}
   const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>c.status===s).length,act=base.filter(c=>c.status!=='done');
   const t0=dayStart(),today=base.filter(c=>(Number(c.createdAt)||0)>=t0).length,crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   const cur=statKey();
@@ -161,13 +162,17 @@ function renderList(list){
       <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
       <td data-l="ที่อยู่" class="addr">${esc(addr(c)||'—')}${hasPin(c)?(pinWarn(c)?'<small class="warn">หมุดอาจผิด</small>':c.pinCheck&&c.pinCheck.status==='geocoded'?`<small class="muted" title="${esc(c.pinCheck.label||'')}">📍 หมุดจากที่อยู่ (${esc((String(c.pinCheck.label||'').match(/^ระดับ(\S+)/)||[])[1]||'ประมาณ')})</small>`:c.pinCheck?'<small class="muted">หมุดปรับจากที่อยู่</small>':''):'<small class="warn">ไม่มีหมุด</small>'}</td>
       <td data-l="ผู้ติดต่อ">${esc(c.name||'')}${t.length>=9?`<a class="tel" href="tel:${esc(t)}">${esc(String(c.phone).replace(/^'/,''))}</a>`:esc(c.phone||'')}</td>
-      <td data-l="ทีม">${esc(c.volunteer||'—')}</td>
+      <td data-l="ทีม">${c.status==='done'?esc(String(c.volunteer||'—').replace(/^'/,'')):`<select class="team-sel${c.volunteer?' has':''}" data-team="${esc(c.id)}" aria-label="ทีมของเคส ${esc(c.id)}">${teamOpts(c)}</select>`}</td>
       <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
       <td class="act"><button class="btn ghost sm" data-open="${esc(c.id)}">ดู</button></td></tr>`}).join('')+'</tbody></table>';
 }
 $('#list').addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
   if(e.target.closest('a,select,button'))return;const tr=e.target.closest('tr[data-id]');if(tr)openDrawer(tr.dataset.id)});
-$('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}const s=e.target.closest('[data-st]');if(s)changeStatus(s.dataset.st,s.value,s)});
+$('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}
+  const tm=e.target.closest('[data-team]');if(tm){const c=A.cases.find(x=>String(x.id)===tm.dataset.team);if(!c)return;const cur=String(c.volunteer||'').replace(/^'/,'').trim(),v=tm.value;
+    if(!v){if(cur&&confirm(`เอาทีม ${cur} ออกจากเคสนี้? เคสจะกลับเป็น "รอความช่วยเหลือ"`))changeStatus(c.id,'open',tm);else tm.value=cur;return}
+    if(cur&&cur!==v&&!confirm(`ย้ายเคสนี้จากทีม ${cur} ไปทีม ${v}?`)){tm.value=cur;return}
+    changeStatus(c.id,'going',tm,v);return}const s=e.target.closest('[data-st]');if(s)changeStatus(s.dataset.st,s.value,s)});
 $('#list').addEventListener('focusout',e=>{if(e.target.matches('.bag-in')&&A.pendingList){A.pendingList=false;setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('.bag-in'))render()},0)}});
 $('#list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('.bag-in'))e.target.blur()});
 async function saveBags(id,val,inp){
@@ -288,7 +293,7 @@ function renderDrawer(){
 }
 const RST={ready:'ว่าง',out:'ทีมกำลังไป',rest:'พัก'};
 async function loadRoster(){if(A.rosterLoading)return;A.rosterLoading=true;
-  try{const r=await api({action:'roster',key:A.key});if(r&&r.ok){A.roster=(r.roster||[]).filter(t=>t.active!==0);if(!$('#drawer').hidden)renderDrawer()}}catch(e){}finally{A.rosterLoading=false}}
+  try{const r=await api({action:'roster',key:A.key});if(r&&r.ok){A.roster=(r.roster||[]).filter(t=>t.active!==0);if(!$('#drawer').hidden)renderDrawer();if(A.listNeedsRoster){A.listNeedsRoster=false;if(!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#list')))render()}}}catch(e){}finally{A.rosterLoading=false}}
 function teamOpts(c){const cur=String(c.volunteer||'').replace(/^'/,'').trim(),load={};A.cases.forEach(x=>{if(x.status==='going'&&x.volunteer){const v=String(x.volunteer).replace(/^'/,'').trim();load[v]=(load[v]||0)+1}});
   const names=(A.roster||[]).map(t=>({n:t.name,st:t.status}));if(cur&&!names.some(t=>t.n===cur))names.unshift({n:cur,st:''});
   return `<option value="">${A.roster?'— เลือกทีม —':'กำลังโหลดรายชื่อทีม…'}</option>`+names.map(t=>`<option value="${esc(t.n)}" ${t.n===cur?'selected':''}>${esc(t.n)}${t.st?' · '+(RST[t.st]||t.st):''}${load[t.n]?' · มีงาน '+load[t.n]+' เคส':''}</option>`).join('')}

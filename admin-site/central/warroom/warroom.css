@@ -320,3 +320,8 @@ body.wr-site .top .brand span b{font-size:15px}body.wr-site .top .brand .rdot{di
 .wr-tree [data-dcase],.wr-tree .node.prov[data-mprov]{cursor:grab}
 #p-struct.dragging .node.prov[data-droom]:not([data-droom=""]){outline:2px dashed #9fb0ff;outline-offset:2px}
 .wr-tree .node.prov.drop-on{outline:3px solid #2D45C8!important;outline-offset:2px;background:#EEF1FD}
+@media(min-width:1100px){
+  body.warroom.wr-overview{overflow:auto}
+  body.warroom.wr-overview #main{height:auto;min-height:calc(100dvh - 86px)}
+  #p-over .wr-grid{flex:none;min-height:min(560px,calc(100dvh - 160px));height:min(560px,calc(100dvh - 160px))}
+}

@@ -950,3 +950,11 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 #view-stock .gt tbody tr.zero td{background:#FFF6F6!important}#view-stock .gt tbody tr.low td{background:#FFFAF2!important}
 #view-stock .gt thead th{font-size:12px;letter-spacing:.02em}
 @media(max-width:640px){#view-stock table.gt td.q .qbar{margin-left:auto}}
+/* case drawer on phones: case info and actions first */
+@media(max-width:760px){
+  .drawer>.d-grid{display:flex!important;flex-direction:column;gap:12px}
+  .drawer>.d-grid>.d-col-b{order:-1;display:flex;flex-direction:column;gap:12px}
+  .drawer>.d-grid>.d-col-b>*{margin-top:0!important}
+  .drawer>.d-grid>.d-col-b>.d-rows{order:1}.drawer>.d-grid>.d-col-b>.d-act{order:2}.drawer>.d-grid>.d-col-b>.d-status{order:3}
+  .drawer>.d-grid>.d-col-b>.d-intake{order:4}.drawer>.d-grid>.d-col-b>p{order:5}
+}

@@ -373,6 +373,26 @@ async function intelUpsert(db, rows) {
   for (let i = 0; i < st.length; i += 80) await db.batch(st.slice(i, i + 80));
   return rows.length;
 }
+async function damIntel(db, dm) {
+  const lv = p => p >= 100 ? 'over' : p >= 80 ? 'high' : '';
+  const n = await intelUpsert(db, [...dm.large, ...dm.medium.filter(x => x.pct >= 100)].map(x => ({ kind: 'dam', k: x.size + ':' + x.id, at: x.t, title: (x.size === 'large' ? 'เขื่อน' : '') + x.name, val: x.pct, level: lv(x.pct || 0) + (x.size === 'large' ? ',large' : ''), lat: x.lat, lng: x.lng, src: 'ThaiWater/' + (x.agency || 'ชป.'), data: { inflow: x.inflow, released: x.released, spilled: x.spilled, storage: x.storage, date: x.date } })));
+  await setMeta(db, 'dam_at', String(Date.now()));
+  return n;
+}
+// ThaiWater ตอบ 429 ให้คำขอจาก Cloudflare Workers จึงให้เบราว์เซอร์ของเจ้าหน้าที่ CENTRAL ดึงแล้วส่งมาบันทึกแทน (verify.js damSync)
+// ส่ง {action:'intel_dams'} เปล่า ๆ = ถามว่าถึงรอบหรือยัง · ส่ง large/medium = บันทึก (เฉพาะเมื่อถึงรอบ กันหลายเครื่องส่งซ้ำ)
+const DAM_EVERY = 20 * 60e3;
+async function intelDams(db, b) {
+  const due = Date.now() - (Number(await getMeta(db, 'dam_at')) || 0) >= DAM_EVERY;
+  if (!Array.isArray(b.large) || !due) return { ok: true, due, saved: 0 };
+  const num = v => v == null || v === '' || !isFinite(+v) ? null : +v, old = Date.now() - 4 * 864e5;
+  const one = (x, size) => ({ id: clean(x.id, 24), name: clean(x.name, 80), size, lat: num(x.lat), lng: num(x.lng), date: clean(x.date, 10), t: num(x.t) || 0,
+    pct: num(x.pct), storage: num(x.storage), inflow: num(x.inflow), released: num(x.released), spilled: num(x.spilled), agency: clean(x.agency, 20) });
+  const ok = x => x.id && x.name && x.t >= old && x.t <= Date.now() + 864e5 && (x.lat == null || Math.abs(x.lat) <= 90) && (x.lng == null || Math.abs(x.lng) <= 180);
+  const dm = { large: b.large.slice(0, 80).map(x => one(x || {}, 'large')).filter(ok), medium: (Array.isArray(b.medium) ? b.medium : []).slice(0, 300).map(x => one(x || {}, 'medium')).filter(x => ok(x) && x.pct != null) };
+  if (!dm.large.length) return { ok: false, error: 'no_dams' };
+  return { ok: true, due, saved: await damIntel(db, dm) };
+}
 async function intelTick(env, db, force) {
   const last = Number(await getMeta(db, 'intel_at')) || 0;
   if (!force && Date.now() - last < 15 * 60e3) return { skipped: true };
@@ -388,8 +408,7 @@ async function intelTick(env, db, force) {
       ...w.sensors.filter(x => x.now != null && x.now >= 5 && x.status !== 'malfunction').map(x => ({ kind: 'road_water', k: x.code || x.name, at: x.t || now, title: `${x.name}${x.road ? ' · ' + x.road : ''}`, val: x.now, province: 'กรุงเทพมหานคร', lat: x.lat, lng: x.lng, src: 'สำนักการระบายน้ำ กทม.', data: { district: x.district, max: x.max } })),
       ...w.stations.filter(x => x.situation >= 3).map(x => ({ kind: 'river', k: String(x.id), at: x.t || now, title: x.name, val: x.diff, level: String(x.situation), lat: x.lat, lng: x.lng, src: 'ThaiWater ' + (x.agency || ''), data: { level: x.level, bank: x.bank } })),
       { kind: 'water_sum', k: 'bkk', at: now, title: 'สรุปน้ำ กทม.', val: w.sensors.filter(x => x.now >= 5).length, data: { sensors: w.sensors.length, wet: w.sensors.filter(x => x.now >= 5).length, deep: w.sensors.filter(x => x.now >= 20).length, stationsHigh: w.stations.filter(x => x.situation >= 4).length } }]); } catch (e) { res.waterErr = String(e.message || e).slice(0, 80); }
-  try { const dm = await damData(), lv = p => p >= 100 ? 'over' : p >= 80 ? 'high' : '';
-    res.dam = await intelUpsert(db, [...dm.large, ...dm.medium.filter(x => x.pct >= 100)].map(x => ({ kind: 'dam', k: x.size + ':' + x.id, at: x.t, title: (x.size === 'large' ? 'เขื่อน' : '') + x.name, val: x.pct, level: lv(x.pct || 0) + (x.size === 'large' ? ',large' : ''), lat: x.lat, lng: x.lng, src: 'ThaiWater/' + (x.agency || 'ชป.'), data: { inflow: x.inflow, released: x.released, spilled: x.spilled, storage: x.storage, date: x.date } }))); } catch (e) { res.damErr = String(e.message || e).slice(0, 80); }
+  try { res.dam = await damIntel(db, await damData()); } catch (e) { res.damErr = String(e.message || e).slice(0, 80); }
   const satLast = Number(await getMeta(db, 'intel_sat_at')) || 0;
   if (env.GISTDA_KEY && (force || Date.now() - satLast >= 30 * 60e3)) try {
     await setMeta(db, 'intel_sat_at', String(Date.now()));
@@ -1487,7 +1506,7 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_token', 'warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'chat_photo', 'team_avatar_set', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'chat_photo', 'team_avatar_set', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'intel_dams', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { team_token: 'เปิดดูลิงก์ทีม', warroom_token: 'เปิดดูลิงก์ War Room', ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2989,7 +3008,7 @@ async function api(request, env) {
     if (b.action === 'create') return json(await createCase(db, b, clientIp(request) || ''));
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
-    const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
+    const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), intel_dams: intelDams, audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
       lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_photo: (db, b) => chatPhotoAdd(db, clean(b.team, MAX.volunteer), b.from === 'team' ? 'team' : 'hq', b), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile', 'team_avatar_set', 'team_rename'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {

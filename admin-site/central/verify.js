@@ -30,14 +30,19 @@ const VERIFY=(()=>{
       const [ro,re,wa,cc]=await Promise.allSettled([fetch(ROADS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}),fetch(REPORTS_URL,{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text()}),
         fetch(base+'?action=water').then(r=>r.json()),fetch(base+'?action=cctv').then(r=>r.json())]);
       if(wa.status==='fulfilled'&&wa.value&&wa.value.ok){F.sensors=wa.value.sensors||[];F.stations=wa.value.stations||[]}
-      if(!F.stations.length)try{const tw=await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10').then(r=>r.json());
-        F.stations=((tw.waterlevel_data||{}).data||[]).map(x=>{const st=x.station||{},nm=st.tele_station_name||{};return {id:st.id,name:nm.th||nm.en||'',lat:+st.tele_station_lat,lng:+st.tele_station_long,
+      // ThaiWater (429) และ dds กทม. (Cloudflare challenge 403) ปฏิเสธคำขอจาก Cloudflare Workers แต่เปิด CORS ให้เบราว์เซอร์ จึงดึงตรงจากเครื่องผู้ใช้เมื่อเซิร์ฟเวอร์ดึงไม่ได้
+      if(!F.sensors.length)try{const dd=await fetch('https://floodbangkok.bangkok.go.th/bkk/dds/services/api/floods/v1/items/sensor_now?limit=-1&fields=flood_now,flood_max,timestamp,sensor_profile.code,sensor_profile.name,sensor_profile.road,sensor_profile.district,sensor_profile.lat,sensor_profile.long,sensor_profile.device_status').then(r=>r.json());
+        F.sensors=(dd.data||[]).map(x=>{const p=x.sensor_profile||{};return {code:p.code||'',name:p.name||'',road:p.road||'',district:p.district||'',lat:+p.lat,lng:+p.long,
+          now:x.flood_now==null?null:+x.flood_now,max:x.flood_max==null?null:+x.flood_max,status:p.device_status||'',t:x.timestamp?Date.parse(x.timestamp+(/[zZ+]/.test(x.timestamp.slice(-6))?'':'Z')):0}}).filter(x=>isFinite(x.lat)&&isFinite(x.lng))}catch(e){}
+      if(!F.stations.some(s=>s.src!=='yala'))try{const tw=await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load?province_code=10').then(r=>r.json());
+        F.stations=F.stations.concat(((tw.waterlevel_data||{}).data||[]).map(x=>{const st=x.station||{},nm=st.tele_station_name||{};return {id:st.id,name:nm.th||nm.en||'',lat:+st.tele_station_lat,lng:+st.tele_station_long,
           level:x.waterlevel_msl==null?null:+x.waterlevel_msl,bank:st.min_bank==null?null:+st.min_bank,diff:x.diff_wl_bank==null?null:+x.diff_wl_bank,situation:+x.situation_level||0,
-          t:x.waterlevel_datetime?Date.parse(x.waterlevel_datetime.replace(' ','T')+':00+07:00'):0,agency:((x.agency||{}).agency_shortname||{}).th||''}}).filter(x=>isFinite(x.lat)&&isFinite(x.lng))}catch(e){}
+          t:x.waterlevel_datetime?Date.parse(x.waterlevel_datetime.replace(' ','T')+':00+07:00'):0,agency:((x.agency||{}).agency_shortname||{}).th||''}}).filter(x=>isFinite(x.lat)&&isFinite(x.lng)))}catch(e){}
       if(cc.status==='fulfilled'&&cc.value&&cc.value.ok)F.cams=cc.value.cams||[];
       try{const rg=await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/public/rain_24h').then(r=>r.json());
         F.gauges=(rg.data||[]).map(x=>{const st=x.station||{};return {name:(st.tele_station_name||{}).th||'',lat:+st.tele_station_lat,lng:+st.tele_station_long,h24:+x.rain_24h||0,h1:+x.rain_1h||0,
           t:x.rainfall_datetime?Date.parse(x.rainfall_datetime.replace(' ','T')+':00+07:00'):0}}).filter(g=>isFinite(g.lat)&&isFinite(g.lng)&&g.t&&Date.now()-g.t<36*36e5)}catch(e){}
+      damSync(base);
       let ok=0;
       if(ro.status==='fulfilled'){ok++;F.roads=[];(ro.value.features||[]).forEach(f=>{const g=f.geometry||{},p=f.properties||{};
         const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
@@ -47,6 +52,20 @@ const VERIFY=(()=>{
       if(ok)F.loaded=Date.now();
     })().finally(()=>{F.loading=null});
     return F.loading;
+  }
+
+  // เขื่อน/อ่างเก็บน้ำ: ThaiWater ปฏิเสธ worker (429) เบราว์เซอร์เจ้าหน้าที่จึงดึงแล้วส่งให้ worker บันทึกลง intel (ใช้ในสรุปสถานการณ์ของ AI) · worker บอกว่าถึงรอบหรือยัง
+  async function damSync(base){
+    const key=(typeof ADM!=='undefined'&&ADM.key)||(typeof A!=='undefined'&&A.key);if(!key)return;
+    try{if(Date.now()-(+localStorage.getItem('uh_dam_ask')||0)<10*60e3)return;localStorage.setItem('uh_dam_ask',String(Date.now()))}catch(e){}
+    const post=b=>fetch(base,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'intel_dams',key,...b})}).then(r=>r.json());
+    try{if(!(await post({})).due)return;
+      const d=((await fetch('https://api-v3.thaiwater.net/api/v1/thaiwater30/analyst/dam').then(r=>r.json())).data)||{},old=Date.now()-3*864e5;
+      const map=(r,size)=>{const m=r.dam||{},nm=m.dam_name||{},num=v=>v==null?null:+v;return {id:m.id,name:nm.th||nm.en||'',size,lat:+m.dam_lat,lng:+m.dam_long,date:String(r.dam_date||'').slice(0,10),
+        t:Date.parse(String(r.dam_date||'').slice(0,10)+'T00:00:00+07:00')||0,pct:num(r.dam_storage_percent),storage:num(r.dam_storage),inflow:num(r.dam_inflow),released:num(r.dam_released),spilled:num(r.dam_spilled),
+        agency:(((r.agency||{}).agency_shortname||{}).th||'').trim()}};
+      const large=(d.dam_daily||[]).map(r=>map(r,'large')).filter(x=>x.name&&x.t>=old),medium=(d.dam_medium||[]).map(r=>map(r,'medium')).filter(x=>x.name&&x.t>=old&&x.pct>=100);
+      if(large.length)await post({large,medium})}catch(e){}
   }
 
   function proj(lat0){const kx=Math.cos(lat0*Math.PI/180)*111320,ky=110540;return (lat,lng,lng0)=>[(lng-lng0)*kx,(lat-lat0)*ky]}

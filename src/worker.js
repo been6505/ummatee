@@ -866,7 +866,7 @@ async function teamMe(db, t) {
   results.forEach(c => { c._stk = stk[String(c.id)] || []; });
   return { ok: true, team: { id: r.id || '', name: t.name, leader: r.leader || '', phone: r.phone || '', members: r.members ?? '', vehicle: r.vehicle || '', zone: r.zone || '',
       status: r.status || '', sosAt: r.sosAt || null, sosAck: r.sosAck || null, gmaps: r.gmaps || '', view: r.token ? await viewId(r.token) : '', inRoster: !!r.id },
-    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk })), live: live || null, supplies: stock.map(s => s.name), now,
+    hqPhone: await getMeta(db, 'hq_phone'), cases: results.map(c => ({ ...outCase(c, true), supplies: c._stk, photos: (String(c.photos || '').match(/[-\w]{25,}/g) || []).slice(0, 8) })), live: live || null, supplies: stock.map(s => s.name), now,
     rallies: await teamRallies(db, t.name), stats: await teamStats(db, t.name, now), route: await teamRoute(db, t.name) };
 }
 async function teamCases(db) {

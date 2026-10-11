@@ -270,6 +270,19 @@ body.ptt-on nav.tabs .nav-ptt span{background:linear-gradient(180deg,#E5383B,#B3
 #ho-n{font-weight:800;color:var(--red)}#ho-n.ok{color:var(--ok)}.ho-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.ho-g:empty{display:none}
 .ho-t{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#E3E6EF}.ho-t img{width:100%;height:100%;object-fit:cover}.ho-t i{position:absolute;right:4px;bottom:4px;min-width:20px;height:20px;border-radius:999px;background:var(--ok);color:#fff;font-style:normal;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 4px}
 .ho-t.up i{background:#5B6386}.ho-t.fail i{background:var(--red)}.ho-t.q i{background:var(--amber)}.ho-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ho-cam{background:var(--primary)!important;color:#fff!important;min-height:48px}.ho-alb{background:#fff!important;color:var(--primary)!important;border:1.5px solid var(--primary)!important;min-height:48px}.ho-btns .btn{margin:0;font-size:15px;white-space:nowrap}.ho .meta{margin:0}#d-ok:disabled{opacity:.45}
+.case .c-ph{display:flex;gap:8px;overflow-x:auto;margin:10px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.case .c-ph::-webkit-scrollbar{display:none}
+.case .c-ph a{flex:none;display:block;width:96px;height:96px;border-radius:14px;overflow:hidden;background:#E9ECF2}
+.case .c-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.case.done .c-ph a{width:72px;height:72px;border-radius:12px}
+body.kb-open nav.tabs,body.kb-open .sos,body.kb-open .ptt-fab{display:none!important}
+body.kb-open #v-chat form.send{padding-bottom:10px!important}
+body.kb-open.kb-vv{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100%)!important;padding-bottom:0!important;overflow:hidden}
+.top>#locdot,.top>#status{display:none!important}
+.db-team{flex-wrap:wrap}
+.db-team .db-ctl{flex:1 1 100%;display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.db-team .db-ctl .locdot{width:40px;height:40px;margin:0;box-shadow:inset 0 0 0 1px var(--line)}
+.db-team .db-ctl .db-loc{flex:1;min-width:0;font-size:13px;color:var(--muted);line-height:1.35}
+.db-team .db-ctl select.st{flex:none;min-height:42px;border-radius:999px;padding:0 34px 0 16px;font-weight:800;font-size:15px}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=23"></script>
@@ -624,6 +637,7 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     <h3>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h3>
     <div class="meta">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''}${(c.vulnerable||[]).length?' · กลุ่มเปราะบาง':''}${c.name?' · '+esc(c.name):''}</div>
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>
+    ${Array.isArray(c.photos)&&c.photos.length?`<div class="c-ph">${c.photos.map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener" aria-label="รูปที่ ${i+1} จากผู้แจ้ง"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w300" onerror="if(!this.dataset.f){this.dataset.f=1;this.src='https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w300'}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}
     ${c.notes?`<p class="note">${esc(c.notes)}</p>`:''}
     ${c.intake&&(c.intake.car||c.intake.handoff||c.intake.latest||c.intake.items||c.intake.risks)?`<dl class="ik-team">${[['🚗 รถเข้าถึง',c.intake.car],['📦 จุดส่งมอบ',c.intake.handoff],['🌊 ระดับน้ำ',c.intake.water],['⚠️ ความเสี่ยง',c.intake.risks],['🕘 รับได้ถึง',c.intake.latest?c.intake.latest+' น.':''],['🧾 ต้องการ',c.intake.items],['📞 ติดต่อ',[c.intake.name,c.intake.phone].filter(Boolean).join(' · ')]].filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`:''}
     ${(()=>{const rt=S.me&&S.me.route;if(!rt||String(rt.caseId)!==String(c.id)||!rt.coords||rt.coords.length<2)return '';
@@ -634,9 +648,11 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
     ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
     ${done?'':`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
       ${(()=>{const at=c.teamArrivedAt||(S.arr&&S.arr[c.id]);return at?`<button class="btn green arrived" type="button" data-arrive="${esc(c.id)}" aria-pressed="true"><i data-ic="check"></i> ถึงแล้ว · ${esc(new Date(Number(at)).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}))}</button>`:`<button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`})()}${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}<button class="btn" type="button" data-done="${esc(c.id)}"><i data-ic="alert"></i> แจ้งปัญหา</button><button class="btn" type="button" data-memo="${esc(c.id)}"><i data-ic="edit"></i> หมายเหตุ</button></div>${c.teamMemo?`<p class="note"><b>หมายเหตุของทีม:</b> ${esc(c.teamMemo)}</p>`:''}${c.teamIssue?`<p class="note" style="background:#FFF1E6;color:#9A3B00">แจ้งศูนย์แล้ว: ${esc(c.teamIssue)}</p>`:''}`}</article>`}
+document.addEventListener('change',e=>{const x=e.target.closest&&e.target.closest('[data-tstatus]');if(!x)return;const sel=$('#status');sel.value=x.value;sel.dispatchEvent(new Event('change'))});
 $('#status').onchange=async e=>{const v=e.target.value;try{const r=await opost({action:'team_status',status:v},'สถานะทีม');if(!r.ok)throw 0;S.me.team.status=v;saveMe(S.me);render();toast(r.queued?'บันทึกไว้ · จะส่งเมื่อมีเน็ต':'อัปเดตสถานะแล้ว')}catch(err){toast('บันทึกไม่ได้ ลองใหม่');render()}};
 document.addEventListener('click',async e=>{
   const a=e.target.closest('[data-arrive]');if(a){if(a.classList.contains('arrived')){toast('แจ้งศูนย์ว่าถึงแล้ว');return}a.disabled=true;const p=TR.pos;const r=await opost({action:'team_case',step:'arrived',id:a.dataset.arrive,lat:p?+p.lat.toFixed(6):'',lng:p?+p.lng.toFixed(6):''},'ถึงแล้ว').catch(()=>({}));toast(r.queued?'บันทึกไว้ · จะแจ้งศูนย์เมื่อมีเน็ต':r.ok?'แจ้งศูนย์แล้ว':'ส่งไม่ได้ ลองใหม่');a.disabled=false;if(r.ok||r.queued){S.arr=S.arr||{};S.arr[a.dataset.arrive]=Date.now();const c=(S.me.cases||[]).find(x=>String(x.id)===a.dataset.arrive);if(c&&!c.teamArrivedAt){c.teamArrivedAt=Date.now();saveMe(S.me)}render()}pollChat();return}
+  const ldb=e.target.closest('[data-locdot]');if(ldb){const ld=$('#locdot');if(ld)ld.click();return}
   const d=e.target.closest('[data-done]');if(d){doneSheet(d.dataset.done);return}
   const mo=e.target.closest('[data-memo]');if(mo){memoSheet(mo.dataset.memo);return}
   const ch=e.target.closest('#supplies .chip');if(ch){const n=ch.textContent;S.sup.has(n)?S.sup.delete(n):S.sup.add(n);ch.setAttribute('aria-pressed',String(S.sup.has(n)));return}
@@ -738,7 +754,7 @@ $('#hdr-sos')&&($('#hdr-sos').onclick=()=>$('#sos').click());
   sel.addEventListener('mousedown',open);sel.addEventListener('touchstart',open,{passive:false});sel.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')open(e)});
   document.addEventListener('click',e=>{if(!e.target.closest('.st-pop')&&e.target!==sel)close()})}}
 {const lb=$('#locbar'),ld=$('#locdot');if(lb&&ld){let busy=false;let reveal=0;const sync=()=>{if(busy)return;busy=true;const off=lb.classList.contains('off'),wait=lb.classList.contains('wait'),ok=!off&&!wait;
-  ld.className='locdot '+(ok?'ok':off?'off':'wait');ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
+  ld.className='locdot '+(ok?'ok':off?'off':'wait');document.querySelectorAll('[data-locdot]').forEach(x=>x.className=ld.className);ld.title=$('#loc-t')?$('#loc-t').textContent:'';lb.classList.toggle('ok-hide',ok&&Date.now()>reveal);busy=false};
   new MutationObserver(sync).observe(lb,{attributes:true,attributeFilter:['class'],childList:true,subtree:true,characterData:true});sync();
   ld.onclick=()=>{reveal=Date.now()+4000;lb.classList.remove('ok-hide');setTimeout(sync,4100)}}}
 function go(v){S.view=v;$$('nav.tabs [data-v]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.v===v)));['home','work','chat','call'].forEach(k=>$('#v-'+k).hidden=k!==v);document.body.classList.toggle('on-home',v==='home');document.body.classList.toggle('on-chat',v==='chat');if(v==='home')HOME.show();if(v==='call')DASH();
@@ -815,7 +831,8 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
   const locOk=m!=null&&m<10,locTxt=m==null?'ยังไม่ส่งตำแหน่ง':m<1?'ส่งตำแหน่งล่าสุด ไม่ถึง 1 นาทีก่อน':`ส่งตำแหน่งล่าสุด ${m} นาทีก่อน`;
   const sup={};going.forEach(c=>(c.supplies||[]).forEach(x=>{sup[x.item]=(sup[x.item]||0)+x.qty}));
   const rl=(r.rallies||[]).filter(x=>!x.closedAt);
-  el.innerHTML=`<section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<span class="db-st ${esc(t.status||'ready')}">${STN[t.status]||'พร้อม'}</span><button type="button" class="db-edit" data-pfedit aria-label="แก้โปรไฟล์ทีม" title="แก้โปรไฟล์ทีม"><i data-ic="edit"></i></button>`:''}</section>
+  el.innerHTML=`<section class="db-card db-team"><div class="db-veh">${veh||ic('users')}</div><div><b>${esc(t.name)}</b><small>${esc([t.leader,t.members?t.members+' คน':'',VN[t.vehicle]||''].filter(Boolean).join(' · ')||'ทีมอาสา')}</small></div>${t.inRoster?`<button type="button" class="db-edit" data-pfedit aria-label="แก้โปรไฟล์ทีม" title="แก้โปรไฟล์ทีม"><i data-ic="edit"></i></button>`:''}
+      <div class="db-ctl"><button type="button" class="${esc(($('#locdot')||{}).className||'locdot')}" data-locdot aria-label="สถานะการส่งตำแหน่ง"><i></i></button><span class="db-loc">${esc(locTxt)}</span>${t.inRoster?`<select class="st ${esc(t.status||'ready')}" data-tstatus aria-label="สถานะทีม">${Object.entries(STN).map(([k,v])=>`<option value="${k}"${(t.status||'ready')===k?' selected':''}>${v}</option>`).join('')}</select>`:''}</div></section>
     ${rl.length?`<section class="db-card db-rally"><h3>📣 ศูนย์เรียกรวมพล</h3><p>${esc(rl[0].label||'')}</p><button type="button" class="btn red" data-dgo="home">ดูจุดรวมพล</button></section>`:''}
     <div class="db-tiles">
       <button type="button" class="db-tile go" data-dgo="work"><small>งานที่ต้องไป</small><b>${act.length}</b></button>
@@ -922,5 +939,16 @@ boot();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{});
 </script>
 <script src="../bc.js?v=2" data-mode="team" defer></script>
+<script>
+/* keyboard open: hide the bottom bar and keep the page inside the visible area so the message box sits right above the keyboard */
+(()=>{const vv=window.visualViewport,touch=matchMedia('(pointer:coarse)').matches,b=document.body,R=document.documentElement;
+  const field=()=>{const a=document.activeElement;return a&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&!/^(checkbox|radio|button|submit|range|color|file)$/.test(a.type)))?a:null};
+  function fit(){const on=touch&&!!field();b.classList.toggle('kb-open',on);b.classList.toggle('kb-vv',on&&!!vv);
+    if(on&&vv){R.style.setProperty('--vvh',vv.height+'px');R.style.setProperty('--vvt',vv.offsetTop+'px')}else{R.style.removeProperty('--vvh');R.style.removeProperty('--vvt')}
+    const m=document.getElementById('msgs');if(on&&m&&field().id==='in')m.scrollTop=m.scrollHeight}
+  const later=()=>{fit();setTimeout(fit,120);setTimeout(fit,350)};
+  document.addEventListener('focusin',later);document.addEventListener('focusout',()=>setTimeout(fit,120));
+  if(vv){vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit)}})();
+</script>
 </body>
 </html>

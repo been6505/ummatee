@@ -205,9 +205,9 @@ function agoT(t){return t?ago(t):''}
 function vrSection(c){
   const v=vr(c),cc=v.cctv,ll=hasPin(c)?`${(+c.lat).toFixed(5)},${(+c.lng).toFixed(5)}`:'';
   const rd=v.road,reps=v.reports.slice(0,3);
-  return `<section class="vr-box vr-b-${v.result.k}">
+  return `<section class="vr-box vr-b-${v.result.k}${v.manual?' vr-manual':''}">
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
-    <div class="vr-why vr-lv lv${v.level}"><p title="${esc(v.levelWhy||'')}"><b>${v.manual?'เจ้าหน้าที่กำหนดระดับ':'ระบบกำหนดระดับ'}: ${esc(URG[v.level]||'')}</b></p>
+    <div class="vr-why vr-lv lv${v.level}"><p class="lv-cur" title="${esc(v.levelWhy||'')}"><small>${v.manual?'เจ้าหน้าที่กำหนดระดับ':'ระบบกำหนดระดับ'}</small><b>${esc(URG[v.level]||'')}</b></p>
       <div class="lv-set" role="group" aria-label="เปลี่ยนระดับความเร่งด่วนเอง"><span>เปลี่ยนเอง:</span>${[1,2,3].map(n=>`<button type="button" class="lv-b lv${n}" data-sev="${n}" aria-pressed="${!!v.manual&&v.level===n}">${URG[n]}</button>`).join('')}${v.manual?'<button type="button" class="lv-b lv-auto" data-sev="">ใช้ระดับของระบบ</button>':''}</div></div>
     <p class="vr-why"><b>ข้อมูลจากผู้แจ้ง:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
@@ -245,7 +245,11 @@ async function saveCctv(id,val){
 
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
 function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
-function closeDrawer(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));A.openId=null;$('#drawer').dataset.case='';$('#drawer').hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll')}
+function closeDrawer(){const d=$('#drawer');A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
+// a refresh that redraws the drawer between press and release would swap the button under the pointer and drop the click
+document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#drawer')){A.dPress=true;A.dPressAt=Date.now()}},true);
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;setTimeout(()=>{if(A.openId)renderDrawer()},0)}},true));
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#drawer #d-close')&&A.openId)closeDrawer()});
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
 function camsStart(){if(typeof CAMLIVE==='undefined')return;const d=$('#drawer');if(d)d.querySelectorAll('.cam-pop').forEach(n=>CAMLIVE.start(n))}
@@ -269,6 +273,7 @@ function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${ic
   </div>`}
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
+  if(A.dPress&&Date.now()-A.dPressAt<4000&&!d.hidden&&d.dataset.case===String(c.id)){A.dPend=true;return}
   const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
   d.dataset.case=String(c.id);
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
@@ -282,7 +287,6 @@ function renderDrawer(){
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
     ${sumCard(c,t)}
-    ${intakeBox(c)}
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ','ความต้องการ','จำนวนคน','ระดับน้ำ','ที่อยู่ / จุดสังเกต','ผู้ติดต่อ','เบอร์โทร'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
@@ -290,7 +294,7 @@ function renderDrawer(){
       <button class="btn ghost" id="d-copy" aria-label="คัดลอกข้อมูลเคส" title="คัดลอกข้อมูลเคส"><i data-ic="copy"></i> <span>คัดลอก</span></button>
     </div>
     ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}${`${assignBox(c)}`}
-    </div></div>`;
+    </div>${(ib=>ib?`<div class="d-col d-col-c">${ib}</div>`:'')(intakeBox(c))}</div>`;
   $('#d-close').onclick=closeDrawer;hoLoad(c);
   d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');

@@ -865,6 +865,7 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
   const sup={};going.forEach(c=>(c.supplies||[]).forEach(x=>{sup[x.item]=(sup[x.item]||0)+x.qty}));
   const rl=(r.rallies||[]).filter(x=>!x.closedAt);
   el.innerHTML=`
+    ${going.length?going.map(card).join(''):'<p class="empty">ยังไม่มีเคสที่ต้องไป · ศูนย์จะส่งงานมาที่นี่</p>'}
     ${rl.length?`<section class="db-card db-rally"><h3>📣 ศูนย์เรียกรวมพล</h3><p>${esc(rl[0].label||'')}</p><button type="button" class="btn red" data-dgo="home">ดูจุดรวมพล</button></section>`:''}
     <section class="db-card"><h3>สถานะเครื่อง</h3>
       <div class="db-row"><i class="dot ${locOk?'':m==null?'off':'wait'}"></i><span>${esc(locTxt)}</span></div>
@@ -875,9 +876,9 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
 const AC={list:null,at:0,open:'',sort:'near',lim:30,busy:false,q:'',srch:false,rad:0};
 async function loadAll(force){if(AC.busy||(!force&&AC.list&&Date.now()-AC.at<60000))return;AC.busy=true;try{const r=await api({action:'team_cases'});if(r&&r.ok){AC.list=r.cases;AC.at=Date.now();if(S.view==='call'&&S.dtab==='cases'){if(document.activeElement&&document.activeElement.id==='ac-q'){const x=$('#ac-res');if(x)x.innerHTML=acRes()}else DASH()}}}catch(e){}finally{AC.busy=false}}
 function DASH(){const el=$('#dash'),r=S.me;if(!el||!r)return;const tab=S.dtab||'over';
-  const seg=`<div class="db-seg" role="tablist"><button type="button" role="tab" data-dtab="over" aria-selected="${tab==='over'}">ภาพรวม</button><button type="button" role="tab" data-dtab="cases" aria-selected="${tab==='cases'}">รวมเคส${AC.list?` <b>${AC.list.length}</b>`:''}</button></div>`;
+  const seg=`<div class="db-seg" role="tablist"><button type="button" role="tab" data-dtab="over" aria-selected="${tab==='over'}">เคสที่ต้องไป${(()=>{const n=(r.cases||[]).filter(c=>c.status==='going').length;return n?` <b>${n}</b>`:''})()}</button><button type="button" role="tab" data-dtab="cases" aria-selected="${tab==='cases'}">รวมเคส${AC.list?` <b>${AC.list.length}</b>`:''}</button></div>`;
   const ct=document.querySelector('.db-contact');if(ct)ct.hidden=tab==='cases';
-  if(tab==='cases'){el.innerHTML=seg+allCases();loadAll()}else{dashOverview(el);el.insertAdjacentHTML('afterbegin',seg);loadAll()}}
+  if(tab==='cases'){el.innerHTML=seg+allCases();loadAll()}else{dashOverview(el);el.insertAdjacentHTML('afterbegin',seg);if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)});loadAll()}}
 function myPos(){if(TR.pos)return TR.pos;const l=S.me&&S.me.live;return l&&l.lat!=null?{lat:+l.lat,lng:+l.lng}:null}
 const sv=c=>typeof VERIFY!=='undefined'&&VERIFY.level?VERIFY.level(c):Math.min(3,Math.max(1,Number(c.urgency)||1));
 const acHay=c=>c._h||(c._h=(function walk(v){return v==null?'':typeof v==='object'?Object.values(v).map(walk).join(' '):String(v)})(c).toLowerCase()+' '+String(c.phone||'').replace(/\D/g,''));

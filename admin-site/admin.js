@@ -43,9 +43,10 @@ const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
 const apiId=id=>isHM(id)?String(id).slice(3):id;
+function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);A.fromLink=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h)}}
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
-    if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render()}
+    if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render();openFromHash()}
   }catch(e){}}
 function mergeCases(){const own=A.own||[];if(!A.hm){A.cases=own;return}
   const hmIds=new Set(A.hm.map(h=>h.hmId)),hmOf=c=>hmIds.has(String(c.id))?String(c.id):((String(c.notes||'').match(HM_LINK)||[])[1]||'');
@@ -56,7 +57,7 @@ async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').text
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
     setCases(r);render();loadHM();
-    const h=decodeURIComponent(location.hash.slice(1));if(h&&findCase(h)){history.replaceState(null,'',location.pathname);openDrawer(h)}
+    openFromHash();
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
 let pollT=null;
@@ -245,7 +246,7 @@ async function saveCctv(id,val){
 
 const findCase=id=>{id=String(id);return A.cases.find(c=>String(c.id)===id||c.local===id||c.hmId===id)};
 function openDrawer(id){const m=findCase(id);A.openId=m?String(m.id):String(id);if(m)aiCheck(m);renderDrawer();$('#drawer').hidden=false;$('#drawer-bg').hidden=false;document.body.classList.add('noscroll')}
-function closeDrawer(){const d=$('#drawer');A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
+function closeDrawer(){const d=$('#drawer');if(A.fromLink&&A.openId){A.fromLink=false;A.openId=null;history.back();return}A.fromLink=false;A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
 // a refresh that redraws the drawer between press and release would swap the button under the pointer and drop the click
 document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#drawer')){A.dPress=true;A.dPressAt=Date.now()}},true);
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;setTimeout(()=>{if(A.openId)renderDrawer()},0)}},true));
@@ -288,13 +289,15 @@ function renderDrawer(){
     </div><div class="d-col d-col-b">
     ${sumCard(c,t)}
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ','ความต้องการ','จำนวนคน','ระดับน้ำ','ที่อยู่ / จุดสังเกต','ผู้ติดต่อ','เบอร์โทร'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
+    ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}
+    </div><div class="d-col d-col-c">
+    ${intakeBox(c)}
     <div class="d-act">
-      ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" aria-label="นำทาง Google Maps" title="นำทาง Google Maps"><i data-ic="nav"></i> <span>นำทาง</span></a>`:''}
       <button class="btn ghost" id="d-copy" aria-label="คัดลอกข้อมูลเคส" title="คัดลอกข้อมูลเคส"><i data-ic="copy"></i> <span>คัดลอก</span></button>
     </div>
-    ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}${`${assignBox(c)}`}
-    </div>${(ib=>ib?`<div class="d-col d-col-c">${ib}</div>`:'')(intakeBox(c))}</div>`;
+    ${assignBox(c)}
+    </div></div>`;
   $('#d-close').onclick=closeDrawer;hoLoad(c);
   d.querySelectorAll('[data-cctv]').forEach(b=>{b.onclick=()=>saveCctv(c.id,b.dataset.cctv)});
   $('#d-copy').onclick=()=>{const txt=[`เคส #${c.hmId||c.id} · ${URG[sev(c)]} · ${ST[c.status]}`,`ต้องการ: ${(c.needs||[]).join(', ')}`,`${c.people||1} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}${c.level?' · น้ำ'+(LEVEL[c.level]||''):''}`,`ที่อยู่: ${addr(c)||'-'}`,hasPin(c)?`แผนที่: https://maps.google.com/?q=${c.lat},${c.lng}`:'',vul(c).length?`ดูแลพิเศษ: ${vul(c).join(', ')}`:'',`ติดต่อ: ${[c.name,String(c.phone||'').replace(/^'/,'')].filter(Boolean).join(' ')}`,notesOf(c)?`สถานการณ์: ${notesOf(c)}`:''].filter(Boolean).join('\n');

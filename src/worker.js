@@ -488,7 +488,7 @@ async function withKnowledge(db, msgs) {
     const hits = await kbSearch(db, last.content.slice(-600), { limit: 3, min: 3 });
     if (!hits.length) return;
     const text = hits.map(e => `### ${e.title}\n${e.content}\nที่มา: ${e.sources.map(x => x.name + ' ' + x.url).join(' · ')}`).join('\n\n').slice(0, 5000);
-    const note = { _kb: true, role: 'system', content: 'ความรู้อ้างอิงจากแหล่งทางการ (คลังความรู้ Helpme+):\n' + text + '\nตอบเรื่องนี้จากข้อมูลข้างบนเท่านั้นและอ้างที่มา · ห้ามเดาเบอร์โทร จำนวนเงิน หรือเงื่อนไขสิทธิ์ที่ไม่มีในข้อมูล ให้แนะนำโทร 1300 (ศูนย์ช่วยเหลือสังคม พม.) แทน' };
+    const note = { _kb: true, role: 'system', content: 'ความรู้อ้างอิงจากแหล่งทางการ (คลังความรู้ Helpme+):\n' + text + '\nลิงก์ที่อ้างได้มีเฉพาะ: ' + [...new Set(hits.flatMap(e => e.sources.map(x => x.url)).filter(Boolean))].join(' ') + '\nตอบเรื่องนี้จากข้อมูลข้างบนเท่านั้นและอ้างที่มา โดยคัดลอกลิงก์จากรายการนี้ตามเดิม ห้ามสร้างลิงก์อื่น · ห้ามเดาเบอร์โทร จำนวนเงิน หรือเงื่อนไขสิทธิ์ที่ไม่มีในข้อมูล ให้แนะนำโทร 1300 (ศูนย์ช่วยเหลือสังคม พม.) แทน' };
     const i = msgs.findIndex(m => m.role !== 'system'); msgs.splice(i < 0 ? msgs.length : i, 0, note);
   } catch (e) {}
 }

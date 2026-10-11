@@ -256,6 +256,17 @@ function pinNote(c){const p=c.pinCheck;if(!p)return '';if(p.status==='geocoded')
 const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed'&&c.pinCheck.status!=='geocoded';
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.altSrc&&i.src!==i.dataset.altSrc){i.src=i.dataset.altSrc;delete i.dataset.altSrc}},true);
 const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
+const fmtTel=t=>/^0\d{9}$/.test(t)?t.replace(/^(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'):/^0\d{8}$/.test(t)?t.replace(/^(\d{2})(\d{3})(\d{4})$/,'$1-$2-$3'):t;
+function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${icn}"></i><div class="ds-v"><small>${k}</small>${v}</div>${x||''}</div>`;
+  return `<div class="d-sum">
+    ${row('user','ชื่อ',`<b>${esc(c.name||'ไม่ระบุชื่อ')}</b>`)}
+    ${row('phone','เบอร์โทร',t.length>=9?`<a class="ds-tel" href="tel:${esc(t)}"><b>${esc(fmtTel(t))}</b></a>`:`<b>${esc(String(c.phone||'-').replace(/^'/,''))}</b>`,t.length>=9?`<a class="ds-call" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> โทร</a>`:'')}
+    ${row('list','ต้องการ',`<b>${esc((c.needs||[]).join(', ')||'-')}</b>`)}
+    ${row('pin','ที่อยู่',`<b>${esc(addr(c)||'-')}</b><em class="${hasPin(c)?'ok':'no'}">${hasPin(c)?'ปักหมุดแล้ว':'ยังไม่ปักหมุด'}</em>`)}
+    ${row('users','จำนวนคน',edNum('d-ppl',c.people||1,'คน','',1))}
+    ${row('wave','ระดับน้ำ',`<b>${esc(LEVEL[c.level]||'ไม่ระบุ')}</b>`)}
+    ${notesOf(c)?row('note','รายละเอียด',`<b class="ds-note">${esc(notesOf(c))}</b>`):''}
+  </div>`}
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){closeDrawer();return}
   const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
@@ -263,7 +274,6 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',{h:(hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด')+(!addr(c)?'':`<div class="aip"><button type="button" class="aip-btn" data-aipin="${esc(c.id)}"><i data-ic="sparkle"></i> ให้ AI ตรวจตำแหน่ง/เส้นทางจากข้อความ</button><div class="aip-out" id="aip-out"></div></div>`)}],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
-  const who=!!(c.name||t.length>=9);
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
     <div class="d-grid"><div class="d-col d-col-a">
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
@@ -271,9 +281,9 @@ function renderDrawer(){
     <div class="d-ho" id="d-ho" hidden></div>
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
-    ${who?`<div class="d-who"><span class="d-who-av"><i data-ic="user"></i></span><span class="d-who-n"><small>ผู้แจ้ง</small>${c.name?`<b>${esc(c.name)}</b>`:'<b class="none">ไม่ระบุชื่อ</b>'}</span>${t.length>=9?`<a class="d-who-tel" href="tel:${esc(t)}" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i><span>${esc(/^0\d{9}$/.test(t)?t.replace(/^(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'):/^0\d{8}$/.test(t)?t.replace(/^(\d{2})(\d{3})(\d{4})$/,'$1-$2-$3'):t)}</span></a>`:''}</div>`:''}
+    ${sumCard(c,t)}
     ${intakeBox(c)}
-    <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ',...(who?['ผู้ติดต่อ','เบอร์โทร']:[])].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
+    <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ','ความต้องการ','จำนวนคน','ระดับน้ำ','ที่อยู่ / จุดสังเกต','ผู้ติดต่อ','เบอร์โทร'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     <div class="d-act">
       ${t.length>=9?`<a class="btn primary ic-btn" href="tel:${esc(t)}" aria-label="โทรหาผู้แจ้ง" title="โทรหาผู้แจ้ง"><i data-ic="phone"></i> <span>โทร</span></a>`:''}
       ${hasPin(c)?`<a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}" aria-label="นำทาง Google Maps" title="นำทาง Google Maps"><i data-ic="nav"></i> <span>นำทาง</span></a>`:''}
@@ -516,10 +526,23 @@ function aipRender(id){const out=$('#aip-out'),btn=$('[data-aipin]'),r=A.aipRes[
     <div class="aip-kv">${kv('บ้านเลขที่',P.house)}${kv('ซอย',P.soi)}${kv('ถนน',P.road)}${kv('จุดสังเกต',P.place)}${kv('แขวง/ตำบล',P.tambon)}${kv('เขต/อำเภอ',P.amphoe)}${kv('จังหวัด',P.province)}</div>
     ${r.steps&&r.steps.length?`<div class="aip-st"><b>เส้นทางเข้าถึงตามข้อความ</b><ol>${r.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`:''}
     ${r.warn?`<p class="aip-warn"><i data-ic="alert"></i> ${esc(r.warn)}</p>`:''}
-    <div class="aip-cs"><b>ตำแหน่งที่ค้นเจอ</b>${r.cands.length?r.cands.map((k,i)=>`<div class="aip-c"><div><b>${esc(k.label)}</b><small>ค้นด้วย “${esc(k.q)}”${k.km!=null?` · ห่างหมุดเดิม ${k.km<1?Math.round(k.km*1000)+' ม.':k.km.toFixed(1)+' กม.'}`:''}</small></div><a class="btn ghost sm" href="https://maps.google.com/?q=${k.lat},${k.lng}" target="_blank" rel="noopener">ดู ↗</a><button type="button" class="btn sm aip-use" data-aipuse="${i}">ใช้ตำแหน่งนี้</button></div>`).join(''):'<p class="muted small">ค้นแผนที่ไม่เจอตำแหน่งที่ชัดกว่าเดิม · ใช้ข้อมูลเส้นทางด้านบนประกอบ</p>'}</div>
+    <div class="aip-cs"><b>ตำแหน่งที่ค้นเจอ</b>${r.cands.length?`<div class="aip-map" id="aip-map" aria-label="แผนที่ตัวอย่างตำแหน่งที่ค้นเจอ"></div>`:''}${r.cands.length?r.cands.map((k,i)=>`<div class="aip-c" data-aipc="${i}"><span class="aip-n">${i+1}</span><div><b>${esc(k.label)}</b><small>ค้นด้วย “${esc(k.q)}”${k.km!=null?` · ห่างหมุดเดิม ${k.km<1?Math.round(k.km*1000)+' ม.':k.km.toFixed(1)+' กม.'}`:''}</small></div><button type="button" class="btn ghost sm aip-view" data-aipview="${i}">ดู</button><a class="btn ghost sm aip-ext" href="https://maps.google.com/?q=${k.lat},${k.lng}" target="_blank" rel="noopener" aria-label="เปิดใน Google Maps" title="เปิดใน Google Maps">↗</a><button type="button" class="btn sm aip-use" data-aipuse="${i}">ใช้ตำแหน่งนี้</button></div>`).join(''):'<p class="muted small">ค้นแผนที่ไม่เจอตำแหน่งที่ชัดกว่าเดิม · ใช้ข้อมูลเส้นทางด้านบนประกอบ</p>'}</div>
     <button type="button" class="btn ghost sm aip-note" data-aipnote>ใส่เส้นทางนี้ในหมายเหตุศูนย์ (ทีมเห็น)</button></div>`;
-  if(typeof ic==='function')out.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)})}
+  if(typeof ic==='function')out.querySelectorAll('i[data-ic]').forEach(x=>{x.outerHTML=ic(x.dataset.ic)});
+  aipMap(r)}
+function aipMap(r){if(A.aipM){try{A.aipM.remove()}catch(e){}A.aipM=null}const el=$('#aip-map');if(!el||!r.cands.length)return;
+  if(!window.L){loadLeaflet().then(()=>{if($('#aip-map')===el)aipMap(r)}).catch(()=>{el.hidden=true});return}
+  const m=L.map(el,{attributionControl:false,scrollWheelZoom:false,zoomControl:true});A.aipM=m;A.aipMk=[];
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(m);
+  const pts=[];if(r.cur){L.circleMarker(r.cur,{radius:7,color:'#fff',weight:3,fillColor:'#E5383B',fillOpacity:1}).addTo(m).bindTooltip('หมุดเดิม');pts.push(r.cur)}
+  r.cands.forEach((k,i)=>{const mk=L.marker([k.lat,k.lng],{icon:L.divIcon({className:'aip-mk',html:`<b>${i+1}</b>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(m).bindTooltip(k.label);mk.on('click',()=>aipFocus(i));A.aipMk.push(mk);pts.push([k.lat,k.lng])});
+  if(r.cur&&r.cands[0])L.polyline([r.cur,[r.cands[0].lat,r.cands[0].lng]],{color:'#2D45C8',weight:2,dashArray:'5 6',opacity:.7}).addTo(m);
+  m.fitBounds(pts,{padding:[28,28],maxZoom:16});setTimeout(()=>{try{m.invalidateSize()}catch(e){}},60)}
+function aipFocus(i){const r=A.aip&&A.aip.r,k=r&&r.cands[i];if(!k||!A.aipM)return;A.aipM.flyTo([k.lat,k.lng],16,{duration:.6});const mk=A.aipMk[i];if(mk)mk.openTooltip();
+  document.querySelectorAll('.aip-c').forEach(x=>x.classList.toggle('on',x.dataset.aipc===String(i)));document.querySelectorAll('.aip-mk').forEach((x,j)=>x.classList.toggle('on',j===i));
+  const el=$('#aip-map');if(el&&el.getBoundingClientRect().top<0)el.scrollIntoView({block:'nearest',behavior:'smooth'})}
 document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.closest('[data-aipin]');if(b){aiPinRun(b.dataset.aipin,b,!!b.dataset.fresh);return}
+  const v=e.target.closest&&e.target.closest('[data-aipview]');if(v){aipFocus(+v.dataset.aipview);return}
   const u=e.target.closest&&e.target.closest('[data-aipuse]');if(u&&A.aip){const {id,r}=A.aip,k=r.cands[+u.dataset.aipuse];if(!k)return;const rep=r.pinType==='pin';if(rep&&isHM(id)){toast('เคสจาก Help Me มีหมุดจากผู้แจ้ง · ย้ายไม่ได้ (จะถูกซิงก์ทับ)');return}if(rep&&!confirm('เคสนี้มีหมุดที่ผู้แจ้งปักไว้แล้ว · ย้ายหมุดไปตำแหน่งที่ AI ค้นเจอ?'))return;
     u.disabled=true;const x=await post({action:'ai_pin_set',key:A.key,id:apiId(id),lat:k.lat,lng:k.lng,label:k.label,replace:rep}).catch(()=>null);if(x&&x.ok){delete A.aipRes[String(id)];toast('ย้ายหมุดแล้ว',true);load()}else{u.disabled=false;toast('ย้ายหมุดไม่สำเร็จ')}return}
   const n=e.target.closest&&e.target.closest('[data-aipnote]');if(n&&A.aip){const {id,r}=A.aip,c=findCase(id);if(!c)return;const t=['เส้นทาง: '+(r.steps||[]).join(' → '),r.warn?'ระวัง: '+r.warn:''].filter(Boolean).join(' · ').slice(0,280);

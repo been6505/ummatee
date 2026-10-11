@@ -897,3 +897,7 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
   #list .tbl td[data-l="ทีม"] .team-sel{flex:1;min-width:0;max-width:none!important}
 }
 #list .tbl td[data-l="ทีม"]:has(.team-sel)::before{content:none!important;display:none!important}
+.hz-fab,#wr-ai{display:none!important}
+.gs-ai{flex:none;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:7px 12px;font:inherit;font-size:13.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,#17181C,#3a2c6e);cursor:pointer;white-space:nowrap}
+.gs-ai:hover{filter:brightness(1.15)}.gs-ai:focus-visible{outline:3px solid var(--tint-2,#c7d0ff);outline-offset:2px}
+@media(max-width:420px){.gs-ai span{display:none}.gs-ai{padding:8px}}

@@ -60,7 +60,11 @@ function hbars(id,rows,opt={}){const box=$(id);if(!rows.length||!rows.some(r=>r[
   rows.forEach(([lab,v,col,txt])=>{const row=el('div','hb-row'),l=el('div','hb-lab');if(col){const i=el('i');i.style.background=col;l.append(i)}l.append(el('span',null,lab));
     const tr=el('div','hb-track'),bar=el('div','hb-bar');bar.style.width=`calc((100% - ${v?(opt.reserve||48):0}px) * ${(v/max).toFixed(4)})`;if(col)bar.style.background=col;
     const pct=total?` · ${Math.round(v/total*100)}%`:'',shown=txt||nf(v)+pct;tr.append(bar,el('span','hb-val',shown));row.append(l,tr);hover(row,txt||nf(v)+' '+(opt.unit||'เคส')+pct,lab);wrap.append(row)});
+  if(rows.length>HB_N){wrap.classList.add('hb-long');if(HB_OPEN.has(id))wrap.classList.add('all');const mb=el('button','hb-more');mb.type='button';
+    const lbl=()=>{mb.textContent=wrap.classList.contains('all')?'ย่อ':`ดูทั้งหมด ${nf(rows.length)} รายการ`};lbl();
+    mb.onclick=()=>{const on=wrap.classList.toggle('all');on?HB_OPEN.add(id):HB_OPEN.delete(id);lbl()};box.replaceChildren(wrap,mb);return}
   box.replaceChildren(wrap)}
+const HB_N=10,HB_OPEN=new Set();
 
 function columns(id,buckets){const box=$(id);const W=Math.max(320,box.clientWidth||600),H=230,pl=34,pr=8,pt=26,pb=26;
   const dual=buckets.some(b=>b.k!=null),max=Math.max(...buckets.map(b=>Math.max(b.v,b.k||0)),0);if(!max){box.replaceChildren(el('p','empty','ยังไม่มีเคสในช่วงนี้'));return}

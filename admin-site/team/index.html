@@ -300,6 +300,15 @@ body:has(#v-prof:not([hidden])) .top-prof{box-shadow:0 0 0 3px var(--hm-red,#C81
 .pv-x{top:calc(var(--sat,0px) + 14px);right:14px}
 .pv-nv{top:50%;transform:translateY(-50%)}.pv-nv.prev{left:10px}.pv-nv.next{right:10px}
 .pv-n{position:absolute;bottom:calc(var(--sab,0px) + 22px);color:#fff;font-weight:700;font-size:15px;background:rgba(255,255,255,.14);border-radius:999px;padding:4px 14px}
+.m .cimg{display:block;margin:2px 0 6px;border-radius:14px;overflow:hidden;max-width:240px;background:rgba(0,0,0,.06)}
+.m .cimg img{display:block;width:100%;height:auto;max-height:320px;object-fit:cover}
+body.on-chat .top-call{margin-left:auto!important;width:var(--hh,50px);height:var(--hh,50px);padding:0!important;border-radius:50%!important;justify-content:center}
+body.on-chat .top-call .ic{width:22px;height:22px}
+.top:has(.tp-n) .brandpill{flex:none!important}
+.top-prof:has(.tp-n){width:auto;min-width:0;flex:0 1 auto;max-width:min(42vw,200px);border-radius:999px;padding:0 4px 0 16px;display:flex;align-items:center;gap:8px}
+.top-prof .tp-n{font-size:15px;font-weight:800;color:var(--ink,#1b1f3b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.top-prof .tp-av{flex:none;width:calc(var(--hh,50px) - 8px);height:calc(var(--hh,50px) - 8px);border-radius:50%;background:var(--tint,#EEF1FD);display:grid;place-items:center;overflow:hidden;font-size:18px}
+.top-prof .tp-av img{width:82%;height:82%;object-fit:contain}
 </style>
 <script src="../central/verify.js?v=15"></script>
 <script src="../central/icons.js?v=23"></script>
@@ -311,7 +320,7 @@ body:has(#v-prof:not([hidden])) .top-prof{box-shadow:0 0 0 3px var(--hm-red,#C81
 .top .hdr-sos{width:var(--hh)!important;height:var(--hh)!important;font-size:13px!important;border-width:3px!important;box-sizing:border-box;flex:none}
 .top .locdot{width:var(--hh)!important;height:var(--hh)!important;flex:none}
 .top .st:not([hidden]){height:var(--hh)!important;min-width:0;max-width:34vw;box-sizing:border-box;padding:0 30px 0 14px!important;font-size:15px!important;background-position:right 10px center!important;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;flex:0 1 auto!important}
-@media(max-width:380px){.top{--hh:44px}.top .brandpill{padding:0 10px!important}}</style>
+@media(max-width:380px){.top{--hh:44px}.top .brandpill{padding:0 10px!important}}.top:has(.tp-n) .brandpill{flex:none!important}</style>
 <script>(()=>{const C=window.Capacitor;if(!(C&&C.getPlatform&&C.getPlatform()==='android'))return;const r=document.documentElement;
   const probe=()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden';document.documentElement.append(d);const h=d.getBoundingClientRect().height;d.remove();return h};
   const set=()=>{if(probe()<1){r.style.setProperty('--sat','36px');r.style.setProperty('--sab','24px')}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',set):set()})();</script>
@@ -352,7 +361,7 @@ body:has(#v-prof:not([hidden])) .top-prof{box-shadow:0 0 0 3px var(--hm-red,#C81
     <button type="button" class="locdot" id="locdot" aria-label="สถานะการส่งตำแหน่ง"><i></i></button>
     <select class="st" id="status" aria-label="สถานะทีม" hidden><option value="ready">พร้อม</option><option value="out">ทีมกำลังไป</option><option value="rest">พัก</option></select>
     <button type="button" class="top-prof" id="top-prof" aria-label="โปรไฟล์ทีม" title="โปรไฟล์ทีม"><i data-ic="user"></i></button>
-    <button type="button" class="top-call" id="top-call" aria-label="โทรหาศูนย์"><i data-ic="phone"></i> โทร</button></header>
+    <button type="button" class="top-call" id="top-call" aria-label="โทรหาศูนย์" title="โทรหาศูนย์"><i data-ic="phone"></i></button></header>
   <div class="sosbar" id="sosbar" hidden><span id="sos-t">ส่ง SOS แล้ว · รอศูนย์</span><button type="button" id="sos-cancel">ปลอดภัยแล้ว</button></div>
   <div class="locbar off" id="locbar"><i class="dot"></i><span id="loc-t">ตำแหน่งปิดอยู่</span><button type="button" id="loc-btn">เปิด</button></div>
 
@@ -421,7 +430,7 @@ body:has(#v-prof:not([hidden])) .top-prof{box-shadow:0 0 0 3px var(--hm-red,#C81
   </main>
   <main id="v-chat" hidden><div id="msgs" aria-live="polite"></div>
     <div class="quick" id="quick"><button class="chip" type="button">รับทราบ</button><button class="chip" type="button">กำลังเดินทาง</button><button class="chip" type="button">ถึงจุดแล้ว</button><button class="chip" type="button">ต้องการกำลังเสริม</button><button class="chip" type="button">ของไม่พอ</button><button class="chip" type="button">เส้นทางไปไม่ได้</button></div>
-    <form class="send" id="send"><button class="round soft" type="button" id="loc-send" aria-label="ส่งตำแหน่ง"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button class="round" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
+    <form class="send" id="send"><button class="round soft" type="button" id="img-send" aria-label="ส่งรูป"><i data-ic="image"></i></button><input type="file" id="img-file" accept="image/*" hidden><button class="round soft" type="button" id="loc-send" aria-label="ส่งตำแหน่ง"><i data-ic="pin"></i></button><input id="in" maxlength="1000" placeholder="ข้อความถึงศูนย์…" autocomplete="off" aria-label="ข้อความ"><button class="round" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
   </main>
   <main id="v-prof" hidden><div id="prof"></div></main>
   <main id="v-call" hidden>
@@ -639,7 +648,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){if($('#wa
 if(typeof VERIFY!=='undefined'){VERIFY.authBody=()=>auth();VERIFY.onUpdate=()=>{if(S.me)render()};VERIFY.load().then(()=>{if(S.me)render()},()=>{})}
 function render(){const r=S.me;if(!r)return;const t=r.team;bgTrack();
   {const nr=(r.rallies||[]).find(x=>!x.my);if(nr&&S.rlSeen!==nr.id){S.rlSeen=nr.id;try{buzz([600,200,600,200,600]);tone(880,300,.15);setTimeout(()=>tone(660,300,.15),350)}catch(e){}if(S.view!=='home'&&S.view!=='call')go('call');toast('📣 ศูนย์เรียกรวมพล: '+nr.label)}}if(S.view==='home'||!S.view)HOME.draw();
-  $('#tname').textContent=t.name;{const pb=$('#top-prof');if(pb&&pb.dataset.k!==(t.vehicle||'')+'|'+t.name){pb.dataset.k=(t.vehicle||'')+'|'+t.name;pb.innerHTML=t.vehicle?`<img src="../assets/veh/${encodeURIComponent(t.vehicle)}.png" alt="" onerror="this.replaceWith(document.createTextNode(this.dataset.i))" data-i="${esc((t.name||'?').trim().charAt(0))}">`:`<b>${esc((t.name||'?').trim().charAt(0))}</b>`;pb.setAttribute('aria-label','โปรไฟล์ทีม '+t.name)}}$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
+  $('#tname').textContent=t.name;{const pb=$('#top-prof');if(pb&&pb.dataset.k!==(t.vehicle||'')+'|'+t.name){pb.dataset.k=(t.vehicle||'')+'|'+t.name;pb.innerHTML=`<span class="tp-n">${esc(t.name)}</span><span class="tp-av">`+(t.vehicle?`<img src="../assets/veh/${encodeURIComponent(t.vehicle)}.png" alt="" onerror="this.replaceWith(document.createTextNode(this.dataset.i))" data-i="${esc((t.name||'?').trim().charAt(0))}">`:`<b>${esc((t.name||'?').trim().charAt(0))}</b>`)+'</span>';pb.setAttribute('aria-label','โปรไฟล์ทีม '+t.name)}}$('#tsub').textContent=[t.leader,t.zone?'พื้นที่ '+t.zone:''].filter(Boolean).join(' · ')||'Helpme+ ทีมอาสา';
   const sel=$('#status');sel.hidden=!t.inRoster;sel.value=t.status||'ready';sel.className='st '+(t.status||'ready');
   const sos=t.sosAt&&(!t.sosAck||t.sosAck<t.sosAt);$('#sosbar').hidden=!t.sosAt;document.body.classList.toggle('sos-on',!!sos);$('#sos-t').textContent=sos?'ส่ง SOS แล้ว · รอศูนย์ติดต่อกลับ':'ศูนย์รับทราบ SOS แล้ว';
   const going=r.cases.filter(c=>c.status==='going'),done=r.cases.filter(c=>c.status==='done');
@@ -784,8 +793,9 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
     const call=m.kind==='call'&&m.link&&Date.now()-m.at>30*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
     if(m.kind==='case'&&m.caseId){const c=((S.me&&S.me.cases)||[]).find(x=>String(x.id)===String(m.caseId));if(c)return `${sep}<div class="m hq mcase"><p class="who">ศูนย์มอบเคส${m.name?' · '+esc(m.name):''} · ${hhmm(m.at)}</p>${card(c)}</div>`}
+    const psrc=m.kind==='photo'&&m.link?(/^data:/.test(m.link)?m.link:m.link+'&'+new URLSearchParams(auth())):'',photo=psrc?`<a class="cimg" href="#" data-cimg="${esc(psrc)}"><img src="${esc(psrc)}" alt="รูปที่ส่งในแชท" loading="lazy"></a>`:'';
     const voice=m.kind==='voice'&&m.link?`<button type="button" class="vmsg" data-vsrc="${esc(m.link)}"><span class="vplay">▶</span><span class="vbar"><i></i></span><span class="vlen">${esc((String(m.text).match(/(\d+) วิ/)||[])[1]||'')} วิ</span></button>`:'';
-    return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}${voice?' vm':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${m.text&&!voice?`<p>${esc(m.text)}</p>`:voice?`<p class="vlab">${esc(String(m.text).replace(/ · \d+ วิ$/,''))}</p>${voice}`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
+    return `${sep}<div class="m ${mine?'me':'hq'}${m.kind==='sos'?' alert':''}${voice?' vm':''}">${mine?'':`<p class="who">ศูนย์${m.name?' · '+esc(m.name):''}</p>`}${photo}${m.text&&!voice&&!(photo&&m.text==='📷 รูปภาพ')?`<p>${esc(m.text)}</p>`:voice?`<p class="vlab">${esc(String(m.text).replace(/ · \d+ วิ$/,''))}</p>${voice}`:''}${call}${loc}<small>${mine&&m.name?esc(m.name)+' · ':''}${hhmm(m.at)}${mine&&m.readHq?' · ศูนย์อ่านแล้ว':''}</small></div>`}).join(''):'<p class="empty">ยังไม่มีข้อความ</p>';
   if(bottom||force)box.scrollTop=box.scrollHeight}
 async function pollChat(first){S.chatAt=Date.now();try{const r=await api({action:'chat'});if(!r.ok)return;const msgs=r.messages,last=(msgs.slice(-1)[0]||{}).n||0;if(!first&&last>(S.lastN||0)&&msgs.some(m=>m.n>(S.lastN||0)&&m.sender==='hq'&&/^📣/.test(m.text||'')))refresh();
 
@@ -800,6 +810,12 @@ function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam))post({action
 async function send(text,extra={}){if(!text&&extra.lat==null)return;S.msgs.push({n:0,sender:'team',name:S.name,text,at:Date.now(),...extra});if(S.view==='chat')drawChat(true);
   try{const r=await opost({action:'chat_send',text,...extra},'ข้อความ');if(!r.ok)throw 0;if(r.queued&&extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ไม่มีเน็ต · ส่งตำแหน่งทาง SMS ได้ทันที (ข้อความในแชทจะส่งตามเมื่อมีเน็ต)')}catch(e){if(extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ส่งตำแหน่งผ่านเน็ตไม่ได้ · ส่งทาง SMS แทน');else toast('ส่งไม่ได้ ลองใหม่')}pollChat()}
 $('#send').addEventListener('submit',e=>{e.preventDefault();const i=$('#in'),t=i.value.trim();if(!t)return;i.value='';send(t)});
+$('#img-send').onclick=()=>$('#img-file').click();
+$('#img-file').onchange=async e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  let d;try{d=await shrink(f,1280,.8)}catch(x){toast('อ่านรูปไม่ได้');return}
+  const m={n:0,sender:'team',name:S.name,text:'📷 รูปภาพ',at:Date.now(),kind:'photo',link:d};S.msgs.push(m);if(S.view==='chat')drawChat(true);
+  try{const r=await post({action:'chat_photo',img:d.split(',')[1],name:S.name,from:'team'});if(!r||!r.ok)throw new Error(r&&r.error);toast('ส่งรูปแล้ว')}
+  catch(x){S.msgs.splice(S.msgs.indexOf(m),1);if(S.view==='chat')drawChat(true);toast(x&&x.message==='too_many'?'ส่งรูปถี่เกินไป รอสักครู่':'ส่งรูปไม่ได้ · ตรวจสัญญาณแล้วลองใหม่')}};
 $('#loc-send').onclick=()=>{const p=TR.pos;if(p&&Date.now()-p.at<60000){send('',{lat:+p.lat.toFixed(6),lng:+p.lng.toFixed(6)});return}
   navigator.geolocation&&navigator.geolocation.getCurrentPosition(q=>send('',{lat:+q.coords.latitude.toFixed(6),lng:+q.coords.longitude.toFixed(6)}),()=>toast('หาตำแหน่งไม่ได้'),{enableHighAccuracy:true,timeout:15000})};
 
@@ -989,7 +1005,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scop
 <script>
 /* case photos: tap opens a full-screen viewer in the app (swipe or arrows for the next one) */
 (()=>{let L=[],k=0,v=null,sx=null;
-  const big=id=>'https://lh3.googleusercontent.com/d/'+encodeURIComponent(id)+'=w1600',alt=id=>'https://drive.google.com/thumbnail?id='+encodeURIComponent(id)+'&sz=w1600';
+  const raw=id=>/^(\/|data:|https?:)/.test(id),big=id=>raw(id)?id:'https://lh3.googleusercontent.com/d/'+encodeURIComponent(id)+'=w1600',alt=id=>raw(id)?id:'https://drive.google.com/thumbnail?id='+encodeURIComponent(id)+'&sz=w1600';
   function draw(){const im=v.querySelector('img');im.dataset.f='';im.src=big(L[k]);v.querySelector('.pv-n').textContent=(k+1)+' / '+L.length;v.querySelectorAll('.pv-nv').forEach(b=>b.hidden=L.length<2)}
   function open(ids,i){if(!v){v=document.createElement('div');v.className='pv';v.hidden=true;v.setAttribute('role','dialog');v.setAttribute('aria-label','รูปจากผู้แจ้ง');
       v.innerHTML='<button type="button" class="pv-x" aria-label="ปิด">✕</button><button type="button" class="pv-nv prev" aria-label="รูปก่อนหน้า">‹</button><img alt="" referrerpolicy="no-referrer"><button type="button" class="pv-nv next" aria-label="รูปถัดไป">›</button><span class="pv-n"></span>';
@@ -1002,7 +1018,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scop
   function close(){if(v&&!v.hidden){v.hidden=true;if(history.state&&history.state.pv)history.back()}}
   addEventListener('popstate',()=>{if(v&&!v.hidden)v.hidden=true});
   document.addEventListener('keydown',e=>{if(!v||v.hidden)return;if(e.key==='Escape')close();else if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1)});
-  document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('.c-ph a');if(!a)return;e.preventDefault();e.stopPropagation();
+  document.addEventListener('click',e=>{const ci=e.target.closest&&e.target.closest('[data-cimg]');if(ci){e.preventDefault();e.stopPropagation();open([ci.dataset.cimg],0);return}const a=e.target.closest&&e.target.closest('.c-ph a');if(!a)return;e.preventDefault();e.stopPropagation();
     const as=[...a.closest('.c-ph').querySelectorAll('a')],ids=as.map(x=>(x.href.match(/\/d\/([-\w]{25,})/)||[])[1]).filter(Boolean);if(ids.length)open(ids,Math.max(0,as.indexOf(a)))},true)})();
 </script>
 </body>

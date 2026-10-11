@@ -55,6 +55,7 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS intel_seen ON intel(kind, seen)`,
   `CREATE TABLE IF NOT EXISTS case_photo (n INTEGER PRIMARY KEY AUTOINCREMENT, caseId TEXT, team TEXT, kind TEXT, at INTEGER, lat REAL, lng REAL, size INTEGER, img BLOB)`,
   `CREATE INDEX IF NOT EXISTS case_photo_case ON case_photo(caseId, n)`,
+  `CREATE TABLE IF NOT EXISTS chat_photo (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, sender TEXT, at INTEGER, size INTEGER, img BLOB)`,
   `CREATE TABLE IF NOT EXISTS road_q (n INTEGER PRIMARY KEY AUTOINCREMENT, team TEXT, at INTEGER, lat REAL, lng REAL, rms REAL, peak REAL, bumps INTEGER, spd REAL)`,
   `CREATE INDEX IF NOT EXISTS road_q_at ON road_q(at)`,
   `CREATE TABLE IF NOT EXISTS team_route (team TEXT PRIMARY KEY, caseId TEXT, data TEXT, at INTEGER, by_ TEXT)`,
@@ -1098,6 +1099,7 @@ const TEAM_POST = {
   },
   call_start: (db, t, b) => callStart(db, t.name, 'team', b),
   chat_send: async (db, t, b) => await quota(db, 'chat:' + t.name, 120, 600e3) ? chatSend(db, { ...b, team: t.name, from: 'team', kind: '', link: '' }) : { ok: false, error: 'too_many' },
+  chat_photo: async (db, t, b) => await quota(db, 'cphoto:' + t.name, 40, 3600e3) ? chatPhotoAdd(db, t.name, 'team', b) : { ok: false, error: 'too_many' },
   team_gmaps: (db, t, b) => setTeamGmaps(db, t.name, b.gmaps),
   env_check: (db, t, b) => envCheck(ENV, b),
   chat_read: (db, t, b) => chatRead(db, { team: t.name, side: 'team' })
@@ -1341,8 +1343,8 @@ const RQ = new AsyncLocalStorage();
 Object.defineProperty(globalThis, 'WRC', { configurable: true, get() { const s = RQ.getStore(); return s ? s.wrc : null; }, set(v) { const s = RQ.getStore(); if (s) s.wrc = v; } });
 Object.defineProperty(globalThis, 'CTX', { configurable: true, get() { const s = RQ.getStore(); return s ? s.ctx : null; }, set(v) { const s = RQ.getStore(); if (s) s.ctx = v; } });
 const WR_GET_OK = new Set(['rev', 'chat_rev', 'chat_threads', 'helpme_cases', 'list', 'news', 'roster', 'stock', 'teams', 'warrooms', 'wr_users', 'apps_list', 'chat', 'team_track',
-  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'fiw', 'case_photos', 'case_photo', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
-const WR_POST_OK = new Set(['team_token', 'route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
+  'warroom_public', 'warrooms_public', 'cctv', 'water', 'dams', 'rallies', 'live_stream', 'route_list', 'road_q', 'photo_index', 'fiw', 'case_photos', 'case_photo', 'chat_img', 'ptt_auth', 'ptt_list', 'ptt_audio', 'board_list', 'board_img', 'gistda_status', 'outreach', 'sheet_places', 'covered', 'broadcasts', 'places', 'hazards', 'env_check']);
+const WR_POST_OK = new Set(['team_token', 'route_set', 'route_clear', 'ptt_send', 'board_save', 'board_move', 'board_delete', 'board_img_add', 'board_img_del', 'rally_save', 'rally_close', 'silent_ack', 'update', 'chat_send', 'chat_photo', 'chat_read', 'sos_ack', 'hq_call', 'roster_save', 'team_link', 'team_warroom', 'warroom_save', 'warroom_staff', 'stock_item', 'stock_move',
   'wr_user_save', 'wr_logout', 'app_decide', 'feedback_save', 'ai_chat', 'env_check']);
 const caseProv = c => { if (c.province) return provName(c.province); const a = String(c.address || ''), m = a.match(/(?:จ\.|จังหวัด)\s*([ก-๙]{3,})/);
   if (m) return provName(m[1]); return /กรุงเทพ|กทม/.test(a) ? 'กรุงเทพมหานคร' : ''; };
@@ -1386,6 +1388,7 @@ async function wrGet(env, db, p) {
     case 'stock': { const r = await listStock(db); r.items = r.items.filter(i => !i.warroom || sc.zones.has(i.warroom)); const ids = new Set(r.items.map(i => i.id)); r.log = (r.log || []).filter(l => ids.has(l.itemId)); return r; }
     case 'warrooms': { const r = await listWarrooms(db); r.warrooms = r.warrooms.filter(w => sc.zones.has(w.id)); r.staff = (r.staff || []).filter(x => sc.zones.has(x.wr)); r.teams = (r.teams || []).filter(x => sc.zones.has(x.warroom)); return r; }
     case 'case_photos': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return c && inScope(c, sc) ? null : { ok: false, error: 'not_in_room' }; }
+    case 'chat_img': { const ph = await db.prepare('SELECT team FROM chat_photo WHERE n=?').bind(Number(p.n) || 0).first(); return ph && sc.teams.has(ph.team) ? null : { ok: false, error: 'not_in_room' }; }
     case 'case_photo': { const ph = await db.prepare('SELECT caseId FROM case_photo WHERE n=?').bind(Number(p.n) || 0).first(); const c = ph && await db.prepare('SELECT * FROM cases WHERE id=?').bind(ph.caseId).first(); return c && inScope(c, sc) ? null : { ok: false, error: 'not_in_room' }; }
     case 'photo_index': { const { results } = await db.prepare("SELECT caseId, n FROM case_photo WHERE kind='handoff' AND at>? ORDER BY n").bind(Date.now() - 30 * 864e5).all(); const ids = [...new Set(results.map(r => r.caseId))]; const ok = new Set();
       for (let i = 0; i < ids.length; i += 50) { const chunk = ids.slice(i, i + 50); const { results: cs } = await db.prepare(`SELECT * FROM cases WHERE id IN (${chunk.map(() => '?').join(',')})`).bind(...chunk).all(); cs.forEach(c => { if (inScope(c, sc)) ok.add(c.id); }); }
@@ -1398,7 +1401,7 @@ async function wrPostCheck(db, b) {
   const teamOk = async name => sc.teams.has(clean(name, MAX.volunteer));
   switch (b.action) {
     case 'update': { const c = await db.prepare('SELECT * FROM cases WHERE id=?').bind(String(b.id)).first(); if (!c || !inScope(c, sc)) return 'not_in_room'; const v = String(b.volunteer || '').replace(/^'/, '').trim(); return !v || v === String(c.volunteer || '').replace(/^'/, '').trim() || await teamOk(v) ? '' : 'not_in_room'; }
-    case 'chat_send': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
+    case 'chat_send': case 'chat_photo': case 'chat_read': case 'hq_call': case 'silent_ack': return await teamOk(b.team) ? '' : 'not_in_room';
     case 'ptt_send': return !b.team || await teamOk(b.team) ? '' : 'not_in_room';
     case 'team_token': { const t = await db.prepare('SELECT warroom FROM roster WHERE id=?').bind(clean(b.id, 20)).first(); return t && sc.zones.has(t.warroom) ? '' : 'not_in_room'; }
     case 'rally_save': if (b.all === true) return ''; for (const t of (Array.isArray(b.teams) ? b.teams : [])) if (!await teamOk(t)) return 'not_in_room'; return '';
@@ -1416,7 +1419,7 @@ async function wrPostCheck(db, b) {
   return '';
 }
 const WR_DENY = ['warroom_token', 'warroom_link', 'backup_now', 'hq_phone', 'import_cases', 'lead_settings', 'discord_save', 'discord_test', 'sms_cfg', 'feedback_done'];
-const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
+const AUDIT_SKIP = new Set(['ai_pin', 'road_q', 'case_photo_add', 'chat_photo', 'ticket', 'staff_login', 'staff_logout', 'ptt_send', 'kb_order', 'board_img_add', 'intel_refresh', 'audit_undo', 'ping', 'team_ping', 'chat_read', 'ai_chat', 'env_check', 'track', 'call_start', 'call_send', 'call_end', 'call_poll', 'call_join', 'call_answer']);
 const AUDIT_TH = { team_token: 'เปิดดูลิงก์ทีม', warroom_token: 'เปิดดูลิงก์ War Room', ai_pin_set: 'ย้ายหมุดตามที่ AI ตรวจ', staff_save: 'บันทึกบัญชีเจ้าหน้าที่', route_set: 'ส่งเส้นทางแนะนำให้ทีม', route_clear: 'ยกเลิกเส้นทางแนะนำ', team_profile: 'ทีมแก้โปรไฟล์', board_save: 'บอร์ดงาน: บันทึกการ์ด', board_move: 'บอร์ดงาน: ย้ายการ์ด', board_delete: 'บอร์ดงาน: ลบการ์ด', board_img_del: 'บอร์ดงาน: ลบรูป', rally_save: 'เรียกรวมพล', rally_close: 'ปิดรวมพล', rally_resp: 'ทีมตอบรวมพล', silent_ack: 'รับทราบทีมเงียบ', update: 'แก้เคส', create: 'แจ้งเคสใหม่', place: 'บันทึกสถานที่', import_cases: 'นำเข้าเคส', covered_add: 'เพิ่มพื้นที่มอบแล้ว', bag_pack: 'แพ็คถุงยังชีพ',
   lead_add: 'เพิ่มเคสจากโซเชียล', lead_decide: 'คัดเคสจากโซเชียล', lead_settings: 'ตั้งค่าคัดเคสโซเชียล', lead_pull: 'ดึงเคสโซเชียล',
   roster_save: 'บันทึกทีม', team_link: 'สร้างลิงก์ทีมใหม่', team_warroom: 'ย้ายทีมไป War Room', team_gmaps: 'ตั้งลิงก์ Google Maps ทีม',
@@ -2671,13 +2674,26 @@ async function pullAll(db, b, env) {
   return { ok: traffy.ok || helpme.ok, added: n('added'), rejected: n('rejected'), duplicate: n('duplicate'), scanned: n('scanned'), closed: helpme.closed || 0, filled: helpme.filled || 0, traffy, helpme };
 }
 
+async function chatPhotoAdd(db, team, from, b) {
+  let a; try { a = b64bytes(b.img); } catch (e) { return { ok: false, error: 'bad_image' }; }
+  if (a.length < 2000 || a.length > 1500e3 || a[0] !== 0xFF || a[1] !== 0xD8) return { ok: false, error: 'bad_image' };
+  const r = await db.prepare('INSERT INTO chat_photo (team,sender,at,size,img) VALUES (?,?,?,?,?)').bind(team, from, Date.now(), a.length, a).run();
+  const n = r.meta && r.meta.last_row_id;
+  return chatSend(db, { team, from, name: b.name, text: clean(b.text, 300) || '📷 รูปภาพ', caseId: b.caseId, kind: 'photo', link: '/api?action=chat_img&n=' + n });
+}
+async function chatPhotoImg(db, n, team) {
+  const r = await db.prepare('SELECT img,team FROM chat_photo WHERE n=?').bind(Number(n) || 0).first(); if (!r) return new Response('not found', { status: 404 });
+  if (team && r.team !== team) return new Response('forbidden', { status: 403 });
+  return new Response(new Uint8Array(r.img), { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=604800' } });
+}
 async function chatSend(db, b) {
   const team = clean(b.team, MAX.volunteer), text = clean(b.text, 1000), from = b.from === 'team' ? 'team' : 'hq';
   const lat = num(b.lat, -90, 90), lng = num(b.lng, -180, 180);
   if (!team || (!text && lat == null)) return { ok: false, error: 'missing' };
-  const kind = ['call', 'sos', 'case', 'voice'].includes(b.kind) ? b.kind : '';
+  const kind = ['call', 'sos', 'case', 'voice', 'photo'].includes(b.kind) ? b.kind : '';
   const link = kind === 'call' && (String(b.link || '').startsWith(MEET) || /^\/call\/#[0-9a-f]{12}\.[0-9a-f]{24}$/.test(String(b.link || ''))) ? String(b.link).slice(0, 300)
-    : kind === 'voice' && /^\/api\?action=ptt_audio&n=\d+$/.test(String(b.link || '')) ? String(b.link) : '';
+    : kind === 'voice' && /^\/api\?action=ptt_audio&n=\d+$/.test(String(b.link || '')) ? String(b.link)
+    : kind === 'photo' && /^\/api\?action=chat_img&n=\d+$/.test(String(b.link || '')) ? String(b.link) : '';
   const read = kind === 'voice' || !!b.read;
   const r = await db.prepare('INSERT INTO chat (team,sender,name,text,caseId,lat,lng,at,readHq,readTeam,kind,link) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(team, from, clean(b.name, 60), text, clean(b.caseId, 30), lat, lng, Date.now(), from === 'hq' || read ? 1 : 0, from === 'team' || read ? 1 : 0, kind, link).run();
@@ -2837,6 +2853,7 @@ async function api(request, env) {
         const [ov, at] = await Promise.all([fiwOverview(db).catch(() => null), pts.length ? fiwPoints(pts) : []]); return json({ ok: true, src: 'Flood Intelligence Watch (Esri Thailand / CDG)', ov, at }); }
       case 'photo_index': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const { results } = await db.prepare("SELECT caseId, n FROM case_photo WHERE kind='handoff' AND at>? ORDER BY n").bind(Date.now() - 30 * 864e5).all(); const m = {}; for (const r of results) (m[r.caseId] = m[r.caseId] || []).push(r.n); return json({ ok: true, m }); }
       case 'case_photos': { if (vol) return json(await casePhotos(db, p.id)); const t = p.tk && await teamFrom(env, db, p); if (!t) return json({ ok: false, error: 'not_volunteer' }); const c = await db.prepare('SELECT volunteer FROM cases WHERE id=?').bind(clean(p.id, 40)).first(); return json(c && String(c.volunteer || '').replace(/^'/, '').trim() === t.name ? await casePhotos(db, p.id) : { ok: false, error: 'not_your_case' }); }
+      case 'chat_img': { if (vol) return chatPhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? chatPhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }
       case 'case_photo': { if (vol) return casePhotoImg(db, p.n); const t = p.tk && await teamFrom(env, db, p); return t ? casePhotoImg(db, p.n, t.name) : new Response('forbidden', { status: 403 }); }
       case 'route_list': return json(vol ? await routeList(db) : { ok: false, error: 'not_volunteer' });
       case 'road_q': { if (!vol) return json({ ok: false, error: 'not_volunteer' }); const h = clampInt(p.hours, 1, 24 * 90, 72), G = 0.0003;
@@ -2886,7 +2903,7 @@ async function api(request, env) {
     if (b.action === 'track') return json(await trackCase(db, b));
     if (CALL_POST[b.action]) { const c = await callAuth(db, b); return json(c ? await CALL_POST[b.action](db, c, b, env) : { ok: false, error: 'bad_call' }); }
     const needKey = { team_token: teamTokenGet, warroom_token: warroomTokenGet, ai_pin: aiPin, ai_pin_set: aiPinSet, staff_save: staffSave, route_set: routeSet, route_clear: routeClear, ptt_send: async (db, b) => { const au = await pttAuth(ENV, db, b, true); return pttSend(db, { sender: au.name || 'ศูนย์', kind: 'hq', name: clean(b.by, 60), chans: (au.chans || []).map(c => c.id) }, b); }, kb_order: kbOrderSave, board_save: boardSave, board_move: boardMove, board_delete: boardDelete, board_img_add: boardImgAdd, board_img_del: boardImgDel, rally_save: rallySave, rally_close: rallyClose, silent_ack: async (db, b) => { await setMeta(db, 'silent_ack:' + clean(b.team, MAX.volunteer), String(Date.now())); return { ok: true }; }, intel_refresh: (db) => intelTick(ENV, db, true), audit_undo: auditUndo, update: updateCase, ping: pingTeam, place: savePlace, roster_save: saveRoster, stock_item: saveStockItem, stock_move: moveStock, covered_add: addCovered, import_cases: importCases, zone_save: saveZone, bag_pack: packBags,
-      lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
+      lead_add: addLeads, chat_send: (db, b) => chatSend(db, { ...b, kind: '', link: '' }), chat_photo: (db, b) => chatPhotoAdd(db, clean(b.team, MAX.volunteer), b.from === 'team' ? 'team' : 'hq', b), chat_read: chatRead, lead_decide: decideLead, lead_settings: saveLeadSettings,
       team_link: renewTeamLink, warroom_save: saveWarroom, warroom_link: warroomLink, broadcast_save: saveBroadcast, ai_chat: aiChat, sms_cfg: smsCfg, wr_user_save: wrUserSave, app_decide: appDecide, discord_save: discordSave, discord_test: discordTest, feedback_save: saveFeedback, feedback_done: doneFeedback, hazard_save: saveHazard, hazard_close: closeHazard, env_check: (db, b) => envCheck(ENV, b), broadcast_cancel: cancelBroadcast, team_gmaps: (db, b) => setTeamGmaps(db, clean(b.team, MAX.volunteer), b.gmaps), warroom_staff: saveWarroomStaff, team_warroom: setTeamWarroom, hq_phone: setHqPhone, sos_ack: ackSos, hq_call: (db, b) => callStart(db, clean(b.team, MAX.volunteer), 'hq', b) };
     if (TEAM_POST[b.action] && (b.tk || ['team_ping', 'team_status', 'team_case', 'team_sos', 'call_start', 'rally_resp', 'team_profile'].includes(b.action) || (b.action === 'ptt_send' && b.team))) {
       const t = await teamFrom(env, db, b);

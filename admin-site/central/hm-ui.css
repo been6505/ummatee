@@ -920,3 +920,19 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 @media(hover:hover){.bd-mv{opacity:0;transition:opacity .12s}.bd-card:hover .bd-mv,.bd-card:focus-within .bd-mv{opacity:1}}
 .bd-col[data-col="done"] .bd-card{opacity:.85}.bd-col[data-col="done"] .bd-card b{text-decoration:line-through;text-decoration-color:rgba(46,158,87,.5)}
 @media(min-width:861px){.bd-col{min-height:calc(100vh - 260px)}}
+/* teams: status-accented team cards */
+.team-list .team{--ts:#2E9E57}
+:root:root .team-list .team{border:0!important;border-radius:18px!important;padding:14px 16px!important;background:var(--surface,#fff)!important;box-shadow:inset 4px 0 0 var(--ts),0 1px 2px rgba(22,27,61,.06),0 6px 18px rgba(22,27,61,.06)!important;display:grid;gap:10px}
+.team-list .team.st-out{--ts:#E8890C}.team-list .team.st-rest{--ts:#9AA1B9}.team-list .team.sos{--ts:#E5383B}
+.team-list .team-main{display:grid;gap:8px}
+.team-list .team-h b{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.team-list .team-h small{display:inline-block!important;margin-top:4px;font-size:12px;font-weight:600;background:var(--bg,#F2F3F7);border-radius:999px;padding:1px 10px;color:var(--ink-2,#3a3a3c)}
+.team-list .team-m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px}
+.team-list .call-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.team-list .call-none{font-size:12.5px;color:var(--muted)}
+.team-list .call-btn{background:var(--bg,#F2F3F7)!important;color:var(--ink,#1d1d1f)!important;font-weight:700}
+.team-list .call-btn.vid{background:var(--tint,#FDEDEE)!important;color:var(--primary,#DD2027)!important}
+.team-list .call-btn.tel{background:#E3F5E9!important;color:#1F7A43!important}
+.team-list .call-btn:hover{filter:brightness(.96)}
+.team-list .team-f{margin-top:0!important;padding-top:10px;border-top:1px solid var(--line,#E8E8EC)}
+.team-list .tc-jump{width:100%;justify-content:center;margin-top:0;min-height:38px;font-size:13px}

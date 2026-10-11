@@ -885,3 +885,15 @@ html body .wr-hero-n span{white-space:normal!important;overflow:visible!importan
 #list .tbl .team-sel.has{background:var(--tint,#E9ECFB);color:var(--primary,#2D45C8);border-color:transparent}
 #list .tbl .team-sel:focus-visible{outline:3px solid var(--tint-2,#c7d0ff);outline-offset:1px}
 [data-theme="dark"] #list .tbl .team-sel{background:transparent;color:var(--ink)}
+@media(max-width:640px){
+  #stats.stats:has([data-sf="teams"]){grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+  #stats.stats:has([data-sf="teams"]) .stat:first-child{grid-column:1/-1;display:flex!important;align-items:baseline;gap:8px}
+  #stats.stats:has([data-sf="teams"]) .stat span{white-space:normal!important;overflow:visible!important}
+  #list .tbl tbody tr{grid-template-areas:"lv st" "needs needs" "chips chips" "ppl bag" "addr addr" "who who" "team team"!important}
+  #list .tbl tbody td.time{grid-area:needs!important;justify-self:end;align-self:start;position:relative;z-index:1;text-align:right;display:grid!important;justify-items:end;gap:3px;font-size:12px;max-width:168px}
+  #list .tbl tbody td.needs>b,#list .tbl tbody td.needs>small:not(.vul){display:block;padding-right:172px}
+  #list .tbl td.time small{order:-1;display:inline-block!important;font-size:12.5px!important;font-weight:800;letter-spacing:.01em;color:var(--ink,#1d1d1f)!important;background:var(--bg,#F2F3F7);border-radius:8px;padding:2px 8px;font-variant-numeric:tabular-nums;user-select:all;-webkit-user-select:all}
+  #list .tbl td[data-l="ทีม"]{display:flex!important;align-items:center;gap:8px;min-width:0}
+  #list .tbl td[data-l="ทีม"] .team-sel{flex:1;min-width:0;max-width:none!important}
+}
+#list .tbl td[data-l="ทีม"]:has(.team-sel)::before{content:none!important;display:none!important}

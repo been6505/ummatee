@@ -1064,3 +1064,5 @@ main.wrap #list#list#list .tbl .row-photos img,main.wrap #list#list#list .tbl .r
 .dv-tbl tr.dv-exp .dv-two>div{display:grid;gap:6px;align-content:start;min-width:0}
 .dv-tbl tr.dv-exp h4{margin:4px 0;font-size:14px}.dv-tbl tr.dv-exp h4.ok{color:#1F7A43}
 @media(max-width:760px){.dv-tbl tr.dv-exp .dv-two{grid-template-columns:1fr}}
+/* drawer controls: no double-tap delay on touch screens */
+.drawer :is(button,a,select,input,label),#drawer-bg{touch-action:manipulation}

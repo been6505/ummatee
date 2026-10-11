@@ -249,7 +249,8 @@ function openDrawer(id,fromLink){const m=findCase(id);A.fromLink=!!fromLink;A.op
 function closeDrawer(){const d=$('#drawer');if(A.aipM){try{A.aipM.remove()}catch(e){}A.aipM=null;A.aipMEl=null}if(A.fromLink&&A.openId){A.fromLink=false;A.openId=null;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');history.back();return}A.fromLink=false;A.openId=null;A.dPress=A.dPend=false;d.hidden=true;$('#drawer-bg').hidden=true;document.body.classList.remove('noscroll');try{if(typeof CAMLIVE!=='undefined')CAMLIVE.stop(d)}catch(e){}d.dataset.case=''}
 // a refresh that redraws the drawer between press and release would swap the button under the pointer and drop the click
 document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#drawer')){A.dPress=true;A.dPressAt=Date.now();clearTimeout(A.dPT);A.dPT=setTimeout(()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;if(A.openId)renderDrawer()}},4100)}},true);
-['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(!A.dPress)return;A.dPress=false;if(A.dPend){A.dPend=false;setTimeout(()=>{if(A.openId)renderDrawer()},0)}},true));
+// on touch screens the click can arrive a few hundred ms after the finger lifts, so keep holding redraws briefly after release
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,()=>{if(!A.dPress)return;A.dPress=false;A.dHold=Date.now()+500;setTimeout(()=>{if(A.dPend&&!A.dPress&&Date.now()>=A.dHold){A.dPend=false;if(A.openId)renderDrawer()}},520)},true));
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#drawer #d-close')&&A.openId)closeDrawer()});
 $('#drawer-bg').addEventListener('click',closeDrawer);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&A.openId)closeDrawer()});
@@ -274,7 +275,7 @@ function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${ic
   </div>`}
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){A.fromLink=false;closeDrawer();return}
-  if(A.dPress&&Date.now()-A.dPressAt<4000&&!d.hidden&&d.dataset.case===String(c.id)){A.dPend=true;return}
+  if(((A.dPress&&Date.now()-A.dPressAt<4000)||Date.now()<(A.dHold||0))&&!d.hidden&&d.dataset.case===String(c.id)){A.dPend=true;return}
   const same=d.dataset.case===String(c.id),keep=same?{ed:[...d.querySelectorAll('.d-ed input')].map(i=>[i.id,i.value]),team:(d.querySelector('#d-team')||{}).value,note:(d.querySelector('#d-note')||{}).value,open:[...d.querySelectorAll('details')].map(x=>x.open),top:d.scrollTop,cols:[...d.querySelectorAll('.d-col')].map(x=>x.scrollTop),focus:document.activeElement&&d.contains(document.activeElement)?document.activeElement.id:'',ik:d.querySelector('.d-intake.dirty')?[...d.querySelectorAll('.d-intake [data-ik]')].map(i=>[i.dataset.ik,i.value]):null}:null;
   d.dataset.case=String(c.id);
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],

@@ -1215,3 +1215,4 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .kb-col.kb-assigned{background:#f6f3ff}.kb-col.kb-teamdone{background:#f3faee}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kb-col.kb-assigned{background:#221d38}:root:not([data-theme="light"]) .kb-col.kb-teamdone{background:#1b2a17}}
 :root[data-theme="dark"] .kb-col.kb-assigned{background:#221d38}:root[data-theme="dark"] .kb-col.kb-teamdone{background:#1b2a17}
+.cc-btns .btn.ok{background:#1F7A43;color:#fff;border:0}.cc-btns .btn.ok:disabled{opacity:.6}.cc-btns .btn .ic{width:16px;height:16px}

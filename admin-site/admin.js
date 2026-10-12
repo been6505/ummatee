@@ -162,7 +162,7 @@ function renderList(list){
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}" title="ระดับที่ระบบตัดสินจากข้อมูลผู้แจ้ง + ข้อมูลระบบ">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
-      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(stOf(c))}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${stOf(c)===k?'selected':''}${(k==='going'||k==='teamdone')&&stOf(c)!==k?' disabled':''}>${v}</option>`).join('')}</select>`}${isFin(c)?'':`<span class="row-acts"><button type="button" class="row-helped" data-helped="${esc(c.id)}" title="ยืนยันว่าส่งมอบความช่วยเหลือแล้ว"><i data-ic="check"></i> ช่วยเหลือแล้ว</button><button type="button" class="row-close" data-close="${esc(c.id)}" title="ปิดเคส (ไม่ได้ช่วย)"><i data-ic="box"></i> ปิดเคส</button></span>`}${c.status==='going'&&c.teamIssue&&!c.teamDoneAt?`<small class="td-tag iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}</td>
+      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(stOf(c))}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${stOf(c)===k?'selected':''}${(k==='going'||k==='teamdone')&&stOf(c)!==k?' disabled':''}>${v}</option>`).join('')}</select>`}${c.status==='going'&&c.teamIssue&&!c.teamDoneAt?`<small class="td-tag iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
       <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
@@ -172,7 +172,7 @@ function renderList(list){
       <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
       <td class="act"><button class="btn ghost sm" data-open="${esc(c.id)}">ดู</button></td></tr>`}).join('')+'</tbody></table>';
 }
-$('#list').addEventListener('click',e=>{if(e.target.closest('.row-nav'))return;const cl=e.target.closest('[data-close]');if(cl){const c=A.cases.find(x=>String(x.id)===cl.dataset.close);if(c)closeCaseDlg(c);return}const hb=e.target.closest('[data-helped]');if(hb){helpedConfirm(hb.dataset.helped);return}const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
+$('#list').addEventListener('click',e=>{if(e.target.closest('.row-nav'))return;const cl=e.target.closest('[data-close]');if(cl){const c=A.cases.find(x=>String(x.id)===cl.dataset.close);if(c)closeCaseDlg(c);return}const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
   if(e.target.closest('a,select,button'))return;const tr=e.target.closest('tr[data-id]');if(tr)openDrawer(tr.dataset.id)});
 $('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}
   const tm=e.target.closest('[data-team]');if(tm){const c=A.cases.find(x=>String(x.id)===tm.dataset.team);if(!c)return;const cur=String(c.volunteer||'').replace(/^'/,'').trim(),v=tm.value;
@@ -193,8 +193,9 @@ async function saveBags(id,val,inp){
   catch(e){c.bags=prev;render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
   finally{if(inp)inp.disabled=false}}
 
-async function changeStatus(id,status,sel,team){
+async function changeStatus(id,status,sel,team,ok){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;const cur=stOf(c),back=()=>{if(sel)sel.value=cur};
+  if(status==='helped'&&!ok&&cur!=='helped'){back();helpedConfirm(c.id);return}
   if(status==='going'&&team)status='assigned';
   if(status===cur&&!team)return;
   if(status==='going'||status==='teamdone'){back();toast(status==='going'?'สถานะนี้ทีมเปลี่ยนเองเมื่อกด "รับเคส" ในแอปทีม':'สถานะนี้ทีมเปลี่ยนเองเมื่อกด "ช่วยเหลือแล้ว" ในแอปทีม');return}
@@ -402,8 +403,14 @@ async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=s
   try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',sevSet:val,metaOnly:true});if(!r||!r.ok)throw 0;
     toast(val===''?'กลับไปใช้ระดับของระบบแล้ว':`ตั้งระดับเป็น "${URG[val]}" แล้ว`,true)}
   catch(e){Object.assign(c,prev);vrCache.delete(c.id);render();renderDrawer();toast('บันทึกไม่สำเร็จ')}}
-async function helpedConfirm(id){const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return false;
-  if(!confirm(`ยืนยันว่าเคส #${c.hmId||c.id} ได้รับความช่วยเหลือแล้ว?\nเคสจะย้ายไปเก็บใน "ช่วยเหลือแล้ว"`))return false;await changeStatus(c.id,'helped');return stOf(c)==='helped'}
+function helpedConfirm(id){const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return Promise.resolve(false);
+  return new Promise(res=>{const d=document.createElement('dialog');d.className='cc-dlg';const team=String(c.volunteer||'').replace(/^'/,'').trim();
+    d.innerHTML=`<form method="dialog"><h3>ยืนยันว่าเคส #${esc(c.hmId||c.id)} ช่วยเหลือแล้ว?</h3><p class="cc-sub">ส่งมอบความช่วยเหลือ${team?' โดยทีม <b>'+esc(team)+'</b>':''} เรียบร้อยแล้ว · เคสจะย้ายไปเก็บใน <b>"ช่วยเหลือแล้ว"</b></p>
+      <div class="cc-btns"><button type="button" class="btn ghost" data-cc="no">ยกเลิก</button><button type="button" class="btn ok" data-cc="ok"><i data-ic="check"></i> ยืนยันช่วยเหลือแล้ว</button></div></form>`;
+    document.body.append(d);d.showModal();let done=false;const fin=v=>{if(done)return;done=true;res(v)};
+    d.addEventListener('close',()=>{d.remove();fin(false)});
+    d.addEventListener('click',async e=>{if(e.target===d){d.close();return}const b=e.target.closest('[data-cc]');if(!b)return;if(b.dataset.cc==='no'){d.close();return}
+      b.disabled=true;await changeStatus(c.id,'helped',null,null,true);const ok=stOf(c)==='helped';done=true;d.close();res(ok)})})}
 function closeCaseDlg(c){const d=document.createElement('dialog');d.className='cc-dlg';
   const R=['ไม่เข้าเกณฑ์','เคสซ้ำ','ติดต่อไม่ได้','ได้รับความช่วยเหลือจากที่อื่นแล้ว','ผู้แจ้งยกเลิก'];
   d.innerHTML=`<form method="dialog"><h3>ปิดเคส #${esc(c.hmId||c.id)}?</h3><p class="cc-sub">ปิดโดย<b>ไม่ได้ส่งมอบความช่วยเหลือ</b> · เคสจะย้ายไป "ปิดเคส · ไม่ได้ช่วย"${c.teamDoneAt?' · บันทึกการส่งมอบเดิมจะถูกลบ':''}</p>

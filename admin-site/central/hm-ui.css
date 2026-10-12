@@ -1173,3 +1173,9 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 }
 /* ช่วยเหลือแล้ว = เขียว (ส่งมอบแล้ว) · ปิดเคส = เทา (ปิดโดยไม่ได้ช่วย) */
 .stat.ok b{color:#277343}.stat.done b{color:#6b7280}
+/* รูปโปรไฟล์ทีมในการ์ดทีม (หน้าจัดทีม) */
+.team-id{display:flex;align-items:center;gap:12px;min-width:0}
+.team-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none;background:#EEF1FD;box-shadow:0 0 0 2px #fff,0 1px 4px rgba(22,27,61,.15)}
+.team-av.ph{display:grid;place-items:center;font-size:24px;line-height:1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .team-av{background:#1f2747;box-shadow:0 0 0 2px #1a1d22}:root:not([data-theme="light"]) .team-av.ph{color:#AFC0FF}}
+:root[data-theme="dark"] .team-av{background:#1f2747;box-shadow:0 0 0 2px #1a1d22}:root[data-theme="dark"] .team-av.ph{color:#AFC0FF}

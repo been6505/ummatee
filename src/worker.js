@@ -896,7 +896,7 @@ async function saveRoster(db, b) {
   return { ok: true, id };
 }
 async function listRoster(db) {
-  const { results } = await db.prepare('SELECT id,name,leader,phone,members,vehicle,zone,status,note,updatedAt,token,sosAt,sosAck,warroom,gmaps FROM roster WHERE active=1 ORDER BY name').all();
+  const { results } = await db.prepare('SELECT r.id,r.name,r.leader,r.phone,r.members,r.vehicle,r.zone,r.status,r.note,r.updatedAt,r.token,r.sosAt,r.sosAck,r.warroom,r.gmaps,a.at avatarAt FROM roster r LEFT JOIN team_avatar a ON a.team=r.name WHERE r.active=1 ORDER BY r.name').all();
   const miss = results.filter(r => !r.token);
   if (miss.length) { for (const r of miss) r.token = teamToken(); await db.batch(miss.map(r => db.prepare('UPDATE roster SET token=? WHERE id=?').bind(r.token, r.id))); }
   for (const r of results) r.view = r.token ? await viewId(r.token) : '';

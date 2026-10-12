@@ -1163,3 +1163,11 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .dl-pop .ts-mode{margin:4px 0 6px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ts-mode.m-bg{background:#123524;color:#8FE0AE}:root:not([data-theme="light"]) .ts-mode.m-web{background:#232a33;color:#B7C0CC}:root:not([data-theme="light"]) .ts-mode.m-off{background:#3a2610;color:#FFC27A}}
 :root[data-theme="dark"] .ts-mode.m-bg{background:#123524;color:#8FE0AE}:root[data-theme="dark"] .ts-mode.m-web{background:#232a33;color:#B7C0CC}:root[data-theme="dark"] .ts-mode.m-off{background:#3a2610;color:#FFC27A}
+/* มือถือ: เปิดตัวกรองแล้วให้ลงบรรทัดใหม่เต็มกว้าง จัด 2 คอลัมน์ ไม่เบียดปุ่มด้านขวา */
+@media(max-width:760px){
+  .view-row:has(#filters-box.open){flex-wrap:wrap!important;row-gap:10px}
+  .view-row>.bar-slot{order:9}
+  .view-row:has(#filters-box.open)>.bar-slot{flex:1 1 100%!important;margin-left:0;padding:10px;border-radius:18px;background:var(--surface,#fff);box-shadow:0 1px 3px rgba(22,27,61,.08)}
+  #filters-box.filters-box.open{grid-template-columns:1fr 1fr!important;gap:8px}
+  #filters-box.filters-box select{min-height:42px;font-size:14px;border-radius:12px}
+}

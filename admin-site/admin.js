@@ -1,8 +1,8 @@
 const API_URL='/api';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',helped:'ช่วยเหลือแล้ว',done:'ปิดเคส'};
-const stOf=c=>c.status!=='open'&&c.teamDoneAt?'helped':c.status,isFin=c=>['helped','done'].includes(stOf(c));
+const ST={open:'รอความช่วยเหลือ',assigned:'มอบให้ทีม',going:'ทีมกำลังไป',teamdone:'ทีมช่วยเหลือแล้ว',helped:'ช่วยเหลือแล้ว',done:'ปิดเคส'};
+const stOf=c=>c.status==='done'?(c.teamDoneAt?'helped':'done'):c.status==='going'?(c.teamDoneAt?'teamdone':(c.teamAckAt||c.teamArrivedAt)?'going':'assigned'):c.status,isFin=c=>['helped','done'].includes(stOf(c));
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน / เครื่องช่วยหายใจ',dialysis:'ผู้ป่วยฟอกไต',chronic:'ผู้ป่วยโรคเรื้อรัง'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / หลังคา'};
@@ -81,7 +81,7 @@ function filtered(){
     if(q){const h=hay(c);const ok=q.split(/\s+/).every(t=>{if(h.includes(t))return true;const d=digits(t);return /^[\d+\-\s]+$/.test(t)&&d.length>=3&&digits(c.phone).includes(d)});if(!ok)return false}
     if(A.today&&!((Number(c.createdAt)||0)>=dayStart()))return false;
     if(st==='active'&&isFin(c))return false;
-    if(['open','going','helped','done'].includes(st)&&stOf(c)!==st)return false;
+    if(Object.keys(ST).includes(st)&&stOf(c)!==st)return false;
     if(u&&String(sev(c))!==u)return false;
     if(nd&&!(c.needs||[]).join(' ').includes(nd))return false;
     const fv=$('#f-vr').value;if(fv==='verified'){if(!VR_OK.has(vr(c).result.k))return false}else if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
@@ -131,7 +131,7 @@ VERIFY.onUpdate=()=>render();
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
   return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
-const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},helped:{st:'helped',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
+const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},assigned:{st:'assigned',u:''},teamdone:{st:'teamdone',u:''},helped:{st:'helped',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
 function statKey(){if(A.today)return 'today';const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
 $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
  const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
@@ -144,7 +144,7 @@ function render(){
   const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>stOf(c)===s).length,act=base.filter(c=>!isFin(c));
   const t0=dayStart(),today=base.filter(c=>(Number(c.createdAt)||0)>=t0).length,crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   const cur=statKey();
-  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['เคสเข้าใหม่วันนี้',today,'today','today'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ช่วยเหลือแล้ว',n('helped'),'ok','helped'],['ปิดเคส · ไม่ได้ช่วย',n('done'),'done','done']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['เคสเข้าใหม่วันนี้',today,'today','today'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบให้ทีม',n('assigned'),'go','assigned'],['ทีมกำลังไป',n('going'),'go','going'],['ทีมช่วยเหลือแล้ว · รอยืนยัน',n('teamdone'),'ok','teamdone'],['ช่วยเหลือแล้ว',n('helped'),'ok','helped'],['ปิดเคส',n('done'),'done','done']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f&&f!=='active'}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);
@@ -162,7 +162,7 @@ function renderList(list){
     list.map(c=>{const t=tel(c);return `<tr class="u${sev(c)} s-${esc(c.status)}" data-id="${esc(c.id)}">
       <td data-l="ระดับ"><span class="urg urg-${sev(c)}" title="ระดับที่ระบบตัดสินจากข้อมูลผู้แจ้ง + ข้อมูลระบบ">${URG[sev(c)]}</span></td>
       <td data-l="ตรวจพื้นที่" class="vr-cell">${c.status==='done'?'<small>—</small>':vrBadge(c)}</td>
-      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(stOf(c))}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${stOf(c)===k?'selected':''}>${v}</option>`).join('')}</select>`}${isFin(c)?'':`<button type="button" class="row-close" data-close="${esc(c.id)}" title="ปิดเคส (ไม่ได้ช่วย)"><i data-ic="box"></i> ปิดเคส</button>`}${c.status==='going'&&c.teamIssue&&!c.teamDoneAt?`<small class="td-tag iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}</td>
+      <td data-l="สถานะ">${c.hm?'<small class="hm-tag">Help Me</small>':''}${`<select class="st-sel st-${esc(stOf(c))}" data-st="${esc(c.id)}" aria-label="สถานะเคส ${esc(c.id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${stOf(c)===k?'selected':''}${(k==='going'||k==='teamdone')&&stOf(c)!==k?' disabled':''}>${v}</option>`).join('')}</select>`}${isFin(c)?'':`<span class="row-acts"><button type="button" class="row-helped" data-helped="${esc(c.id)}" title="ยืนยันว่าส่งมอบความช่วยเหลือแล้ว"><i data-ic="check"></i> ช่วยเหลือแล้ว</button><button type="button" class="row-close" data-close="${esc(c.id)}" title="ปิดเคส (ไม่ได้ช่วย)"><i data-ic="box"></i> ปิดเคส</button></span>`}${c.status==='going'&&c.teamIssue&&!c.teamDoneAt?`<small class="td-tag iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}</td>
       <td data-l="ความต้องการ" class="needs"><b>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</b>${c.level?`<small>น้ำ${esc(LEVEL[c.level]||c.level)}</small>`:''}${vul(c).length?`<small class="vul">ดูแลพิเศษ: ${esc(vul(c).join(', '))}</small>`:''}${photosOf(c).length?`<span class="row-photos" data-open="${esc(String(c.id))}" title="ดูรูปจากผู้แจ้ง">${photosOf(c).slice(0,4).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w160" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w160" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer">`).join('')}${photosOf(c).length>4?`<em>+${photosOf(c).length-4}</em>`:''}</span>`:''}</td>
       <td data-l="คน / ครัวเรือน" class="num">${esc(c.people||1)} คน${hh(c)?`<small>${hh(c)} ครัวเรือน</small>`:''}</td>
       <td data-l="ถุงยังชีพ" class="bag">${`<input class="bag-in" type="number" min="0" max="9999" inputmode="numeric" data-bag="${esc(c.id)}" value="${bagsOf(c)==null?'':bagsOf(c)}" placeholder="${bagSuggest(c)}" aria-label="จำนวนถุงยังชีพ เคส ${esc(c.id)}" title="ว่างไว้ = ยังไม่ระบุ (แนะนำ ${bagSuggest(c)} ถุง)"><small>ถุง</small>`}</td>
@@ -172,7 +172,7 @@ function renderList(list){
       <td data-l="แจ้งเมื่อ" class="time" title="${esc(fullTime(c.createdAt))}">${esc(ago(c.createdAt))}<small>#${esc(c.hmId||c.id)}</small></td>
       <td class="act"><button class="btn ghost sm" data-open="${esc(c.id)}">ดู</button></td></tr>`}).join('')+'</tbody></table>';
 }
-$('#list').addEventListener('click',e=>{if(e.target.closest('.row-nav'))return;const cl=e.target.closest('[data-close]');if(cl){const c=A.cases.find(x=>String(x.id)===cl.dataset.close);if(c)closeCaseDlg(c);return}const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
+$('#list').addEventListener('click',e=>{if(e.target.closest('.row-nav'))return;const cl=e.target.closest('[data-close]');if(cl){const c=A.cases.find(x=>String(x.id)===cl.dataset.close);if(c)closeCaseDlg(c);return}const hb=e.target.closest('[data-helped]');if(hb){helpedConfirm(hb.dataset.helped);return}const b=e.target.closest('[data-open]');if(b){openDrawer(b.dataset.open);return}
   if(e.target.closest('a,select,button'))return;const tr=e.target.closest('tr[data-id]');if(tr)openDrawer(tr.dataset.id)});
 $('#list').addEventListener('change',e=>{const b=e.target.closest('[data-bag]');if(b){saveBags(b.dataset.bag,b.value,b);return}
   const tm=e.target.closest('[data-team]');if(tm){const c=A.cases.find(x=>String(x.id)===tm.dataset.team);if(!c)return;const cur=String(c.volunteer||'').replace(/^'/,'').trim(),v=tm.value;
@@ -194,16 +194,22 @@ async function saveBags(id,val,inp){
   finally{if(inp)inp.disabled=false}}
 
 async function changeStatus(id,status,sel,team){
-  const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
-  if(status===stOf(c)&&!team)return;
-  const helped=status==='helped'?true:((status==='going'||status==='done')&&c.teamDoneAt?false:undefined);
-  if(status==='helped'){status='going';if(!team&&c.volunteer)team=String(c.volunteer).replace(/^'/,'')}
-  if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
-  if(team)store.set('uh_team',team,true);
-  const prev={status:c.status,volunteer:c.volunteer,teamDoneAt:c.teamDoneAt};c.status=status;if(status==='open')c.volunteer='';else if(team)c.volunteer=team;if(helped!==undefined)c.teamDoneAt=helped?Date.now():null;if(status==='open')c.teamDoneAt=null;render();
-  try{const r=await post({action:'update',key:A.key,id:apiId(id),status,volunteer:team||c.volunteer||'',...(helped!==undefined?{helped}:{})});
+  const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;const cur=stOf(c),back=()=>{if(sel)sel.value=cur};
+  if(status==='going'&&team)status='assigned';
+  if(status===cur&&!team)return;
+  if(status==='going'||status==='teamdone'){back();toast(status==='going'?'สถานะนี้ทีมเปลี่ยนเองเมื่อกด "รับเคส" ในแอปทีม':'สถานะนี้ทีมเปลี่ยนเองเมื่อกด "ช่วยเหลือแล้ว" ในแอปทีม');return}
+  if(status==='done'){back();closeCaseDlg(c);return}
+  const vol=String(c.volunteer||'').replace(/^'/,'').trim();
+  if(status==='assigned'){if(!team)team=vol;if(!team){back();toast('เลือกทีมในช่อง "เลือกทีม" เพื่อมอบเคส');const ts=document.querySelector(`[data-team="${CSS.escape(String(c.id))}"]`);if(ts)ts.focus();return}
+    if(team===vol&&(cur==='going'||cur==='teamdone')){back();toast('ทีมนี้รับเคสแล้ว · ถ้าจะเปลี่ยนทีม เลือกทีมอื่นในช่อง "เลือกทีม"');return}
+    store.set('uh_team',team,true)}
+  const dbSt=status==='assigned'?'going':status==='helped'?'done':'open',helped=status==='helped'?true:undefined,changed=status==='assigned'&&team!==vol;
+  const prev={status:c.status,volunteer:c.volunteer,teamDoneAt:c.teamDoneAt,teamAckAt:c.teamAckAt,teamArrivedAt:c.teamArrivedAt};
+  c.status=dbSt;if(status==='open'){c.volunteer='';c.teamDoneAt=c.teamAckAt=c.teamArrivedAt=null}else if(team)c.volunteer=team;
+  if(changed){c.teamDoneAt=c.teamAckAt=c.teamArrivedAt=null}if(helped)c.teamDoneAt=c.teamDoneAt||Date.now();render();
+  try{const r=await post({action:'update',key:A.key,id:apiId(id),status:dbSt,volunteer:status==='open'?'':(team||vol),...(helped?{helped:true}:{})});
     if(!r||!r.ok){if(r&&r.error==='not_volunteer'){showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
-    toast(`เคส #${id} → ${ST[stOf(c)]}`,true)}
+    toast(`เคส #${c.hmId||id} → ${ST[stOf(c)]}`,true)}
   catch(e){Object.assign(c,prev);render();toast('บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง')}
 }
 
@@ -287,7 +293,7 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',{h:(hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด')+(!addr(c)?'':`<div class="aip"><button type="button" class="aip-btn" data-aipin="${esc(c.id)}"><i data-ic="sparkle"></i> ให้ AI ตรวจตำแหน่ง/เส้นทางจากข้อความ</button><div class="aip-out" id="aip-out"></div></div>`)}],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
-  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(stOf(c))}">${esc(ST[stOf(c)]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><div class="d-hbtns">${isFin(c)?'':'<button type="button" class="btn d-closecase" data-dact="closecase"><i data-ic="box"></i> ปิดเคส</button>'}<button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div></div>
+  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(stOf(c))}">${esc(ST[stOf(c)]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><div class="d-hbtns">${isFin(c)?'':'<button type="button" class="btn d-helped" data-dact="helped"><i data-ic="check"></i> ช่วยเหลือแล้ว</button><button type="button" class="btn d-closecase" data-dact="closecase"><i data-ic="box"></i> ปิดเคส</button>'}<button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div></div>
     <div class="d-grid"><div class="d-col d-col-a">
     ${stOf(c)==='done'&&c.closeNote?`<div class="d-closenote"><b>เหตุผลที่ปิดเคส</b><p>${esc(c.closeNote)}</p></div>`:''}
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
@@ -396,6 +402,8 @@ async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=s
   try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',sevSet:val,metaOnly:true});if(!r||!r.ok)throw 0;
     toast(val===''?'กลับไปใช้ระดับของระบบแล้ว':`ตั้งระดับเป็น "${URG[val]}" แล้ว`,true)}
   catch(e){Object.assign(c,prev);vrCache.delete(c.id);render();renderDrawer();toast('บันทึกไม่สำเร็จ')}}
+async function helpedConfirm(id){const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return false;
+  if(!confirm(`ยืนยันว่าเคส #${c.hmId||c.id} ได้รับความช่วยเหลือแล้ว?\nเคสจะย้ายไปเก็บใน "ช่วยเหลือแล้ว"`))return false;await changeStatus(c.id,'helped');return stOf(c)==='helped'}
 function closeCaseDlg(c){const d=document.createElement('dialog');d.className='cc-dlg';
   const R=['ไม่เข้าเกณฑ์','เคสซ้ำ','ติดต่อไม่ได้','ได้รับความช่วยเหลือจากที่อื่นแล้ว','ผู้แจ้งยกเลิก'];
   d.innerHTML=`<form method="dialog"><h3>ปิดเคส #${esc(c.hmId||c.id)}?</h3><p class="cc-sub">ปิดโดย<b>ไม่ได้ส่งมอบความช่วยเหลือ</b> · เคสจะย้ายไป "ปิดเคส · ไม่ได้ช่วย"${c.teamDoneAt?' · บันทึกการส่งมอบเดิมจะถูกลบ':''}</p>
@@ -415,6 +423,7 @@ function closeCaseDlg(c){const d=document.createElement('dialog');d.className='c
     catch(err){Object.assign(c,prev);b.disabled=false;toast('ปิดเคสไม่สำเร็จ ลองใหม่อีกครั้ง')}})}
 async function assignAct(c,act,btn){
   if(act==='closecase'){closeCaseDlg(c);return}
+  if(act==='helped'){if(await helpedConfirm(c.id)&&!$('#drawer').hidden)closeDrawer();return}
   if(act==='newteam'){const f=$('#d-newteam');f.hidden=!f.hidden;if(!f.hidden)$('#nt-name').focus();return}
   if(act==='ntcancel'){$('#d-newteam').hidden=true;return}
   if(act==='ntsave'){const name=$('#nt-name').value.trim();if(!name){toast('ใส่ชื่อทีมก่อน');$('#nt-name').focus();return}

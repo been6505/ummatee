@@ -358,7 +358,7 @@ $('#c-body').addEventListener('change',async e=>{const s=e.target.closest('[data
   catch(err){toast('บันทึกไม่สำเร็จ')}finally{s.disabled=false;render()}});
 $('#c-body').addEventListener('click',e=>{const t=e.target.closest('[data-ctog]');if(!t)return;W.copen=W.copen===t.dataset.ctog?'':t.dataset.ctog;casesTab(view())});
 $('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('บันทึกว่าช่วยเหลือแล้ว?'))return;
-  b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'going',volunteer:vol(c),helped:true});if(r.ok){c.status='going';c.teamDoneAt=Date.now();toast('บันทึกว่าช่วยเหลือแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
+  b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c),helped:true});if(r.ok){c.status='done';c.teamDoneAt=c.teamDoneAt||Date.now();toast('บันทึกว่าช่วยเหลือแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
 function teamsTab(V){if(W.appsAt!=='t'+V.r.id&&/^wru?_/.test(String(ADM.key||''))){W.appsAt='t'+V.r.id;appsCard($('#t-apps'),'room')}const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
   if(isProv(r)){dispatchQ(V);const zs=zonesOf(r.province);

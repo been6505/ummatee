@@ -1202,3 +1202,16 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .row-close .ic,.row-nav .ic{width:15px;height:15px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .row-close{background:#262b33;color:#d6dae2;border-color:#3a404b}:root:not([data-theme="light"]) .row-nav{background:#1f2747;color:#AFC0FF;border-color:#33407a}}
 :root[data-theme="dark"] .row-close{background:#262b33;color:#d6dae2;border-color:#3a404b}:root[data-theme="dark"] .row-nav{background:#1f2747;color:#AFC0FF;border-color:#33407a}
+/* สถานะใหม่: มอบให้ทีม (ม่วง) · ทีมช่วยเหลือแล้ว รอยืนยัน (เขียวอ่อน) · ปิดเคส (เทา) + ปุ่มช่วยเหลือแล้ว */
+.st-sel.st-assigned,.st.st-assigned,.st-txt.st-assigned{background:#efeafd!important;color:#5b3fc4!important}
+.st-sel.st-teamdone,.st.st-teamdone,.st-txt.st-teamdone{background:#eef8e9!important;color:#3b7a1d!important}
+.st-sel.st-done,.st.st-done,.st-txt.st-done{background:#eef0f3!important;color:#5b6270!important}
+.row-acts{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:8px;vertical-align:middle}.row-acts .row-close{margin-left:0}
+.row-helped{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;background:#E6F6EC;color:#17663A;border:1px solid #BFE6CC}.row-helped:hover{background:#D8F0E1}.row-helped .ic{width:15px;height:15px}
+.d-helped{min-height:40px;padding:0 16px;border-radius:999px;font-weight:700;font-size:14px;background:#1F7A43;color:#fff;border:0;display:inline-flex;align-items:center;gap:6px;cursor:pointer}.d-helped:hover{background:#196638}.d-helped .ic{width:16px;height:16px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .row-helped{background:#123524;color:#8FE0AE;border-color:#1f5a3b}}
+:root[data-theme="dark"] .row-helped{background:#123524;color:#8FE0AE;border-color:#1f5a3b}
+.kb-assigned h3::before{background:#7c5cf0}.kb-teamdone h3::before{background:#65a30d}
+.kb-col.kb-assigned{background:#f6f3ff}.kb-col.kb-teamdone{background:#f3faee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kb-col.kb-assigned{background:#221d38}:root:not([data-theme="light"]) .kb-col.kb-teamdone{background:#1b2a17}}
+:root[data-theme="dark"] .kb-col.kb-assigned{background:#221d38}:root[data-theme="dark"] .kb-col.kb-teamdone{background:#1b2a17}

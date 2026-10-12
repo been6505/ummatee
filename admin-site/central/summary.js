@@ -2,7 +2,7 @@ function hmSummary(el,o){if(!el)return;const cases=(o.cases||[]).filter(c=>!c.du
   const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n=x=>Number(x).toLocaleString('th-TH'),pp=c=>Math.max(1,Number(c.people)||1),sum=l=>l.reduce((a,c)=>a+pp(c),0);
   const wait=t=>{const m=Math.max(0,Math.round((Date.now()-t)/60000));if(m<60)return m+' นาที';const h=Math.floor(m/60);return h<24?h+' ชม. '+(m%60)+' นาที':Math.floor(h/24)+' วัน'};
-  const hp=c=>c.status!=='open'&&Number(c.teamDoneAt)>0,done=cases.filter(hp),closed=cases.filter(c=>c.status==='done'&&!hp(c)),act=cases.filter(c=>c.status!=='done'&&!hp(c)),open=act.filter(c=>c.status!=='going'),going=act.filter(c=>c.status==='going');
+  const hp=c=>c.status==='done'&&Number(c.teamDoneAt)>0,done=cases.filter(hp),closed=cases.filter(c=>c.status==='done'&&!hp(c)),act=cases.filter(c=>c.status!=='done'),open=act.filter(c=>c.status!=='going'),going=act.filter(c=>c.status==='going');
   const crit=open.filter(c=>sev(c)===3),urg=open.filter(c=>sev(c)>=2);
   const t0=new Date();t0.setHours(0,0,0,0);const doneToday=done.filter(c=>Number(c.teamDoneAt)>=t0.getTime());const newToday=cases.filter(c=>Number(c.createdAt)>=t0.getTime());
   const oldest=open.reduce((m,c)=>Math.min(m,c.createdAt||Infinity),Infinity),ppl=sum(crit);

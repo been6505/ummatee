@@ -33,7 +33,7 @@ async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').clas
   later({action:'stock',key:D.key},sk=>{D.stock=sk&&sk.ok?sk:D.stock});later({action:'teams',key:D.key},tl=>{if(tl&&tl.ok)D.live=tl.teams||[]});
   try{const r=await api({action:'list',key:D.key});if(!r||!r.ok)throw 0;
     api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
-    api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});
+    api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null;D.hmSkip=h&&h.ok&&h.skipped!=null?h.skipped:null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});
     if(!D.rosterN)api({action:'roster',key:D.key}).then(r=>{if(r&&r.ok){D.rosterN=(r.roster||[]).length;summary()}}).catch(()=>{});
     D.live=D.live||[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
@@ -138,9 +138,9 @@ addEventListener('message',e=>{if(e.origin!==location.origin)return;const d=e.da
   M.map.once('moveend',()=>mk.openPopup());M.map.flyTo(ll,Math.max(M.map.getZoom(),16),{duration:.6})});
 ['#mt-done','#mt-flood','#mt-cov','#mt-leads','#mt-live'].forEach(s=>document.addEventListener('change',e=>{if(e.target.matches(s))render()}));
 
-function summary(){if(typeof hmSummary!=='function')return;const all=(D.hmc||[]).concat(D.cases);if(!all.length&&!D.hmcDone)return;
+function summary(){if(typeof hmSummary!=='function')return;const all=D.hmc||D.cases;if(!all.length&&!D.hmcDone)return;
   const online=new Set((D.live||[]).filter(t=>Date.now()-t.updatedAt<10*60e3).map(t=>t.team)).size;
-  hmSummary($('#sumbox'),{cases:all,title:'ภาพรวมทั้งหมด',online,teams:D.rosterN||(D.live||[]).length,sev})}
+  hmSummary($('#sumbox'),{cases:all,title:'ภาพรวมทั้งหมด',online,teams:D.rosterN||(D.live||[]).length,skipped:D.hmc?D.hmSkip:null})}
 function metrics(){const el=$('#metrics');if(!el)return;const all=(D.hmc||[]).concat(D.cases).filter(c=>!c.dupOf);if(!all.length)return;
   const now=Date.now(),wk=now-7*864e5,M=60e3,med=a=>{if(!a.length)return null;a=a.slice().sort((x,y)=>x-y);const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2};
   const dur=ms=>ms==null?'–':ms<3600e3?Math.round(ms/M)+' นาที':ms<864e5?(ms/3600e3).toFixed(1).replace(/\.0$/,'')+' ชม.':(ms/864e5).toFixed(1).replace(/\.0$/,'')+' วัน';

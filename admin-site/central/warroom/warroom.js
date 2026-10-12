@@ -91,7 +91,7 @@ async function loadCases(){
   const [h,o]=await Promise.all([apiGet({action:'helpme_cases'}).catch(()=>null),apiGet({action:'list'}).catch(()=>null)]);
   const hm=h&&h.ok?h.cases:[],own=o&&o.cases?o.cases:[],ids=new Set(hm.map(c=>String(c.id)));
   W.cases=hm.map(c=>({...c,needs:c.needs||[],src:'hm'})).concat(own.filter(c=>!ids.has(String(c.id))).map(c=>({...c,needs:c.needs||[],src:'own'}))).filter(c=>!c.dupOf);
-  W.at=Date.now();
+  W.hmSkip=h&&h.ok&&h.skipped!=null?h.skipped:null;W.at=Date.now();
 }
 async function loadTeams(){
   const [r,t]=await Promise.all([apiGet({action:'roster'}).catch(()=>null),apiGet({action:'chat_threads'}).catch(()=>null)]);
@@ -152,7 +152,7 @@ $('#rooms').addEventListener('click',async e=>{const b=e.target.closest('[data-r
 $('#subtabs').addEventListener('click',async e=>{const b=e.target.closest('[data-tab]');if(!b)return;W.tab=b.dataset.tab;if(!W.room){try{history.replaceState(null,'',location.pathname+(W.tab==='board'?'?tab=board':''))}catch(err){}}if(W.tab==='prof')W.uAt='';if(W.tab==='stock'||W.tab==='struct')await loadStock();render()});
 
 function kpis(V){const rm=room(),fresh=new Set(V.live.filter(l=>Date.now()-l.updatedAt<10*60e3).map(l=>l.team));
-  hmSummary($('#kpis'),{cases:V.cases,title:rm?rm.name:'ภาพรวมทั้งหมด',online:fresh.size,teams:V.roster.length,sev})
+  hmSummary($('#kpis'),{cases:rm?V.cases:V.cases.filter(c=>c.src==='hm'),title:rm?rm.name:'ภาพรวมทั้งหมด',online:fresh.size,teams:V.roster.length,skipped:rm?null:W.hmSkip})
 }
 $('#kpis').addEventListener('click',e=>{const b=e.target.closest('[data-cst]');if(!b||!room())return;const f=b.dataset.cst;W.cst=f==='crit'?'open':f;W.tab='cases';render()});
 function alerts(V){

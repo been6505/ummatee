@@ -306,7 +306,6 @@ function renderDrawer(){
   d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(stOf(c))}">${esc(ST[stOf(c)]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><div class="d-hbtns">${isFin(c)?'':'<button type="button" class="btn d-helped" data-dact="helped"><i data-ic="check"></i> ช่วยเหลือแล้ว</button><button type="button" class="btn d-closecase" data-dact="closecase"><i data-ic="box"></i> ปิดเคส</button>'}<button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div></div>
     <div class="d-grid"><div class="d-col d-col-a">
     ${stOf(c)==='done'&&c.closeNote?`<div class="d-closenote"><b>เหตุผลที่ปิดเคส</b><p>${esc(c.closeNote)}</p></div>`:''}
-    ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
     <div class="d-ho" id="d-ho" hidden></div>
     ${covSection(c)}${vrSection(c)}

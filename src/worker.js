@@ -160,7 +160,7 @@ function outCase(r, full) {
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
-    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', closeNote: r.closeNote || '', teamDoneAt: r.teamDoneAt || null, teamAckAt: r.teamAckAt || null, teamNote: r.teamNote || '', teamMemo: r.teamMemo || '', teamMemoAt: r.teamMemoAt || null, teamArrivedAt: r.teamArrivedAt || null, teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake) };
+    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', closeNote: r.closeNote || '', teamDoneAt: r.teamDoneAt || hmHelpedAt(r), teamAckAt: r.teamAckAt || null, teamNote: r.teamNote || '', teamMemo: r.teamMemo || '', teamMemoAt: r.teamMemoAt || null, teamArrivedAt: r.teamArrivedAt || null, teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake) };
   if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
   if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; o.hqNote = ''; o.closeNote = ''; o.teamMemo = ''; o.teamMemoAt = null; o.teamNote = ''; o.teamIssue = ''; o.teamIssueAt = null; o.sevBy = ''; o.cctv = '';
     o.address = String(o.address || '').replace(/(บ้านเลขที่|เลขที่)?\s*\d+(\/\d+)?/g, '').replace(/\s{2,}/g, ' ').trim(); if (o.lat !== '' && o.lat != null) { o.lat = Math.round(Number(o.lat) * 1000) / 1000; o.lng = Math.round(Number(o.lng) * 1000) / 1000; } }
@@ -2807,6 +2807,8 @@ async function photoAiPass(env, db, max = 4) {
   if (n) await bumpRev(db);
   return n;
 }
+/* เคสจาก Help Me ที่ Help Me ปิดว่า "ช่วยแล้ว" (status done) และศูนย์ไม่ได้ปิดเองด้วย "ปิดเคส" (ไม่มี closeNote) = ช่วยเหลือแล้ว · ตรงกับตัวเลขหน้า helpme4u.com/#stats */
+const hmHelpedAt = c => (c.src === 'helpme' || c.src === 'hm_direct') && c.status === 'done' && c.hmStatus === 'done' && !c.closeNote ? (Number(c.doneAt) || Number(c.hmUpdatedAt) || Number(c.updatedAt) || null) : null;
 async function helpmeCases(env, db) {
   let { results } = await db.prepare("SELECT * FROM cases WHERE src IN ('helpme','hm_direct') AND COALESCE(hmStatus,'')<>'skip' ORDER BY createdAt").all();
   const last = Number(await getMeta(db, 'hm_sync_at')) || 0;
@@ -2815,7 +2817,7 @@ async function helpmeCases(env, db) {
   const J = (v, d) => { try { return v ? JSON.parse(v) : d; } catch (e) { return d; } };
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, cases: results.map(c => ({ id: c.id, direct: c.src === 'hm_direct', createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', closeNote: c.closeNote || '', teamDoneAt: c.teamDoneAt || null, teamAckAt: c.teamAckAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', closeNote: c.closeNote || '', teamDoneAt: c.teamDoneAt || hmHelpedAt(c), teamAckAt: c.teamAckAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {

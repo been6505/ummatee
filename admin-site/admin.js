@@ -424,9 +424,9 @@ function closeCaseDlg(c){const d=document.createElement('dialog');d.className='c
     const ch=e.target.closest('[data-r]');if(ch){const v=ta.value.trim();ta.value=v?v+(/[\s·,]$/.test(v)?'':' · ')+ch.dataset.r:ch.dataset.r;ta.focus();return}
     const b=e.target.closest('[data-cc]');if(!b)return;if(b.dataset.cc==='no'){d.close();return}
     b.disabled=true;const note=ta.value.trim(),prev={status:c.status,teamDoneAt:c.teamDoneAt,closeNote:c.closeNote};
-    try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:'done',volunteer:String(c.volunteer||'').replace(/^'/,''),closeNote:note,...(c.teamDoneAt?{helped:false}:{})});
+    try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:'done',volunteer:String(c.volunteer||'').replace(/^'/,''),closeNote:note||'ปิดเคสโดยศูนย์',...(c.teamDoneAt?{helped:false}:{})});
       if(!r||!r.ok){if(r&&r.error==='not_volunteer'){d.close();showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
-      c.status='done';c.teamDoneAt=null;c.closeNote=note;c.doneAt=Date.now();d.close();if(!$('#drawer').hidden)closeDrawer();render();toast(`ปิดเคส #${c.hmId||c.id} แล้ว`,true)}
+      c.status='done';c.teamDoneAt=null;c.closeNote=note||'ปิดเคสโดยศูนย์';c.doneAt=Date.now();d.close();if(!$('#drawer').hidden)closeDrawer();render();toast(`ปิดเคส #${c.hmId||c.id} แล้ว`,true)}
     catch(err){Object.assign(c,prev);b.disabled=false;toast('ปิดเคสไม่สำเร็จ ลองใหม่อีกครั้ง')}})}
 async function assignAct(c,act,btn){
   if(act==='closecase'){closeCaseDlg(c);return}

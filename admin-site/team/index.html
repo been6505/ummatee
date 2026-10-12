@@ -538,7 +538,16 @@ function gmUI(){const vw=S.me&&S.me.team&&S.me.team.view;if(vw){const u=location
 const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
 setInterval(function smsc(){if(S.tk&&S._smscFor!==S.tk&&window.crypto&&crypto.subtle){const t=S.tk;S._smscFor=t;crypto.subtle.digest('SHA-256',new TextEncoder().encode(t+':sms')).then(d=>{if(S.tk===t)S.smsc=[...new Uint8Array(d)].slice(0,6).map(b=>b.toString(16).padStart(2,'0')).join('')}).catch(()=>{})}return smsc}(),5000);
 const NT={started:false,at:0,err:'',q:0};setInterval(()=>{if(NATIVE&&NT.err==='offline')locUI()},30000);
-async function nativeTrack(){if(!NATIVE||!window.NTRK)return;
+function locConsent(){let ok=false;try{ok=localStorage.getItem('uh_loc_ok')==='1'}catch(e){}if(ok)return Promise.resolve(true);
+  if(locConsent.p)return locConsent.p;
+  return locConsent.p=new Promise(res=>{sheet(`<h2>Help Me ทีม ใช้ตำแหน่งของเครื่องนี้</h2>
+    <p>แอปนี้เก็บและส่ง<b>ตำแหน่งของเครื่อง</b> (พร้อมระดับแบตเตอรี่และสัญญาณ) ให้ศูนย์ประสานงาน Help Me <b>แม้ปิดแอปหรือล็อกหน้าจอ</b> ตลอดเวลาที่เปิดการติดตาม</p>
+    <p>เพื่อให้ศูนย์ส่งงานให้ทีมที่อยู่ใกล้ที่สุด เห็นเส้นทาง และช่วยเหลือทีมได้ทันทีเมื่อเกิดเหตุ (SOS) · ข้อมูลใช้เฉพาะงานช่วยเหลือ ไม่ขายหรือแชร์เพื่อโฆษณา · <a href="../privacy/" target="_blank" rel="noopener">นโยบายความเป็นส่วนตัว</a></p>
+    <p>ขั้นต่อไป ให้เลือก <b>"อนุญาตตลอดเวลา"</b> · หยุดได้ทุกเมื่อจากปุ่มตำแหน่งในแอป หรือการตั้งค่าเครื่อง</p>
+    <button type="button" class="btn blue" id="lc-ok">ยอมรับและเปิดตำแหน่ง</button><button type="button" class="btn" id="lc-no" data-x>ไม่ตอนนี้</button>`);
+    $('#lc-ok').onclick=()=>{try{localStorage.setItem('uh_loc_ok','1')}catch(e){}locConsent.p=null;closeSheet();res(true)};
+    const no=()=>{locConsent.p=null;closeSheet();res(false)};$('#lc-no').onclick=no;$('#layer').onclick=e=>{if(e.target.closest('[data-x]'))no()}})}
+async function nativeTrack(){if(!NATIVE||!window.NTRK)return;if(!(await locConsent()))return;
 const host=/(^|\.)helpme4u\.com$/.test(location.hostname)?'https://central.helpme4u.com':location.origin;
   const hq=String(S.me&&S.me.hqPhone||''),cfg=S.tk?{tk:S.tk,host,hq,team:S.team}:(S.key&&S.team?{key:S.key,team:S.team,name:S.name,host,hq}:null);if(!cfg)return;
   await NTRK.start(cfg,st=>{NT.at=st.at||NT.at;NT.err=st.err||'';NT.q=st.queued||0;autoTrackUI();locUI()});NT.started=true}

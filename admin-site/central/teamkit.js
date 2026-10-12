@@ -3,6 +3,7 @@ const TK={
   NET:{WIFI:'Wi-Fi',wifi:'Wi-Fi',cellular:'มือถือ','4g':'4G','3g':'3G','2g':'2G','slow-2g':'2G',OFFLINE:'ไม่มีเน็ต'},
   dir:h=>h==null?'':['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'][Math.round(((+h%360)+360)%360/45)%8],
   mode(l){if(!l)return null;const now=Date.now(),m=t=>{const x=Math.max(0,Math.round((now-t)/60e3));return x<1?'เมื่อสักครู่':x<60?x+' นาทีก่อน':Math.round(x/60)+' ชม.ก่อน'};
+    if(l.appAt&&now-l.appAt<30*60e3&&now-Number(l.updatedAt)>3*60e3)return {k:'off',t:'แอปไม่ได้ส่งมา '+m(l.updatedAt).replace('ก่อน','')+' · อาจไม่มีสัญญาณ/แอปถูกปิด',tip:'แอปส่งทุก 20 วิ ถ้าเงียบเกิน 3 นาทีแปลว่ามีปัญหา · ลองโทรหาทีม'};
     if(l.appAt&&now-l.appAt<30*60e3)return {k:'bg',t:'แอปส่งเบื้องหลัง · ล็อกจอได้',tip:'ส่งตำแหน่งต่อเนื่องแม้ปิดหน้าจอ'};
     if(l.hidAt&&Number(l.hidAt)>=Number(l.updatedAt)-15e3)return {k:'off',t:'ปิดจอ/สลับแอป '+m(l.hidAt)+' · ตำแหน่งหยุดอัปเดต',tip:'ใช้ผ่านเบราว์เซอร์ จะส่งต่อเมื่อเปิดหน้าแอปทีมอีกครั้ง'};
     return {k:'web',t:'เบราว์เซอร์ · ต้องเปิดจอค้างไว้',tip:'ถ้าปิดจอจะหยุดส่ง · แนะนำให้ทีมติดตั้งแอป Help Me ทีม'}},

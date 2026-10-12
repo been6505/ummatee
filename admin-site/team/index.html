@@ -476,17 +476,35 @@ if(S.tk){st.set('uh_tm_tk',S.tk)}else{S.tk=st.get('uh_tm_tk');S.key=st.get('uh_v
 S.name=st.get('uh_chat_name');
 const auth=()=>S.tk?{tk:S.tk}:{key:S.key,team:S.team};
 const avUrl=t=>t&&t.avatarAt?'/api?'+new URLSearchParams({action:'team_avatar',...auth(),v:t.avatarAt}):'';
-const api=async p=>(await fetch('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'})).json();
-const post=async b=>(await fetch('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})})).json();
-const OB={k:'uh_tm_outbox',get(){try{return JSON.parse(localStorage.getItem(this.k)||'[]')}catch(e){return []}},set(a){try{localStorage.setItem(this.k,JSON.stringify(a.slice(-200)))}catch(e){}},busy:false};
-const isNet=e=>!e||e.name==='TypeError'||/fetch|network|load failed/i.test(String(e.message||e));
-async function opost(b,label){try{const r=await post(b);return r}catch(e){if(!isNet(e))throw e;const a=OB.get();a.push({b,label:label||b.action,at:Date.now()});OB.set(a);obUI();return {ok:true,queued:true}}}
-async function obFlush(){if(OB.busy)return;let a=OB.get();if(!a.length){obUI();return}OB.busy=true;
-  try{while(a.length){const it=a[0],b={...it.b};if(b.action==='chat_send'&&Date.now()-it.at>120000)b.text=(b.text||'')+` (ส่งตอนไม่มีเน็ต ${hhmm(it.at)})`;
+// สัญญาณอ่อนในพื้นที่: ทุกคำขอมีเวลาจำกัด (เดิมค้างได้หลายนาที) และ server ล่ม/ตอบไม่ใช่ JSON ถือเป็น "เน็ตมีปัญหา" → เข้าคิวส่งใหม่
+const netErr=m=>Object.assign(new Error(m),{net:true});
+// แข่งกับนาฬิกาด้วย — CapacitorHttp (แอป native) อาจไม่สน AbortSignal ถ้าพึ่ง abort อย่างเดียว คำขอจะค้างตลอดไป
+async function req(url,opt,ms){const c=new AbortController();let t;const late=new Promise((_,rej)=>{t=setTimeout(()=>{try{c.abort()}catch(e){}rej(netErr('timeout'))},ms)});
+  try{const r=await Promise.race([fetch(url,{...opt,signal:c.signal}),late]);if(r.status>=500||r.status===429)throw netErr('http_'+r.status);try{return await Promise.race([r.json(),late])}catch(e){throw e&&e.net?e:netErr('bad_json')}}
+  catch(e){if(e&&(e.net||e.name==='AbortError'))throw netErr(e.message||'timeout');throw e}finally{clearTimeout(t);late.catch(()=>{})}}
+const api=p=>req('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'},20000);
+const post=b=>req('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})},b&&b.img?90000:25000);
+// คิวรอส่ง (outbox): เก็บใน IndexedDB — รูปส่งมอบหลายรูปเกิน localStorage (~5MB) เดิมหายเงียบ ๆ ทั้งที่จอบอกว่ารอส่ง
+// ถือสำเนาไว้ในหน่วยความจำ (OB.a) ให้ get() ยังเป็นแบบ sync เหมือนเดิม; เขียนลง IDB ทุกครั้งที่เปลี่ยน, ใช้ localStorage เป็นทางสำรอง
+const OB={k:'uh_tm_outbox',a:[],busy:false,
+  db:new Promise(res=>{try{const r=indexedDB.open('hm-team',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}}),
+  async idb(mode,f){const d=await this.db;if(!d)throw new Error('no_idb');return new Promise((res,rej)=>{const t=d.transaction('kv',mode),q=f(t.objectStore('kv'));t.oncomplete=()=>res(q&&q.result);t.onerror=t.onabort=()=>rej(t.error||new Error('idb'))})},
+  get(){return this.a.slice()},
+  set(a){this.a=a.slice(-200);return this.save()},
+  async save(){const a=this.a;try{await this.idb('readwrite',s=>s.put(a,'outbox'));try{localStorage.removeItem(this.k)}catch(e){}return true}
+    catch(e){try{localStorage.setItem(this.k,JSON.stringify(a));return true}catch(e2){toast('⚠️ เครื่องเต็ม · บันทึกรายการรอส่งไม่ได้ ลบรูป/แอปอื่นแล้วลองใหม่');return false}}},
+  ready:null};
+OB.ready=(async()=>{let leg=[];try{leg=JSON.parse(localStorage.getItem(OB.k)||'[]')}catch(e){}let s=[];try{s=await OB.idb('readonly',st=>st.get('outbox'))||[]}catch(e){}
+  OB.a=[...s,...leg].sort((x,y)=>x.at-y.at);if(leg.length)await OB.save();try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}obUI()})();
+const isNet=e=>!e||e.net||e.name==='TypeError'||e.name==='AbortError'||/fetch|network|load failed|timeout/i.test(String(e.message||e));
+async function opost(b,label){try{const r=await post(b);return r}catch(e){if(!isNet(e))throw e;await OB.ready;const a=OB.get();a.push({b,label:label||b.action,at:Date.now()});const saved=await OB.set(a);obUI();return saved?{ok:true,queued:true}:{ok:false,error:'storage_full'}}}
+async function obFlush(){await OB.ready;if(OB.busy)return;if(!OB.a.length){obUI();return}OB.busy=true;let sent=0;
+  try{for(let it;(it=OB.a[0]);){const b={...it.b};if(b.action==='chat_send'&&Date.now()-it.at>120000)b.text=(b.text||'')+` (ส่งตอนไม่มีเน็ต ${hhmm(it.at)})`;
       let r;try{r=await post(b)}catch(e){break}
-      a.shift();OB.set(a);if(!r.ok&&r.error==='bad_link'){screen('#bad');break}}}
+      // ลบเฉพาะรายการที่ส่งแล้ว — รายการที่เพิ่งเข้าคิวระหว่างส่งจะไม่ถูกเขียนทับ
+      OB.a=OB.a.filter(x=>x!==it);await OB.save();sent++;if(!r.ok&&r.error==='bad_link'){screen('#bad');break}}}
   finally{OB.busy=false;obUI()}
-  if(!OB.get().length&&a.length===0){refresh();pollChat()}}
+  if(sent&&!OB.a.length){refresh();pollChat()}}
 function obUI(){const n=OB.get().length,el=$('#obar');if(!el)return;el.hidden=!n&&navigator.onLine!==false&&!S.offline;
   el.textContent=n?`📴 ไม่มีเน็ต · รอส่ง ${n} รายการ จะส่งเองเมื่อมีสัญญาณ`:(S.offline?`📴 ไม่มีเน็ต · แสดงข้อมูลล่าสุดเมื่อ ${S.me&&S.me.now?hhmm(S.me.now):'-'}`:'')}
 setInterval(()=>{obFlush()},15000);addEventListener('online',()=>{obFlush();refresh()});addEventListener('offline',obUI);

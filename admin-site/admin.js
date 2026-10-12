@@ -36,9 +36,18 @@ $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=
     else $('#login-err').textContent='รหัสไม่ถูกต้อง';
   }catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'}
   finally{$('#login-go').disabled=false}});
-$('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';A.cases=[];closeDrawer();$('#list').replaceChildren();showLogin('ออกจากระบบแล้ว')});
+$('#logout').addEventListener('click',()=>{cacheClear();store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';A.cases=[];closeDrawer();$('#list').replaceChildren();showLogin('ออกจากระบบแล้ว')});
 
-function setCases(r){A.own=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.loaded=Date.now();mergeCases()}
+// แคชข้อมูลเคสล่าสุดไว้ในเครื่อง: เปิดแอปแล้วแสดงทันที แล้วค่อยดึงของใหม่ (ล้างเมื่อออกจากระบบ)
+const CK='uh_case_cache1',ckOf=k=>{let h=0;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))|0;return String(h)};
+function cacheStore(){try{return localStorage.getItem('uh_vol_key')?localStorage:sessionStorage}catch(e){return null}}
+function cacheSave(part,cases){const st=cacheStore();if(!st||!A.key)return;try{let c={};try{c=JSON.parse(st.getItem(CK)||'{}')}catch(e){}if(c.k!==ckOf(A.key))c={k:ckOf(A.key)};c[part]=cases;c.at=Date.now();st.setItem(CK,JSON.stringify(c))}catch(e){try{st.removeItem(CK)}catch(e2){}}}
+function cacheClear(){try{localStorage.removeItem(CK);sessionStorage.removeItem(CK)}catch(e){}}
+function cacheBoot(){const st=cacheStore();if(!st||!A.key)return false;try{const c=JSON.parse(st.getItem(CK)||'null');if(!c||c.k!==ckOf(A.key)||!Array.isArray(c.own)||Date.now()-c.at>3*864e5)return false;
+  A.own=c.own.map(normCase);if(Array.isArray(c.hm))A.hm=c.hm.map(hmCase);mergeCases();return true}catch(e){return false}}
+const normCase=c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)});
+const hmCase=c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)});
+function setCases(r){cacheSave('own',r.cases||[]);A.own=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.loaded=Date.now();mergeCases()}
 const HM_URL=id=>'https://helpme-th.pages.dev/?case='+encodeURIComponent(id);
 const HM_LINK=/helpme-th\.pages\.dev\/\?case=([\w-]+)/;
 const isHM=id=>String(id).startsWith('hm-');
@@ -49,18 +58,18 @@ function openFromHash(){const h=decodeURIComponent(location.hash.slice(1));
   if(h&&findCase(h)){history.replaceState(null,'',location.pathname);const fl=(()=>{try{return !!document.referrer&&new URL(document.referrer).origin===location.origin&&new URL(document.referrer).pathname!==location.pathname&&history.length>1}catch(e){return false}})();openDrawer(h,fl)}}
 async function loadHM(){if(!A.key)return;
   try{const r=await api({action:'helpme_cases',key:A.key});
-    if(r&&r.ok&&Array.isArray(r.cases)){A.hm=r.cases.map(c=>({...c,hm:true,hmId:c.id,id:'hm-'+c.id,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean)}));A.hmAt=Date.now();mergeCases();render();openFromHash()}
+    if(r&&r.ok&&Array.isArray(r.cases)){cacheSave('hm',r.cases);A.hm=r.cases.map(hmCase);A.hmAt=Date.now();mergeCases();render();openFromHash()}
   }catch(e){}}
 function mergeCases(){const own=A.own||[];if(!A.hm){A.cases=own;return}
   const hmIds=new Set(A.hm.map(h=>h.hmId)),hmOf=c=>hmIds.has(String(c.id))?String(c.id):((String(c.notes||'').match(HM_LINK)||[])[1]||'');
   const link=new Map();own.forEach(c=>{const h=hmOf(c);if(h&&hmIds.has(h))link.set(h,c)});
   A.cases=[...A.hm.map(c=>{const o=link.get(c.hmId);return o?{...c,local:o.id,bags:o.bags,cctv:o.cctv||c.cctv,households:o.households}:c}),...own.filter(c=>!hmIds.has(hmOf(c)))]}
-async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').textContent='กำลังโหลด…';
-  try{const r=await api({action:'list',key:A.key});
+async function load(){if(A.loading||!A.key)return;A.loading=true;$('#sync').textContent='กำลังโหลด…';let hmP=null;
+  try{hmP=loadHM();const r=await api({action:'list',key:A.key});
     if(!r||!r.ok)throw new Error(r&&r.error||'error');
-    if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
-    setCases(r);render();loadHM();
-    openFromHash();
+    if(!r.volunteer){cacheClear();store.set('uh_vol_key','');store.set('uh_vol_ok','');A.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
+    setCases(r);render();
+    openFromHash();await hmP;
   }catch(e){$('#sync').textContent='โหลดไม่สำเร็จ · ลองใหม่'}
   finally{A.loading=false}}
 let pollT=null;
@@ -500,7 +509,7 @@ $('#export').addEventListener('click',()=>{const list=filtered();
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=`umplus-cases-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
   toast(`ส่งออก ${list.length} เคสแล้ว · ไฟล์มีข้อมูลส่วนตัว เก็บให้ปลอดภัย`,true)});
 
-if(A.key){showApp();load().then(()=>{if(A.key){startPolling();loadFlood()}})}else showLogin();
+if(A.key){showApp();if(cacheBoot()){render();$('#sync').textContent='กำลังอัปเดต…'}load().then(()=>{if(A.key){startPolling();(window.requestIdleCallback||setTimeout)(()=>loadFlood(),{timeout:2500})}})}else showLogin();
 
 {const _rd=renderDrawer;renderDrawer=function(){if(typeof CAMLIVE!=='undefined')CAMLIVE.stop($('#drawer'));_rd();camsStart()}}
 function roadCam(c,v){const lat=+c.lat,lng=+c.lng,fresh=k=>k.hls||!k.at||Date.now()/1000-k.at<3*3600;

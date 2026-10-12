@@ -22,7 +22,7 @@ const CHAT=(()=>{
         <form class="chat-form" hidden><input class="chat-in" maxlength="1000" placeholder="พิมพ์ข้อความถึงทีม…" aria-label="ข้อความ" autocomplete="off"><button class="chat-draft" type="button" title="ให้ AI HELP ร่างคำตอบ (แก้ก่อนส่งได้)" hidden>✦ ร่าง</button><button class="chat-send" type="submit" aria-label="ส่ง"><i data-ic="send"></i></button></form>
       </section>`;
     document.body.append(root);
-    const al=document.createElement('div');al.className='alert-stack';al.setAttribute('aria-live','assertive');document.body.append(al);S.al=al;
+    const al=document.createElement('div');al.className='alert-stack';al.setAttribute('aria-live','assertive');document.body.append(al);S.al=al;try{new ResizeObserver(()=>document.documentElement.style.setProperty('--al-h',al.offsetHeight?al.offsetHeight+8+'px':'0px')).observe(al)}catch(e){}
     al.onclick=e=>{const a=e.target.closest('[data-al]');if(!a)return;const k=a.dataset.al,v=a.dataset.v;
       if(k==='chat'){openTeam(v);return}
       if(k==='answer'){e.preventDefault();const c=S.alerts.calls.find(x=>String(x.n)===v);setSeen(Math.max(seenCall(),+v));drawAlerts();if(c)callPane(c);return}

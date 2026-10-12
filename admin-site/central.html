@@ -10,17 +10,17 @@
 <title>CENTRAL · Helpme+ ช่วยเหลือฉุกเฉิน</title>
 <link rel="icon" href="./assets/hm-icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="./admin.css?v=18">
 <link rel="stylesheet" href="./central/theme.css?v=2">
 <link rel="stylesheet" href="./central/helpme-skin.css?v=35">
-<link rel="stylesheet" href="./central/hm-ui.css?v=175">
-<script src="./central/icons.js?v=23"></script>
+<link rel="stylesheet" href="./central/hm-ui.css?v=177">
+<script src="./central/icons.js?v=23" defer></script>
 </head>
 <body>
 <section id="login" class="login" hidden>
   <form id="login-form" class="login-card" autocomplete="off">
-    <img src="./assets/helpme4u-logo.png" alt="Help Me 4U" width="207" height="33">
+    <img src="./assets/helpme4u-logo.webp" alt="Help Me 4U" width="207" height="33">
     <h1>HELP ME CENTRAL</h1>
     <p>สำหรับทีมอาสาและแอดมิน ใส่รหัสทีมเพื่อดูและจัดการเคส</p>
     <label class="fld"><span>รหัสทีม</span><span class="pw-wrap"><input id="login-key" type="password" required autocomplete="current-password"><button type="button" class="pw-eye" data-pw-toggle aria-label="แสดงรหัส" aria-pressed="false" title="แสดงรหัส"><i data-ic="eye"></i></button></span></label>
@@ -33,7 +33,7 @@
 
 <div id="app" class="app" hidden>
   <header class="top">
-    <a class="brand" href="./central.html"><img class="brand-logo" src="./assets/helpme4u-logo.png" alt="Help Me 4U" width="151" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
+    <a class="brand" href="./central.html"><img class="brand-logo" src="./assets/helpme4u-logo.webp" alt="Help Me 4U" width="151" height="24"><span><i class="brand-plus" aria-hidden="true">+</i> <b>CENTRAL</b></span></a>
     <nav class="tabs" aria-label="เมนู CENTRAL"><a href="./central/dashboard/">แดชบอร์ด</a><a href="./central.html" aria-current="page">จัดการเคส</a><a href="./central/warroom/">War Room</a><a href="./central/board/">บอร์ดงาน</a><a href="./central/teams/">จัดทีม</a><a href="./central/stock/">สต็อก</a><a href="./central/broadcast/">ประกาศ</a><a href="./central/settings/">ตั้งค่า</a></nav>
     <div class="top-r">
       <span class="sync" id="sync"></span>
@@ -87,26 +87,26 @@
 <aside class="drawer" id="drawer" aria-label="รายละเอียดเคส" hidden></aside>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
-<script src="./central/verify.js?v=17"></script>
-<script src="./central/covered.js?v=9"></script>
-<script src="./admin.js?v=101"></script>
-<script src="./central/ofm.js?v=1"></script>
-<script src="./central/camlive.js?v=8"></script>
-<script src="./central/mapx.js?v=15"></script>
-<script src="./central/mapfs.js?v=1"></script>
-<script src="./central/routeshim.js?v=1"></script>
-<script src="./central/teams/route.js?v=5"></script>
-<script src="./central/casekanban.js?v=14"></script>
-<script src="./central/casedays.js?v=3"></script>
-<script src="./central/leadsview.js?v=7"></script>
-<script src="./central/theme-toggle.js?v=9"></script>
-<script src="./central/livestream.js?v=4"></script>
-<script src="./central/ptt.js?v=9"></script>
-<script src="./central/chat.js?v=24"></script>
-<script src="./central/feedback.js?v=1"></script>
-<script src="./central/localai.js?v=7"></script>
-<script src="./central/hermes.js?v=17"></script>
-<script src="./central/kbfit.js?v=2"></script>
+<script src="./central/verify.js?v=17" defer></script>
+<script src="./central/covered.js?v=9" defer></script>
+<script src="./admin.js?v=102" defer></script>
+<script src="./central/ofm.js?v=1" defer></script>
+<script src="./central/camlive.js?v=8" defer></script>
+<script src="./central/mapx.js?v=15" defer></script>
+<script src="./central/mapfs.js?v=1" defer></script>
+<script src="./central/routeshim.js?v=1" defer></script>
+<script src="./central/teams/route.js?v=5" defer></script>
+<script src="./central/casekanban.js?v=14" defer></script>
+<script src="./central/casedays.js?v=3" defer></script>
+<script src="./central/leadsview.js?v=7" defer></script>
+<script src="./central/theme-toggle.js?v=9" defer></script>
+<script src="./central/livestream.js?v=4" defer></script>
+<script src="./central/ptt.js?v=9" defer></script>
+<script src="./central/chat.js?v=25" defer></script>
+<script src="./central/feedback.js?v=1" defer></script>
+<script src="./central/localai.js?v=7" defer></script>
+<script src="./central/hermes.js?v=17" defer></script>
+<script src="./central/kbfit.js?v=2" defer></script>
 <script>document.addEventListener("click",e=>{const b=e.target.closest("[data-pw-toggle]");if(!b)return;const i=b.parentElement.querySelector("input");const show=i.type==="password";i.type=show?"text":"password";b.setAttribute("aria-pressed",String(show));b.setAttribute("aria-label",show?"ซ่อนรหัส":"แสดงรหัส");b.title=b.getAttribute("aria-label");b.innerHTML=ic(show?"eyeoff":"eye");i.focus()});</script>
 <script src="./bc.js?v=2" data-mode="staff" defer></script>
 </body>

@@ -24,20 +24,31 @@ function showApp(){$('#login').hidden=true;$('#app').hidden=false}
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const k=$('#login-key').value.trim();if(!k)return;$('#login-go').disabled=true;$('#login-err').textContent='กำลังตรวจรหัส…';
   try{const r=await api({action:'list',key:k});if(r&&r.ok&&r.volunteer){D.key=k;const rem=$('#login-remember').checked;store.set('uh_vol_key',k,rem);store.set('uh_vol_ok','1',rem);$('#login-key').value='';setCases(r);showApp();load();poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}else $('#login-err').textContent='รหัสไม่ถูกต้อง'}
   catch(err){$('#login-err').textContent='เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'}finally{$('#login-go').disabled=false}});
-$('#logout').addEventListener('click',()=>{store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';D.cases=[];showLogin('ออกจากระบบแล้ว')});
+$('#logout').addEventListener('click',()=>{try{localStorage.removeItem(DCK);sessionStorage.removeItem(DCK)}catch(e){}store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';D.cases=[];showLogin('ออกจากระบบแล้ว')});
 
+// แคชในเครื่อง: ใช้ชุดเดียวกับหน้าจัดการเคส (uh_case_cache1) + สถิติ Help Me — เปิดแดชบอร์ดแล้วแสดงทันที
+const DCK='uh_case_cache1',dckOf=k=>{let h=0;for(const ch of String(k))h=(h*31+ch.charCodeAt(0))|0;return String(h)};
+function dcStore(){try{return localStorage.getItem('uh_vol_key')?localStorage:sessionStorage}catch(e){return null}}
+function dcRead(){const st=dcStore();try{const c=st&&JSON.parse(st.getItem(DCK)||'null');return c&&c.k===dckOf(D.key)&&Date.now()-c.at<3*864e5?c:null}catch(e){return null}}
+function dcSave(part,v){const st=dcStore();if(!st||!D.key||!v)return;try{let c={};try{c=JSON.parse(st.getItem(DCK)||'{}')}catch(e){}if(c.k!==dckOf(D.key))c={k:dckOf(D.key)};c[part]=v;c.at=Date.now();st.setItem(DCK,JSON.stringify(c))}catch(e){}}
+function dcBoot(){const c=dcRead();if(!c||!Array.isArray(c.own))return false;try{setCases({cases:c.own});
+  if(Array.isArray(c.hm)){D.hmc=c.hm.map(x=>({...x,needs:Array.isArray(x.needs)?x.needs:String(x.needs||'').split(/\s*,\s*/).filter(Boolean)}));D.hmcDone=true}
+  if(c.hmStats&&c.hmStats.ok)D.hm=c.hmStats;return true}catch(e){return false}}
 function setCases(r){D.cases=(r.cases||[]).map(c=>({...c,needs:Array.isArray(c.needs)?c.needs:String(c.needs||'').split(/\s*,\s*/).filter(Boolean),createdAt:Number(c.createdAt)||0,updatedAt:Number(c.updatedAt)||0}));D.loaded=Date.now()}
 function status(msg,retry){const el=$('#status');el.hidden=!msg;el.textContent=msg||'';if(retry){const b=document.createElement('button');b.className='linkish';b.textContent=' ลองใหม่';b.onclick=load;el.append(b)}}
 async function load(){if(D.loading||!D.key)return;D.loading=true;$('#main').classList.add('loading');$('#sync').textContent='กำลังโหลด…';if(!D.loaded)status('กำลังโหลดข้อมูลเคส… (อาจใช้เวลาสักครู่)');
   const later=(a,f)=>api(a).then(x=>{f(x);if(D.loaded)render()}).catch(()=>{});
   later({action:'stock',key:D.key},sk=>{D.stock=sk&&sk.ok?sk:D.stock});later({action:'teams',key:D.key},tl=>{if(tl&&tl.ok)D.live=tl.teams||[]});
+  // ยิง list / helpme_stats / helpme_cases พร้อมกัน (เดิมรอ list เสร็จก่อนค่อยเริ่มอีกสองตัว)
+  const hsP=api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;dcSave('hmStats',D.hm);if(D.loaded)render()}).catch(()=>{});
+  api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null;D.hmSkip=h&&h.ok&&h.skipped!=null?h.skipped:null}).catch(()=>{}).finally(()=>{D.hmcDone=true;if(D.loaded)render()});
   try{const r=await api({action:'list',key:D.key});if(!r||!r.ok)throw 0;
-    api({action:'helpme_stats',key:D.key}).then(h=>{D.hm=h&&h.ok?h:null;render()}).catch(()=>{});
-    api({action:'helpme_cases',key:D.key}).then(h=>{D.hmc=h&&h.ok?h.cases.map(c=>({...c,needs:c.needs||[]})):null;D.hmSkip=h&&h.ok&&h.skipped!=null?h.skipped:null}).catch(()=>{}).finally(()=>{D.hmcDone=true;render()});
     if(!D.rosterN)api({action:'roster',key:D.key}).then(r=>{if(r&&r.ok){D.rosterN=(r.roster||[]).length;summary()}}).catch(()=>{});
     D.live=D.live||[];
     if(!r.volunteer){store.set('uh_vol_key','');store.set('uh_vol_ok','');D.key='';showLogin('รหัสหมดอายุหรือถูกเปลี่ยน กรุณาเข้าสู่ระบบใหม่');return}
-    setCases(r);status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
+    setCases(r);dcSave('own',r.cases||[]);D.retry=0;status('');render()}catch(e){$('#sync').textContent='โหลดไม่สำเร็จ';
+    // ลองใหม่อัตโนมัติ 3 ครั้ง (2s/4s/8s) ก่อนขึ้นข้อความให้กดเอง — มีข้อมูลในเครื่องอยู่แล้วก็แสดงต่อไป
+    if((D.retry=(D.retry||0)+1)<=3){status(D.loaded?'':'กำลังลองเชื่อมต่อใหม่…');setTimeout(load,1000*2**D.retry)}else status('โหลดข้อมูลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต',true)}finally{D.loading=false;$('#main').classList.remove('loading')}}
 let pollT;function poll(){clearInterval(pollT);pollT=setInterval(async()=>{if(document.hidden||!D.key||(typeof LIVE!=='undefined'&&LIVE.ok()))return;try{const r=await api({action:'rev'});if(r&&r.ok&&r.rev!=null){if(D.rev!==null&&r.rev!==D.rev){D.rev=r.rev;load()}else D.rev=r.rev}}catch(e){}if(Date.now()-D.loaded>120000)load()},20000)}
 $('#refresh').addEventListener('click',load);
 setInterval(()=>{if(D.key&&!document.hidden&&(!(typeof LIVE!=='undefined'&&LIVE.ok())||Date.now()-D.loaded>600000))load()},60000);document.addEventListener('visibilitychange',()=>{if(D.key&&!document.hidden)load()});
@@ -306,7 +317,7 @@ function renderStock(){
     const a=el('a',null,'ไปที่หน้าสต็อก →');a.href='../stock/';const p=el('p');p.style.margin='10px 0 0';p.append(a);t.append(tb);$('#restock').replaceChildren(t,p)}
 }
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(D.loaded)render()},200)});
-if(D.key){showApp();load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}})}else showLogin();
+if(D.key){showApp();try{if(dcBoot()){D.live=D.live||[];render()}}catch(e){}load().then(()=>{if(D.key){poll();VERIFY.load().then(render,render);if(typeof COVERED!=='undefined')COVERED.load(API_URL,D.key).then(render,render)}})}else showLogin();
 
 const ICON_FULL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',ICON_CLOSE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
 (()=>{const card=document.querySelector('.mapcard'),btn=$('#fs-btn'),lay=$('#fs-lay');if(!card||!btn)return;

@@ -1225,3 +1225,21 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
   .d-head .d-hbtns .x{flex:none;margin-left:auto}
   .d-head h2{overflow-wrap:anywhere}
 }
+/* มือถือ: เว้นที่ให้แถบแจ้งเตือน (SOS/ขาดการติดต่อ) ไม่ให้ทับปุ่มสลับมุมมองใต้หัว */
+@media (max-width:760px){header.top{margin-bottom:var(--al-h,0px)}}
+/* มือถือ: สถิติหน้าเคส 9 ช่อง → 2 แถวเลื่อนแนวนอน (เดิม 3×3 กินจอ ~270px) */
+@media (max-width:760px){
+  #stats.stats:has(>[data-sf="crit"]){display:grid!important;grid-template-columns:none!important;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:minmax(128px,38%);overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;gap:6px!important;scroll-snap-type:x proximity}
+  #stats.stats:has(>[data-sf="crit"])::-webkit-scrollbar{display:none}
+  #stats.stats:has(>[data-sf="crit"]) .stat{padding:8px 11px!important;border-radius:14px!important;min-height:0!important;scroll-snap-align:start}
+  #stats.stats:has(>[data-sf="crit"]) .stat b{font-size:19px!important;line-height:1.15!important}
+  #stats.stats:has(>[data-sf="crit"]) .stat span{font-size:11.5px!important;line-height:1.3!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+}
+/* มือถือ: แดชบอร์ด ปุ่มช่วงเวลา → แถบ 4 ช่องเท่ากันแถวเดียว (เดิมตัดบรรทัด "ทั้งหมด" หล่นลงไป) */
+@media (max-width:760px){
+  .filters[role=group]:has(>[data-range]){display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px!important;padding:4px!important;border-radius:20px!important;margin-bottom:12px}
+  .filters[role=group]:has(>[data-range]) .f-lab{display:none}
+  .filters[role=group]:has(>[data-range]) button{min-height:40px!important;padding:0 4px!important;font-size:14.5px!important;white-space:nowrap;box-shadow:none!important;background:transparent}
+  .filters[role=group]:has(>[data-range]) .f-note{grid-column:1/-1;text-align:center;font-size:12.5px;color:var(--ink-2,#5B6386);padding:2px 0 4px}
+  .filters[role=group]:has(>[data-range]) .f-note:empty{display:none}
+}

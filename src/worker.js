@@ -87,7 +87,7 @@ let ready = null;
 const ALTERS = [['stock', 'expiry TEXT'], ['stock', 'location TEXT'], ['stock_log', 'team TEXT'], ['stock', 'kit TEXT'], ...[['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'hidAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'closeNote TEXT'], ['cases', 'teamAckAt INTEGER'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]];
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'closeNote TEXT'], ['cases', 'teamAckAt INTEGER'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT'], ['cases', 'hardAsk TEXT'], ['cases', 'teamHard TEXT']]];
 // เดิม init ยิง ~73 คำสั่ง D1 ทีละคำสั่งทุกครั้งที่ isolate ใหม่เริ่ม (cold start ~6–25 วินาที เมื่อชนกับ hm_sync)
 // ตอนนี้: ถ้า schema_ver ใน meta ตรงกับลายนิ้วมือของ SCHEMA+ALTERS ปัจจุบัน → อ่าน 1 ครั้งแล้วจบ
 const SCHEMA_VER = (() => { let h = 7; for (const ch of JSON.stringify([SCHEMA, ALTERS, 'roster_token'])) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return 'v1-' + h.toString(36); })();
@@ -157,6 +157,14 @@ async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new Text
 const aiText = out => { if (!out) return ''; if (typeof out.response === 'string') return out.response; if (out.response && typeof out.response === 'object') return JSON.stringify(out.response); const m = out.choices && out.choices[0] && out.choices[0].message; return m && typeof m.content === 'string' ? m.content : ''; };
 const noPin = r => r.lat == null || r.lat === '' || !Number(r.lat);
 const INTAKE_KEYS = { name: 80, phone: 30, car: 300, handoff: 300, water: 60, risks: 400, latest: 20, items: 600 };
+// ความลำบากของครัวเรือน: คำตอบจากศูนย์ที่โทรถาม (hardAsk) + สิ่งที่ทีมยืนยันหน้างาน (teamHard) — รับเฉพาะค่าที่กำหนด
+const HARD_ASK = { food: ['0', '1-2', '3+'], meds: ['out', 'ok', 'none'], house: ['ok', 'damaged', 'gone'], aid: ['none', 'some'] };
+const HARD_VUL = ['bedridden', 'elderly', 'child', 'infant', 'pregnant', 'disabled', 'none'];
+const TEAM_HARD = { nofood: 'ไม่มีอาหาร', nowater: 'ไม่มีน้ำดื่ม', bedridden: 'ผู้ป่วยติดเตียง', meds: 'ต้องการยาด่วน', infant: 'มีทารก/เด็กเล็ก', elderly: 'ผู้สูงอายุ', disabled: 'ผู้พิการ', pregnant: 'หญิงตั้งครรภ์', house: 'บ้านอยู่ไม่ได้', alone: 'ไม่มีคนดูแล', nodoc: 'ไม่มีบัตร/สิทธิ' };
+function cleanHardAsk(x) { const o = {}; if (!x || typeof x !== 'object') return o;
+  for (const [k, vs] of Object.entries(HARD_ASK)) if (vs.includes(String(x[k]))) o[k] = String(x[k]);
+  if (Array.isArray(x.vul)) o.vul = [...new Set(x.vul.map(String).filter(v => HARD_VUL.includes(v)))]; return o; }
+const parseJ = v => { if (!v) return null; try { const o = JSON.parse(v); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } };
 function parseIntake(v) { if (!v) return null; try { const o = JSON.parse(v); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
 function cleanIntake(x) { const o = {}; if (!x || typeof x !== 'object') return o; for (const [k, m] of Object.entries(INTAKE_KEYS)) { const v = String(x[k] == null ? '' : x[k]).replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').trim().slice(0, m); if (v) o[k] = v; } return o; }
 function outCase(r, full) {
@@ -164,9 +172,9 @@ function outCase(r, full) {
     people: r.people, address: r.address || '', lat: r.lat == null ? '' : r.lat, lng: r.lng == null ? '' : r.lng, level: r.level || '',
     needs: r.needs ? String(r.needs).split(/\s*,\s*/).filter(Boolean) : [], vulnerable: r.vulnerable ? String(r.vulnerable).split(/\s*,\s*/).filter(Boolean) : [],
     notes: r.notes || '', volunteer: r.volunteer || '', updatedAt: r.updatedAt, households: r.households == null ? '' : r.households,
-    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', closeNote: r.closeNote || '', teamDoneAt: r.teamDoneAt || hmHelpedAt(r), teamAckAt: r.teamAckAt || null, teamNote: r.teamNote || '', teamMemo: r.teamMemo || '', teamMemoAt: r.teamMemoAt || null, teamArrivedAt: r.teamArrivedAt || null, teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake) };
+    bags: r.bags == null ? '' : r.bags, cctv: r.cctv || '', pickedAt: r.pickedAt || null, doneAt: r.doneAt || null, dupOf: r.dupOf || '', hqNote: r.hqNote || '', closeNote: r.closeNote || '', teamDoneAt: r.teamDoneAt || hmHelpedAt(r), teamAckAt: r.teamAckAt || null, teamNote: r.teamNote || '', teamMemo: r.teamMemo || '', teamMemoAt: r.teamMemoAt || null, teamArrivedAt: r.teamArrivedAt || null, teamIssue: r.teamIssue || '', teamIssueAt: r.teamIssueAt || null, sevSet: r.sevSet || null, sevBy: r.sevBy || '', intake: parseIntake(r.intake), hardAsk: parseJ(r.hardAsk), teamHard: parseJ(r.teamHard) };
   if (noPin(r) && r.glat != null) { o.lat = r.glat; o.lng = r.glng; o.pinCheck = { status: 'geocoded', label: r.glabel || '' }; }
-  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; o.hqNote = ''; o.closeNote = ''; o.teamMemo = ''; o.teamMemoAt = null; o.teamNote = ''; o.teamIssue = ''; o.teamIssueAt = null; o.sevBy = ''; o.cctv = '';
+  if (!full) { o.phone = maskPhone(o.phone); o.name = o.name ? o.name.slice(0, 1) + '***' : ''; o.notes = ''; o.intake = null; o.hardAsk = null; o.teamHard = null; o.hqNote = ''; o.closeNote = ''; o.teamMemo = ''; o.teamMemoAt = null; o.teamNote = ''; o.teamIssue = ''; o.teamIssueAt = null; o.sevBy = ''; o.cctv = '';
     o.address = String(o.address || '').replace(/(บ้านเลขที่|เลขที่)?\s*\d+(\/\d+)?/g, '').replace(/\s{2,}/g, ' ').trim(); if (o.lat !== '' && o.lat != null) { o.lat = Math.round(Number(o.lat) * 1000) / 1000; o.lng = Math.round(Number(o.lng) * 1000) / 1000; } }
   return o;
 }
@@ -588,6 +596,7 @@ async function updateCase(db, b) {
   if (b.people !== undefined && b.people !== '') { sets.push('people=?'); vals.push(clampInt(b.people, 1, 9999, 1)); }
   if (b.households !== undefined) { sets.push('households=?'); vals.push(b.households === '' ? null : clampInt(b.households, 1, 9999, 1)); }
   if (b.intake !== undefined && b.intake !== null) { const o = cleanIntake(b.intake); o.by = clean(b.by, 60); o.at = Date.now(); sets.push('intake=?'); vals.push(JSON.stringify(o)); }
+  if (b.hardAsk !== undefined && b.hardAsk !== null) { const o = cleanHardAsk(b.hardAsk); o.by = clean(b.by, 60); o.at = Date.now(); sets.push('hardAsk=?'); vals.push(JSON.stringify(o)); }
   if (b.hqNote !== undefined && b.hqNote !== null) { sets.push('hqNote=?'); vals.push(clean(b.hqNote, 500)); }
   if (b.closeNote !== undefined && b.closeNote !== null) { sets.push('closeNote=?'); vals.push(clean(b.closeNote, 500)); }
   if (!meta) {
@@ -1187,6 +1196,9 @@ const TEAM_POST = {
       await db.prepare('UPDATE cases SET teamAckAt=COALESCE(teamAckAt,?), updatedAt=? WHERE id=?').bind(now, now, c.id).run(); await bumpRev(db);
       await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `รับเคส #${c.id} แล้ว · กำลังไป`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
     if (b.step === 'arrived') { const now = Date.now(); await db.prepare('UPDATE cases SET teamArrivedAt=COALESCE(teamArrivedAt,?), teamAckAt=COALESCE(teamAckAt,?), updatedAt=? WHERE id=?').bind(now, now, now, c.id).run(); await bumpRev(db); await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `ถึงจุดเคส #${c.id} แล้ว`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
+    if (b.step === 'hard') { const tags = [...new Set((Array.isArray(b.tags) ? b.tags : []).map(String).filter(k => TEAM_HARD[k]))], now = Date.now();
+      await db.prepare('UPDATE cases SET teamHard=?, updatedAt=? WHERE id=?').bind(JSON.stringify({ tags, team: t.name, at: now }), now, c.id).run(); await bumpRev(db);
+      await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `สภาพหน้างานเคส #${c.id}: ${tags.length ? tags.map(k => TEAM_HARD[k]).join(' · ') : 'ไม่พบความลำบากพิเศษ'}`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true, tags }; }
     if (b.step === 'issue') { if (c.status !== 'going') return { ok: false, error: 'bad_step' }; const ISS = { blocked: 'เข้าไม่ถึง', notfound: 'ไม่เจอบ้าน', evacuated: 'อพยพไปแล้ว', noanswer: 'ติดต่อผู้แจ้งไม่ได้', need: 'ต้องการกำลังเสริม' }, why = ISS[b.issue] || 'ปัญหาอื่น';
       await db.prepare('UPDATE cases SET teamIssue=?, teamIssueAt=?, updatedAt=? WHERE id=?').bind(why + (b.note ? ' · ' + clean(b.note, 200) : ''), Date.now(), Date.now(), c.id).run(); await bumpRev(db);
       await chatSend(db, { team: t.name, from: 'team', name: b.name, text: `แจ้งปัญหาเคส #${c.id}: ${why}${b.note ? ' · ' + clean(b.note, 200) : ''}`, caseId: c.id, lat: b.lat, lng: b.lng }); return { ok: true }; }
@@ -2776,19 +2788,27 @@ async function syncHelpme(env, db, force) {
 const PHOTO_AI_PROMPT = 'This photo was sent by a person asking for flood rescue in Thailand. Look only at what is visible. ' +
   'Answer ONLY JSON: {"flood":"yes|no|unclear","depth_cm":number|null,"inside_house":true|false,"danger":"high|medium|low","note":"<=12 words, Thai"}. ' +
   'flood=yes only if standing flood water is clearly visible (not a wet road, puddle, river in its banks or reflection). depth_cm = water depth where people/houses are, estimated from legs, doors, cars, steps; null if unsure. ' +
-  'inside_house=true if water is inside a building. danger=high if water is about waist-deep or more, fast current, people/elderly/children/patients stranded, or water near electrical outlets; medium if knee-deep; low otherwise.';
+  'inside_house=true if water is inside a building. danger=high if water is about waist-deep or more, fast current, people/elderly/children/patients stranded, or water near electrical outlets; medium if knee-deep; low otherwise. ' +
+  // ความเป็นอยู่ — ช่วยศูนย์ประเมินความลำบาก (ไม่ระบุตัวตน ไม่เดาเชื้อชาติ/ศาสนา)
+  'ALSO add living conditions, judged only from what is visible: "elderly":true|false (old people visible), "children":true|false (children or babies visible), ' +
+  '"lying":true|false (a person lying on the floor, a mat or a bed who may be sick or bedridden), "disabled":true|false (wheelchair, crutches or visible disability), ' +
+  '"shelter":"normal|damaged|makeshift" (makeshift = tarp, shack or temporary shelter; damaged = broken walls/roof or collapsed), ' +
+  '"hardship":"high|medium|low" (high = clear signs of deprivation: very poor or makeshift housing, people sleeping on bare floor, many dependents in a cramped space, no visible food or supplies), ' +
+  '"living_note":"<=12 words, Thai, about living conditions". Never guess ethnicity, religion or identity.';
 async function photoAiOne(env, id) {
   const r = await fetch(`https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800`, { headers: UA, redirect: 'follow', signal: AbortSignal.timeout(15000) });
   if (!r.ok || !String(r.headers.get('content-type') || '').startsWith('image/')) return null;
   const buf = await r.arrayBuffer();
   if (buf.byteLength < 2000 || buf.byteLength > 3_000_000) return null;
-  const out = await env.AI.run(CCTV_AI_MODEL, { messages: [{ role: 'user', content: [{ type: 'text', text: PHOTO_AI_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64(buf) } }] }], max_tokens: 140, temperature: 0 });
+  const out = await env.AI.run(CCTV_AI_MODEL, { messages: [{ role: 'user', content: [{ type: 'text', text: PHOTO_AI_PROMPT }, { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64(buf) } }] }], max_tokens: 260, temperature: 0 });
   const raw = out && (out.response ?? (out.choices && out.choices[0] && out.choices[0].message && out.choices[0].message.content));
   let j = raw && typeof raw === 'object' ? raw : {};
   if (typeof raw === 'string') { const m = raw.match(/\{[\s\S]*\}/); try { j = m ? JSON.parse(m[0]) : {}; } catch (e) {} }
   let flood = ['yes', 'no', 'unclear'].includes(j.flood) ? j.flood : 'unclear'; const depth = Number(j.depth_cm);
   if (flood === 'yes' && isFinite(depth) && depth > 0 && depth < 5) flood = 'unclear';
-  return { flood, depth: flood === 'yes' && isFinite(depth) && depth > 0 ? Math.min(400, Math.round(depth)) : null, inside: !!j.inside_house && flood === 'yes', danger: ['high', 'medium', 'low'].includes(j.danger) ? j.danger : 'low', note: clean(j.note, 80) };
+  return { flood, depth: flood === 'yes' && isFinite(depth) && depth > 0 ? Math.min(400, Math.round(depth)) : null, inside: !!j.inside_house && flood === 'yes', danger: ['high', 'medium', 'low'].includes(j.danger) ? j.danger : 'low', note: clean(j.note, 80),
+    elderly: j.elderly === true, children: j.children === true, lying: j.lying === true, disabled: j.disabled === true,
+    shelter: ['normal', 'damaged', 'makeshift'].includes(j.shelter) ? j.shelter : 'normal', hardship: ['high', 'medium', 'low'].includes(j.hardship) ? j.hardship : 'low', lnote: clean(j.living_note, 80) };
 }
 async function photoAiPass(env, db, max = 4) {
   if (!env.AI) return 0;
@@ -2799,13 +2819,17 @@ async function photoAiPass(env, db, max = 4) {
     let ids = []; try { ids = JSON.parse(c.photos || '[]').filter(x => /^[-\w]{25,}$/.test(x)).slice(0, 3); } catch (e) {}
     if (!ids.length) continue;
     const key = fnv(ids.join(',')); let prev = null; try { prev = c.photoAi ? JSON.parse(c.photoAi) : null; } catch (e) {}
-    if (prev && prev.key === key) continue;
+    // วิเคราะห์ซ้ำครั้งเดียวเพื่อเพิ่มข้อมูลความเป็นอยู่ (v2) — เฉพาะเคสที่ยังไม่ปิด ไม่เปลือง AI กับเคสที่จบแล้ว
+    if (prev && prev.key === key && (prev.v === 2 || c.status === 'done')) continue;
     n++;
     const res = (await Promise.all(ids.map(id => photoAiOne(env, id).catch(() => null)))).filter(Boolean);
     const yes = res.filter(x => x.flood === 'yes'), rank = { high: 3, medium: 2, low: 1 };
     const sum = { key, at: Date.now(), n: res.length, flood: yes.length ? 'yes' : res.some(x => x.flood === 'no') ? 'no' : 'unclear',
       depth: yes.reduce((m, x) => Math.max(m, x.depth || 0), 0) || null, inside: yes.some(x => x.inside),
-      danger: res.reduce((m, x) => rank[x.danger] > rank[m] ? x.danger : m, 'low'), note: (yes[0] || res[0] || {}).note || '' };
+      danger: res.reduce((m, x) => rank[x.danger] > rank[m] ? x.danger : m, 'low'), note: (yes[0] || res[0] || {}).note || '',
+      v: 2, elderly: res.some(x => x.elderly), children: res.some(x => x.children), lying: res.some(x => x.lying), disabled: res.some(x => x.disabled),
+      shelter: res.some(x => x.shelter === 'makeshift') ? 'makeshift' : res.some(x => x.shelter === 'damaged') ? 'damaged' : 'normal',
+      hardship: res.reduce((m, x) => rank[x.hardship] > rank[m] ? x.hardship : m, 'low'), lnote: (res.find(x => x.hardship === 'high') || res.find(x => x.lnote) || {}).lnote || '' };
     await db.prepare('UPDATE cases SET photoAi=? WHERE id=?').bind(JSON.stringify(sum), c.id).run();
   }
   if (n) await bumpRev(db);
@@ -2822,7 +2846,7 @@ async function helpmeCases(env, db) {
   const skipN = (await db.prepare("SELECT COUNT(*) n FROM cases WHERE src IN ('helpme','hm_direct') AND hmStatus='skip'").first() || {}).n || 0;
   return { ok: true, time: Date.now(), source: 'db', syncedAt: Number(await getMeta(db, 'hm_sync_at')) || null, skipped: skipN, cases: results.map(c => ({ id: c.id, direct: c.src === 'hm_direct', createdAt: c.createdAt, updatedAt: c.updatedAt, doneAt: c.doneAt, status: c.status, hmStatus: c.hmStatus || '', urgency: c.urgency,
     people: c.people, lat: noPin(c) && c.glat != null ? c.glat : c.lat, lng: noPin(c) && c.glat != null ? c.glng : c.lng, needs: c.needs ? String(c.needs).split(/\s*,\s*/).filter(Boolean) : [], address: c.address || '', district: c.district || '', province: c.province || '', volunteer: c.volunteer || '',
-    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', closeNote: c.closeNote || '', teamDoneAt: c.teamDoneAt || hmHelpedAt(c), teamAckAt: c.teamAckAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null),
+    name: c.name || '', phone: c.phone || '', notes: c.notes || '', org: c.org || '', pickedAt: c.pickedAt || null, dupOf: c.dupOf || '', hqNote: c.hqNote || '', closeNote: c.closeNote || '', teamDoneAt: c.teamDoneAt || hmHelpedAt(c), teamAckAt: c.teamAckAt || null, teamNote: c.teamNote || '', teamIssue: c.teamIssue || '', teamIssueAt: c.teamIssueAt || null, sevSet: c.sevSet || null, sevBy: c.sevBy || '', intake: parseIntake(c.intake), photos: J(c.photos, []), pinCheck: noPin(c) && c.glat != null ? { status: 'geocoded', label: c.glabel || '' } : J(c.pinCheck, null), photoAi: J(c.photoAi, null), hardAsk: J(c.hardAsk, null), teamHard: J(c.teamHard, null),
     level: c.level || '', levelText: c.levelText || '', bags: c.bags == null ? '' : c.bags, households: c.households == null ? '' : c.households, cctv: c.cctv || '', vulnerable: c.vulnerable ? String(c.vulnerable).split(/\s*,\s*/).filter(Boolean) : [] })) };
 }
 async function helpmeStatsLive(env, db) {

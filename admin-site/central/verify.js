@@ -104,7 +104,7 @@ const VERIFY=(()=>{
     if(vul.length)why.push('มีกลุ่มเปราะบาง'+(vul.some(v=>['bedridden','oxygen','dialysis'].includes(v))?' (ติดเตียง/ออกซิเจน/ฟอกไต)':''));if(Number(c.people)>=10)why.push(c.people+' คน');
     const reporterSevere=c.level==='chest'||c.level==='roof'||vul.some(v=>['bedridden','oxygen','dialysis'].includes(v));
     const cctv=parseCctv(c.cctv);
-    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],vulCrit,deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
+    const out={R,E:0,score:R,ev:[],chips:[],road:null,reports:[],cctv,result:null,why,ext:[],vulCrit,hard:hardship(c),deep:['waist','chest','roof'].includes(c.level),veryDeep:['chest','roof'].includes(c.level)};
     const m=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.',chip=(t,k)=>out.chips.push({t,k});
     const photoEv=()=>{
     const pa=c.photoAi;
@@ -164,6 +164,7 @@ const VERIFY=(()=>{
     else if(out.score>=45&&some||strong){lv=2;why='มีข้อมูลระบบยืนยันว่ามีน้ำท่วมใกล้จุด'}
     else if(out.veryDeep||out.vulCrit||out.R>=24){lv=2;why='ข้อมูลผู้แจ้งบ่งว่ารุนแรง แต่ระบบยังยืนยันไม่ได้ · โทรยืนยันก่อน'}
     else why='ยังไม่มีข้อมูลยืนยันความรุนแรง';
+    if(lv<2&&out.hard&&out.hard.score>=70){lv=2;why='ครัวเรือนลำบาก/เปราะบางมาก ('+out.hard.score+'/100) · '+out.hard.why.slice(0,2).map(x=>x.t).join(' · ')}
     out.level=lv;out.levelWhy=why;return out}
   function finish(out,severe,cleared){
     out.E=Math.max(-20,Math.min(E_MAX,out.E*E_SCALE));out.score=Math.max(0,Math.min(100,Math.round(out.R+out.E)));
@@ -176,9 +177,62 @@ const VERIFY=(()=>{
     else out.result=RESULT.notcrit;
     return decide(out);
   }
+  // ดัชนี "ความลำบาก / เปราะบาง" 0–100 — แยกจากคะแนนน้ำท่วม (คะแนนน้ำท่วมตอบว่า "ท่วมจริงไหม" อันนี้ตอบว่า "ครัวเรือนนี้ลำบากแค่ไหน")
+  // ใช้เฉพาะสภาพที่กระทบการเข้าถึงความช่วยเหลือ — ไม่ใช้เชื้อชาติ/ศาสนาเป็นตัวให้คะแนน
+  const VUL_PTS={bedridden:14,oxygen:14,dialysis:14,infant:10,pregnant:10,disabled:10,elderly:8,child:8,chronic:8};
+  const VUL_TH={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน',dialysis:'ฟอกไต',chronic:'โรคเรื้อรัง'};
+  const HARD=[[/ยากจน|ไม่มีเงิน|ไม่มีรายได้|ตกงาน|รายได้น้อย|หาเช้ากินค่ำ/,12,'ฐานะยากจน / ไม่มีรายได้'],
+    [/ไม่มี(อาหาร|ข้าว)|อดอาหาร|ไม่ได้กิน|ขาดอาหาร|อาหารหมด/,14,'ขาดอาหาร'],
+    [/ไร้สัญชาติ|ไม่มีบัตร|ไม่มีสถานะ|ไม่มีสัญชาติ|แรงงานต่างด้าว|ไม่มีสิทธิ/,8,'ไม่มีสถานะ/บัตร · อาจเข้าไม่ถึงความช่วยเหลือรัฐ'],
+    [/บ้านพัง|ไม่มีบ้าน|ไม่มีที่อยู่|ไม่มีที่พัก|เพิงพัก|บ้านเช่า.*ท่วม|นอนข้างถนน/,8,'ที่พักเสียหาย / ไม่มีที่พัก'],
+    [/อยู่คนเดียว|ไม่มีญาติ|ไม่มีคนดูแล|ถูกทิ้ง/,6,'ไม่มีคนดูแล']];
+  const NEED_H=[[/อาหาร|ข้าว|น้ำดื่ม|นม/,8,'ต้องการอาหาร/น้ำดื่ม'],[/ยา|ป่วย|รักษา|หมอ/,6,'ต้องการยา/รักษา'],[/ที่นอน|เสื้อผ้า|ผ้าห่ม|ที่พัก|มุ้ง/,4,'ต้องการเครื่องนอน/เสื้อผ้า']];
+  // แหล่งข้อมูล 4 ทาง: คำบรรยายผู้แจ้ง · AI ดูรูป (photoAi v2) · ศูนย์โทรถาม (hardAsk) · ทีมยืนยันหน้างาน (teamHard)
+  // แต่ละหมวดใช้ค่าสูงสุดจากทุกแหล่ง (ไม่นับซ้ำ) และบอกที่มาไว้ในวงเล็บ
+  const TH_TAG={nofood:'ไม่มีอาหาร',nowater:'ไม่มีน้ำดื่ม',bedridden:'ผู้ป่วยติดเตียง',meds:'ต้องการยาด่วน',infant:'มีทารก/เด็กเล็ก',elderly:'ผู้สูงอายุ',disabled:'ผู้พิการ',pregnant:'หญิงตั้งครรภ์',house:'บ้านอยู่ไม่ได้',alone:'ไม่มีคนดูแล',nodoc:'ไม่มีบัตร/สิทธิ'};
+  function hardship(c){
+    const txt=String(c.notes||'')+' '+(c.needs||[]).join(' '),why=[],add=(p,t)=>{if(p>0){why.push({p,t});return p}return 0};
+    const pa=c.photoAi&&c.photoAi.v===2?c.photoAi:null,ask=c.hardAsk||null,tm=c.teamHard&&Array.isArray(c.teamHard.tags)?c.teamHard:null,tg=new Set(tm?tm.tags:[]);
+    const SRC={t:'ผู้แจ้ง',ai:'AI ดูรูป',ph:'โทรยืนยัน',tm:'ทีมหน้างาน'};
+    // กลุ่มเปราะบาง: key → แหล่งที่มา
+    const vul=new Map(),vAdd=(k,src)=>{if(!vul.has(k))vul.set(k,new Set());vul.get(k).add(src)};
+    (Array.isArray(c.vulnerable)?c.vulnerable:String(c.vulnerable||'').split(/\s*,\s*/)).filter(Boolean).forEach(v=>vAdd(v,'t'));
+    const num=re=>{const m=txt.match(re);return m?Number(m[1]):0};
+    const kids=num(/เด็ก(?:เล็ก|ๆ)?\s*(?:ประมาณ|กว่า)?\s*(\d+)/),old=num(/(?:ผู้สูงอายุ|ผู้สูงวัย|คนแก่|ผู้เฒ่า)\s*(?:อายุ\s*\d+\s*(?:ปี)?\s*)?(?:ประมาณ|กว่า)?\s*(\d+)/);
+    if(kids)vAdd('child','t');if(old)vAdd('elderly','t');
+    if(/ติดเตียง/.test(txt))vAdd('bedridden','t');if(/ตั้งครรภ์|ท้องแก่|คนท้อง/.test(txt))vAdd('pregnant','t');if(/พิการ/.test(txt))vAdd('disabled','t');if(/ทารก|เด็กอ่อน|แรกเกิด/.test(txt))vAdd('infant','t');
+    if(pa){if(pa.elderly)vAdd('elderly','ai');if(pa.children)vAdd('child','ai');if(pa.disabled)vAdd('disabled','ai')}
+    if(ask&&Array.isArray(ask.vul)){if(ask.vul.includes('none')&&ask.vul.length===1){[...vul.keys()].forEach(k=>{const s=vul.get(k);s.delete('t');s.delete('ai');if(!s.size)vul.delete(k)})}ask.vul.filter(v=>v!=='none').forEach(v=>vAdd(v,'ph'))}
+    ['bedridden','infant','elderly','disabled','pregnant'].forEach(k=>{if(tg.has(k))vAdd(k,'tm')});
+    const srcTxt=set=>[...set].map(x=>SRC[x]).join(', ');
+    let vp=0;vul.forEach((_,v)=>vp+=VUL_PTS[v]||0);
+    let S=add(Math.min(40,vp),'กลุ่มเปราะบาง: '+[...vul].map(([v,set])=>(VUL_TH[v]||v)+' ('+srcTxt(set)+')').join(', '));
+    if(pa&&pa.lying&&!vul.has('bedridden'))S+=add(10,'รูปมีคนนอนกับพื้น/เตียง อาจป่วยหรือติดเตียง (AI ดูรูป) · โทรยืนยัน');
+    const dep=kids+old;S+=add(dep>=20?15:dep>=10?10:dep>=4?5:0,[kids?`เด็ก ${kids} คน`:'',old?`ผู้สูงอายุ ${old} คน`:''].filter(Boolean).join(' · ')+' (ผู้แจ้ง)');
+    const ppl=Number(c.people)||1;S+=add(ppl>=50?10:ppl>=20?6:ppl>=5?3:0,`${ppl} คน`);
+    let np=0;const nt=[];NEED_H.forEach(([re,p,t])=>{if(re.test(txt)){np+=p;nt.push(t)}});S+=add(Math.min(15,np),nt.join(' · '));
+    // หมวดที่ใช้ค่าสูงสุดจากหลายแหล่ง
+    const best=(name,cands)=>{const b=cands.filter(x=>x&&x[0]>0).sort((x,y)=>y[0]-x[0])[0];return b?add(b[0],b[1]):0};
+    S+=best('food',[[HARD[1][0].test(txt)?14:0,'ขาดอาหาร (ผู้แจ้ง)'],[ask&&ask.food==='0'?18:ask&&ask.food==='1-2'?10:0,ask&&ask.food==='0'?'อาหาร/น้ำหมดแล้ว (โทรยืนยัน)':'อาหาร/น้ำเหลือ 1–2 วัน (โทรยืนยัน)'],
+      [tg.has('nofood')?18:0,'ไม่มีอาหาร (ทีมหน้างาน)'],[tg.has('nowater')?12:0,'ไม่มีน้ำดื่ม (ทีมหน้างาน)']]);
+    S+=best('meds',[[ask&&ask.meds==='out'?10:0,'ยาประจำหมด (โทรยืนยัน)'],[tg.has('meds')?10:0,'ต้องการยาด่วน (ทีมหน้างาน)']]);
+    S+=best('house',[[HARD[3][0].test(txt)?8:0,'ที่พักเสียหาย (ผู้แจ้ง)'],[ask&&ask.house==='gone'?12:ask&&ask.house==='damaged'?6:0,ask&&ask.house==='gone'?'บ้านอยู่ไม่ได้ (โทรยืนยัน)':'บ้านเสียหาย (โทรยืนยัน)'],
+      [tg.has('house')?12:0,'บ้านอยู่ไม่ได้ (ทีมหน้างาน)'],[pa&&pa.shelter==='makeshift'?10:pa&&pa.shelter==='damaged'?8:0,pa&&pa.shelter==='makeshift'?'ที่พักชั่วคราว/เพิง (AI ดูรูป)':'ที่พักเสียหาย (AI ดูรูป)']]);
+    S+=best('poor',[[HARD[0][0].test(txt)?12:0,'ฐานะยากจน / ไม่มีรายได้ (ผู้แจ้ง)'],[pa&&pa.hardship==='high'?12:pa&&pa.hardship==='medium'?5:0,'สภาพความเป็นอยู่ลำบาก (AI ดูรูป)'+(pa&&pa.lnote?': '+pa.lnote:'')]]);
+    S+=best('nodoc',[[HARD[2][0].test(txt)?8:0,'ไม่มีสถานะ/บัตร · อาจเข้าไม่ถึงความช่วยเหลือรัฐ (ผู้แจ้ง)'],[tg.has('nodoc')?8:0,'ไม่มีบัตร/สิทธิ (ทีมหน้างาน)']]);
+    S+=best('alone',[[HARD[4][0].test(txt)?6:0,'ไม่มีคนดูแล (ผู้แจ้ง)'],[tg.has('alone')?6:0,'ไม่มีคนดูแล (ทีมหน้างาน)']]);
+    if(ask&&ask.aid==='none')S+=add(6,'ยังไม่ได้รับความช่วยเหลือจากที่อื่น (โทรยืนยัน)');
+    const fin=c.status==='done',noTeam=!String(c.volunteer||'').replace(/^'/,'').trim(),d=(Date.now()-Number(c.createdAt||Date.now()))/864e5;
+    if(!fin&&noTeam)S+=add(d>=7?15:d>=3?10:d>=1?5:0,`รอความช่วยเหลือ ${Math.floor(d)} วัน ยังไม่มีทีม`);
+    S=Math.min(100,Math.round(S));
+    const band=S>=70?{k:'vh',t:'สูงมาก'}:S>=45?{k:'h',t:'สูง'}:S>=25?{k:'m',t:'ปานกลาง'}:{k:'l',t:'ต่ำ'};
+    // คำถามโทรยืนยัน — เฉพาะเรื่องที่ยังไม่มีใครตอบ
+    const q=[];if(!(ask&&ask.food)&&!tg.has('nofood'))q.push('อาหาร/น้ำดื่มเหลือพอกี่วัน?');if(!(ask&&ask.vul&&ask.vul.length)&&!tm)q.push('มีผู้สูงอายุ เด็กเล็ก คนป่วย ติดเตียง หรือคนท้องไหม?');
+    if(!(ask&&ask.meds)&&!tg.has('meds'))q.push('มีใครต้องกินยาประจำหรือยาหมดไหม?');if(!(ask&&ask.house)&&!tg.has('house'))q.push('บ้าน/ที่พักยังอยู่ได้ไหม?');if(!(ask&&ask.aid))q.push('ได้รับความช่วยเหลือจากที่อื่นแล้วหรือยัง?');
+    return {score:S,band,why:why.sort((a,b)=>b.p-a.p),ask:q,vul:[...vul.keys()],src:{ai:!!pa,ph:!!(ask&&ask.at),tm:!!tm},hardAsk:ask,teamHard:tm}}
   function nearCams(lat,lng,max=3,within=6000){return F.cams.map(c=>({...c,d:dist(lat,lng,c.lat,c.lng)})).filter(c=>c.d<=within).sort((a,b)=>a.d-b.d).slice(0,max)}
   const LC=new Map();
-  function level(c){const k=[c.id,c.sevSet,F.loaded,c.photoAi&&c.photoAi.at,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
+  function level(c){const k=[c.id,c.sevSet,F.loaded,c.photoAi&&c.photoAi.at,c.level,(c.needs||[]).join(),c.people,c.lat,c.lng,c.cctv,c.vulnerable,c.status,c.volunteer,String(c.notes||'').length,JSON.stringify(c.hardAsk||''),JSON.stringify(c.teamHard||''),c.photoAi&&c.photoAi.v,Math.floor((Date.now()-Number(c.createdAt||0))/864e5)].join('|'),h=LC.get(c.id);if(h&&h.k===k)return h.v;
     const v=assess(c).level||1;LC.set(c.id,{k,v});return v}
-  const VERIFY={F,load,assess,level,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
+  const VERIFY={F,load,assess,level,hardship,RESULT,VERDICT_TH,parseCctv,nearCams,dist,distToLines,onUpdate:null};return VERIFY;
 })();

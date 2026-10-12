@@ -110,7 +110,7 @@ $('#f-toggle').addEventListener('click',()=>{const o=!$('#filters-box').classLis
 
 const VR_ORDER={confirmed:5,likely:4,conflict:3,unverified:2,notcrit:1,nopin:0};
 let vrCache=new Map();
-function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+c.sevSet+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat;const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
+function vr(c){const ai=aiCctvOf(c),k=c.id+'|'+c.sevSet+'|'+VERIFY.F.loaded+'|'+c.cctv+'|'+ai+'|'+c.urgency+'|'+c.level+'|'+c.lat+'|'+c.status+'|'+c.volunteer+'|'+String(c.notes||'').length+'|'+(c.vulnerable||'')+'|'+c.people+'|'+JSON.stringify(c.hardAsk||'')+JSON.stringify(c.teamHard||'')+(c.photoAi&&c.photoAi.v);const h=vrCache.get(c.id);if(h&&h.k===k)return h.v;const v=VERIFY.assess(c.cctv||!ai?c:{...c,cctv:ai});vrCache.set(c.id,{k,v});return v}
 const AI=new Map();
 const camDist=d=>d<1000?Math.round(d)+' ม.':(d/1000).toFixed(1)+' กม.';
 function aiCctvOf(c){const a=AI.get(String(c.id));if(!a||!a.data||a.data.verdict!=='flood')return '';
@@ -138,7 +138,7 @@ function covSection(c){const m=cov(c);if(!m)return '';return `<section class="co
 setInterval(()=>{if(A.key&&!document.hidden)loadFlood()},10*60e3);
 VERIFY.onUpdate=()=>render();
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
-  return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
+  return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${v.hard&&v.hard.score>=45?`<span class="vr-chip hd-chip hd-${v.hard.band.k} sm" title="${esc(v.hard.why.map(x=>x.t).join(' · '))}">ลำบาก ${v.hard.score}</span>`:''}${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
 const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},assigned:{st:'assigned',u:''},teamdone:{st:'teamdone',u:''},helped:{st:'helped',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
 function statKey(){if(A.today)return 'today';const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
@@ -232,6 +232,11 @@ function vrSection(c){
       <div class="lv-set" role="group" aria-label="เปลี่ยนระดับความเร่งด่วนเอง"><span>เปลี่ยนเอง:</span>${[1,2,3].map(n=>`<button type="button" class="lv-b lv${n}" data-sev="${n}" aria-pressed="${!!v.manual&&v.level===n}">${URG[n]}</button>`).join('')}${v.manual?'<button type="button" class="lv-b lv-auto" data-sev="">ใช้ระดับของระบบ</button>':''}</div></div>
     ${(ph=>ph.length?`<div class="vr-photos"><b>รูปจากผู้แจ้ง · ${ph.length} รูป</b><div>${ph.map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:'')(photosOf(c))}
     <div class="vr-top"><div><small>ผลตรวจพื้นที่ (ช่วยตัดสินใจ)</small><b>${esc(v.result.t)}</b><p>${esc(v.result.d)}</p></div><div class="vr-num"><b>${v.score}</b><small>/100</small></div></div>
+    ${v.hard?`<div class="hd-box hd-${v.hard.band.k}"><div class="hd-top"><div><small>ความลำบาก / เปราะบางของครัวเรือน</small><b>${esc(v.hard.band.t)}</b>
+        <span class="hd-src">${[['tm','ทีมยืนยันหน้างาน'],['ph','โทรยืนยันแล้ว'],['ai','AI ดูรูปแล้ว']].map(([k,t])=>`<i class="${v.hard.src[k]?'on':''}">${v.hard.src[k]?'✓ ':''}${t}</i>`).join('')}</span></div><div class="vr-num"><b>${v.hard.score}</b><small>/100</small></div></div>
+      ${v.hard.teamHard?`<p class="hd-tm"><b>${esc((t=>/^ทีม/.test(t)?t:'ทีม'+t)(v.hard.teamHard.team||''))} ยืนยันหน้างาน</b> · ${esc(ago(v.hard.teamHard.at))}<br>${v.hard.teamHard.tags.length?v.hard.teamHard.tags.map(t=>esc(TEAM_HARD_TH[t]||t)).join(' · '):'ไม่พบความลำบากพิเศษ'}</p>`:''}
+      ${v.hard.why.length?`<ul class="hd-why">${v.hard.why.map(x=>`<li><span>+${x.p}</span>${esc(x.t)}</li>`).join('')}</ul>`:'<p class="hd-ask">ยังไม่มีข้อมูลความเป็นอยู่</p>'}
+      ${hqBox(c)}</div>`:''}
     <p class="vr-why"><b>ข้อมูลจากผู้แจ้ง:</b> ${esc((v.why||[]).join(' · '))}</p>
     <p class="vr-why"><b>ตรวจซ้ำด้วย:</b> ฝน (รายจุด + สถานีวัดฝน) · ดาวเทียม GISTDA · ถนนน้ำท่วม/รายงาน Floodboard · เซ็นเซอร์น้ำ กทม. · กล้อง CCTV</p>
     <div class="vr-chips">${v.chips.map(x=>`<span class="vr-chip k-${x.k}">${esc(x.t)}</span>`).join('')}</div>
@@ -285,6 +290,23 @@ const pinWarn=c=>c.pinCheck&&c.pinCheck.status!=='fixed'&&c.pinCheck.status!=='g
 document.addEventListener('error',e=>{const i=e.target;if(i.tagName==='IMG'&&i.dataset.altSrc&&i.src!==i.dataset.altSrc){i.src=i.dataset.altSrc;delete i.dataset.altSrc}},true);
 const photosOf=c=>Array.isArray(c.photos)?c.photos.filter(id=>/^[-\w]{25,}$/.test(id)):[];
 const fmtTel=t=>/^0\d{9}$/.test(t)?t.replace(/^(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'):/^0\d{8}$/.test(t)?t.replace(/^(\d{2})(\d{3})(\d{4})$/,'$1-$2-$3'):t;
+// บันทึกผลโทรถามความเป็นอยู่ (hardAsk) — กดแล้วบันทึกทันที กดซ้ำเพื่อล้าง
+const TEAM_HARD_TH={nofood:'ไม่มีอาหาร',nowater:'ไม่มีน้ำดื่ม',bedridden:'ผู้ป่วยติดเตียง',meds:'ต้องการยาด่วน',infant:'มีทารก/เด็กเล็ก',elderly:'ผู้สูงอายุ',disabled:'ผู้พิการ',pregnant:'หญิงตั้งครรภ์',house:'บ้านอยู่ไม่ได้',alone:'ไม่มีคนดูแล',nodoc:'ไม่มีบัตร/สิทธิ'};
+const HQ=[['food','อาหาร/น้ำเหลือ',[['0','หมดแล้ว'],['1-2','1–2 วัน'],['3+','3 วันขึ้นไป']]],
+  ['vul','กลุ่มเปราะบาง',[['bedridden','ติดเตียง'],['elderly','ผู้สูงอายุ'],['child','เด็กเล็ก'],['infant','ทารก'],['pregnant','คนท้อง'],['disabled','ผู้พิการ'],['none','ไม่มี']],true],
+  ['meds','ยาประจำ',[['out','ยาหมด'],['ok','มีพอ'],['none','ไม่มีใครกินยา']]],['house','บ้าน/ที่พัก',[['ok','อยู่ได้'],['damaged','เสียหาย'],['gone','อยู่ไม่ได้']]],
+  ['aid','ความช่วยเหลือจากที่อื่น',[['none','ยังไม่ได้รับ'],['some','ได้บ้างแล้ว']]]];
+function hqBox(c){const a=c.hardAsk||{},n=HQ.filter(([k])=>k==='vul'?(a.vul||[]).length:a[k]).length;
+  return `<details class="hd-q" data-hqbox ${A.hdOpen||!n?'open':''}><summary>บันทึกผลโทรถาม <small>${n?'ตอบแล้ว '+n+'/'+HQ.length:'ยังไม่ได้โทรถาม'}${a.at?` · ${esc(a.by||'')} ${esc(ago(a.at))}`:''}</small></summary>
+    ${HQ.map(([k,l,opts,multi])=>`<div class="hq-r"><span>${l}</span><div role="group" aria-label="${l}">${opts.map(([v,t])=>`<button type="button" data-hq="${k}" data-hv="${v}" aria-pressed="${multi?(a.vul||[]).includes(v):a[k]===v}">${t}</button>`).join('')}</div></div>`).join('')}</details>`}
+async function hqSet(c,k,v){const a={...(c.hardAsk||{})};delete a.by;delete a.at;
+  if(k==='vul'){let st=new Set(a.vul||[]);if(v==='none')st=st.has('none')?new Set():new Set(['none']);else{st.delete('none');st.has(v)?st.delete(v):st.add(v)}a.vul=[...st];if(!a.vul.length)delete a.vul}
+  else if(a[k]===v)delete a[k];else a[k]=v;
+  const prev=c.hardAsk;c.hardAsk={...a,by:store.get('uh_staff')||'',at:Date.now()};A.hdOpen=true;vrCache.delete(c.id);renderDrawer();render();
+  try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',hardAsk:a,metaOnly:true});if(!r||!r.ok)throw new Error(r&&r.error)}
+  catch(e){c.hardAsk=prev;vrCache.delete(c.id);renderDrawer();render();toast('บันทึกผลโทรถามไม่สำเร็จ ลองใหม่อีกครั้ง')}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hq]');if(!b)return;const c=findCase(A.openId);if(c)hqSet(c,b.dataset.hq,b.dataset.hv)});
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('[data-hqbox]'))A.hdOpen=e.target.open},true);
 function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${icn}"></i><div class="ds-v"><small>${k}</small>${v}</div>${x||''}</div>`;
   return `<div class="d-sum">
     ${row('user','ชื่อ',`<b>${esc(c.name||'ไม่ระบุชื่อ')}</b>`)}

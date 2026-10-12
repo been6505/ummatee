@@ -820,6 +820,7 @@ function drawChat(force){const box=$('#msgs'),bottom=box.scrollHeight-box.scroll
   box.innerHTML=S.msgs.length?S.msgs.map(m=>{const d=day(m.at),sep=d!==ld?`<p class="day">${esc(d)}</p>`:'';ld=d;const mine=m.sender==='team';
     const loc=m.lat!=null?`<p><a href="https://maps.google.com/?q=${+m.lat},${+m.lng}" target="_blank" rel="noopener"><i data-ic="pin"></i> ตำแหน่ง · เปิดแผนที่</a></p>`:'';
     const call=m.kind==='call'&&m.link&&Date.now()-m.at>30*60e3?'<p class="ended"><i data-ic="phone"></i> สายสิ้นสุดแล้ว</p>':m.kind==='call'&&m.link?`<a class="join" href="${esc(m.link)}" target="_blank" rel="noopener"><i data-ic="${m.text==='วิดีโอคอล'?'video':'phone'}"></i> เข้าร่วมสาย</a>`:'';
+    if(m.kind==='case')return '';
     if(m.kind==='case'&&m.caseId){const c=((S.me&&S.me.cases)||[]).find(x=>String(x.id)===String(m.caseId));if(c)return `${sep}<div class="m hq mcase"><p class="who">ศูนย์มอบเคส${m.name?' · '+esc(m.name):''} · ${hhmm(m.at)}</p>${card(c)}</div>`}
     const psrc=m.kind==='photo'&&m.link?(/^data:/.test(m.link)?m.link:m.link+'&'+new URLSearchParams(auth())):'',photo=psrc?`<a class="cimg" href="#" data-cimg="${esc(psrc)}"><img src="${esc(psrc)}" alt="รูปที่ส่งในแชท" loading="lazy"></a>`:'';
     const voice=m.kind==='voice'&&m.link?`<button type="button" class="vmsg" data-vsrc="${esc(m.link)}"><span class="vplay">▶</span><span class="vbar"><i></i></span><span class="vlen">${esc((String(m.text).match(/(\d+) วิ/)||[])[1]||'')} วิ</span></button>`:'';
@@ -829,12 +830,13 @@ async function pollChat(first){S.chatAt=Date.now();try{const r=await api({action
 
     const fresh=msgs.filter(m=>m.sender==='hq'&&m.n>S.lastN);
     if(!first&&fresh.length){buzz([150,80,150]);tone()}
+    if(!first&&fresh.some(m=>m.kind==='case')){refresh();if(S.view!=='call')go('call');toast('ศูนย์มอบเคสใหม่ · ดูที่หน้าแรก')}
     const call=msgs.filter(m=>m.kind==='call'&&m.sender==='hq'&&m.n>S.handledCall&&Date.now()-m.at<90000).pop();if(call)ring(call);
     const changed=last!==S.lastN||msgs.some((m,i)=>S.msgs[i]&&m.readHq!==S.msgs[i].readHq);S.lastN=last;S.msgs=msgs;
-    const unread=msgs.filter(m=>m.sender==='hq'&&!m.readTeam).length,b=$('#b-chat');b.hidden=!unread||S.view==='chat';b.textContent=unread;const bb=$('#b-bell');if(bb){bb.hidden=!unread||S.view==='chat';bb.textContent=unread}
+    const unread=msgs.filter(m=>m.sender==='hq'&&!m.readTeam&&m.kind!=='case').length,b=$('#b-chat');b.hidden=!unread||S.view==='chat';b.textContent=unread;const bb=$('#b-bell');if(bb){bb.hidden=!unread||S.view==='chat';bb.textContent=unread}
     document.title=(unread&&document.hidden?'('+unread+') ':'')+(S.team||'ทีม')+' · Helpme+';
     if(S.view==='chat'){if(changed||first)drawChat(first);if(unread&&!document.hidden)markRead()}}catch(e){}}
-function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam))post({action:'chat_read'}).catch(()=>{})}
+function markRead(){if(S.msgs.some(m=>m.sender==='hq'&&!m.readTeam&&m.kind!=='case'))post({action:'chat_read'}).catch(()=>{})}
 async function send(text,extra={}){if(!text&&extra.lat==null)return;S.msgs.push({n:0,sender:'team',name:S.name,text,at:Date.now(),...extra});if(S.view==='chat')drawChat(true);
   try{const r=await opost({action:'chat_send',text,...extra},'ข้อความ');if(!r.ok)throw 0;if(r.queued&&extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ไม่มีเน็ต · ส่งตำแหน่งทาง SMS ได้ทันที (ข้อความในแชทจะส่งตามเมื่อมีเน็ต)')}catch(e){if(extra.lat!=null)smsSheet('แจ้งตำแหน่ง','','ส่งตำแหน่งผ่านเน็ตไม่ได้ · ส่งทาง SMS แทน');else toast('ส่งไม่ได้ ลองใหม่')}pollChat()}
 $('#send').addEventListener('submit',e=>{e.preventDefault();const i=$('#in'),t=i.value.trim();if(!t)return;i.value='';send(t)});

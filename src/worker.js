@@ -595,7 +595,7 @@ async function updateCase(db, b) {
     if (b.status === 'going' && b.helped === true) { sets.push('teamDoneAt=?'); vals.push(r.teamDoneAt && !reset ? r.teamDoneAt : Date.now()); if (reset) sets.push("teamNote=''"); }
     else if (reset) sets.push('teamDoneAt=NULL', "teamNote=''");
     if (reset) sets.push('teamArrivedAt=NULL');
-    else if (b.status === 'going' && b.helped === false) sets.push('teamDoneAt=NULL');
+    else if ((b.status === 'going' || b.status === 'done') && b.helped === false) sets.push('teamDoneAt=NULL');
     if (b.status === 'open') sets.push("volunteer=''");
     else if (b.volunteer) { sets.push('volunteer=?'); vals.push(clean(b.volunteer, MAX.volunteer)); }
   }

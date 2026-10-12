@@ -689,7 +689,7 @@ function render(){const r=S.me;if(!r)return;const t=r.team;if(r.avatarAt&&!t.ava
 }
 function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.lng}`:[c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' ');
   const done=c.status==='done',rep=!done&&c.teamDoneAt;
-  return `<article class="case u${s}${done?' done':''}"><div><span class="tag u${s}">${URG[s]}</span>${done?'<span class="tag ok">ปิดเคสแล้ว</span>':rep?'<span class="tag ok">แจ้งศูนย์แล้ว · รอปิดเคส</span>':''}<small class="meta">#${esc(c.id)}</small></div>
+  return `<article class="case u${s}${done?' done':''}"><div><span class="tag u${s}">${URG[s]}</span>${done?(c.teamDoneAt?'<span class="tag ok">ช่วยเหลือแล้ว</span>':'<span class="tag">ปิดเคส</span>'):rep?'<span class="tag ok">ช่วยเหลือแล้ว</span>':''}<small class="meta">#${esc(c.id)}</small></div>
     <h3>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h3>
     <div class="meta">${esc(c.people||1)} คน${c.level?' · น้ำ'+esc(LEVEL[c.level]||''):''}${(c.vulnerable||[]).length?' · กลุ่มเปราะบาง':''}${c.name?' · '+esc(c.name):''}</div>
     <div>${esc([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · ')||'ไม่ระบุที่อยู่')}</div>

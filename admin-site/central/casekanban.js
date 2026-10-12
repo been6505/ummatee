@@ -1,5 +1,5 @@
 const KANBAN=(()=>{
-  const COLS=[['open','รอความช่วยเหลือ'],['going','ทีมกำลังไป'],['helped','ช่วยเหลือแล้ว · รอปิด'],['done','ปิดเคส (24 ชม.)']];
+  const COLS=[['open','รอความช่วยเหลือ'],['going','ทีมกำลังไป'],['helped','ช่วยเหลือแล้ว (24 ชม.)'],['done','ปิดเคส · ไม่ได้ช่วย (24 ชม.)']];
   const K={drag:null,ghost:null,timer:null,start:null,moved:false,order:{},orderAt:0};
   async function loadOrder(force){if(!force&&Date.now()-K.orderAt<20000)return;K.orderAt=Date.now();try{const r=await api({action:'kb_order',key:A.key});if(r&&r.ok){const ch=JSON.stringify(r.order||{})!==JSON.stringify(K.order);K.order=r.order||{};if(ch)draw()}}catch(e){}}
   const rk=c=>K.order[c.id]!=null?Number(K.order[c.id]):null;
@@ -7,7 +7,7 @@ const KANBAN=(()=>{
   const box=()=>document.getElementById('kanban-view');
   const vol=c=>String(c.volunteer||'').replace(/^'/,'').trim();
   function list(){const st=$('#f-status');const keep=st.value;st.value='all';let cs;try{cs=filtered()}finally{st.value=keep}
-    const day=Date.now()-864e5;return cs.filter(c=>!c.dupOf&&(c.status!=='done'||Number(c.doneAt||c.updatedAt||0)>day))}
+    const day=Date.now()-864e5;return cs.filter(c=>!c.dupOf&&(!isFin(c)||Number((stOf(c)==='helped'?c.teamDoneAt:0)||c.doneAt||c.updatedAt||0)>day))}
   const PH={m:{},at:0,t:'',busy:false};
   async function phLoad(force){if(PH.busy||(!force&&Date.now()-PH.at<60000))return;PH.busy=true;try{const[r,t]=await Promise.all([api({action:'photo_index',key:A.key}),typeof HMT!=='undefined'?HMT.get():'']);if(r&&r.ok){const ch=JSON.stringify(r.m)!==JSON.stringify(PH.m)||PH.t!==t;PH.m=r.m;PH.t=t;PH.at=Date.now();if(ch)draw()}}catch(e){}finally{PH.busy=false}}
   addEventListener('hm-rev',()=>phLoad(true));
@@ -20,13 +20,13 @@ const KANBAN=(()=>{
       ${c.teamIssue&&c.status==='going'?`<small class="kb-iss">ทีมแจ้ง: ${esc(c.teamIssue.split(' · ')[0])}</small>`:''}<small class="kb-ago">${esc(ago(c.createdAt))}</small>${ho.length?`<div class="kb-ho" title="ภาพส่งมอบจากทีม">${ho.slice(0,3).map((n,i)=>`<a href="${phU(n)}" target="_blank" rel="noopener" draggable="false" data-kbho="${esc(c.id)}" data-i="${i}"><img src="${phU(n)}" alt="ภาพส่งมอบ ${i+1}" loading="lazy" draggable="false">${i===2&&ho.length>3?`<b>+${ho.length-3}</b>`:''}</a>`).join('')}</div>`:''}</div></article>`}
   function draw(){const el=box();if(!el||el.hidden)return;phLoad();loadOrder();if(D.on||K.ghost||document.querySelector('.kb-pick')){K.pend=true;return}K.pend=false;const sx=(el.querySelector('.kb-cols')||{}).scrollLeft||0,sy=[...el.querySelectorAll('.kb-list')].map(x=>x.scrollTop);const cs=list();
     el.innerHTML=`<div class="kb-top"><button type="button" class="btn ghost sm" id="rt-board-btn" aria-pressed="${!!(typeof RTBOARD!=='undefined'&&RTBOARD.open)}" onclick="RTBOARD.toggle()"><i data-ic="route"></i> จัดเส้นทาง · มอบเคสให้ทีมทั้งเส้น</button></div><div class="kb-cols${K.showDone?'':' fold'}">${COLS.map(([k,t])=>{const xs=cs.filter(c=>stOf(c)===k).sort((a,b)=>{const ra=rk(a),rb=rk(b);if(ra!=null||rb!=null)return ra==null?1:rb==null?-1:ra-rb;return sev(b)-sev(a)||Number(a.createdAt)-Number(b.createdAt)});
-      if(k==='done'&&!K.showDone)return `<section class="kb-col kb-done kb-fold" data-kbcol="done"><h3>ปิดเคส <span>${xs.length}</span></h3><div class="kb-list"><p class="kb-empty"><i data-ic="check"></i><br>ลากการ์ดมาวาง<br>เพื่อปิดเคส</p>${xs.length?`<button type="button" class="btn ghost sm kb-show" data-kbshow>ดูเคสที่ปิด (24 ชม.)</button>`:''}</div></section>`;
+      if(k==='done'&&!K.showDone)return `<section class="kb-col kb-done kb-fold" data-kbcol="done"><h3>ปิดเคส · ไม่ได้ช่วย <span>${xs.length}</span></h3><div class="kb-list"><p class="kb-empty"><i data-ic="check"></i><br>ลากการ์ดมาวาง<br>เพื่อปิดเคส</p>${xs.length?`<button type="button" class="btn ghost sm kb-show" data-kbshow>ดูเคสที่ปิด (24 ชม.)</button>`:''}</div></section>`;
       return `<section class="kb-col kb-${k}" data-kbcol="${k}"><h3>${t} <span>${xs.length}</span>${k==='done'?'<button type="button" class="kb-hide" data-kbshow aria-label="ซ่อนเคสที่ปิด" title="ซ่อนเคสที่ปิด"><i data-ic="eyeoff"></i></button>':''}</h3><div class="kb-list">${xs.slice(0,150).map(card).join('')||'<p class="kb-empty">วางการ์ดที่นี่</p>'}${xs.length>150?`<p class="kb-empty">+${xs.length-150} เคส · ใช้ตัวกรองเพื่อดูเพิ่ม</p>`:''}</div></section>`}).join('')}</div>`;
     const nc=el.querySelector('.kb-cols');if(nc)nc.scrollLeft=sx;el.querySelectorAll('.kb-list').forEach((x,i)=>{x.scrollTop=sy[i]||0});
     if(typeof ic==='function')el.querySelectorAll('i[data-ic]').forEach(i=>{i.outerHTML=ic(i.dataset.ic)})}
   async function drop(id,to,idx){const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;if(stOf(c)===to){if(idx!=null&&(to!=='done'||K.showDone))await reorder(to,id,idx==null?0:idx);return}const before=c.status+'|'+(c.teamDoneAt||'');
     if((to==='going'&&!(stOf(c)==='helped'&&vol(c)))||(to==='helped'&&(!vol(c)||c.status!=='going'))){const team=await pickTeam(c);if(!team)return;await changeStatus(c.id,to,null,team)}
-    else if(to==='done'){if(!c.teamDoneAt&&c.status==='going'&&!confirm('ทีมยังไม่ได้แจ้งว่าช่วยเหลือแล้ว · ปิดเคสเลยหรือไม่?'))return;await changeStatus(c.id,'done')}
+    else if(to==='done'){if(!confirm(stOf(c)==='helped'?'เคสนี้บันทึกว่าช่วยเหลือแล้ว · เปลี่ยนเป็น "ปิดเคส · ไม่ได้ช่วย" หรือไม่?':'ปิดเคสโดยไม่ได้ช่วยเหลือ (เช่น ไม่เข้าเกณฑ์ ซ้ำ ติดต่อไม่ได้) หรือไม่?'))return;await changeStatus(c.id,'done')}
     else if(to==='open'){if(c.status!=='open'&&!confirm('คืนเคสเป็น "รอความช่วยเหลือ" และเอาออกจากทีม?'))return;await changeStatus(c.id,'open')}
     else await changeStatus(c.id,to);
     if(idx!=null&&stOf(c)===to&&(to!=='done'||K.showDone)&&before!==c.status+'|'+(c.teamDoneAt||''))await reorder(to,id,idx);else draw()}

@@ -1,3 +1,4 @@
+const HP=c=>c.status!=='open'&&Number(c.teamDoneAt)>0,FIN=c=>c.status==='done'||HP(c);
 const W={cases:[],roster:[],live:[],threads:[],alerts:{sos:[],calls:[]},warn:[],rooms:[],staff:[],items:[],log:[],
   room:'',tab:new URLSearchParams(location.search).get('tab')==='board'?'board':new URLSearchParams(location.search).get('wr')?'over':'struct',cst:'open',cq:'',map:null,lc:null,lt:null,lr:null,fitted:'',at:0};
 (()=>{const q=new URLSearchParams(location.search),k=(q.get('k')||'').replace(/[^a-z0-9]/g,''),wr=q.get('wr')||'';
@@ -185,7 +186,7 @@ function feed(V){
   V.threads.slice(0,12).forEach(t=>{const m=t.last;if(!m)return;it.push({at:m.at,cls:m.kind==='sos'?'sos':m.sender==='team'?'team':'hq',
     html:`<b>${m.sender==='team'?esc(t.team):'ศูนย์ → '+esc(t.team)}</b> ${esc(m.text||(m.lat!=null?'ส่งตำแหน่ง':''))}`})});
   V.cases.filter(c=>Date.now()-(c.createdAt||0)<6*3600e3).forEach(c=>it.push({at:c.createdAt,cls:'new u'+sev(c),html:`<b>เคสใหม่</b> ${esc(URG[sev(c)])} · ${esc((c.needs||[]).join(', ')||'ขอความช่วยเหลือ')}${c.district?' · เขต'+esc(c.district):''}`}));
-  V.cases.filter(c=>c.status==='done'&&Date.now()-(c.doneAt||c.updatedAt||0)<6*3600e3).forEach(c=>it.push({at:c.doneAt||c.updatedAt,cls:'done',html:`<b>ช่วยแล้ว</b> ${esc((c.needs||[]).join(', ')||'เคส')}${vol(c)?' · '+esc(vol(c)):''}`}));
+  V.cases.filter(c=>HP(c)&&Date.now()-c.teamDoneAt<6*3600e3).forEach(c=>it.push({at:c.teamDoneAt,cls:'done',html:`<b>ช่วยแล้ว</b> ${esc((c.needs||[]).join(', ')||'เคส')}${vol(c)?' · '+esc(vol(c)):''}`}));
   it.sort((a,b)=>(b.at||0)-(a.at||0));
   $('#feed').innerHTML=it.length?it.slice(0,25).map(x=>`<li class="${x.cls}"><time>${esc(new Date(x.at).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}))}</time><span>${x.html}</span></li>`).join(''):'<li class="muted">ยังไม่มีความเคลื่อนไหวใน 6 ชม.</li>';
 }
@@ -211,7 +212,7 @@ async function drawMap(V){
     L.circle([r.lat,r.lng],{radius:r.radius,color:r.color,weight:2,fillColor:r.color,fillOpacity:V.r?.04:.07,dashArray:'6 6',interactive:!V.r}).bindTooltip(`<b>${esc(r.name)}</b> · รัศมี ${kmTxt(r.radius)} กม.${capsOf(r).length?'<br>'+capsOf(r).map(k=>esc(capLabel(k))).join(' · '):''}`,{sticky:true}).on('click',()=>{if(!V.r){W.room=r.id;W.fitted='';render()}}).addTo(W.lr);
     if(V.r)pts.push([r.lat,r.lng])});
   V.cases.filter(c=>c.status!=='done'||(showDone&&(c.doneAt||c.updatedAt)>=t0)).sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(!hasPin(c)){if(c.status!=='done')nopin++;return}
-    const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open',ph=photos(c);pts.push([+c.lat,+c.lng]);
+    const k=FIN(c)?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open',ph=photos(c);pts.push([+c.lat,+c.lng]);
     L.marker([+c.lat,+c.lng],{icon:umPin(k,{extra:ph.length?`<span class="pin-thumb"><img src="${thumb(ph[0],200)}" alt="" loading="lazy" referrerpolicy="no-referrer"></span>`:''}),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
       .bindTooltip(esc(`${URG[sev(c)]} · ${(c.needs||[]).join(', ')||'ขอความช่วยเหลือ'} · ${c.people||1} คน${vol(c)?' · ทีม '+vol(c):''} · รอ ${waitTxt(c.createdAt)}`),{direction:'top',offset:[0,-4]})
       .on('click',()=>{location.href=caseLink(c)}).addTo(W.lc)});
@@ -326,7 +327,7 @@ function casesTab(V){
   $('#c-st').innerHTML=[['open','รอช่วย'],['going','กำลังไป'],['done','ช่วยแล้ว'],['all','ทั้งหมด']].map(([k,l])=>`<button type="button" data-st="${k}" aria-selected="${k===W.cst}">${l} <small>${cnt(k)}</small></button>`).join('');
   const q=W.cq.trim().toLowerCase();
   const list=V.cases.filter(c=>(W.cst==='all'||c.status===W.cst)&&(!q||[(c.needs||[]).join(' '),c.district,c.address,vol(c)].join(' ').toLowerCase().includes(q)))
-    .sort((a,b)=>(a.status==='done')-(b.status==='done')||sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,300);
+    .sort((a,b)=>FIN(a)-FIN(b)||sev(b)-sev(a)||(a.createdAt||0)-(b.createdAt||0)).slice(0,300);
   const teamOpts=sel=>`<option value="">— เลือกทีม —</option>`+V.roster.map(t=>`<option${t.name===sel?' selected':''}>${esc(t.name)}</option>`).join('');
   const NI=[[/อาหาร/,'food'],[/น้ำดื่ม|น้ำ/,'water'],[/ยา|การแพทย์|แพทย์/,'pill'],[/อพยพ|เรือ/,'boat'],[/ผู้ป่วย|ผู้สูงอายุ|ติดเตียง|พิการ/,'patient']];
   const nIc=c=>{const seen=[];(c.needs||[]).forEach(n=>{const m=NI.find(([re])=>re.test(n));const k=m?m[1]:'more';if(!seen.includes(k))seen.push(k)});return seen};
@@ -335,17 +336,17 @@ function casesTab(V){
     return `<article class="wr-ci ${UC[u]} cs-${esc(c.status)}${open?' is-open':''}" data-cid="${esc(id)}">
       <button type="button" class="wr-ci-h" aria-expanded="${open}" data-ctog="${esc(id)}">
         <span class="ph">${ph.length?`<img src="${thumb(ph[0],160)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w160" alt="" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b>${ph.length}</b>`:''}`:ic('image')}</span>
-        <span class="lv"><i></i>${c.status==='done'?'ช่วยแล้ว':c.status==='going'?'กำลังไป':URG[u]}</span>
+        <span class="lv"><i></i>${HP(c)?'ช่วยแล้ว':c.status==='done'?'ปิดเคส':c.status==='going'?'กำลังไป':URG[u]}</span>
         <span class="nd" title="${esc((c.needs||[]).join(', '))}">${ics.slice(0,2).map(k=>ic(k)).join('')}${ics.length>2?`<small>+${ics.length-2}</small>`:''}</span>
         <span class="pp"><b>${esc(c.people||1)}</b> <span>${esc(c.district||c.province||'–')}</span></span>
-        <span class="wt">${c.status==='done'?'—':esc(waitTxt(c.createdAt))}</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <span class="wt">${FIN(c)?'—':esc(waitTxt(c.createdAt))}</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
       ${open?`<div class="wr-ci-b"><dl>${row('ต้องการ',esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ'))}${row('สถานะ',esc(CST[c.status]||c.status)+(v?' · '+esc(v):''))}${row('จำนวนคน',esc(c.people||1)+' คน')}
           ${row('ระดับน้ำ',esc(c.levelText||''))}${row('ที่อยู่',esc(c.address||''))}${row('ผู้แจ้ง',esc([c.name,c.phone].filter(Boolean).join(' · ')))}${row('หมายเหตุ',esc(c.notes||''))}
           ${row('แจ้งเมื่อ',c.createdAt?esc(waitTxt(c.createdAt))+'ที่แล้ว'+(c.src==='hm'?' · Help Me':''):'')}</dl>
         ${ph.length?`<div class="wr-ci-ph">${ph.slice(0,6).map(x=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(x)}/view" target="_blank" rel="noopener"><img src="${thumb(x,320)}" data-alt="https://drive.google.com/thumbnail?id=${encodeURIComponent(x)}&sz=w320" alt="รูปจากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div>`:''}
         ${c.status!=='done'?`<label class="wr-ci-as">มอบทีม<select data-assign="${esc(id)}" aria-label="มอบทีม">${teamOpts(v)}</select></label>`:''}
         <div class="wr-ci-a">${tel?`<a class="btn call" href="tel:${esc(tel)}">${ic('phone')} โทร</a>`:''}${hasPin(c)?`<a class="btn ghost" href="${navLink(c.lat,c.lng)}" target="_blank" rel="noopener">${ic('nav')} นำทาง</a>`:''}
-          ${c.status!=='done'?`<button type="button" class="btn ghost" data-done="${esc(id)}">${ic('check')} เสร็จ</button>`:''}<a class="btn ghost" href="${caseLink(c)}">${ic('next')} เปิดเคส</a></div></div>`:''}</article>`}).join('')
+          ${!FIN(c)?`<button type="button" class="btn ghost" data-done="${esc(id)}">${ic('check')} ช่วยแล้ว</button>`:''}<a class="btn ghost" href="${caseLink(c)}">${ic('next')} เปิดเคส</a></div></div>`:''}</article>`}).join('')
     :`<p class="muted wr-empty">ไม่มีเคส${V.r?' ในพื้นที่ของ War Room นี้ (ตั้งเขต/รัศมีได้ที่แท็บโปรไฟล์)':''}</p>`;
   $('#c-count').textContent=`${list.length} เคส`
 }
@@ -356,8 +357,8 @@ $('#c-body').addEventListener('change',async e=>{const s=e.target.closest('[data
   try{const r=await apiPost({action:'update',id:c.id,status:team?'going':'open',volunteer:team});if(r.ok){c.volunteer=team;c.status=team?'going':'open';toast(team?`มอบเคสให้ ${team} แล้ว`:'ยกเลิกการมอบทีมแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}
   catch(err){toast('บันทึกไม่สำเร็จ')}finally{s.disabled=false;render()}});
 $('#c-body').addEventListener('click',e=>{const t=e.target.closest('[data-ctog]');if(!t)return;W.copen=W.copen===t.dataset.ctog?'':t.dataset.ctog;casesTab(view())});
-$('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('ปิดเคสนี้ว่าช่วยเสร็จแล้ว?'))return;
-  b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'done',volunteer:vol(c)});if(r.ok){c.status='done';toast('ปิดเคสแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
+$('#c-body').addEventListener('click',async e=>{const b=e.target.closest('[data-done]');if(!b)return;const c=W.cases.find(x=>String(x.id)===b.dataset.done);if(!c||!confirm('บันทึกว่าช่วยเหลือแล้ว?'))return;
+  b.disabled=true;try{const r=await apiPost({action:'update',id:c.id,status:'going',volunteer:vol(c),helped:true});if(r.ok){c.status='going';c.teamDoneAt=Date.now();toast('บันทึกว่าช่วยเหลือแล้ว',true)}else toast('บันทึกไม่สำเร็จ: '+(r.error||''))}catch(err){toast('บันทึกไม่สำเร็จ')}render()});
 
 function teamsTab(V){if(W.appsAt!=='t'+V.r.id&&/^wru?_/.test(String(ADM.key||''))){W.appsAt='t'+V.r.id;appsCard($('#t-apps'),'room')}const r=V.r,live=new Map(W.live.map(l=>[l.team,l])),rn=new Map(W.rooms.map(x=>[x.id,x]));
   if(isProv(r)){dispatchQ(V);const zs=zonesOf(r.province);

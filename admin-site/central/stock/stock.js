@@ -69,7 +69,7 @@ document.addEventListener('click',e=>{
   const ed=e.target.closest('[data-ed]');if(ed){openItem(S.items.find(i=>i.id===ed.dataset.ed));return}
 });
 $('#add-item').addEventListener('click',()=>openItem(null));
-$('#add-bag').addEventListener('click',()=>openItem({category:BAG,unit:'ถุง'}));
+$('#add-bag').addEventListener('click',()=>openItem({category:BAG,unit:'ถุง'},true));
 addEventListener('hashchange',()=>{const v=location.hash==='#bags'?'bags':'stock';if(v!==S.view){S.view=v;render()}});
 $('#add-team').addEventListener('click',openTeam);
 
@@ -194,11 +194,12 @@ function openMove(it,type){if(!it)return;
       it.qty=r.qty;toast(`${TYPE[t]} ${it.name} ${nf(a)} ${it.unit||''} · เหลือ ${nf(r.qty)}`,true);closeD();render();loadAll()}
     catch(err){if(err.message!=='auth')toast('บันทึกไม่สำเร็จ ลองใหม่')}finally{const b=$('#m-go');if(b)b.disabled=false}};
 }
-function openItem(it){it=it||{};const isNew=!it.id;
-  drawer(`<div class="d-head"><div><h2>${isNew?'เพิ่มรายการใหม่':'แก้ไขรายการ'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
-  <form id="iform" class="form-grid">
-    <label class="fld"><span>ชื่อรายการ *</span><input name="name" required maxlength="80" value="${esc(it.name)}"></label>
-    <label class="fld"><span>หมวด</span><input name="category" list="cats" maxlength="30" value="${esc(it.category)}" placeholder="อาหาร, ยา, ของใช้…"><datalist id="cats">${CATS.map(c=>`<option value="${c}">`).join('')}</datalist></label>
+// bagOnly: opened from "+ เพิ่มชนิดถุง" — category is fixed so the new bag can't land in another category and vanish from the bags view
+function openItem(it,bagOnly){it=it||{};const isNew=!it.id;
+  drawer(`<div class="d-head"><div><h2>${bagOnly?'เพิ่มชนิดถุงยังชีพ':isNew?'เพิ่มรายการใหม่':'แก้ไขรายการ'}</h2></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
+  <form id="iform" class="form-grid" autocomplete="off">
+    <label class="fld"><span>ชื่อรายการ *</span><input name="name" required maxlength="80" value="${esc(it.name)}"${bagOnly?' placeholder="เช่น ถุงยังชีพ ชุด A / ถุงเด็กเล็ก"':''}></label>
+    ${bagOnly?`<label class="fld"><span>หมวด</span><input name="category" value="${BAG}" readonly></label>`:`<label class="fld"><span>หมวด</span><input name="category" list="cats" maxlength="30" value="${esc(it.category)}" placeholder="อาหาร, ยา, ของใช้…"><datalist id="cats">${CATS.map(c=>`<option value="${c}">`).join('')}</datalist></label>`}
     ${isNew?`<label class="fld"><span>จำนวนรับเข้าตอนนี้</span><input name="qty0" type="number" min="0" inputmode="numeric" placeholder="เว้นว่าง = 0"></label>`:''}
     <label class="fld"><span>หน่วย</span><input name="unit" maxlength="20" list="units" placeholder="ห่อ, แผง, ขวด…" value="${esc(it.unit)}"><datalist id="units">${['ห่อ','แผง','ขวด','แพ็ค','ถุง','กล่อง','ชิ้น','ซอง','หลอด','ตลับ','กระป๋อง','คู่','ชุด','ฟอง','กิโลกรัม'].map(u=>`<option value="${u}">`).join('')}</datalist></label>
     ${isNew?`<label class="fld"><span>รับจาก / ผู้บริจาค</span><input name="source" maxlength="80" placeholder="เช่น มัสยิด… / ร้าน… / ซื้อเอง"></label>`:''}

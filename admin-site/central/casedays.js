@@ -2,7 +2,7 @@ const CASEDAYS=(()=>{
   const D={n:14,day:null,init:false};
   const box=()=>document.getElementById('days-view');
   const key=t=>{const d=new Date(Number(t));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-  const helpedAt=c=>Number(c.teamDoneAt)||(c.status==='done'?Number(c.doneAt||c.updatedAt)||0:0);
+  const helpedAt=c=>c.status!=='open'?Number(c.teamDoneAt)||0:0;
   const label=k=>{const [y,m,d]=k.split('-').map(Number),dt=new Date(y,m-1,d),t=key(Date.now()),yd=key(Date.now()-864e5);
     return (k===t?'วันนี้ · ':k===yd?'เมื่อวาน · ':'')+dt.toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'})};
   function list(){const st=$('#f-status');const keep=st.value;st.value='all';try{return filtered().filter(c=>!c.dupOf)}finally{st.value=keep}}

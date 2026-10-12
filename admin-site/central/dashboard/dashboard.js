@@ -87,7 +87,7 @@ let leafletP=null;const M={map:null,cases:null,flood:null,fitted:false,floodAt:-
 function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return leafletP;leafletP=new Promise((res,rej)=>{
   const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.integrity='sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';css.crossOrigin='';document.head.append(css);
   const sc=document.createElement('script');sc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';sc.integrity='sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';sc.crossOrigin='';sc.onload=res;sc.onerror=()=>{leafletP=null;rej()};document.head.append(sc)});return leafletP}
-const caseColor=c=>c.status==='done'?'#0ca30c':c.status==='going'?'#2a78d6':sev(c)===3?'#d03b3b':sev(c)===2?'#ec835a':'#fab219';
+const caseColor=c=>c.status!=='open'&&c.teamDoneAt?'#0ca30c':c.status==='done'?'#9aa1aa':c.status==='going'?'#2a78d6':sev(c)===3?'#d03b3b':sev(c)===2?'#ec835a':'#fab219';
 const escT=s=>String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 async function drawMap(L0){
   try{await loadLeaflet()}catch(e){$('#dmap').textContent='โหลดแผนที่ไม่สำเร็จ';return}
@@ -99,7 +99,7 @@ async function drawMap(L0){
   const showDone=$('#mt-done').checked,list=L0.filter(c=>(showDone||c.status!=='done'));
   M.cases.clearLayers();const pts=[];let nopin=0;
   list.slice().sort((a,b)=>sev(a)-sev(b)).forEach(c=>{if(c.lat===''||c.lat==null||c.lng===''||isNaN(+c.lat)){nopin++;return}const ll=[+c.lat,+c.lng];pts.push(ll);
-    const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';
+    const k=(c.status==='done'||(c.status!=='open'&&c.teamDoneAt))?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';
     L.marker(ll,{icon:umPin(k),zIndexOffset:{danger:1000,urgent:700,open:400,going:200,done:0}[k],keyboard:false})
       .bindPopup(`<b>${escT(URG[sev(c)])} · ${escT(ST[c.status]||'')}</b><br>${escT(c.needs.join(', ')||'ขอความช่วยเหลือ')} · ${escT(c.people||1)} คน${hh(c)?' · '+hh(c)+' ครัวเรือน':''}<br>${escT([c.address,c.district?'เขต'+c.district:''].filter(Boolean).join(' · '))}${c.volunteer?'<br>ทีม: '+escT(c.volunteer):''}<br><a href="https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll[1]}&travelmode=driving" target="_blank" rel="noopener">นำทาง (Google Maps) ↗</a> · <a href="../../central.html">เปิดหน้าจัดการเคส →</a>`).addTo(M.cases)});
   $('#map-nopin').textContent=nopin?`· ${nopin} เคสไม่มีหมุด (ไม่แสดงบนแผนที่)`:'';
@@ -145,7 +145,7 @@ function metrics(){const el=$('#metrics');if(!el)return;const all=(D.hmc||[]).co
   const now=Date.now(),wk=now-7*864e5,M=60e3,med=a=>{if(!a.length)return null;a=a.slice().sort((x,y)=>x-y);const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2};
   const dur=ms=>ms==null?'–':ms<3600e3?Math.round(ms/M)+' นาที':ms<864e5?(ms/3600e3).toFixed(1).replace(/\.0$/,'')+' ชม.':(ms/864e5).toFixed(1).replace(/\.0$/,'')+' วัน';
   const rec=all.filter(c=>c.createdAt>=wk),open=all.filter(c=>c.status!=='done'&&c.status!=='going');
-  const pick=rec.filter(c=>c.pickedAt>c.createdAt).map(c=>c.pickedAt-c.createdAt),fin=rec.filter(c=>c.status==='done'&&(c.doneAt||c.updatedAt)>c.createdAt).map(c=>(c.doneAt||c.updatedAt)-c.createdAt);
+  const pick=rec.filter(c=>c.pickedAt>c.createdAt).map(c=>c.pickedAt-c.createdAt),fin=rec.filter(c=>c.status!=='open'&&Number(c.teamDoneAt)>c.createdAt).map(c=>c.teamDoneAt-c.createdAt);
   const crit=rec.filter(c=>sev(c)===3),critOk=crit.filter(c=>c.pickedAt&&c.pickedAt-c.createdAt<=30*M).length;
   const critWait=open.filter(c=>sev(c)===3&&now-c.createdAt>30*M).length,longWait=open.filter(c=>now-c.createdAt>864e5).length;
   const mp=med(pick),mf=med(fin),pc=crit.length?Math.round(critOk/crit.length*100):null;
@@ -168,14 +168,14 @@ function render(){summary();metrics();if(!D.fbkAt){D.fbkAt=1;loadFeedback()}
   $('#range-note').textContent=from?`ตั้งแต่ ${new Date(from).toLocaleDateString('th-TH',{day:'numeric',month:'short'})} · ${nf(L.length)} เคส`:`${nf(L.length)} เคสทั้งหมด`;
   const n=s=>L.filter(c=>c.status===s).length;
   const HMC=!!D.hmc,KL=HMC?D.hmc.filter(c=>!from||c.createdAt>=from):L,ka=KL.filter(c=>c.status!=='done'),kn=s=>KL.filter(c=>c.status===s).length;
-  const doneAt=c=>Number(c.doneAt)||c.updatedAt,done=KL.filter(c=>c.status==='done'&&doneAt(c)>c.createdAt);
+  const hp=c=>c.status!=='open'&&Number(c.teamDoneAt)>0,doneAt=c=>Number(c.teamDoneAt)||Number(c.doneAt)||c.updatedAt,done=KL.filter(c=>hp(c)&&doneAt(c)>c.createdAt);
   const avgH=done.length?done.reduce((s,c)=>s+(doneAt(c)-c.createdAt),0)/done.length/36e5:null;
   const crit=ka.filter(c=>sev(c)===3).length,ppl=ka.reduce((s,c)=>s+(Number(c.people)||1),0),hhs=ka.reduce((s,c)=>s+hh(c),0),vc=ka.filter(c=>vul(c).length||(c.needs||[]).includes('ผู้ป่วย / ผู้สูงอายุ')).length;
 const bagsOf=c=>c.bags===''||c.bags==null?null:Number(c.bags);const bagSet=KL.reduce((s,c)=>s+(bagsOf(c)||0),0),bagNeed=ka.filter(c=>bagsOf(c)==null).reduce((s,c)=>s+(hh(c)||1),0);
     const day0=Math.floor((Date.now()+7*36e5)/864e5)*864e5-7*36e5,P=c=>Math.max(1,Number(c.people)||1);
-    const newToday=KL.filter(c=>c.createdAt>=day0).length,doneToday=KL.filter(c=>c.status==='done'&&doneAt(c)>=day0).length;
-    const pplCrit=ka.filter(c=>sev(c)===3).reduce((s,c)=>s+P(c),0),pplDone=KL.filter(c=>c.status==='done').reduce((s,c)=>s+P(c),0);
-    const avgTxt=avgH==null?'':`ปิดเคสเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'}`;
+    const newToday=KL.filter(c=>c.createdAt>=day0).length,doneToday=KL.filter(c=>hp(c)&&doneAt(c)>=day0).length;
+    const pplCrit=ka.filter(c=>sev(c)===3).reduce((s,c)=>s+P(c),0),pplDone=KL.filter(hp).reduce((s,c)=>s+P(c),0);
+    const avgTxt=avgH==null?'':`ช่วยเสร็จเฉลี่ย ${avgH<1?Math.round(avgH*60)+' นาที':avgH.toFixed(1)+' ชม.'}`;
     const k=[[nf(KL.length),'เคสทั้งหมด',`ช่วยแล้ว ${KL.length?Math.round(kn('done')/KL.length*100):0}% · ใหม่วันนี้ ${nf(newToday)}`],[nf(kn('open')),'รอความช่วยเหลือ',`วิกฤต ${nf(crit)} เคส`,'var(--crit)'],[nf(kn('going')),'ทีมกำลังไป','กำลังเดินทาง / อยู่หน้างาน','var(--going)'],[nf(kn('done')),'ช่วยเหลือแล้ว',`วันนี้ ${nf(doneToday)} เคส${avgTxt?' · '+avgTxt:''}`,'var(--good)'],
     [nf(ppl),'คนที่ยังรอ',`ในเคสวิกฤต ${nf(pplCrit)} คน`,'var(--crit)'],[nf(pplDone),'คนที่ช่วยแล้ว','ได้รับความช่วยเหลือ','var(--good)'],[hhs?nf(hhs):'–','ครัวเรือนที่ยังรอ','ถ้าผู้แจ้งระบุ'],[nf(vc),'เคสที่มีคนต้องดูแลพิเศษ','ยังไม่เสร็จ'],[nf(KL.filter(c=>!(c.lat!==''&&c.lat!=null)).length),'เคสที่ไม่มีหมุด','ต้องโทรถามตำแหน่ง'],[nf(bagSet),'ถุงยังชีพ (ที่ระบุแล้ว)','รวมทุกเคสในช่วงนี้'],[nf(bagNeed),'ถุงที่ควรเตรียมเพิ่ม','เคสยังไม่เสร็จที่ยังไม่ระบุ · ครัวเรือนละ 1']];
   const fromHM=new Set(HMC?k:[]);

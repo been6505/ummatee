@@ -2,7 +2,7 @@ const API_URL='/api';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ST={open:'รอความช่วยเหลือ',going:'ทีมกำลังไป',helped:'ช่วยเหลือแล้ว',done:'ปิดเคส'};
-const stOf=c=>c.status==='going'&&c.teamDoneAt?'helped':c.status;
+const stOf=c=>c.status!=='open'&&c.teamDoneAt?'helped':c.status,isFin=c=>['helped','done'].includes(stOf(c));
 const URG={3:'วิกฤต',2:'เร่งด่วน',1:'ทั่วไป'};
 const VUL={elderly:'ผู้สูงอายุ',child:'เด็กเล็ก',infant:'ทารก',pregnant:'หญิงตั้งครรภ์',disabled:'ผู้พิการ',bedridden:'ผู้ป่วยติดเตียง',oxygen:'ใช้ออกซิเจน / เครื่องช่วยหายใจ',dialysis:'ผู้ป่วยฟอกไต',chronic:'ผู้ป่วยโรคเรื้อรัง'};
 const LEVEL={ankle:'ข้อเท้า',knee:'เข่า',waist:'เอว',chest:'อก',roof:'มิดหัว / หลังคา'};
@@ -80,8 +80,8 @@ function filtered(){
   return A.cases.filter(c=>{
     if(q){const h=hay(c);const ok=q.split(/\s+/).every(t=>{if(h.includes(t))return true;const d=digits(t);return /^[\d+\-\s]+$/.test(t)&&d.length>=3&&digits(c.phone).includes(d)});if(!ok)return false}
     if(A.today&&!((Number(c.createdAt)||0)>=dayStart()))return false;
-    if(st==='active'&&c.status==='done')return false;
-    if(st==='helped'){if(stOf(c)!=='helped')return false}else if(['open','going','done'].includes(st)&&c.status!==st)return false;
+    if(st==='active'&&isFin(c))return false;
+    if(['open','going','helped','done'].includes(st)&&stOf(c)!==st)return false;
     if(u&&String(sev(c))!==u)return false;
     if(nd&&!(c.needs||[]).join(' ').includes(nd))return false;
     const fv=$('#f-vr').value;if(fv==='verified'){if(!VR_OK.has(vr(c).result.k))return false}else if(fv==='covered'){if(!cov(c))return false}else if(fv==='notcovered'){if(cov(c))return false}else if(fv&&vr(c).result.k!==fv)return false;
@@ -89,8 +89,8 @@ function filtered(){
     return true}).sort((a,b)=>{const ca=Number(a.createdAt)||0,cb=Number(b.createdAt)||0;
       if(so==='team'){const ta=String(a.volunteer||'').replace(/^'/,''),tb=String(b.volunteer||'').replace(/^'/,'');if(ta!==tb)return !ta?1:!tb?-1:ta.localeCompare(tb,'th');return sev(b)-sev(a)||ca-cb}
       if(so==='new')return cb-ca;if(so==='old')return ca-cb;if(so==='ppl')return (Number(b.people)||1)-(Number(a.people)||1);
-      if(so==='score')return ((a.status==='done')-(b.status==='done'))||(vr(b).score-vr(a).score)||(ca-cb);
-      return ((a.status==='done')-(b.status==='done'))||(sev(b)-sev(a))||(vrRank(a)-vrRank(b))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(vr(b).score-vr(a).score)||(ca-cb)});
+      if(so==='score')return (isFin(a)-isFin(b))||(vr(b).score-vr(a).score)||(ca-cb);
+      return (isFin(a)-isFin(b))||(sev(b)-sev(a))||(vrRank(a)-vrRank(b))||({open:0,going:1,done:2}[a.status]-{open:0,going:1,done:2}[b.status])||(vr(b).score-vr(a).score)||(ca-cb)});
 }
 ['#q','#f-status','#f-urg','#f-need','#f-sort','#f-vr','#f-zone'].forEach(s=>$(s).addEventListener(s==='#q'?'input':'change',()=>{if(s!=='#q')A.today=false;fCount();render()}));
 const dayStart=()=>new Date().setHours(0,0,0,0);
@@ -131,7 +131,7 @@ VERIFY.onUpdate=()=>render();
 function vrBadge(c){const v=vr(c),ext=v.chips.filter(x=>/^(ดาวเทียม|ฝน)/.test(x.t)&&x.k!=='na').slice(0,2);
   return covBadge(c)+`<span class="vr vr-${v.result.k}" title="${esc(v.result.d)}">${esc(v.result.t)}</span><small class="vr-score">คะแนน ${v.score}/100</small>${ext.map(x=>`<span class="vr-chip k-${x.k} sm">${esc(x.t)}</span>`).join('')}`}
 
-const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},done:{st:'done',u:''},active:{st:'active',u:''}};
+const SF={all:{st:'all',u:''},today:{st:'all',u:'',sort:'new',today:true},crit:{st:'active',u:'3'},open:{st:'open',u:''},going:{st:'going',u:''},teams:{st:'going',u:'',sort:'team'},helped:{st:'helped',u:''},done:{st:'done',u:''},active:{st:'active',u:''}};
 function statKey(){if(A.today)return 'today';const st=$('#f-status').value,u=$('#f-urg').value;if($('#f-need').value||$('#f-vr').value)return '';const so=$('#f-sort').value;return Object.keys(SF).find(k=>SF[k].st===st&&SF[k].u===u&&((SF[k].sort||'')===(so==='team'?'team':'')))||''}
 $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');if(!b)return;
  const k=b.getAttribute('aria-pressed')==='true'&&b.dataset.sf!=='active'?'active':b.dataset.sf,f=SF[k];
@@ -141,10 +141,10 @@ $('#stats').addEventListener('click',e=>{const b=e.target.closest('[data-sf]');i
   fCount();render();const t=$('#map-wrap:not([hidden])')||$('#list');if(t&&window.innerWidth<1024)t.scrollIntoView({behavior:'smooth',block:'start'})});
 function render(){
   if(!A.roster&&A.key){A.listNeedsRoster=true;loadRoster()}
-  const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>c.status===s).length,act=base.filter(c=>c.status!=='done');
+  const all=A.cases,base=A.hm||all,n=s=>base.filter(c=>stOf(c)===s).length,act=base.filter(c=>!isFin(c));
   const t0=dayStart(),today=base.filter(c=>(Number(c.createdAt)||0)>=t0).length,crit=act.filter(c=>sev(c)===3).length,confirmed=act.filter(c=>vr(c).result.k==='confirmed').length,conflict=act.filter(c=>vr(c).result.k==='conflict').length;
   const cur=statKey();
-  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['เคสเข้าใหม่วันนี้',today,'today','today'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ปิดเคสแล้ว',n('done'),'done','done']]
+  $('#stats').innerHTML=[[A.hm?'ทั้งหมด <small class="hm-tag">Help Me</small>':'ทั้งหมด',base.length,'','all'],['เคสเข้าใหม่วันนี้',today,'today','today'],['วิกฤต · ยืนยันแล้ว '+confirmed+(conflict?' · ขัดแย้ง '+conflict:''),crit,'red','crit'],['รอความช่วยเหลือ',n('open'),'wait','open'],['มอบเคสให้ทีม',n('going'),'go','going'],['ทีมกำลังไป',new Set(base.filter(c=>c.status==='going'&&c.volunteer).map(c=>String(c.volunteer).replace(/^'/,'').trim())).size,'go','teams'],['ช่วยเหลือแล้ว',n('helped'),'ok','helped'],['ปิดเคส · ไม่ได้ช่วย',n('done'),'done','done']]
     .map(([t,v,k,f])=>`<button type="button" class="stat ${k}" data-sf="${f}" aria-pressed="${cur===f&&f!=='active'}" title="กดเพื่อแสดงเคสกลุ่มนี้"><b>${esc(v)}</b><span>${t}</span></button>`).join('');
   const list=filtered();
   const ownOnly=all.length-(A.hm?A.hm.length:0);
@@ -196,7 +196,7 @@ async function saveBags(id,val,inp){
 async function changeStatus(id,status,sel,team){
   const c=A.cases.find(x=>String(x.id)===String(id));if(!c)return;
   if(status===stOf(c)&&!team)return;
-  const helped=status==='helped'?true:(status==='going'&&c.teamDoneAt?false:undefined);
+  const helped=status==='helped'?true:((status==='going'||status==='done')&&c.teamDoneAt?false:undefined);
   if(status==='helped'){status='going';if(!team&&c.volunteer)team=String(c.volunteer).replace(/^'/,'')}
   if(status==='going'&&!team){team=prompt('ชื่อทีมที่รับเคสนี้',c.volunteer||store.get('uh_team'));if(team===null){if(sel)sel.value=c.status;return}team=team.trim();if(!team){toast('ต้องใส่ชื่อทีมก่อนรับเคส');if(sel)sel.value=c.status;return}}
   if(team)store.set('uh_team',team,true);
@@ -355,7 +355,7 @@ document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest
   const ta=f.querySelector('[data-ik="risks"]'),cur=ta.value.split(/\s*,\s*/).filter(Boolean),r=t.dataset.ikrisk,i=cur.indexOf(r);if(i>=0)cur.splice(i,1);else cur.push(r);ta.value=cur.join(', ');t.setAttribute('aria-pressed',String(i<0))});
 function assignBox(c){const going=c.status==='going',done=c.status==='done',rep=going&&c.teamDoneAt;
   return `<fieldset class="d-status"><legend>มอบหมายทีม</legend>
-    <p class="d-now">สถานะ: <b class="st-txt st-${esc(c.status)}">${esc(ST[c.status]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>
+    <p class="d-now">สถานะ: <b class="st-txt st-${esc(stOf(c))}">${esc(ST[stOf(c)]||c.status)}</b>${c.volunteer&&!(c.status==='open')?' · '+esc(String(c.volunteer).replace(/^'/,'')):''}</p>
     ${c.teamIssue?`<div class="d-teamdone d-issue"><b>ทีมแจ้งปัญหา · ${esc(ago(c.teamIssueAt))}</b><span>${esc(c.teamIssue)} · ส่งทีมอื่นได้ที่ "เปลี่ยนทีม" หรือปิดเคส</span></div>`:''}
     ${c.teamMemo?`<div class="d-teamdone memo"><b>หมายเหตุจากทีม · ${esc(ago(c.teamMemoAt))}</b><span>${esc(c.teamMemo)}</span></div>`:''}
     ${rep?`<div class="d-teamdone"><b>ทีมแจ้งว่าช่วยเหลือแล้ว · ${esc(ago(c.teamDoneAt))}</b>${c.teamNote?`<span>${esc(c.teamNote)}</span>`:''}</div>`:''}
@@ -449,7 +449,7 @@ async function drawMap(list){
       r.lines.forEach(l=>L.polyline(l.map(p=>[p[1],p[0]]),{color:col,weight:5,opacity:.85,lineCap:'round'}).bindTooltip(`${r.name}${r.depth!=null?' · ~'+r.depth+' ซม.':''}`).addTo(A.flood))})}
   setTimeout(()=>A.map.invalidateSize(),50);A.layer.clearLayers();const pts=[];
   const PZ={danger:1000,urgent:700,open:400,going:200,done:0};
-  list.filter(hasPin).forEach(c=>{const k=c.status==='done'?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';pts.push([+c.lat,+c.lng]);
+  list.filter(hasPin).forEach(c=>{const k=isFin(c)?'done':c.status==='going'?'going':sev(c)===3?'danger':sev(c)===2?'urgent':'open';pts.push([+c.lat,+c.lng]);
     const ph=photosOf(c);
     L.marker([+c.lat,+c.lng],{icon:umPin(k,{extra:ph.length?`<span class="pin-thumb"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(ph[0])}=w200" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(ph[0])}&sz=w200" alt="" loading="lazy" referrerpolicy="no-referrer">${ph.length>1?`<b aria-label="มีรูป ${ph.length} รูป">${ph.length}</b>`:''}</span>`:''}),zIndexOffset:PZ[k]+(ph.length?50:0),keyboard:false}).bindTooltip(esc(`${URG[sev(c)]} · ${vr(c).result.t} · ${(c.needs||[]).join(', ')} · ${c.people||1} คน`)+(ph.length?`<span class="tip-photos">${ph.slice(0,3).map((id,i)=>`<img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w240" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w240" alt="รูปที่ ${i+1} จากผู้แจ้ง" referrerpolicy="no-referrer">`).join('')}${ph.length>3?`<em>+${ph.length-3}</em>`:''}</span>`:''),{direction:'top',offset:[0,-4]}).on('click',()=>openDrawer(c.id)).addTo(A.layer)});
   if(pts.length&&!A.fitted){A.map.fitBounds(pts,{padding:[40,40],maxZoom:14});A.fitted=true}

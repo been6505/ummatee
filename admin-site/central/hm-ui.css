@@ -1171,3 +1171,5 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
   #filters-box.filters-box.open{grid-template-columns:1fr 1fr!important;gap:8px}
   #filters-box.filters-box select{min-height:42px;font-size:14px;border-radius:12px}
 }
+/* ช่วยเหลือแล้ว = เขียว (ส่งมอบแล้ว) · ปิดเคส = เทา (ปิดโดยไม่ได้ช่วย) */
+.stat.ok b{color:#277343}.stat.done b{color:#6b7280}

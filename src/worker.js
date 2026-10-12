@@ -83,16 +83,19 @@ for (const [t, k] of Object.entries(BACKUP_TABLES)) {
   if (t !== 'stock_log') SCHEMA.push(`CREATE TRIGGER IF NOT EXISTS q_${t}_upd AFTER UPDATE ON ${t} BEGIN INSERT INTO sync_queue (tbl,rid) VALUES ('${t}', NEW.${k}); END`);
 }
 let ready = null;
-async function init(db) {
-  if (!ready) ready = (async () => {
-    await db.batch(SCHEMA.map(s => db.prepare(s)));
-    for (const col of ['expiry TEXT', 'location TEXT']) { try { await db.prepare('ALTER TABLE stock ADD COLUMN ' + col).run(); } catch (e) {} }
-    try { await db.prepare('ALTER TABLE stock_log ADD COLUMN team TEXT').run(); } catch (e) {}
-    try { await db.prepare('ALTER TABLE stock ADD COLUMN kit TEXT').run(); } catch (e) {}
-    for (const [t, col] of [['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'hidAt INTEGER'], ['teams_live', 'speed REAL'],
+// ALTER ที่เคยเพิ่มคอลัมน์ทีหลัง — รวมไว้ที่เดียวเพื่อคำนวณลายนิ้วมือ schema
+const ALTERS = [['stock', 'expiry TEXT'], ['stock', 'location TEXT'], ['stock_log', 'team TEXT'], ['stock', 'kit TEXT'], ...[['roster', 'token TEXT'], ['roster', 'sosAt INTEGER'], ['roster', 'sosAck INTEGER'], ['teams_live', 'battery INTEGER'], ['teams_live', 'appAt INTEGER'], ['teams_live', 'hidAt INTEGER'], ['teams_live', 'speed REAL'],
       ['teams_live', 'heading REAL'], ['chat', 'kind TEXT'], ['chat', 'link TEXT'], ['roster', 'warroom TEXT'], ['stock', 'warroom TEXT'], ['warrooms', 'kind TEXT'], ['warrooms', 'province TEXT'], ['roster', 'gmaps TEXT'],
       ['cases', 'src TEXT'], ['cases', 'hmHash TEXT'], ['cases', 'hmStatus TEXT'], ['cases', 'hmVolunteer TEXT'], ['cases', 'hmUpdatedAt INTEGER'], ['cases', 'localAt INTEGER'],
-      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'closeNote TEXT'], ['cases', 'teamAckAt INTEGER'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
+      ['cases', 'sevSet INTEGER'], ['cases', 'intake TEXT'], ['cases', 'teamMemo TEXT'], ['cases', 'closeNote TEXT'], ['cases', 'teamAckAt INTEGER'], ['cases', 'teamArrivedAt INTEGER'], ['cases', 'teamMemoAt INTEGER'], ['teams_live', 'alt REAL'], ['teams_live', 'charging INTEGER'], ['teams_live', 'sig INTEGER'], ['teams_live', 'net TEXT'], ['teams_live', 'carrier TEXT'], ['teams_live', 'temp REAL'], ['teams_live', 'hum REAL'], ['teams_live', 'wxAt INTEGER'], ['teams_live', 'devAt INTEGER'], ['ptt', 'talk TEXT'], ['rallies', 'isAll INTEGER'], ['cases', 'teamIssue TEXT'], ['cases', 'teamIssueAt INTEGER'], ['cases', 'sevBy TEXT'], ['audit', 'undo TEXT'], ['audit', 'undone INTEGER'], ['cases', 'photos TEXT'], ['cases', 'province TEXT'], ['cases', 'org TEXT'], ['cases', 'dupOf TEXT'], ['cases', 'glat REAL'], ['cases', 'glng REAL'], ['cases', 'glabel TEXT'], ['cases', 'gtry INTEGER'], ['cases', 'gai INTEGER'], ['cases', 'pickedAt INTEGER'], ['cases', 'doneAt INTEGER'], ['cases', 'pinCheck TEXT'], ['cases', 'levelText TEXT'], ['cases', 'photoAi TEXT'], ['cases', 'hqNote TEXT'], ['cases', 'teamDoneAt INTEGER'], ['cases', 'teamNote TEXT'], ['cases', 'hmLink TEXT'], ['warrooms', 'token TEXT'], ['warrooms', 'caps TEXT'], ['warrooms', 'capNote TEXT']]];
+// เดิม init ยิง ~73 คำสั่ง D1 ทีละคำสั่งทุกครั้งที่ isolate ใหม่เริ่ม (cold start ~6–25 วินาที เมื่อชนกับ hm_sync)
+// ตอนนี้: ถ้า schema_ver ใน meta ตรงกับลายนิ้วมือของ SCHEMA+ALTERS ปัจจุบัน → อ่าน 1 ครั้งแล้วจบ
+const SCHEMA_VER = (() => { let h = 7; for (const ch of JSON.stringify([SCHEMA, ALTERS, 'roster_token'])) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return 'v1-' + h.toString(36); })();
+async function init(db) {
+  if (!ready) ready = (async () => {
+    try { if (await getMeta(db, 'schema_ver') === SCHEMA_VER) return; } catch (e) {}
+    await db.batch(SCHEMA.map(s => db.prepare(s)));
+    for (const [t, col] of ALTERS) { try { await db.prepare(`ALTER TABLE ${t} ADD COLUMN ${col}`).run(); } catch (e) {} }
     await db.prepare('CREATE INDEX IF NOT EXISTS roster_token ON roster(token)').run();
     const c = await db.prepare('SELECT COUNT(*) n FROM stock').first();
     if (!c.n) {
@@ -104,6 +107,7 @@ async function init(db) {
       await db.batch(Object.entries(BACKUP_TABLES).map(([t, k]) => db.prepare(`INSERT INTO sync_queue (tbl,rid) SELECT '${t}', ${k} FROM ${t}`)));
       await setMeta(db, 'backup_seeded', String(Date.now()));
     }
+    await setMeta(db, 'schema_ver', SCHEMA_VER);
   })().catch(e => { ready = null; throw e; });
   return ready;
 }

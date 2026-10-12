@@ -1195,3 +1195,10 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .cc-btns .btn.danger{background:#D92D20;color:#fff;border:0}.cc-btns .btn.danger:disabled{opacity:.6}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .d-closecase{background:#262b33;color:#d6dae2;border-color:#3a404b}:root:not([data-theme="light"]) .d-closenote{background:#20242b}:root:not([data-theme="light"]) .cc-chip{background:#20242b;border-color:#3a404b;color:inherit}:root:not([data-theme="light"]) .cc-dlg textarea{border-color:#3a404b}}
 :root[data-theme="dark"] .d-closecase{background:#262b33;color:#d6dae2;border-color:#3a404b}:root[data-theme="dark"] .d-closenote{background:#20242b}:root[data-theme="dark"] .cc-chip{background:#20242b;border-color:#3a404b;color:inherit}:root[data-theme="dark"] .cc-dlg textarea{border-color:#3a404b}
+/* ปุ่มในแถวเคส: ปิดเคส (ข้างสถานะ) · นำทาง (ข้างที่อยู่) */
+.row-close,.row-nav{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border-radius:999px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;vertical-align:middle}
+.row-close{margin-left:8px;background:#F1F2F5;color:#3D4451;border:1px solid #DFE2E8}.row-close:hover{background:#E7E9EE}
+.row-nav{margin-left:10px;background:#EEF1FD;color:#2D45C8;border:1px solid #C9D2F6}.row-nav:hover{background:#E2E7FC}
+.row-close .ic,.row-nav .ic{width:15px;height:15px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .row-close{background:#262b33;color:#d6dae2;border-color:#3a404b}:root:not([data-theme="light"]) .row-nav{background:#1f2747;color:#AFC0FF;border-color:#33407a}}
+:root[data-theme="dark"] .row-close{background:#262b33;color:#d6dae2;border-color:#3a404b}:root[data-theme="dark"] .row-nav{background:#1f2747;color:#AFC0FF;border-color:#33407a}

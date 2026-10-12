@@ -1243,3 +1243,19 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
   .filters[role=group]:has(>[data-range]) .f-note{grid-column:1/-1;text-align:center;font-size:12.5px;color:var(--ink-2,#5B6386);padding:2px 0 4px}
   .filters[role=group]:has(>[data-range]) .f-note:empty{display:none}
 }
+/* มือถือ: แถว เคส/บอร์ด/วันที่ + ดาวน์โหลด + ตัวกรอง — badge จำนวนตัวกรองลอยที่มุมปุ่ม (ไม่ดันปุ่มให้กว้างจนล้นจอ)
+   และให้แถบมุมมองหดได้ ปุ่มด้านขวาจะไม่ถูกตัดเสมอ */
+#f-toggle{position:relative}
+#f-toggle #f-n{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;display:grid;place-items:center;font-size:11.5px;line-height:1;font-weight:800;background:var(--red,#E5383B);color:#fff;border:2px solid var(--page,#F5F5F7);margin:0!important}
+#f-toggle #f-n[hidden]{display:none}
+@media(max-width:760px){
+  .view-row:has(>.vr-tools)>.view-sw{flex:0 1 auto!important;min-width:0;overflow-x:auto!important;scrollbar-width:none}
+  .view-row:has(>.vr-tools)>.view-sw::-webkit-scrollbar{display:none}
+  .view-row:has(>.vr-tools)>.view-sw button{flex:none;white-space:nowrap}
+  .view-row>.vr-tools{flex:none;padding-right:4px}
+}
+.view-row>.bar-slot:empty{display:none!important}
+@media(max-width:760px){
+  .view-row:has(>.vr-tools)>.bar-slot:not(:has(#filters-box.open)){flex:0 0 0!important;min-width:0;margin:0!important;overflow:hidden}
+  .view-row:has(>.vr-tools):has(#filters-box.open){flex-wrap:wrap!important}
+}

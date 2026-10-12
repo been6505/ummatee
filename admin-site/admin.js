@@ -287,8 +287,9 @@ function renderDrawer(){
   const t=tel(c),rows=[['ระดับ',URG[sev(c)]+(vr(c).manual?' · เจ้าหน้าที่กำหนด':' · ระบบกำหนด')],['สถานะ',ST[c.status]||c.status],['ความต้องการ',(c.needs||[]).join(', ')||'-'],['จำนวนคน',{h:edNum('d-ppl',c.people||1,'คน','',1)}],['ถุงยังชีพ',{h:edNum('d-bags',bagsOf(c)==null?'':bagsOf(c),'ถุง',`แนะนำ ${bagSuggest(c)}`,0)}],['ครัวเรือน / ครอบครัว',{h:edNum('d-hh',hh(c)||'','ครัวเรือน','ไม่ระบุ',1)}],['ระดับน้ำ',LEVEL[c.level]||'ไม่ระบุ'],
     ['ที่อยู่ / จุดสังเกต',addr(c)||'-'],['พิกัด',{h:(hasPin(c)?`${(+c.lat).toFixed(6)}, ${(+c.lng).toFixed(6)}`+pinNote(c):'ไม่ได้ปักหมุด')+(!addr(c)?'':`<div class="aip"><button type="button" class="aip-btn" data-aipin="${esc(c.id)}"><i data-ic="sparkle"></i> ให้ AI ตรวจตำแหน่ง/เส้นทางจากข้อความ</button><div class="aip-out" id="aip-out"></div></div>`)}],['ผู้ติดต่อ',c.name||'-'],['เบอร์โทร',String(c.phone||'-').replace(/^'/,'')],
     ['ต้องดูแลเป็นพิเศษ',vul(c).join(', ')||'-'],['ทีมที่รับเคส',c.volunteer||'-'],['แจ้งเมื่อ',fullTime(c.createdAt)],['อัปเดตล่าสุด',fullTime(c.updatedAt)]];
-  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(c.status)}">${esc(ST[c.status]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div>
+  d.innerHTML=`<div class="d-head"><div><span class="urg urg-${sev(c)}">${URG[sev(c)]}</span> <span class="st st-${esc(stOf(c))}">${esc(ST[stOf(c)]||'')}</span><h2>${esc((c.needs||[]).join(' · ')||'ขอความช่วยเหลือ')}</h2><small>#${esc(c.hmId||c.id)}${c.hm?' · <span class="hm-tag">Help Me</span>':''}</small></div><div class="d-hbtns">${isFin(c)?'':'<button type="button" class="btn d-closecase" data-dact="closecase"><i data-ic="box"></i> ปิดเคส</button>'}<button class="x" id="d-close" aria-label="ปิด"><i data-ic="close"></i></button></div></div>
     <div class="d-grid"><div class="d-col d-col-a">
+    ${stOf(c)==='done'&&c.closeNote?`<div class="d-closenote"><b>เหตุผลที่ปิดเคส</b><p>${esc(c.closeNote)}</p></div>`:''}
     ${notesOf(c)?`<div class="d-notes"><b>สถานการณ์</b><p>${esc(notesOf(c))}</p></div>`:''}
     ${photosOf(c).length?`<div class="d-photos"><b>รูปจากผู้แจ้ง · ${photosOf(c).length} รูป</b><div>${photosOf(c).map((id,i)=>`<a href="https://drive.google.com/file/d/${encodeURIComponent(id)}/view" target="_blank" rel="noopener"><img src="https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w600" data-alt-src="https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w600" alt="รูปที่ ${i+1} จากผู้แจ้ง" loading="lazy" referrerpolicy="no-referrer"></a>`).join('')}</div></div>`:''}
     <div class="d-ho" id="d-ho" hidden></div>
@@ -395,7 +396,25 @@ async function setSev(c,val,btn){const prev={sevSet:c.sevSet,sevBy:c.sevBy},by=s
   try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:c.status,volunteer:c.volunteer||'',sevSet:val,metaOnly:true});if(!r||!r.ok)throw 0;
     toast(val===''?'กลับไปใช้ระดับของระบบแล้ว':`ตั้งระดับเป็น "${URG[val]}" แล้ว`,true)}
   catch(e){Object.assign(c,prev);vrCache.delete(c.id);render();renderDrawer();toast('บันทึกไม่สำเร็จ')}}
+function closeCaseDlg(c){const d=document.createElement('dialog');d.className='cc-dlg';
+  const R=['ไม่เข้าเกณฑ์','เคสซ้ำ','ติดต่อไม่ได้','ได้รับความช่วยเหลือจากที่อื่นแล้ว','ผู้แจ้งยกเลิก'];
+  d.innerHTML=`<form method="dialog"><h3>ปิดเคส #${esc(c.hmId||c.id)}?</h3><p class="cc-sub">ปิดโดย<b>ไม่ได้ส่งมอบความช่วยเหลือ</b> · เคสจะย้ายไป "ปิดเคส · ไม่ได้ช่วย"${c.teamDoneAt?' · บันทึกการส่งมอบเดิมจะถูกลบ':''}</p>
+    <label class="cc-lbl" for="cc-note">หมายเหตุ / เหตุผลที่ปิด</label>
+    <div class="cc-chips">${R.map(r=>`<button type="button" class="cc-chip" data-r="${esc(r)}">${esc(r)}</button>`).join('')}</div>
+    <textarea id="cc-note" rows="3" maxlength="500" placeholder="เช่น ติดต่อผู้แจ้งแล้ว ได้รับของจากหน่วยงานในพื้นที่แล้ว"></textarea>
+    <div class="cc-btns"><button type="button" class="btn ghost" value="cancel" data-cc="no">ยกเลิก</button><button type="button" class="btn danger" data-cc="ok"><i data-ic="box"></i> ยืนยันปิดเคส</button></div></form>`;
+  document.body.append(d);if(typeof iconize==='function')iconize(d);d.showModal();const ta=d.querySelector('#cc-note');setTimeout(()=>ta.focus(),50);
+  d.addEventListener('close',()=>d.remove());
+  d.addEventListener('click',async e=>{if(e.target===d){d.close();return}
+    const ch=e.target.closest('[data-r]');if(ch){const v=ta.value.trim();ta.value=v?v+(/[\s·,]$/.test(v)?'':' · ')+ch.dataset.r:ch.dataset.r;ta.focus();return}
+    const b=e.target.closest('[data-cc]');if(!b)return;if(b.dataset.cc==='no'){d.close();return}
+    b.disabled=true;const note=ta.value.trim(),prev={status:c.status,teamDoneAt:c.teamDoneAt,closeNote:c.closeNote};
+    try{const r=await post({action:'update',key:A.key,id:apiId(c.id),status:'done',volunteer:String(c.volunteer||'').replace(/^'/,''),closeNote:note,...(c.teamDoneAt?{helped:false}:{})});
+      if(!r||!r.ok){if(r&&r.error==='not_volunteer'){d.close();showLogin('รหัสหมดอายุ กรุณาเข้าสู่ระบบใหม่');return}throw new Error(r&&r.error)}
+      c.status='done';c.teamDoneAt=null;c.closeNote=note;c.doneAt=Date.now();d.close();closeDrawer();render();toast(`ปิดเคส #${c.hmId||c.id} แล้ว`,true)}
+    catch(err){Object.assign(c,prev);b.disabled=false;toast('ปิดเคสไม่สำเร็จ ลองใหม่อีกครั้ง')}})}
 async function assignAct(c,act,btn){
+  if(act==='closecase'){closeCaseDlg(c);return}
   if(act==='newteam'){const f=$('#d-newteam');f.hidden=!f.hidden;if(!f.hidden)$('#nt-name').focus();return}
   if(act==='ntcancel'){$('#d-newteam').hidden=true;return}
   if(act==='ntsave'){const name=$('#nt-name').value.trim();if(!name){toast('ใส่ชื่อทีมก่อน');$('#nt-name').focus();return}

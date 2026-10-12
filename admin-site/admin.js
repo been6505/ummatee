@@ -293,7 +293,7 @@ function sumCard(c,t){const row=(icn,k,v,x)=>`<div class="ds-r"><i data-ic="${ic
     ${row('pin','ที่อยู่',`<b>${esc(addr(c)||'-')}</b><em class="${hasPin(c)?'ok':'no'}">${hasPin(c)?'ปักหมุดแล้ว':'ยังไม่ปักหมุด'}</em>`)}
     ${row('users','จำนวนคน',edNum('d-ppl',c.people||1,'คน','',1))}
     ${row('wave','ระดับน้ำ',`<b>${esc(LEVEL[c.level]||'ไม่ระบุ')}</b>`)}
-    ${notesOf(c)?row('note','รายละเอียด',`<b class="ds-note">${esc(notesOf(c))}</b>`):''}
+    ${notesOf(c)?row('note','สถานการณ์',`<b class="ds-note">${esc(notesOf(c))}</b>`):''}
   </div>`}
 function renderDrawer(){
   const c=A.cases.find(x=>String(x.id)===A.openId),d=$('#drawer');if(!c){A.fromLink=false;closeDrawer();return}

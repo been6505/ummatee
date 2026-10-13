@@ -326,7 +326,7 @@ button.db-tile{font:inherit;text-align:left;cursor:pointer;border:0;color:inheri
 </style>
 <script src="../central/verify.js?v=19"></script>
 <script src="../central/icons.js?v=23"></script>
-<script src="./native-track.js?v=9"></script>
+<script src="./native-track.js?v=10"></script>
 <script src="../central/ptt.js?v=9"></script>
 <script>(()=>{const C=window.Capacitor;if(C&&C.isNativePlatform&&C.isNativePlatform())document.documentElement.classList.add('native')})();</script>
 <style>html.native .web-only,html.native #at-hero,html.native #gm-hero{display:none!important}</style><style>.top{--hh:50px;align-items:center!important;gap:8px!important}
@@ -677,7 +677,7 @@ setInterval(()=>{if(TR.watch!=null&&TR.pos&&Date.now()-TR.sentAt>20000)ping();lo
 function locUI(){const b=$('#locbar'),t=$('#loc-t'),btn=$('#loc-btn');if(!b)return;
   if(typeof NATIVE!=='undefined'&&NATIVE){const m=NT.at?Math.round((Date.now()-NT.at)/60000):null,smsNow=NT.err==='offline'&&window.NTRK&&NTRK.offlineFor()>120000;btn.hidden=NT.err!=='denied'&&!smsNow;btn.textContent=smsNow?'ส่งทาง SMS':'อนุญาต';
     if(NT.err){b.className=NT.err==='offline'?'locbar wait':'locbar off';t.textContent=NT.err==='denied'?'ยังไม่ได้อนุญาตตำแหน่ง · ศูนย์มองไม่เห็นทีม':NT.err==='bad_link'||NT.err==='bad_key'?'ลิงก์ทีมใช้ไม่ได้ · ศูนย์ไม่ได้รับตำแหน่ง':NT.err==='offline'?`ไม่มีสัญญาณ · เก็บตำแหน่งไว้ ${NT.q} จุด จะส่งเมื่อมีสัญญาณ`:'ส่งตำแหน่งไม่ได้';return}
-    b.className=NT.at?'locbar':'locbar wait';t.textContent=NT.at?(m<5?'ศูนย์เห็นตำแหน่ง':`ศูนย์เห็นตำแหน่ง · ส่งล่าสุด ${m} นาทีก่อน`):'กำลังเริ่มส่งตำแหน่ง…';return}
+    b.className=NT.at?'locbar':'locbar wait';t.textContent=NT.at?((m<5?'ศูนย์เห็นตำแหน่ง':`ศูนย์เห็นตำแหน่ง · ส่งล่าสุด ${m} นาทีก่อน`)+(window.NTRK&&NTRK.still&&NTRK.still()?' · หยุดนิ่ง พักจับ GPS ประหยัดแบต':'')):'กำลังเริ่มส่งตำแหน่ง…';return}
   if(TR.watch==null){b.className='locbar off';t.textContent=TR.err||'ตำแหน่งปิดอยู่ · ศูนย์มองไม่เห็นทีม';btn.textContent='เปิด';btn.hidden=false;return}
   btn.hidden=true;
   if(TR.err||!TR.pos){b.className='locbar wait';t.textContent=TR.err||'กำลังหาตำแหน่ง…';return}

@@ -43,12 +43,12 @@ const ACTNOW=(()=>{
     if(!box){box=document.createElement('section');box.id='actnow';box.className='actnow';box.setAttribute('aria-label','ต้องจัดการตอนนี้');st.before(box);
       box.addEventListener('click',onClick)}
     const L=items(),late=L.filter(x=>x.k==='new'&&mins(x.t)>=LATE[x.sv]).length;
-    if(!L.length){box.innerHTML=`<div class="an-top"><b><i data-ic="check"></i> ไม่มีงานค้าง</b><small>ทุกเคสมีทีมดูแลแล้ว</small></div>`;box.classList.add('an-empty');box.hidden=false;return}
+    if(!L.length){box.innerHTML=`<div class="an-top"><span class="an-ic an-ok"><i data-ic="check"></i></span><b class="an-ttl">ไม่มีงานค้าง</b><small>ทุกเคสมีทีมดูแลแล้ว</small></div>`;box.classList.add('an-empty');box.hidden=false;return}
     box.classList.remove('an-empty');
     const shown=all?L:L.slice(0,SHOW);
-    box.innerHTML=`<button type="button" class="an-top" data-an-toggle aria-expanded="${open}"><b>ต้องจัดการตอนนี้ <span class="an-n">${L.length}</span></b>${late?`<small class="an-latec">เกินเวลา ${late}</small>`:''}<i data-ic="chev" class="an-chev"></i></button>`
-      +(open&&!(T.live||[]).some(t=>Date.now()-t.updatedAt<LIVE_MAX)&&L.some(x=>x.k==='new')?'<p class="an-note">ยังไม่มีทีมส่งตำแหน่งใน 30 นาที · แนะนำทีมใกล้สุดไม่ได้ เลือกทีมเองจากปุ่ม "เลือกทีม"</p>':'')
-      +(open?`<ul class="an-list">${shown.map(row).join('')}</ul>${L.length>SHOW?`<button type="button" class="an-all" data-an-all>${all?'ย่อ':`ดูทั้งหมด ${L.length} รายการ`}</button>`:''}`:'');
+    // หัวกล่องบรรทัดเดียว: ไอคอน + ชื่อ + จำนวน (แดงเมื่อมีเคสเกินเวลา) · ป้าย "เกิน N" เฉพาะเมื่อเกินบางส่วน
+    box.innerHTML=`<button type="button" class="an-top" data-an-toggle aria-expanded="${open}"><span class="an-ic"><i data-ic="alert"></i></span><b class="an-ttl">ต้องจัดการตอนนี้</b><span class="an-n${late?' an-hot':''}">${L.length}</span>${late&&late<L.length?`<small class="an-latec">เกิน ${late}</small>`:''}<i data-ic="chev" class="an-chev"></i></button>`
+      +(open?`<ul class="an-list">${shown.map(row).join('')}</ul>${L.length>SHOW?`<button type="button" class="an-all" data-an-all>${all?'ย่อรายการ':`ดูทั้งหมด ${L.length} รายการ`}<i data-ic="chev"></i></button>`:''}`:'');
   }
   async function onClick(e){const g=e.target.closest('[data-an-assign]');
     if(g){const id=g.dataset.anAssign,team=g.dataset.anTeam;busy.add(id);draw();try{await changeStatus(id,'assigned',null,team)}finally{busy.delete(id);draw()}return}

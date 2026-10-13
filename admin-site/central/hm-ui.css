@@ -1309,3 +1309,31 @@ main.wrap>section.bar .bar-row:not(:has(.filters-box.open)){display:none!importa
 .hq-r button[aria-pressed=true]{background:#2D45C8;border-color:#2D45C8;color:#fff}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .hd-tm{background:#123524;color:#8FE0AE}:root:not([data-theme="light"]) .hd-src i.on{background:#123524;color:#8FE0AE}}
 :root[data-theme="dark"] .hd-tm{background:#123524;color:#8FE0AE}:root[data-theme="dark"] .hd-src i.on{background:#123524;color:#8FE0AE}
+/* มุมมอง "วันที่" — กราฟพอดีจอ ไม่ตัวเลขทับกัน · สรุป 3 ช่อง · ตารางหัวคอลัมน์บรรทัดเดียว */
+.dv-top{display:grid!important;gap:10px}
+.dv-sum{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important}
+.dv-sum>div{min-width:0!important;padding:10px 12px!important;border-radius:16px!important;box-shadow:0 1px 3px rgba(22,27,61,.06)!important}
+.dv-sum small{display:flex!important;align-items:center;gap:6px;white-space:nowrap}.dv-sum small i{width:8px;height:8px;border-radius:3px;flex:none;background:#2D45C8}.dv-sum small i.o{background:#10b981}.dv-sum small i.w{background:#E5383B}
+.dv-sum b{font-size:24px!important;line-height:1.15}
+.dv-n{justify-self:start}
+.dv-chart{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px!important;padding:16px 8px 8px!important;overflow:hidden!important;border-radius:20px!important;box-shadow:0 1px 3px rgba(22,27,61,.06)!important}
+.dv-chart.dense{grid-auto-columns:minmax(18px,1fr);overflow-x:auto!important}
+.dv-bar{flex:none!important;min-width:0}
+.dv-bs{height:96px!important;gap:3px!important;align-items:flex-end}
+.dv-bs i{width:42%!important;max-width:14px!important;border-radius:5px 5px 2px 2px!important}
+.dv-bs em{display:none}
+.dv-v{display:grid;gap:0;width:100%;text-align:center;font-weight:700;line-height:1.25}
+.dv-v u{text-decoration:none;font-size:11.5px;font-variant-numeric:tabular-nums}.dv-v u.i{color:#2D45C8}.dv-v u.o{color:#0e9f6e}
+.dv-chart.dense .dv-v{display:none}
+.dv-bar small{font-size:11.5px!important;font-weight:600}.dv-bar.on small{color:var(--ink,#161B3D)}
+.dv-bar.on{background:#EEF1FD!important;box-shadow:inset 0 0 0 1.5px #C9D2F6}
+.dv-tbl{border-radius:20px!important;box-shadow:0 1px 3px rgba(22,27,61,.06)!important}
+.dv-tbl th{white-space:nowrap;padding:10px 10px!important;font-size:12.5px!important}.dv-tbl td{padding:10px 10px!important;font-variant-numeric:tabular-nums}
+.dv-tbl thead th:not(:first-child){width:21%}
+.dv-tbl tr[data-dvd]>td:first-child{display:flex;align-items:center;gap:2px}
+.dv-dl{display:grid;line-height:1.25;min-width:0}.dv-dl b{font-size:14px}.dv-dl span{font-size:12.5px;color:var(--muted)}
+.dv-dl b+span{font-size:12px}.dv-dl>span:only-child{font-size:14px;color:inherit;font-weight:600}
+.dv-tbl tbody tr.on td:first-child .dv-dl b{color:#2D45C8}
+@media (max-width:760px){.dv-bs{height:88px!important}}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dv-bar.on{background:#1f2747!important;box-shadow:inset 0 0 0 1.5px #33407a}}
+:root[data-theme="dark"] .dv-bar.on{background:#1f2747!important;box-shadow:inset 0 0 0 1.5px #33407a}

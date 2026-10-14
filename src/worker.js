@@ -2011,6 +2011,35 @@ async function cached(key, ttl, load) {
 }
 const UA = { 'user-agent': 'UMplus-flood-help/1.0 (+https://admin-um-help.pages.dev)' };
 
+// ---- พยากรณ์ฝน "ตกไหม / เริ่มกี่โมง / หยุดกี่โมง" ต่อจุด (Open-Meteo รายชั่วโมง ความละเอียดราว 10 กม.) ----------------
+// ตัดพิกัดเป็นช่อง 0.1° แล้วแคช 10 นาที: ทีมหลายสิบคนที่อยู่ใกล้กันใช้คำตอบเดียวกัน ไม่เปลืองโควตา Open-Meteo
+const RAIN_WET = 0.1;   // มม./ชม. ขึ้นไปนับว่ามีฝน
+const rainClass = mm => mm < RAIN_WET ? 0 : mm < 2.5 ? 1 : mm < 10 ? 2 : mm < 30 ? 3 : 4;   // 0 ไม่ตก 1 เล็กน้อย 2 ปานกลาง 3 หนัก 4 หนักมาก
+function rainSummary(hours) {
+  const mm = hours.map(h => h.mm), n = mm.length, wetNow = mm[0] >= RAIN_WET;
+  const firstDryAfter = i => { for (let k = i; k < n; k++) if (mm[k] < RAIN_WET) return k; return -1; };
+  const firstWetAfter = i => { for (let k = i; k < n; k++) if (mm[k] >= RAIN_WET) return k; return -1; };
+  const sum = a => Math.round(a.reduce((x, y) => x + y, 0) * 10) / 10, at = k => (k >= 0 ? hours[k].t : null);
+  let startsAt = null, stopsAt = null, again = null;
+  if (wetNow) { const d = firstDryAfter(1); stopsAt = at(d); if (d >= 0) again = at(firstWetAfter(d)); }
+  else { const w = firstWetAfter(1); startsAt = at(w); if (w >= 0) stopsAt = at(firstDryAfter(w + 1)); }
+  const peakI = mm.indexOf(Math.max(...mm)), pr = hours.map(h => h.p == null ? 0 : h.p);
+  return { wetNow, level: rainClass(Math.max(...mm.slice(0, 6))), nowLevel: rainClass(mm[0]), startsAt, stopsAt, again,
+    total6: sum(mm.slice(0, 6)), total24: sum(mm), peakMm: Math.round(mm[peakI] * 10) / 10, peakAt: mm[peakI] >= RAIN_WET ? hours[peakI].t : null,
+    maxProb6: Math.max(...pr.slice(0, 6)), maxProb24: Math.max(...pr) };
+}
+async function rainForecast(lat, lng) {
+  const la = (Math.round(lat * 10) / 10).toFixed(1), lo = (Math.round(lng * 10) / 10).toFixed(1);
+  return cached(`rainfc-v1-${la}-${lo}`, 600, async () => {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&hourly=precipitation,precipitation_probability&forecast_hours=24&timezone=Asia%2FBangkok`, { headers: UA, signal: AbortSignal.timeout(12000) });
+    if (!r.ok) throw new Error('open-meteo ' + r.status);
+    const j = await r.json(), H = j && j.hourly;
+    if (!H || !Array.isArray(H.time) || !H.time.length) throw new Error('open-meteo empty');
+    const hours = H.time.map((t, i) => ({ t: Date.parse(t + ':00+07:00'), mm: Math.max(0, Number(H.precipitation[i]) || 0), p: H.precipitation_probability && H.precipitation_probability[i] != null ? Number(H.precipitation_probability[i]) : null }));
+    return { ok: true, at: Date.now(), lat: +la, lng: +lo, hours, sum: rainSummary(hours) };
+  });
+}
+
 const TMD_KEY = 'uid=api&ukey=api12345';
 const xmlDec = s => String(s || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
   .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d))
@@ -3080,6 +3109,9 @@ async function api(request, env) {
       case 'ptt_list': case 'ptt_audio': { const au = vol || p.tk ? await pttAuth(env, db, p, vol) : null; if (!au || !au.ok) return json({ ok: false, error: 'not_volunteer' }); const chans = au.chans.map(c => c.id);
         if (p.action === 'ptt_list') return json(await pttList(db, p, chans));
         const row = await db.prepare('SELECT ch FROM ptt WHERE n=?').bind(Number(p.n) || 0).first(); if (!row || !chans.includes(row.ch || 'all')) return new Response('not found', { status: 404 }); return pttAudio(db, p); }
+      case 'rain_fc': { if (!vol && !await teamFrom(env, db, p)) return json({ ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' });
+        const la = Number(p.lat), lo = Number(p.lng); if (!isFinite(la) || !isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return json({ ok: false, error: 'bad_location' });
+        try { return json(await rainForecast(la, lo)); } catch (e) { return json({ ok: false, error: 'weather_unavailable' }); } }
       case 'team_me': { const t = await teamFrom(env, db, p); return json(t ? await teamMe(db, t) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_stream': { const t = await teamFrom(env, db, p); return t ? teamStream(db, t.name) : json({ ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }
       case 'team_cases': { const t = await teamFrom(env, db, p); return json(t ? await teamCases(db) : { ok: false, error: p.tk ? 'bad_link' : 'not_volunteer' }); }

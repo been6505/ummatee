@@ -325,6 +325,7 @@ button.db-tile{font:inherit;text-align:left;cursor:pointer;border:0;color:inheri
 .tag.acc{background:#efeafd;color:#5b3fc4}.acts.acc{grid-template-columns:1fr}.acts.acc .btn.big{min-height:58px;font-size:18px}
 </style>
 <script src="../central/verify.js?v=19"></script>
+<script src="../central/rainfc.js?v=2"></script>
 <script src="../central/icons.js?v=23"></script>
 <script src="./native-track.js?v=10"></script>
 <script src="../central/ptt.js?v=9"></script>
@@ -483,6 +484,7 @@ async function req(url,opt,ms){const c=new AbortController();let t;const late=ne
   try{const r=await Promise.race([fetch(url,{...opt,signal:c.signal}),late]);if(r.status>=500||r.status===429)throw netErr('http_'+r.status);try{return await Promise.race([r.json(),late])}catch(e){throw e&&e.net?e:netErr('bad_json')}}
   catch(e){if(e&&(e.net||e.name==='AbortError'))throw netErr(e.message||'timeout');throw e}finally{clearTimeout(t);late.catch(()=>{})}}
 const api=p=>req('/api?'+new URLSearchParams({...p,...auth(),t:Date.now()}),{cache:'no-store'},20000);
+window.RAINFC_FETCH=(la,lo)=>api({action:'rain_fc',lat:la,lng:lo});
 const post=b=>req('/api',{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({...b,...auth(),name:S.name})},b&&b.img?90000:25000);
 // คิวรอส่ง (outbox): เก็บใน IndexedDB — รูปส่งมอบหลายรูปเกิน localStorage (~5MB) เดิมหายเงียบ ๆ ทั้งที่จอบอกว่ารอส่ง
 // ถือสำเนาไว้ในหน่วยความจำ (OB.a) ให้ get() ยังเป็นแบบ sync เหมือนเดิม; เขียนลง IDB ทุกครั้งที่เปลี่ยน, ใช้ localStorage เป็นทางสำรอง
@@ -703,6 +705,7 @@ function render(){const r=S.me;if(!r)return;const t=r.team;if(r.avatarAt&&!t.ava
   const nb=$('#b-work');nb.hidden=!going.length;nb.textContent=going.length;
   $('#cases').innerHTML=(going.length?`<p class="sec">งานที่ได้รับ ${going.length} เคส</p>`+going.map(card).join(''):'<p class="empty">ยังไม่มีงาน · ศูนย์จะส่งงานมาที่นี่</p>')
     +(done.length?`<p class="sec">เสร็จวันนี้ ${done.length}</p>`+done.map(card).join(''):'');
+  if(typeof RAINFC!=='undefined')RAINFC.mount($('#cases'));
   $('#supplies').innerHTML=(r.supplies||[]).map(n=>`<button type="button" class="chip" aria-pressed="${S.sup.has(n)}">${esc(n)}</button>`).join('');
   const p=tel(r.hqPhone);$('#c-tel').hidden=p.length<3;$('#c-tel').href='tel:'+p;$('#c-none').hidden=p.length>=3;
   if(S.view==='call')DASH();if(S.view==='prof')PROF();
@@ -722,6 +725,7 @@ function card(c){const s=sev(c),p=tel(c.phone),dest=hasPin(c)?`${+c.lat},${+c.ln
       return `<div class="hq-route"><b><i data-ic="route"></i> เส้นทางแนะนำจากศูนย์</b><span>${esc(rt.km)} กม. · ~${esc(rt.min)} นาที${rt.hits?'':' · เลี่ยงจุดน้ำท่วมแล้ว'}${rt.avoid&&rt.avoid.length?` · เลี่ยงอุปสรรค ${rt.avoid.length} จุด`:''}</span>${rt.note?`<p>${esc(rt.note)}</p>`:''}<a class="btn green" href="${esc(u)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทางตามเส้นทางนี้</a></div>`})()}
     ${c.hqNote?`<p class="note hq"><b>หมายเหตุจากศูนย์:</b> ${esc(c.hqNote)}</p>`:''}
     ${(c.supplies||[]).length?`<p class="note stk"><b>ของที่ศูนย์ส่งมา:</b> ${c.supplies.map(x=>esc(x.item)+' × '+esc(x.qty)).join(' · ')}</p>`:''}
+    ${done||!hasPin(c)?'':`<div class="rf-box" data-rf="${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}"></div>`}
     ${done?'':pendOf(c)?`<div class="acts acc"><button class="btn red big" type="button" data-accept="${esc(c.id)}"><i data-ic="check"></i> รับเคส · กำลังไป</button>${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}</div>`:`<div class="acts">${dest?`<a class="btn blue" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}" target="_blank" rel="noopener"><i data-ic="nav"></i> นำทาง</a>`:''}${p.length>=9?`<a class="btn green" href="tel:${esc(p)}"><i data-ic="phone"></i> โทรผู้แจ้ง</a>`:''}
       ${(()=>{const at=c.teamArrivedAt||(S.arr&&S.arr[c.id]);return at?`<button class="btn green arrived" type="button" data-arrive="${esc(c.id)}" aria-pressed="true"><i data-ic="check"></i> ถึงแล้ว · ${esc(new Date(Number(at)).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}))}</button>`:`<button class="btn" type="button" data-arrive="${esc(c.id)}"><i data-ic="pin"></i> ถึงแล้ว</button>`})()}${rep?'':`<button class="btn green" type="button" data-done="${esc(c.id)}"><i data-ic="check"></i> ช่วยเหลือแล้ว</button>`}<button class="btn" type="button" data-done="${esc(c.id)}"><i data-ic="alert"></i> แจ้งปัญหา</button><button class="btn" type="button" data-memo="${esc(c.id)}"><i data-ic="edit"></i> หมายเหตุ</button><button class="btn full" type="button" data-hard="${esc(c.id)}"><i data-ic="users"></i> สภาพหน้างาน${(S.hd&&S.hd[c.id])||c.teamHard?' ✓ ส่งแล้ว':''}</button></div>${c.teamMemo?`<p class="note"><b>หมายเหตุของทีม:</b> ${esc(c.teamMemo)}</p>`:''}${c.teamIssue?`<p class="note" style="background:#FFF1E6;color:#9A3B00">แจ้งศูนย์แล้ว: ${esc(c.teamIssue)}</p>`:''}`}</article>`}
 document.addEventListener('change',e=>{const x=e.target.closest&&e.target.closest('[data-tstatus]');if(!x)return;const sel=$('#status');sel.value=x.value;sel.dispatchEvent(new Event('change'))});
@@ -966,7 +970,7 @@ function dashOverview(el){const r=S.me;const t=r.team,st=r.stats||{total:0,helpe
       <div class="db-row"><i class="dot ${locOk?'':m==null?'off':'wait'}"></i><span>${esc(locTxt)}</span></div>
       <div class="db-row"><i class="dot ${navigator.onLine?'':'off'}"></i><span>${navigator.onLine?'ออนไลน์':'ไม่มีเน็ต · ข้อความจะส่งเมื่อมีสัญญาณ'}</span></div>
     </section>
-    ${Object.keys(sup).length?`<section class="db-card"><h3>ของที่ศูนย์ส่งมากับงาน</h3><div class="db-chips">${Object.entries(sup).map(([k,v])=>`<span>${esc(k)} × ${v}</span>`).join('')}</div></section>`:''}`}
+    ${Object.keys(sup).length?`<section class="db-card"><h3>ของที่ศูนย์ส่งมากับงาน</h3><div class="db-chips">${Object.entries(sup).map(([k,v])=>`<span>${esc(k)} × ${v}</span>`).join('')}</div></section>`:''}`;if(typeof RAINFC!=='undefined')RAINFC.mount(el)}
 
 const AC={list:null,at:0,open:'',sort:'near',lim:30,busy:false,q:'',srch:false,rad:0};
 async function loadAll(force){if(AC.busy||(!force&&AC.list&&Date.now()-AC.at<60000))return;AC.busy=true;try{const r=await api({action:'team_cases'});if(r&&r.ok){AC.list=r.cases;AC.at=Date.now();if(S.view==='call'&&S.dtab==='cases'){if(document.activeElement&&document.activeElement.id==='ac-q'){const x=$('#ac-res');if(x)x.innerHTML=acRes()}else DASH()}}}catch(e){}finally{AC.busy=false}}

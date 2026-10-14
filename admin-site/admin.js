@@ -25,6 +25,8 @@ function toast(msg,ok){const t=document.createElement('div');t.className='toast'
 
 async function api(params){const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),20000);
   try{const r=await fetch(API_URL+'?'+new URLSearchParams({...params,t:Date.now()}),{signal:ctl.signal,cache:'no-store'});return await r.json()}finally{clearTimeout(tm)}}
+// พยากรณ์ฝนต่อจุด (central/rainfc.js)
+window.RAINFC_FETCH=(la,lo)=>api({action:'rain_fc',key:A.key,lat:la,lng:lo});
 async function post(body){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({by:store.get('uh_staff')||undefined,...body})});return r.json()}
 
 function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#login-err').textContent=msg||'';setTimeout(()=>$('#login-key').focus(),50)}
@@ -332,6 +334,7 @@ function renderDrawer(){
     ${covSection(c)}${vrSection(c)}
     </div><div class="d-col d-col-b">
     ${sumCard(c,t)}
+    ${hasPin(c)?`<div class="rf-box" data-rf="${(+c.lat).toFixed(4)},${(+c.lng).toFixed(4)}"></div>`:''}
     <dl class="d-rows">${rows.filter(([k,v])=>!['ระดับ','สถานะ','ความต้องการ','จำนวนคน','ระดับน้ำ','ที่อยู่ / จุดสังเกต','ผู้ติดต่อ','เบอร์โทร'].includes(k)&&!(typeof v==='string'&&/^(-|–|ไม่ระบุ|)$/.test(v.trim()))).map(([k,v])=>`<dt>${k}</dt><dd>${v&&typeof v==='object'?v.h:esc(v)}</dd>`).join('')}</dl>
     ${c.hm?`<p class="small muted hm-sync">เคสจาก Help Me · ซิงก์เข้าฐานข้อมูลเราทุก 1 นาที${c.org?' · หน่วยงานที่รับ: '+esc(c.org):''} · สถานะ/ทีมที่แก้ที่นี่บันทึกในระบบเรา (ถ้า Help Me เปลี่ยนทีหลัง จะใช้ของ Help Me) · <a target="_blank" rel="noopener" href="${HM_URL(c.hmId)}">เปิดใน Help Me ↗</a></p>`:''}
     </div><div class="d-col d-col-c">
@@ -354,6 +357,7 @@ function renderDrawer(){
   {const sv=d.querySelector('.d-save'),nt=d.querySelector('#d-note');if(sv&&nt){const eds=[...d.querySelectorAll('.d-ed input')];eds.forEach(i=>i.addEventListener('input',()=>upd()));const upd=()=>{const busy=!!(A.stkBusy&&A.stkBusy[c.id]),dirty=!busy&&(nt.value.trim()!==(c.hqNote||'').trim()||stkPend(c).length>0||eds.some(i=>i.value!==i.dataset.orig));sv.disabled=!dirty;sv.classList.toggle('on',dirty);sv.lastChild.textContent=dirty?' บันทึก':' บันทึกแล้ว'};nt.addEventListener('input',upd);upd()}}
   d.querySelectorAll('[data-stkdel]').forEach(b=>b.onclick=()=>{const L=stkPend(c);L.splice(+b.dataset.stkdel,1);renderDrawer()});
   if(!A.roster)loadRoster();if(!A.stock)loadStock();
+  if(typeof RAINFC!=='undefined')RAINFC.mount(d);
 }
 const RST={ready:'ว่าง',out:'ทีมกำลังไป',rest:'พัก'};
 async function loadRoster(){if(A.rosterLoading)return;A.rosterLoading=true;

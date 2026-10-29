@@ -26,7 +26,7 @@ describe('nazaConfig ตรงกับ firestore.rules', () => {
     expect(m).toBeTruthy()
     const re = new RegExp(m[1])
     for (const s of ALL_SEATS) expect(re.test(s), s).toBe(true)
-    for (const s of ['A0', 'A6', 'B6', 'C0', 'C11', 'D11', 'E1', 'A10']) expect(re.test(s), s).toBe(false)
+    for (const s of ['A0', 'A6', 'B6', 'C0', 'C6', 'F6', 'G1', 'A10', 'C10']) expect(re.test(s), s).toBe(false)
     expect(ALL_SEATS).toHaveLength(SEATS_PER_ROUND)
   })
 
@@ -56,7 +56,7 @@ describe('nazaConfig ตรงกับ Apps Script (อีเมล/เตื�
   })
   it('รูปแบบข้อความใน QR ของอีเมลตรงกับที่เครื่องสแกนอ่าน', () => {
     expect(gs).toContain("return 'NAZA|' + b.code + '|' + b.round + '|' + b.seats.join(',')")
-    expect(parseNazaQr('NAZA|NZ-AB2CD|d6-1400|A1,C10')).toBe('NZ-AB2CD')
+    expect(parseNazaQr('NAZA|NZ-AB2CD|d6-1400|A1,F5')).toBe('NZ-AB2CD')
     expect(parseNazaQr('NZ-AB2CD')).toBe(null)
     expect(parseNazaQr('https://example.com')).toBe(null)
   })
@@ -78,12 +78,12 @@ describe('อีเมล', () => {
 })
 
 describe('ฟังก์ชันช่วย', () => {
-  it('เรียงที่นั่งตามแถวแล้วตามเลข (C10 อยู่หลัง C9)', () => {
-    expect(sortSeats(['C10', 'A2', 'C9', 'A1'])).toEqual(['A1', 'A2', 'C9', 'C10'])
+  it('เรียงที่นั่งตามแถวแล้วตามเลข', () => {
+    expect(sortSeats(['F5', 'A2', 'C5', 'A1'])).toEqual(['A1', 'A2', 'C5', 'F5'])
   })
   it('ประเภทที่นั่ง', () => {
     expect(seatType('A1')).toBe('บีนแบ็ก')
-    expect(seatType('D10')).toBe('เก้าอี้')
+    expect(seatType('F5')).toBe('เก้าอี้')
   })
   it('ชื่อรอบอ่านออก และรอบที่ไม่รู้จักไม่พัง', () => {
     expect(roundLabel('d6-1830')).toBe('ศุกร์ 6 พ.ย. 2569 · 18:30–21:00 น.')

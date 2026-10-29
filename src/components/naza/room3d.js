@@ -218,7 +218,7 @@ export function buildRoom({ canvas: cvs, wrap, rows: ROWS, onToggle, onPov, onHo
 
   // ที่นั่ง
   const ROWZ = []; { let z = -3.1; ROWS.forEach((r, i) => { if (i > 0) { const a = ROWS[i - 1][2], b = r[2]; z += a === 'bean' && b === 'bean' ? 1.45 : a === 'bean' ? 1.35 : 1.0 } ROWZ.push(z) }) }
-  const SP = 1.3, CSP = 0.82
+  const SP = 1.3, CSP = 0.95
   const chairSeatG = new THREE.BoxGeometry(0.46, 0.05, 0.44); chairSeatG.translate(0, 0.45, 0)
   const chairBackG = new THREE.BoxGeometry(0.46, 0.42, 0.04); chairBackG.rotateX(-0.12); chairBackG.translate(0, 0.7, 0.21)
   const legG = new THREE.CylinderGeometry(0.014, 0.014, 0.45, 8)
@@ -230,7 +230,7 @@ export function buildRoom({ canvas: cvs, wrap, rows: ROWS, onToggle, onPov, onHo
     const isBean = type === 'bean'
     for (let i = 1; i <= n; i++) {
       const id = row + i, r = rng(hashStr(id))
-      const x = isBean ? (i - 1 - (n - 1) / 2) * SP + (r() - .5) * 0.12 : (i - 1 - (n - 1) / 2) * CSP + (i > n / 2 ? 0.35 : -0.35)
+      const x = isBean ? (i - 1 - (n - 1) / 2) * SP + (r() - .5) * 0.12 : (i - 1 - (n - 1) / 2) * CSP + (n % 2 === 0 ? (i > n / 2 ? 0.35 : -0.35) : 0)
       const z = ROWZ[ri] + (isBean ? (r() - .5) * 0.14 : 0)
       const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = isBean ? (r() - .5) * 0.26 - x * 0.03 : -x * 0.015
       const mat = isBean ? new THREE.MeshStandardMaterial({ color: FREE.clone(), roughness: .88, bumpMap: bump, bumpScale: 0.015, emissive: '#000000' })

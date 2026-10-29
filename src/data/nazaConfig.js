@@ -17,8 +17,8 @@ export const NAZA_TIMES = [
   { id: '1830', label: '18:30', end: '21:00' },
 ]
 
-// แถว A–B บีนแบ็กด้านหน้า (10 ที่) · แถว C–D เก้าอี้ (20 ที่) · รวม 30 ที่ต่อรอบ
-export const NAZA_ROWS = [['A', 5, 'bean'], ['B', 5, 'bean'], ['C', 10, 'chair'], ['D', 10, 'chair']]
+// แถว A–B บีนแบ็กด้านหน้า (10 ที่) · แถว C–F เก้าอี้ แถวละ 5 (20 ที่) · รวม 30 ที่ต่อรอบ
+export const NAZA_ROWS = [['A', 5, 'bean'], ['B', 5, 'bean'], ['C', 5, 'chair'], ['D', 5, 'chair'], ['E', 5, 'chair'], ['F', 5, 'chair']]
 export const SEATS_PER_ROUND = NAZA_ROWS.reduce((a, [, n]) => a + n, 0)
 export const ALL_SEATS = NAZA_ROWS.flatMap(([r, n]) => Array.from({ length: n }, (_, i) => r + (i + 1)))
 

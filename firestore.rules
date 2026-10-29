@@ -910,7 +910,7 @@ service cloud.firestore {
       allow create: if isNazaStaff() || (
         request.resource.data.keys().hasOnly(['round', 'seat', 'bookingId', 'status', 'at'])
         && request.resource.data.seat is string
-        && request.resource.data.seat.matches('^([AB][1-5]|[CD]([1-9]|10))$')
+        && request.resource.data.seat.matches('^[A-F][1-5]$')
         && request.resource.data.round is string
         && id == request.resource.data.round + '_' + request.resource.data.seat
         && request.resource.data.status == 'pending'

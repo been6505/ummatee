@@ -3,7 +3,7 @@ import { useNavigate } from '../navContext'
 import { PAGE_TO_PATH } from '../data/routes.js'
 import { useLang } from '../i18n.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faMoon, faFilm, faStore, faEarthAsia } from '@fortawesome/free-solid-svg-icons'
+import { faFilm, faStore, faEarthAsia, faHouse, faHandHoldingHeart } from '@fortawesome/free-solid-svg-icons'
 
 // แถบเมนูหลักของเว็บ (desktop + drawer มือถือ) พร้อมตัวสลับภาษา TH/EN/AR
 // ภาษาที่รองรับทั้งหมด
@@ -93,15 +93,39 @@ export default function Nav({ scrolled }) {
 
       {/* ฉากมืดด้านหลัง + เมนู drawer สำหรับจอมือถือ */}
       <div className={`scrim ${open ? 'show' : ''}`} onClick={close}></div>
-      <div className={`nav-drawer ${open ? 'open' : ''}`}>
-        <button className="drawer-close" onClick={close} aria-label="close">×</button>
-        <a href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home', true)}>{t.dHome}</a>
-        {show('donation') && <a href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => link(e, 'donation', true)}>{t.dDonation}</a>}
-        {/* ปุ่มเด่นสีแดงของงานที่กำลังเปิดอยู่ — เดิมเป็น Iftar For Gaza (หน้าเดิมยังเข้าได้ทาง URL ตรง) */}
-        {show('naza') && <a href={PAGE_TO_PATH['naza'] || '/'} onClick={(e) => link(e, 'naza', true)} className="iftar-link"><FontAwesomeIcon icon={faFilm} /> {t.dNaza}</a>}
-        {show('missions') && <a href={PAGE_TO_PATH['missions'] || '/'} onClick={(e) => link(e, 'missions', true)}><FontAwesomeIcon icon={faEarthAsia} /> {t.dMissions}</a>}
-        {show('shop') && <a href={PAGE_TO_PATH['shop'] || '/'} onClick={(e) => link(e, 'shop', true)}><FontAwesomeIcon icon={faStore} /> {t.dShop}</a>}
-
+      <div className={`nav-drawer ${open ? 'open' : ''}`} aria-hidden={!open}>
+        {/* ทรงแผ่นแบบ iOS: หัวเรื่องตัวใหญ่ + ปุ่มปิดวงกลมกระจก, งานเด่นเป็นการ์ดบนสุด, ที่เหลือเป็นรายการจัดกลุ่ม */}
+        <div className="drawer-head">
+          <span className="drawer-title">{t.home === 'Home' ? 'Menu' : t.home === 'الرئيسية' ? 'القائمة' : 'เมนู'}</span>
+          <button className="drawer-close" onClick={close} aria-label="close">×</button>
+        </div>
+        {show('naza') && (
+          <a href={PAGE_TO_PATH['naza'] || '/'} onClick={(e) => link(e, 'naza', true)} className="iftar-link drawer-feature">
+            <span className="df-icon"><FontAwesomeIcon icon={faFilm} /></span>
+            <span className="df-text"><b>{t.dNaza}</b><small>6–8 พ.ย. 2569 · Meeting Mall</small></span>
+            <span className="df-chev" aria-hidden="true">›</span>
+          </a>
+        )}
+        <div className="drawer-group">
+          <a href={PAGE_TO_PATH['home'] || '/'} onClick={(e) => link(e, 'home', true)}>
+            <span className="dg-icon" style={{ '--tile': '#8e8e93' }}><FontAwesomeIcon icon={faHouse} /></span>{t.dHome.trim()}
+          </a>
+          {show('donation') && (
+            <a href={PAGE_TO_PATH['donation'] || '/'} onClick={(e) => link(e, 'donation', true)}>
+              <span className="dg-icon" style={{ '--tile': '#c9a84c' }}><FontAwesomeIcon icon={faHandHoldingHeart} /></span>{t.dDonation.trim()}
+            </a>
+          )}
+          {show('missions') && (
+            <a href={PAGE_TO_PATH['missions'] || '/'} onClick={(e) => link(e, 'missions', true)}>
+              <span className="dg-icon" style={{ '--tile': '#34c759' }}><FontAwesomeIcon icon={faEarthAsia} /></span>{t.dMissions.trim()}
+            </a>
+          )}
+          {show('shop') && (
+            <a href={PAGE_TO_PATH['shop'] || '/'} onClick={(e) => link(e, 'shop', true)}>
+              <span className="dg-icon" style={{ '--tile': '#007aff' }}><FontAwesomeIcon icon={faStore} /></span>{t.dShop.trim()}
+            </a>
+          )}
+        </div>
       </div>
     </>
   )

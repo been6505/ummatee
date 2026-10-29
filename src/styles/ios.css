@@ -1,0 +1,198 @@
+/* ══════════════════════════════════════════════════════════════════════
+   หน้าตาแบบ iOS (Liquid Glass) ของฝั่ง public — โหลดเป็นไฟล์สุดท้ายใน index.css จึงทับไฟล์ก่อนหน้า
+   แตะเฉพาะส่วนที่คนทั่วไปเห็น: แถบเมนู, เมนู drawer, การ์ดหน้าแรก, ปุ่ม, ปุ่มลอย — ไม่ยุ่งกับหน้าแอดมิน
+
+   หลักที่ใช้ (ตามภาษาออกแบบของ iOS):
+   - วัสดุกระจก: พื้นโปร่ง + blur + saturate + ขอบแสงด้านบน (inset highlight) แทนพื้นทึบ
+   - ทรงแคปซูล/มุมโค้งใหญ่ต่อเนื่อง, ปุ่มกดแล้วยุบเล็กน้อย (scale) แทนการลอยขึ้นแบบเว็บ
+   - ฟอนต์ระบบของ Apple ก่อน (SF Pro + ฟอนต์ไทยของ iOS) เครื่องอื่นถอยไปใช้ Sarabun เหมือนเดิม
+   - การเคลื่อนไหวแบบสปริง (--ios-ease)
+   ══════════════════════════════════════════════════════════════════════ */
+:root{
+  --ios-ease:cubic-bezier(.32,.72,0,1);
+  --glass-bg:rgba(255,255,255,.16);
+  --glass-bg-strong:rgba(255,255,255,.72);
+  --glass-border:rgba(255,255,255,.38);
+  --glass-blur:blur(22px) saturate(180%);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.08),0 10px 30px -12px rgba(0,0,0,.35);
+  --ios-label:#1c1c1e;
+  --ios-secondary:rgba(60,60,67,.6);
+  --ios-separator:rgba(60,60,67,.14);
+  --ios-fill:rgba(120,120,128,.12);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Sarabun','Poppins',system-ui,sans-serif}
+
+/* ── แถบเมนูลอยทรงแคปซูลกระจก ── */
+#main-nav,#main-nav.scrolled{
+  top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;right:12px;
+  max-width:1180px;margin:0 auto;
+  padding:7px 8px 7px 8px;border-radius:999px;
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border);
+  box-shadow:var(--glass-shadow);
+  transition:background .4s var(--ios-ease),box-shadow .4s var(--ios-ease),border-color .4s var(--ios-ease);
+}
+#main-nav.scrolled{background:rgba(255,255,255,.8);border-color:rgba(255,255,255,.7);box-shadow:inset 0 1px 0 #fff,0 12px 34px -14px rgba(0,0,0,.28)}
+.nav-logo,#main-nav.scrolled .nav-logo{padding:6px 14px;border-radius:999px;box-shadow:0 2px 8px -2px rgba(0,0,0,.18)}
+.nav-logo img,#main-nav.scrolled .nav-logo img{height:32px}
+.nav-links{gap:6px}
+.nav-links a{padding:8px 14px;border-radius:999px;transition:background .25s var(--ios-ease),color .35s}
+.nav-links a:hover{opacity:1;background:rgba(255,255,255,.16)}
+#main-nav.scrolled .nav-links a:hover{background:var(--ios-fill)}
+.nav-right{gap:8px}
+.lang-btn{height:40px;padding:0 14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+#main-nav.scrolled .lang-btn{background:var(--ios-fill);border-color:transparent;box-shadow:none}
+.lang-menu{border-radius:18px;padding:6px;background:rgba(255,255,255,.82);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);border:1px solid rgba(255,255,255,.7);box-shadow:0 18px 50px -14px rgba(0,0,0,.35)}
+.lang-opt{border-radius:12px}
+.nav-cta{padding:10px 20px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 20px -10px rgba(27,94,54,.8)}
+.nav-cta:hover{transform:none;filter:brightness(1.08)}
+.nav-hamburger{width:42px;height:42px;padding:0;align-items:center;justify-content:center;gap:4px;border-radius:50%;
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+#main-nav.scrolled .nav-hamburger{background:var(--ios-fill);border-color:transparent;box-shadow:none}
+.nav-hamburger span{width:17px;height:2px}
+.nav-hamburger:active,.lang-btn:active,.nav-logo:active{transform:scale(.94)}
+.nav-hamburger,.lang-btn,.nav-logo{transition:transform .2s var(--ios-ease),background .3s}
+
+/* ── เมนู drawer = แผ่นกระจกแบบ iOS ── */
+.scrim{background:rgba(0,0,0,.28);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.nav-drawer{
+  top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  width:min(86vw,360px);border-radius:34px;padding:18px 16px 24px;gap:14px;overflow-y:auto;
+  background:rgba(242,242,247,.78);
+  -webkit-backdrop-filter:blur(30px) saturate(190%);backdrop-filter:blur(30px) saturate(190%);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:inset 0 1px 0 #fff,0 30px 80px -20px rgba(0,0,0,.45);
+  transform:translateX(calc(100% + 24px)) scale(.96);transform-origin:right center;
+  transition:transform .5s var(--ios-ease);
+}
+.nav-drawer.open{transform:none}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 2px}
+.drawer-title{font-size:2rem;font-weight:800;letter-spacing:-.02em;color:var(--ios-label)}
+.drawer-close{position:static;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+  background:var(--ios-fill);color:var(--ios-secondary);font-size:1.35rem;line-height:1;transition:transform .2s var(--ios-ease)}
+.drawer-close:active{transform:scale(.9)}
+.nav-drawer a{color:var(--ios-label);font-size:1.02rem;font-weight:500}
+.nav-drawer a:hover{background:none}
+
+/* การ์ดงานเด่น (NAZA) */
+.nav-drawer a.drawer-feature{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin:0;
+  padding:14px 14px;border-radius:22px;color:#fff;
+  background:linear-gradient(145deg,#1c1b18,#3a1014 70%,#7a141c);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 14px 30px -14px rgba(122,20,28,.8);
+  transition:transform .2s var(--ios-ease)}
+.nav-drawer a.drawer-feature:active{transform:scale(.97)}
+.df-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;
+  background:linear-gradient(160deg,#ff5a62,#d4232c);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.df-text{display:grid;line-height:1.3;min-width:0}
+.df-text b{font-weight:700;font-size:1.02rem}
+.df-text small{font-size:.8rem;color:rgba(255,255,255,.7);font-weight:500}
+.df-chev{font-size:1.5rem;color:rgba(255,255,255,.55);line-height:1}
+
+/* รายการจัดกลุ่ม (inset grouped list แบบหน้าการตั้งค่า) */
+.drawer-group{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.drawer-group a{position:relative;display:flex;align-items:center;gap:13px;padding:12px 16px;border-radius:0;transition:background .15s}
+.drawer-group a:active{background:rgba(120,120,128,.16)}
+.drawer-group a::after{content:'›';margin-left:auto;font-size:1.4rem;line-height:1;color:rgba(60,60,67,.3)}
+.drawer-group a+a::before{content:'';position:absolute;top:0;right:0;left:61px;height:1px;background:var(--ios-separator);transform:scaleY(.6)}
+.dg-icon{width:32px;height:32px;flex:none;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:.9rem;
+  background:var(--tile,#8e8e93);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+
+/* ── หน้าแรก: แถบการ์ดด้านบน ── */
+.hero-feed{padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
+.hero-feed-brand{border-bottom:none;padding-bottom:0;margin-bottom:clamp(18px,3vw,30px)}
+.hf-brand-name{font-size:1.65rem;font-weight:800;letter-spacing:-.02em}
+.hf-brand-sub{font-size:.88rem;color:rgba(255,255,255,.72)}
+.hf-card{border-radius:30px;background:rgba(255,255,255,.96);
+  box-shadow:inset 0 1px 0 #fff,0 24px 60px -24px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.08);
+  transition:transform .35s var(--ios-ease),box-shadow .35s var(--ios-ease)}
+.hf-card:hover{transform:translateY(-3px)}
+.hf-card:active{transform:scale(.985)}
+.hf-card-body{padding:20px 22px 24px;gap:10px}
+.hf-card-title{letter-spacing:-.02em}
+.hf-tag{padding:5px 11px;font-weight:700;letter-spacing:.02em}
+.hf-card-btn{padding:14px 24px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 10px 22px -12px rgba(0,0,0,.45);transition:transform .2s var(--ios-ease),filter .2s}
+.hf-card-btn:hover{opacity:1;transform:none;filter:brightness(1.06)}
+.hf-card-btn:active{transform:scale(.96)}
+.hf-card-share-float{background:rgba(255,255,255,.55);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1px 0 #fff,0 6px 16px -6px rgba(0,0,0,.35)}
+.hf-dot{width:7px;height:7px;transition:width .35s var(--ios-ease),background .2s}
+.hf-dot.active{width:20px;border-radius:99px;transform:none}
+.hf-poster-dot.active{width:16px;border-radius:99px;transform:none}
+
+/* skeleton: เงาจาง ๆ บนการ์ดขาวแทนแท่งทึบ */
+.sk-block,.sk-line{background:linear-gradient(90deg,#efeff2 25%,#f8f8fa 40%,#efeff2 60%);background-size:200% 100%;border-radius:12px}
+.hf-card-skeleton .hf-poster.sk-block{border-radius:0}
+.hf-card-skeleton{background:rgba(255,255,255,.9)}
+
+/* ── ปุ่มทั่วไปของหน้า public: กดแล้วยุบแบบ iOS ── */
+.btn{transition:transform .2s var(--ios-ease),box-shadow .2s,filter .2s}
+.btn:hover{transform:none;filter:brightness(1.06)}
+.btn:active{transform:scale(.96)}
+.btn-ghost{background:rgba(255,255,255,.14);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+
+/* ── หน้าแรก: แถบภารกิจ / การ์ดอื่น ── */
+.hm-mission-chip{background:#fff;border:1px solid rgba(0,0,0,.05);box-shadow:0 6px 18px -12px rgba(0,0,0,.3);transition:transform .2s var(--ios-ease),background .2s}
+.hm-mission-chip:hover{transform:none}
+.hm-mission-chip:active{transform:scale(.95)}
+.hm-missions-cta:active,.hm-gaza-cta:active{transform:scale(.96)}
+.hm-gaza-wrap{border-radius:28px}
+.focus-card{border-radius:30px;transition:transform .35s var(--ios-ease)}
+.focus-card:hover{transform:translateY(-3px)}
+.focus-card:active{transform:scale(.98)}
+.help-item{border-radius:24px}
+.cta-strip{border-radius:34px}
+.site-announcement-close{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+
+/* ── ปุ่มลอย (แชท/บริจาค/ตะกร้า) = ปุ่มกระจก ── */
+.fab-hub{bottom:calc(env(safe-area-inset-bottom,0px) + 20px);
+  background:linear-gradient(160deg,rgba(46,125,82,.92),rgba(27,94,54,.92));
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 14px 30px -10px rgba(27,94,54,.7);
+  transition:transform .25s var(--ios-ease)}
+.fab-hub:hover{transform:none}
+.fab-hub:active{transform:scale(.92)}
+.fab-hub-menu{border-radius:22px;padding:6px;background:rgba(255,255,255,.82);
+  -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.7);box-shadow:0 22px 50px -14px rgba(0,0,0,.4);
+  transform-origin:bottom left;animation:ios-pop .35s var(--ios-ease)}
+.fab-hub-menu-item{border-radius:14px;padding:12px 14px}
+.fab-hub-menu-item:hover{background:var(--ios-fill)}
+@keyframes ios-pop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+/* ── แถบชวนติดตั้งแอป = การ์ดกระจกลอย (แบบการแจ้งเตือนของ iOS) ── */
+.install-banner{left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  padding:12px 12px 12px 14px;border-radius:26px;border:1px solid rgba(255,255,255,.7);
+  background:rgba(255,255,255,.88);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  box-shadow:inset 0 1px 0 #fff,0 20px 50px -16px rgba(0,0,0,.4);
+  animation:install-banner-ios .5s var(--ios-ease)}
+@keyframes install-banner-ios{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+.install-banner-cta{box-shadow:inset 0 1px 0 rgba(255,255,255,.3);transition:transform .2s var(--ios-ease)}
+.install-banner-cta:hover{transform:none;opacity:1}
+.install-banner-cta:active{transform:scale(.95)}
+.install-banner-close{background:var(--ios-fill);color:var(--ios-secondary)}
+.has-install-banner .chat-fab,
+.has-install-banner .fab-hub{bottom:calc(env(safe-area-inset-bottom,0px) + 106px)}
+.has-install-banner .fab-hub-menu{bottom:calc(env(safe-area-inset-bottom,0px) + 172px)}
+@media (min-width:769px){
+  .install-banner{left:auto;right:24px;bottom:24px;max-width:420px}
+  .has-install-banner .chat-fab,.has-install-banner .fab-hub{bottom:24px}
+  .has-install-banner .fab-hub-menu{bottom:90px}
+}
+
+/* เบราว์เซอร์ที่ไม่มี backdrop-filter: ใช้พื้นทึบขึ้นแทน ไม่งั้นตัวหนังสืออ่านยาก */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  #main-nav{background:rgba(27,94,54,.92)}
+  #main-nav.scrolled{background:rgba(250,248,242,.97)}
+  .nav-drawer{background:#f2f2f7}
+  .lang-menu,.fab-hub-menu,.install-banner{background:#fff}
+}
+@media (prefers-reduced-motion:reduce){
+  .nav-drawer,.hf-card,.fab-hub-menu{transition:none;animation:none}
+}
+@media (max-width:640px){
+  #main-nav,#main-nav.scrolled{left:10px;right:10px}
+  .hf-card{border-radius:28px}
+}

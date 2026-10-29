@@ -5,10 +5,11 @@
 // (validNazaBooking / match /nazaSeats) — แก้ที่นี่ต้องแก้ที่ rules ด้วย ไม่งั้นจองไม่ผ่าน
 // มีเทสต์ nazaConfig.test.js เทียบให้อยู่แล้ว
 
+// date (ค.ศ.) ใช้ตอนส่งอีเมลเตือนก่อนวันงาน — ซ้ำอยู่ใน NAZA_DAY_DATES ของ docs/volunteer-apps-script/Code.gs
 export const NAZA_DAYS = [
-  { id: 'd6', w: 'ศุกร์', d: '6', m: 'พ.ย.', full: 'ศุกร์ 6 พ.ย. 2569' },
-  { id: 'd7', w: 'เสาร์', d: '7', m: 'พ.ย.', full: 'เสาร์ 7 พ.ย. 2569' },
-  { id: 'd8', w: 'อาทิตย์', d: '8', m: 'พ.ย.', full: 'อาทิตย์ 8 พ.ย. 2569' },
+  { id: 'd6', date: '2026-11-06', w: 'ศุกร์', d: '6', m: 'พ.ย.', full: 'ศุกร์ 6 พ.ย. 2569' },
+  { id: 'd7', date: '2026-11-07', w: 'เสาร์', d: '7', m: 'พ.ย.', full: 'เสาร์ 7 พ.ย. 2569' },
+  { id: 'd8', date: '2026-11-08', w: 'อาทิตย์', d: '8', m: 'พ.ย.', full: 'อาทิตย์ 8 พ.ย. 2569' },
 ]
 
 export const NAZA_TIMES = [
@@ -64,14 +65,19 @@ export function newBookingCode(rand = Math.random) {
 }
 
 export const cleanPhone = (p) => String(p || '').replace(/[^\d]/g, '')
+export const cleanEmail = (e) => String(e || '').trim().toLowerCase()
+// ต้องตรงกับ d.email.matches(...) ใน firestore.rules (เทสต์เทียบให้)
+export const NAZA_EMAIL_RE = /^[^@\s]+@[^@\s]+[.][^@\s]+$/
 
 // ตรวจฟอร์มผู้จอง — คืน object ของข้อความ error (ว่าง = ผ่าน) เงื่อนไขเดียวกับใน firestore.rules
-export function validateBookingForm({ name, phone, hasSlip }) {
+export function validateBookingForm({ name, phone, email, hasSlip }) {
   const e = {}
   const n = String(name || '').trim()
   const p = cleanPhone(phone)
+  const m = cleanEmail(email)
   if (n.length < 2 || n.length > 100) e.name = 'กรอกชื่อสำหรับเช็กอินหน้างาน'
   if (p.length < 9 || p.length > 10) e.phone = 'กรอกเบอร์โทร 9–10 หลัก'
+  if (!NAZA_EMAIL_RE.test(m) || m.length > 200) e.email = 'กรอกอีเมลให้ถูกต้อง เพื่อรับตั๋วและการแจ้งเตือน'
   if (!hasSlip) e.slip = 'แนบสลิปการโอนก่อนยืนยัน'
   return e
 }
@@ -80,4 +86,10 @@ export const STATUS_TEXT = {
   pending: ['pending', 'รอตรวจสลิป'],
   confirmed: ['confirmed', 'ยืนยันแล้ว'],
   rejected: ['rejected', 'ไม่ผ่านการตรวจ'],
+}
+
+// อ่านรหัสการจองจากข้อความใน QR ตั๋ว ("NAZA|NZ-XXXXX|รอบ|ที่นั่ง") — คืน null ถ้าไม่ใช่ตั๋ว NAZA
+export const parseNazaQr = (text) => {
+  const m = String(text || '').trim().match(/^NAZA\|(NZ-[A-Z0-9]{5})\|/)
+  return m ? m[1] : null
 }

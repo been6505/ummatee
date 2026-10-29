@@ -876,13 +876,15 @@ service cloud.firestore {
     }
     function validNazaBooking(id) {
       let d = request.resource.data;
-      return d.keys().hasOnly(['code', 'round', 'seats', 'name', 'phone', 'amount', 'slipUrl', 'status', 'createdAt'])
+      return d.keys().hasOnly(['code', 'round', 'seats', 'name', 'phone', 'email', 'amount', 'slipUrl', 'status', 'createdAt'])
         && d.code is string && d.code.matches('^NZ-[A-Z0-9]{5}$')
         && d.round in ['d6-1400', 'd6-1830', 'd7-1400', 'd7-1830', 'd8-1400', 'd8-1830']
         && d.seats is list && d.seats.size() >= 1 && d.seats.size() <= 4
         && d.seats.toSet().size() == d.seats.size()
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
         && d.phone is string && d.phone.matches('^[0-9]{9,10}$')
+        // อีเมลบังคับ — ใช้ส่งตั๋ว QR ตอนอนุมัติ และเตือนก่อนวันงาน (Apps Script อ่านจากเอกสารนี้เอง)
+        && d.email is string && d.email.size() <= 200 && d.email.matches('^[^@\\s]+@[^@\\s]+[.][^@\\s]+$')
         && d.slipUrl is string && d.slipUrl.size() <= 500 && d.slipUrl.matches('^https://res[.]cloudinary[.]com/.+')
         && d.status == 'pending'
         && d.createdAt == request.time

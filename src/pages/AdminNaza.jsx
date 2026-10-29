@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import AdminNav from '../components/AdminNav.jsx'
 import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
 import { writeAuditLog } from '../lib/auditLog.js'
@@ -11,6 +11,8 @@ import {
   confirmNazaBooking, rejectNazaBooking, setNazaCheckIn,
 } from '../data/naza.js'
 import { StatusPill, useNazaFonts } from '../components/naza/shared.jsx'
+import NazaScanner from '../components/naza/NazaScanner.jsx'
+import { notifyNazaBooking } from '../utils/lineNotify.js'
 
 // แอดมินระบบจองตั๋ว NAZA for GAZA (/admin/events/naza)
 // ตรวจสลิป → อนุมัติ (ยืนยันที่นั่ง) / ปฏิเสธ (คืนที่นั่ง) · ดูผังที่นั่งทุกรอบ · เช็กอินหน้างาน · ตั้งราคา/พร้อมเพย์/ปิดรับจอง
@@ -55,6 +57,8 @@ function NazaAdminBody() {
   const [busyId, setBusyId] = useState(null)
   const [showCfg, setShowCfg] = useState(false)
   const [msg, setMsg] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [mailing, setMailing] = useState(null)
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }
 
@@ -75,7 +79,7 @@ function NazaAdminBody() {
     return list
       .filter((b) => filter === 'all' || b.status === filter)
       .filter((b) => roundF === 'all' || b.round === roundF)
-      .filter((b) => !s || [b.code, b.name, b.phone].some((x) => String(x || '').toLowerCase().includes(s)))
+      .filter((b) => !s || [b.code, b.name, b.phone, b.email].some((x) => String(x || '').toLowerCase().includes(s)))
   }, [list, filter, roundF, q])
 
   const act = async (b, kind) => {
@@ -102,13 +106,29 @@ function NazaAdminBody() {
     } finally { setBusyId(null) }
   }
 
+  // ใช้กับเครื่องสแกน — ต้องคงที่ ไม่งั้นกล้องปิด/เปิดใหม่ทุกครั้งที่รายการจองอัปเดต
+  const scanCheckIn = useCallback(async (b) => {
+    await setNazaCheckIn(b.id, true)
+  }, [])
+
+  // ส่งอีเมลตามสถานะปัจจุบันอีกครั้ง (เช่น Apps Script ล่มตอนกดอนุมัติ) — ฝั่งนั้นไม่ส่งซ้ำถ้าส่งสำเร็จไปแล้ว
+  const resendEmail = async (b) => {
+    setMailing(b.id)
+    const r = await notifyNazaBooking(b.id)
+    setMailing(null)
+    if (!r) flash('ติดต่อระบบอีเมลไม่ได้ — ตรวจการ deploy ของ Apps Script')
+    else if (r.already) flash(`อีเมลสถานะนี้ของ ${b.code} เคยส่งไปแล้ว`)
+    else if (r.mailed) flash(`ส่งอีเมลถึง ${b.email} แล้ว`)
+    else flash('ส่งอีเมลไม่สำเร็จ: ' + (r.error || 'ไม่ทราบสาเหตุ'))
+  }
+
   const exportCsv = () => {
     const rows = sortForExport(list).map((b) => [
-      b.code, roundLabel(b.round), sortSeats(b.seats).join(' '), b.seats.length, b.name, b.phone, b.amount,
+      b.code, roundLabel(b.round), sortSeats(b.seats).join(' '), b.seats.length, b.name, b.phone, b.email || '', b.amount,
       { pending: 'รอตรวจ', confirmed: 'ยืนยันแล้ว', rejected: 'ปฏิเสธ' }[b.status] || b.status,
       b.checkedInAt ? 'เช็กอินแล้ว' : '', tsLabel(b.createdAt), b.slipUrl,
     ])
-    downloadCsv('naza-bookings.csv', ['รหัส', 'รอบ', 'ที่นั่ง', 'จำนวน', 'ชื่อ', 'เบอร์', 'ยอด', 'สถานะ', 'เช็กอิน', 'จองเมื่อ', 'สลิป'], rows)
+    downloadCsv('naza-bookings.csv', ['รหัส', 'รอบ', 'ที่นั่ง', 'จำนวน', 'ชื่อ', 'เบอร์', 'อีเมล', 'ยอด', 'สถานะ', 'เช็กอิน', 'จองเมื่อ', 'สลิป'], rows)
   }
 
   return (
@@ -160,7 +180,8 @@ function NazaAdminBody() {
             ))}
           </div>
           <div className="adm-tools">
-            <input placeholder="ค้นหารหัส / ชื่อ / เบอร์ (วางข้อความจาก QR ได้)" value={q} onChange={(e) => setQ(e.target.value)} />
+            <button className="primary" onClick={() => setScanning(true)}>สแกน QR เช็กอิน</button>
+            <input placeholder="ค้นหารหัส / ชื่อ / เบอร์ / อีเมล (วางข้อความจาก QR ได้)" value={q} onChange={(e) => setQ(e.target.value)} />
             <select value={roundF} onChange={(e) => setRoundF(e.target.value)}>
               <option value="all">ทุกรอบ</option>
               {NAZA_ROUNDS.map((r) => <option key={r} value={r}>{roundShort(r)}</option>)}
@@ -175,7 +196,11 @@ function NazaAdminBody() {
                   {shown.map((b) => (
                     <div key={b.id} className="panel adm">
                       <div className="h">
-                        <div className="who"><b>{b.name}</b><span><a href={`tel:${b.phone}`}>{b.phone}</a> · {b.code}</span></div>
+                        <div className="who">
+                          <b>{b.name}</b>
+                          <span><a href={`tel:${b.phone}`}>{b.phone}</a> · {b.code}</span>
+                          {b.email && <span><a href={`mailto:${b.email}`}>{b.email}</a></span>}
+                        </div>
                         <StatusPill status={b.status} short />
                       </div>
                       <div className="kv"><span>{roundLabel(b.round)}</span><b style={{ fontFamily: 'var(--f-mono)' }}>{sortSeats(b.seats).join(' ')}</b></div>
@@ -198,6 +223,9 @@ function NazaAdminBody() {
                             {armed === b.id ? 'แตะอีกครั้งเพื่อปฏิเสธ' : 'ปฏิเสธ'}
                           </button>
                         )}
+                        {b.email && (
+                          <button disabled={mailing === b.id} onClick={() => resendEmail(b)}>{mailing === b.id ? 'กำลังส่ง…' : 'ส่งอีเมลอีกครั้ง'}</button>
+                        )}
                         {b.status === 'confirmed' && (
                           b.checkedInAt
                             ? <button className="ci" disabled={busyId === b.id} onClick={() => act(b, 'uncheckin')}>เช็กอินแล้ว ✓</button>
@@ -210,6 +238,7 @@ function NazaAdminBody() {
               )}
         </section>
       </div>
+      {scanning && <NazaScanner bookings={list} onCheckIn={scanCheckIn} onClose={() => setScanning(false)} />}
       {msg && <div className="toast" role="status">{msg}</div>}
     </div>
   )

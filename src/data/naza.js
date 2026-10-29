@@ -4,6 +4,7 @@ import {
   collection, doc, onSnapshot, runTransaction, updateDoc, setDoc, query, orderBy, serverTimestamp,
 } from 'firebase/firestore'
 import { NAZA_DEFAULTS, seatDocId } from './nazaConfig.js'
+import { notifyNazaBooking } from '../utils/lineNotify.js'
 
 // ระบบจองตั๋ว NAZA for GAZA — ข้อมูลอยู่ 3 ที่
 //   config/nazaEvent        ราคา/เลขพร้อมเพย์/เปิด-ปิดรับจอง (ทุกคนอ่านได้ staff แก้ได้)
@@ -46,7 +47,7 @@ export class SeatTakenError extends Error {
 }
 
 // สร้างการจอง + ถือที่นั่งในทรานแซกชันเดียว — ถ้ามีที่นั่งไหนถูกจองไปแล้วจะโยน SeatTakenError
-export async function createNazaBooking({ code, round, seats, name, phone, slipUrl, amount }) {
+export async function createNazaBooking({ code, round, seats, name, phone, email, slipUrl, amount }) {
   const bookingRef = doc(collection(db, 'nazaBookings'))
   const seatRefs = seats.map((s) => doc(db, 'nazaSeats', seatDocId(round, s)))
   await runTransaction(db, async (tx) => {
@@ -57,10 +58,11 @@ export async function createNazaBooking({ code, round, seats, name, phone, slipU
       round, seat: seats[k], bookingId: bookingRef.id, status: 'pending', at: serverTimestamp(),
     }))
     tx.set(bookingRef, {
-      code, round, seats, name, phone, amount, slipUrl, status: 'pending', createdAt: serverTimestamp(),
+      code, round, seats, name, phone, email, amount, slipUrl, status: 'pending', createdAt: serverTimestamp(),
     })
   })
   rememberBooking(bookingRef.id)
+  notifyNazaBooking(bookingRef.id) // อีเมล "ได้รับการจองแล้ว รอตรวจสลิป"
   return bookingRef.id
 }
 
@@ -69,7 +71,9 @@ const MINE_KEY = 'nazaMyBookings'
 export function myBookingIds() {
   try { const v = JSON.parse(localStorage.getItem(MINE_KEY) || '[]'); return Array.isArray(v) ? v : [] } catch { return [] }
 }
-function rememberBooking(id) {
+// export ไว้ให้ลิงก์ตั๋วในอีเมล (/events/Naza?t=<id>) เพิ่มตั๋วเข้า "ตั๋วของฉัน" บนเครื่องใหม่ได้
+export function rememberBooking(id) {
+  if (!id || myBookingIds().includes(id)) { window.dispatchEvent(new Event('naza:mine')); return }
   try { localStorage.setItem(MINE_KEY, JSON.stringify([id, ...myBookingIds().filter((x) => x !== id)])) } catch { /* noop */ }
   window.dispatchEvent(new Event('naza:mine'))
 }
@@ -122,6 +126,7 @@ export async function confirmNazaBooking(b) {
     }))
     tx.update(doc(db, 'nazaBookings', b.id), { status: 'confirmed', reviewedAt: serverTimestamp(), reviewedBy: reviewer() })
   })
+  notifyNazaBooking(b.id) // อีเมลตั๋วพร้อม QR
 }
 
 // ปฏิเสธ: คืนที่นั่ง (ลบเฉพาะเอกสารที่นั่งที่ยังเป็นของการจองนี้) ให้คนอื่นจองต่อได้ทันที
@@ -132,6 +137,7 @@ export async function rejectNazaBooking(b) {
     snaps.forEach((s, k) => { if (s.exists() && s.data().bookingId === b.id) tx.delete(seatRefs[k]) })
     tx.update(doc(db, 'nazaBookings', b.id), { status: 'rejected', reviewedAt: serverTimestamp(), reviewedBy: reviewer() })
   })
+  notifyNazaBooking(b.id) // อีเมลแจ้งสลิปไม่ผ่าน
 }
 
 export const setNazaCheckIn = (id, on) =>

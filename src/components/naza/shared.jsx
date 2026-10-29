@@ -43,7 +43,10 @@ export function Ticket({ b }) {
       </div>
       <div className="perf" />
       <div className="tk-bot">
-        <div className="qr"><QRCodeSVG value={ticketQrValue(b)} level="M" style={{ width: '100%', height: '100%' }} /></div>
+        {/* QR สำหรับเจ้าหน้าที่สแกนขึ้นเฉพาะตั๋วที่ยืนยันแล้ว — ตั๋วรอตรวจ/ไม่ผ่านสแกนไปก็เข้างานไม่ได้ */}
+        {b.status === 'confirmed'
+          ? <div className="qr"><QRCodeSVG value={ticketQrValue(b)} level="M" style={{ width: '100%', height: '100%' }} /></div>
+          : <div className="qr qr-wait">{b.status === 'rejected' ? 'ไม่มี QR' : 'QR จะขึ้นเมื่อยืนยันแล้ว'}</div>}
         <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
           <span className="note">รหัสการจอง</span>
           <span className="code">{b.code}</span>

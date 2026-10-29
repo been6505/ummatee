@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   NAZA_DAYS, NAZA_TIMES, NAZA_ROWS, SEATS_PER_ROUND, roundOf, roundLabel, baht, sortSeats, seatType,
-  seatDocId, newBookingCode, cleanPhone, validateBookingForm,
+  seatDocId, newBookingCode, cleanPhone, cleanEmail, validateBookingForm,
 } from '../data/nazaConfig.js'
-import { useNazaConfig, useNazaSeats, useMyNazaBookings, createNazaBooking } from '../data/naza.js'
+import { useNazaConfig, useNazaSeats, useMyNazaBookings, createNazaBooking, rememberBooking } from '../data/naza.js'
 import { uploadToCloudinary } from '../utils/cloudinary.js'
 import NazaRoom3D from '../components/naza/NazaRoom3D.jsx'
 import { Ticket, StatusPill, useNazaFonts } from '../components/naza/shared.jsx'
@@ -11,6 +11,26 @@ import { Ticket, StatusPill, useNazaFonts } from '../components/naza/shared.jsx'
 // หน้าจองตั๋ว NAZA for GAZA (/events/Naza) — พอร์ตจากต้นแบบ NAZA_Booking.html
 // ขั้นตอน: เลือกวัน/รอบ → เลือกที่นั่ง (3D หรือผัง 2D) → กรอกชื่อ/เบอร์ + แนบสลิป → ได้ตั๋ว (รอแอดมินตรวจสลิป)
 // ฝั่งตรวจสลิป/อนุมัติอยู่ที่ /admin/events/naza (AdminNaza.jsx)
+// ลิงก์ในอีเมล /events/Naza?t=<bookingId> เปิดตั๋วใบนั้นได้จากทุกเครื่อง (และจำไว้ใน "ตั๋วของฉัน")
+
+// อ่าน ?t= ครั้งเดียวตอนเปิดหน้า แล้วลบออกจาก URL — กันลิงก์ตั๋วติดไปกับการแชร์หน้าโดยไม่ตั้งใจ
+// จำผลไว้ — StrictMode เรียก initializer ของ useState สองรอบ รอบสองจะเจอ URL ที่ลบ ?t= ไปแล้ว
+let linkedTicketCache
+function ticketIdFromUrl() {
+  if (linkedTicketCache !== undefined) return linkedTicketCache
+  linkedTicketCache = readTicketParam()
+  return linkedTicketCache
+}
+function readTicketParam() {
+  try {
+    const u = new URL(window.location.href)
+    const t = u.searchParams.get('t')
+    if (!t || !/^[A-Za-z0-9]{10,40}$/.test(t)) return null
+    u.searchParams.delete('t')
+    window.history.replaceState({}, '', u.pathname + u.search)
+    return t
+  } catch { return null }
+}
 
 const UploadIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -48,15 +68,17 @@ export default function NazaBooking() {
   const { seats, ready: seatsReady, error: seatsError } = useNazaSeats()
   const mine = useMyNazaBookings()
 
-  const [view, setView] = useState('round')
+  const [linkedTicket] = useState(ticketIdFromUrl)
+  const [view, setView] = useState(linkedTicket ? 'ticket' : 'round')
   const [day, setDay] = useState(NAZA_DAYS[0].id)
   const [round, setRound] = useState(null)
   const [selected, setSelected] = useState([])
   const [seatMode, setSeatMode] = useState('3d')
   const [room3dFailed, setRoom3dFailed] = useState(false)
-  const [current, setCurrent] = useState(null)
+  const [current, setCurrent] = useState(linkedTicket)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [slip, setSlip] = useState(null) // { file, preview, name, uploadedUrl }
   const [errors, setErrors] = useState({})
   const [formErr, setFormErr] = useState('')
@@ -64,6 +86,8 @@ export default function NazaBooking() {
   const [toastMsg, setToastMsg] = useState('')
   const toastT = useRef(null)
   const slipInput = useRef(null)
+
+  useEffect(() => { if (linkedTicket) rememberBooking(linkedTicket) }, [linkedTicket])
 
   const toast = useCallback((m) => {
     setToastMsg(m); clearTimeout(toastT.current); toastT.current = setTimeout(() => setToastMsg(''), 2800)
@@ -126,7 +150,7 @@ export default function NazaBooking() {
   }
 
   const submit = async () => {
-    const e = validateBookingForm({ name, phone, hasSlip: !!slip })
+    const e = validateBookingForm({ name, phone, email, hasSlip: !!slip })
     setErrors(e); setFormErr('')
     if (Object.keys(e).length) {
       setTimeout(() => document.querySelector('.naza .err:not(:empty)')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0)
@@ -143,7 +167,7 @@ export default function NazaBooking() {
         setSlip((s) => (s ? { ...s, uploadedUrl: slipUrl } : s)) // ลองส่งซ้ำได้โดยไม่ต้องอัปโหลดใหม่
       }
       const id = await createNazaBooking({
-        code: newBookingCode(), round, seats: seatList, name: name.trim(), phone: cleanPhone(phone),
+        code: newBookingCode(), round, seats: seatList, name: name.trim(), phone: cleanPhone(phone), email: cleanEmail(email),
         slipUrl, amount: seatList.length * price,
       })
       setCurrent(id)
@@ -301,6 +325,11 @@ export default function NazaBooking() {
                 <input id="nz-phone" inputMode="tel" autoComplete="tel" placeholder="08x-xxx-xxxx" value={phone} maxLength={14} onChange={(e) => setPhone(e.target.value)} />
                 <div className="err">{errors.phone}</div>
               </div>
+              <div className="field">
+                <label htmlFor="nz-email">อีเมล</label>
+                <input id="nz-email" type="email" inputMode="email" autoComplete="email" placeholder="ใช้รับตั๋ว QR และการแจ้งเตือนก่อนวันงาน" value={email} maxLength={200} onChange={(e) => setEmail(e.target.value)} />
+                <div className="err">{errors.email}</div>
+              </div>
 
               <h2 style={{ marginTop: 8 }}>โอนเงิน</h2>
               <div className="panel pay">
@@ -336,7 +365,7 @@ export default function NazaBooking() {
           </main>
         )}
 
-        {view === 'ticket' && <TicketView booking={current ? mine.byId[current] : null} />}
+        {view === 'ticket' && <TicketView booking={current ? mine.byId[current] : null} missing={current ? mine.byId[current] === null : false} />}
 
         {view === 'mine' && (
           <main>
@@ -434,17 +463,17 @@ function TicketPreview({ round, seats, price }) {
   )
 }
 
-function TicketView({ booking: b }) {
+function TicketView({ booking: b, missing }) {
   const t = {
-    pending: ['ส่งสลิปแล้ว', 'ทีมงานจะตรวจสลิปและยืนยันตั๋ว สถานะจะเปลี่ยนในหน้านี้ · เก็บหน้านี้ไว้ หรือเปิดดูได้ที่ “ตั๋วของฉัน”'],
-    confirmed: ['ตั๋วพร้อมใช้', 'แสดง QR นี้ที่จุดลงทะเบียนหน้าห้องฉาย'],
+    pending: ['ส่งสลิปแล้ว', 'ทีมงานจะตรวจสลิปและยืนยันตั๋ว เมื่อยืนยันแล้ว QR สำหรับเข้างานจะขึ้นในหน้านี้และส่งไปที่อีเมลของคุณ · เปิดดูได้ที่ “ตั๋วของฉัน”'],
+    confirmed: ['ตั๋วพร้อมใช้', 'แสดง QR นี้ให้เจ้าหน้าที่สแกนที่จุดลงทะเบียนหน้าห้องฉาย'],
     rejected: ['สลิปไม่ผ่านการตรวจ', 'ที่นั่งถูกคืนแล้ว ติดต่อทีมงานพร้อมรหัสการจองนี้'],
   }[b?.status] || ['ส่งสลิปแล้ว', 'เก็บหน้านี้ไว้ หรือเปิดดูได้ที่ “ตั๋วของฉัน”']
   return (
     <main>
       <div className="stephead"><h1>{t[0]}</h1><p>{t[1]}</p></div>
       <section className="sec">
-        {b ? <Ticket b={b} /> : <div className="panel empty">กำลังโหลดตั๋ว…</div>}
+        {b ? <Ticket b={b} /> : <div className="panel empty">{missing ? 'ไม่พบตั๋วนี้ ตรวจลิงก์อีกครั้งหรือติดต่อทีมงาน' : 'กำลังโหลดตั๋ว…'}</div>}
       </section>
     </main>
   )

@@ -196,3 +196,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Sarabun','Poppi
   #main-nav,#main-nav.scrolled{left:10px;right:10px}
   .hf-card{border-radius:28px}
 }
+
+/* หัวข้อที่แบ่งท่อนด้วย \n (TitleLines ใน Home.jsx) — ท่อนละก้อน ไม่ถูกตัดกลางคำ */
+.title-line{display:inline-block}
+/* ตัวอักษรไทยไม่ควรถ่างระยะ — สระ/วรรณยุกต์ลอยแยกจากพยัญชนะ (เช่น "ให้") */
+.eyebrow-sm{letter-spacing:.06em}
+/* หัวข้อไทยหลายบรรทัด: ระยะบรรทัดเดิม 1.18 ทำให้วรรณยุกต์บรรทัดล่างชนสระบรรทัดบน */
+.section-head h2,.cta-strip h2{line-height:1.32}

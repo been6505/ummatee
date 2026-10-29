@@ -1,7 +1,7 @@
 import {
   faTableColumns, faCalendar, faGlobe, faUsers, faMapLocationDot, faMicrophone,
   faBullseye, faFlag, faVideo, faClockRotateLeft, faListCheck, faTowerBroadcast,
-  faDiagramProject, faBolt, faNewspaper,
+  faDiagramProject, faBolt, faNewspaper, faTicket,
 } from '@fortawesome/free-solid-svg-icons'
 import { hasStaffRole } from '../useStaffRole.js'
 
@@ -37,6 +37,7 @@ export const STAFF_NAV_GROUPS = [
       { href: '/admin/board', label: 'บอร์ดวางแผน', icon: faTableColumns },
       { href: '/admin/campaigns', label: 'แคมเปญบริจาค', icon: faBullseye },
       { href: '/admin/events', label: 'งาน/อีเวนต์', icon: faFlag },
+      { href: '/admin/events/naza', label: 'จองตั๋ว NAZA', icon: faTicket },
     ]
   },
   {

@@ -850,6 +850,84 @@ service cloud.firestore {
       allow read, write: if isStaffRole(['admin', 'staff', 'field']);
     }
 
+    // ── ระบบจองตั๋ว NAZA for GAZA (/events/Naza, แอดมิน /admin/events/naza) ──
+    // ผู้จองไม่ต้องล็อกอิน (แบบ guest checkout) ความปลอดภัยจึงอยู่ที่การตรวจรูปแบบ + การผูกเอกสาร
+    // "ที่นั่ง" กับ "การจอง" ให้ต้องสร้างพร้อมกันในคำสั่งเดียวเท่านั้น (ดู src/data/naza.js)
+    // รายการรอบและรหัสที่นั่งต้องตรงกับ src/data/nazaConfig.js (มีเทสต์ nazaConfig.test.js เทียบให้)
+    function isNazaStaff() {
+      return isStaffRole(['admin', 'staff', 'field']);
+    }
+    function nazaConfig() {
+      return get(/databases/$(database)/documents/config/nazaEvent).data;
+    }
+    function nazaConfigExists() {
+      return exists(/databases/$(database)/documents/config/nazaEvent);
+    }
+    // ราคาต่อที่นั่ง — ถ้าแอดมินยังไม่เคยบันทึก config ใช้ 100 (ตรงกับ NAZA_DEFAULTS.price)
+    function nazaPrice() {
+      return nazaConfigExists() && ('price' in nazaConfig()) ? nazaConfig().price : 100;
+    }
+    function nazaOpen() {
+      return !nazaConfigExists() || nazaConfig().get('closed', false) != true;
+    }
+    function nazaSeatHeld(round, seats, i, bookingId) {
+      return i >= seats.size()
+        || getAfter(/databases/$(database)/documents/nazaSeats/$(round + '_' + seats[i])).data.bookingId == bookingId;
+    }
+    function validNazaBooking(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['code', 'round', 'seats', 'name', 'phone', 'amount', 'slipUrl', 'status', 'createdAt'])
+        && d.code is string && d.code.matches('^NZ-[A-Z0-9]{5}$')
+        && d.round in ['d6-1400', 'd6-1830', 'd7-1400', 'd7-1830', 'd8-1400', 'd8-1830']
+        && d.seats is list && d.seats.size() >= 1 && d.seats.size() <= 4
+        && d.seats.toSet().size() == d.seats.size()
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 100
+        && d.phone is string && d.phone.matches('^[0-9]{9,10}$')
+        && d.slipUrl is string && d.slipUrl.size() <= 500 && d.slipUrl.matches('^https://res[.]cloudinary[.]com/.+')
+        && d.status == 'pending'
+        && d.createdAt == request.time
+        && d.amount == d.seats.size() * nazaPrice()
+        && nazaOpen()
+        // ทุกที่นั่งในรายการต้องถูกสร้างในคำสั่งเดียวกันและชี้กลับมาที่การจองนี้
+        && nazaSeatHeld(d.round, d.seats, 0, id)
+        && nazaSeatHeld(d.round, d.seats, 1, id)
+        && nazaSeatHeld(d.round, d.seats, 2, id)
+        && nazaSeatHeld(d.round, d.seats, 3, id);
+    }
+    match /nazaBookings/{id} {
+      allow create: if validNazaBooking(id);
+      // id เป็น auto id สุ่ม 20 ตัว — ผู้จองเปิดดูตั๋วตัวเองได้ด้วย id ที่จำไว้ในเครื่อง (แบบ orders)
+      allow get: if true;
+      allow list, update, delete: if isNazaStaff();
+    }
+    match /nazaSeats/{id} {
+      // ผังที่นั่งต้องเห็นได้ทุกคน — เอกสารนี้ไม่มีชื่อ/เบอร์ มีแค่ bookingId
+      allow read: if true;
+      // สร้างได้เฉพาะเมื่อยังไม่มีคนถือ (create ล้มเองถ้ามีเอกสารอยู่แล้ว) และต้องมาคู่กับการจองใหม่
+      // ที่สร้างในคำสั่งเดียวกัน (!exists = ห้ามแปะที่นั่งเพิ่มเข้าการจองเก่าที่ตรวจราคาไปแล้ว)
+      allow create: if isNazaStaff() || (
+        request.resource.data.keys().hasOnly(['round', 'seat', 'bookingId', 'status', 'at'])
+        && request.resource.data.seat is string
+        && request.resource.data.seat.matches('^([AB][1-5]|[CD]([1-9]|10))$')
+        && request.resource.data.round is string
+        && id == request.resource.data.round + '_' + request.resource.data.seat
+        && request.resource.data.status == 'pending'
+        && request.resource.data.bookingId is string
+        && !exists(/databases/$(database)/documents/nazaBookings/$(request.resource.data.bookingId))
+        && getAfter(/databases/$(database)/documents/nazaBookings/$(request.resource.data.bookingId)).data.round == request.resource.data.round
+        && request.resource.data.seat in getAfter(/databases/$(database)/documents/nazaBookings/$(request.resource.data.bookingId)).data.seats
+      );
+      allow update, delete: if isNazaStaff();
+    }
+    // ตั้งค่างาน (ราคา/พร้อมเพย์/เปิด-ปิดรับจอง) — staff ที่ดูแลงานแก้ได้ ไม่ต้องเป็นเจ้าของระบบ
+    match /config/nazaEvent {
+      allow read: if true;
+      allow write: if isNazaStaff()
+        && request.resource.data.keys().hasOnly(['price', 'maxSeats', 'promptpay', 'accountName', 'closed'])
+        && request.resource.data.get('price', 100) is int
+        && request.resource.data.get('price', 100) > 0;
+    }
+
     // ปฏิเสธทุกอย่างที่ไม่ได้ระบุไว้ข้างบน
     match /{document=**} {
       allow read, write: if false;

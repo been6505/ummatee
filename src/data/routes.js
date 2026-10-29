@@ -25,4 +25,5 @@ export const PAGE_TO_PATH = {
   'shop-checkout': '/um-shop/checkout',
   'shop-my-orders': '/um-shop/my-orders',
   volunteer: '/volunteer/register',
+  naza: '/events/Naza',
 }

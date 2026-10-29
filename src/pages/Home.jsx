@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from '../navContext'
 import { PAGE_TO_PATH } from '../data/routes.js'
 import { useLang } from '../i18n.jsx'
@@ -183,7 +184,69 @@ const HELP_ICONS = [faUtensils, faMosque, faBookOpen, faHandshake]
 function TitleLines({ text }) {
   const parts = String(text || '').split('\n')
   if (parts.length < 2) return text
-  return parts.map((p, i) => <span key={i} className="title-line">{p}</span>)
+  // ท่อนภาษาอังกฤษต้องมีเว้นวรรคคั่น ("Thailand Clinic" + "For Gaza") — ภาษาไทยไม่ต้อง
+  const latinEdge = (a, b) => /[A-Za-z0-9?!.,]$/.test(a) && /^[A-Za-z0-9]/.test(b)
+  return parts.map((p, i) => (
+    <span key={i}>
+      {i > 0 && latinEdge(parts[i - 1], p) ? ' ' : null}
+      <span className="title-line">{p}</span>
+    </span>
+  ))
+}
+
+// โปสเตอร์ "Thailand Clinic For Gaza" — ไฟล์อยู่ public/clinic/ (ย่อเหลือ 1200×1500 แล้ว)
+const CLINIC_POSTERS = [
+  { src: '/clinic/doctors-for-gaza.jpg', name: 'Doctors For Gaza', accent: '#1e5bd8' },
+  { src: '/clinic/scholar-for-gaza.jpg', name: 'Scholar For Gaza', accent: '#18a7c9' },
+  { src: '/clinic/influ-for-gaza.jpg', name: 'Influ For Gaza', accent: '#3aa64a' },
+]
+
+function ClinicForGaza({ t }) {
+  const [open, setOpen] = useState(null) // index ของโปสเตอร์ที่เปิดดูเต็มจอ
+  const n = CLINIC_POSTERS.length
+  useEffect(() => {
+    if (open === null) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(null)
+      if (e.key === 'ArrowRight') setOpen((i) => (i + 1) % n)
+      if (e.key === 'ArrowLeft') setOpen((i) => (i - 1 + n) % n)
+    }
+    window.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+  }, [open, n])
+  const cur = open !== null ? CLINIC_POSTERS[open] : null
+  return (
+    <section className="clinic-band">
+      <div className="wrap">
+        <FadeUp className="section-head">
+          <span className="eyebrow-sm">{t.clinicEyebrow}</span>
+          <h2><TitleLines text={t.clinicTitle} /></h2>
+          <p>{t.clinicSub}</p>
+        </FadeUp>
+        <div className="clinic-grid">
+          {CLINIC_POSTERS.map((p, i) => (
+            <button key={p.src} type="button" className="clinic-card" style={{ '--accent': p.accent }} onClick={() => setOpen(i)} aria-label={`${p.name} — ${t.clinicTap}`}>
+              <img src={p.src} alt={p.name} loading="lazy" width="1200" height="1500" />
+              <span className="clinic-card-label"><b>{p.name}</b><small>{t.clinicTap}</small></span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* portal ไป body — .page มี animation (transform) ทำให้ position:fixed ข้างในยึดกับหน้าแทนจอ */}
+      {cur && createPortal(
+        <div className="clinic-lightbox" role="dialog" aria-label={cur.name} onClick={() => setOpen(null)}>
+          <img src={cur.src} alt={cur.name} onClick={(e) => e.stopPropagation()} />
+          <button type="button" className="clinic-lb-btn clinic-lb-close" onClick={() => setOpen(null)} aria-label="ปิด">×</button>
+          <button type="button" className="clinic-lb-btn clinic-lb-prev" onClick={(e) => { e.stopPropagation(); setOpen((open - 1 + n) % n) }} aria-label="ภาพก่อนหน้า">‹</button>
+          <button type="button" className="clinic-lb-btn clinic-lb-next" onClick={(e) => { e.stopPropagation(); setOpen((open + 1) % n) }} aria-label="ภาพถัดไป">›</button>
+          <span className="clinic-lb-count">{open + 1} / {n}</span>
+        </div>,
+        document.body
+      )}
+    </section>
+  )
 }
 
 const T = {
@@ -211,6 +274,7 @@ const T = {
     ctaStripP: 'เลือกหนทางของคุณ — มาร่วมงาน Iftar For Gaza หรือเริ่มบริจาคได้ทันที',
     ctaStripIftar: 'ลงทะเบียน Iftar For Gaza', ctaStripDonate: 'ร่วมบริจาค',
     followTitle: 'ติดตามอุมมะตี\nได้ทุกช่องทาง', followP: 'อัปเดตภารกิจช่วยเหลือและกิจกรรมล่าสุดของเราได้ที่โซเชียลมีเดียทุกแพลตฟอร์ม',
+    clinicEyebrow: 'UMMATEE THE SERIES', clinicTitle: 'Thailand Clinic\nFor Gaza', clinicSub: 'แพทย์ นักวิชาการ และอินฟลูเอนเซอร์ ร่วมกันส่งต่อการรักษาและความช่วยเหลือสู่พี่น้องในกาซา', clinicTap: 'แตะเพื่อดูภาพเต็ม',
     missionsEyebrow: 'MISSIONS · ภารกิจ', missionsTitle: 'ทุกโครงการของเรา', missionsCta: 'ดูภาพและวิดีโอทุกภารกิจ',
   },
   en: {
@@ -237,6 +301,7 @@ const T = {
     ctaStripP: 'Choose your path — join Iftar For Gaza or start donating right away',
     ctaStripIftar: 'Register · Iftar For Gaza', ctaStripDonate: 'Donate',
     followTitle: 'Follow Ummatee Everywhere', followP: 'Stay updated on our latest aid missions and activities on every platform',
+    clinicEyebrow: 'UMMATEE THE SERIES', clinicTitle: 'Thailand Clinic\nFor Gaza', clinicSub: 'Doctors, scholars and influencers coming together to bring medical care and aid to Gaza', clinicTap: 'Tap to view full size',
     missionsEyebrow: 'MISSIONS', missionsTitle: 'All Our Projects', missionsCta: 'View photos & videos of every mission',
   },
   ar: {
@@ -263,6 +328,7 @@ const T = {
     ctaStripP: 'اختر طريقك — انضم إلى إفطار من أجل غزة أو ابدأ التبرع فوراً',
     ctaStripIftar: 'سجّل · إفطار من أجل غزة', ctaStripDonate: 'تبرّع',
     followTitle: 'تابع أمّتي على كل المنصات', followP: 'تابع آخر مهماتنا الإغاثية وأنشطتنا على جميع وسائل التواصل الاجتماعي',
+    clinicEyebrow: 'UMMATEE THE SERIES', clinicTitle: 'Thailand Clinic\nFor Gaza', clinicSub: 'أطباء وعلماء ومؤثرون يتعاونون لإيصال العلاج والمساعدة إلى غزة', clinicTap: 'اضغط لعرض الصورة كاملة',
     missionsEyebrow: 'المهمات', missionsTitle: 'كل مشاريعنا', missionsCta: 'عرض صور وفيديوهات كل مهمة',
   },
 }
@@ -442,6 +508,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* ── Thailand Clinic For Gaza: โปสเตอร์ 3 ชุด (แพทย์ / นักวิชาการ / อินฟลูเอนเซอร์) ── */}
+      <ClinicForGaza t={t} />
 
       {/* ── แทบดำ: ภารกิจทั้งหมด ── */}
       <section className="hm-missions-band">

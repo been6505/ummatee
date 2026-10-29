@@ -205,3 +205,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Sarabun','Poppi
 .section-head h2,.cta-strip h2{line-height:1.5}
 /* ท่อนของ TitleLines เป็น inline-block — เว้นระยะบน/ล่างของแต่ละท่อนเพิ่ม กันวรรณยุกต์/สระล่างของสองบรรทัดชนกัน */
 .section-head h2 .title-line,.cta-strip h2 .title-line{padding:.06em 0}
+
+/* ── หน้าแรก: Thailand Clinic For Gaza (โปสเตอร์ 3 ชุด) ── */
+.clinic-band{padding:clamp(56px,8vw,96px) 0;background:linear-gradient(180deg,#eaf2ff 0%,#e6f7fb 50%,#eaf7ec 100%)}
+.clinic-band .section-head{margin-bottom:clamp(28px,4vw,44px)}
+.clinic-band .eyebrow-sm{color:#1e5bd8}
+.clinic-band .section-head h2{color:#0b2d6b}
+.clinic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(14px,2.5vw,26px)}
+.clinic-card{position:relative;display:block;padding:0;border-radius:28px;overflow:hidden;background:#fff;
+  box-shadow:inset 0 1px 0 #fff,0 22px 50px -24px rgba(11,45,107,.55),0 2px 6px rgba(0,0,0,.06);
+  transition:transform .35s var(--ios-ease)}
+.clinic-card:hover{transform:translateY(-4px)}
+.clinic-card:active{transform:scale(.98)}
+.clinic-card img{display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover}
+.clinic-card-label{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:18px;color:#fff;text-align:left;
+  background:rgba(10,20,40,.38);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+  border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.clinic-card-label b{font-size:.98rem;font-weight:700}
+.clinic-card-label small{font-size:.74rem;opacity:.8;white-space:nowrap}
+@media (max-width:760px){
+  .clinic-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 -24px;padding:4px 24px 18px;scrollbar-width:none}
+  .clinic-grid::-webkit-scrollbar{display:none}
+  .clinic-card{flex:0 0 82%;scroll-snap-align:center}
+}
+.clinic-lightbox{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 56px) 12px calc(env(safe-area-inset-bottom,0px) + 56px);
+  background:rgba(0,0,0,.82);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:ios-pop .3s var(--ios-ease)}
+.clinic-lightbox img{max-width:min(100%,720px);max-height:100%;width:auto;height:auto;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.clinic-lb-btn{position:absolute;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:1.7rem;line-height:1;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+.clinic-lb-btn:active{transform:scale(.92)}
+.clinic-lb-close{top:calc(env(safe-area-inset-top,0px) + 10px);right:12px}
+.clinic-lb-prev{left:12px;top:50%;transform:translateY(-50%)}
+.clinic-lb-next{right:12px;top:50%;transform:translateY(-50%)}
+.clinic-lb-prev:active,.clinic-lb-next:active{transform:translateY(-50%) scale(.92)}
+.clinic-lb-count{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);left:50%;transform:translateX(-50%);color:rgba(255,255,255,.85);font-size:.88rem;
+  padding:5px 12px;border-radius:99px;background:rgba(255,255,255,.14)}

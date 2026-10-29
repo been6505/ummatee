@@ -202,4 +202,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Sarabun','Poppi
 /* ตัวอักษรไทยไม่ควรถ่างระยะ — สระ/วรรณยุกต์ลอยแยกจากพยัญชนะ (เช่น "ให้") */
 .eyebrow-sm{letter-spacing:.06em}
 /* หัวข้อไทยหลายบรรทัด: ระยะบรรทัดเดิม 1.18 ทำให้วรรณยุกต์บรรทัดล่างชนสระบรรทัดบน */
-.section-head h2,.cta-strip h2{line-height:1.32}
+.section-head h2,.cta-strip h2{line-height:1.5}
+/* ท่อนของ TitleLines เป็น inline-block — เว้นระยะบน/ล่างของแต่ละท่อนเพิ่ม กันวรรณยุกต์/สระล่างของสองบรรทัดชนกัน */
+.section-head h2 .title-line,.cta-strip h2 .title-line{padding:.06em 0}

@@ -4,14 +4,12 @@ import { useConfigDoc, saveConfigDoc } from './configDoc.js'
 // (อ่านได้ทุกคน, แก้ได้เฉพาะแอดมิน ตาม firestore.rules เดิม — เหมือน config/announcement)
 // รายการเมนูทั้งหมดที่ปิดได้ (ไม่รวม "หน้าหลัก" — เป็นทางกลับบ้าน ปิดไม่ได้)
 export const NAV_MENU_ITEMS = [
+// ความคืบหน้า / ภารกิจกุรบาน / Iftar / งาน "ให้" / อาสาสมัคร ถูกเอาออกจากเมนูแล้ว (หน้าเดิมยังเข้าได้ทาง URL ตรง)
+// ถ้าจะเอากลับมา ต้องเพิ่มทั้งที่นี่และลิงก์ใน src/components/Nav.jsx
   { key: 'donation', label: 'ร่วมบริจาค', path: '/donation' },
+  { key: 'naza', label: 'รับชมภาพยนตร์ NAZA', path: '/events/Naza' },
   { key: 'missions', label: 'ภารกิจ', path: '/missions' },
-  { key: 'updates', label: 'ความคืบหน้า', path: '/updates' },
-  { key: 'qurban', label: 'ภารกิจกุรบาน', path: '/missions/qurban2026' },
   { key: 'shop', label: 'um-shop', path: '/um-shop' },
-  { key: 'iftar', label: 'Iftar For Gaza', path: '/event/iftar-for-gaza' },
-  { key: 'give', label: 'งาน "ให้"', path: '/event/give-for-um' },
-  { key: 'volunteer', label: 'อาสาสมัคร', path: '/volunteer/register' },
 ]
 
 // หา nav key จาก path ของลิงก์ (จับ path ที่ตรง/ครอบคลุมที่สุด เช่น /missions/qurban2026 → qurban ไม่ใช่ missions)

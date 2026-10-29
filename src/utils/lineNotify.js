@@ -24,9 +24,12 @@ function postToScript(label, payload, ctx) {
       const body = await res.text().catch(() => '')
       if (!res.ok || !body.trim().startsWith('{')) {
         console.warn(`[${label}] ไม่สำเร็จ (HTTP ${res.status}) — ตรวจการ deploy ของ Apps Script`, ctx)
+        return null
       }
+      // คืนผลจาก Apps Script ให้ผู้เรียกที่อยากรู้ (เช่นปุ่ม "ส่งอีเมลอีกครั้ง") — ที่เหลือไม่ต้องสนใจค่านี้
+      try { return JSON.parse(body) } catch { return null }
     })
-    .catch((e) => console.warn(`[${label}] ล้มเหลว:`, e?.message || e, ctx))
+    .catch((e) => { console.warn(`[${label}] ล้มเหลว:`, e?.message || e, ctx); return null })
 }
 
 const LINE_EVENTS = ['payment_confirmed', 'shipping', 'shipping_update', 'delivered']
@@ -68,6 +71,16 @@ export function notifyAdminOrderCreated(orderId) {
 export function notifyCustomerShipped(orderId) {
   if (!orderId) return
   postToScript('notifyCustomerShipped', { type: 'orderShipped', orderId }, { orderId })
+}
+
+/**
+ * อีเมลถึงผู้จองตั๋ว NAZA for GAZA — ส่งแค่ bookingId ให้ Apps Script อ่านการจองจริงจาก Firestore
+ * แล้วเลือกอีเมลตามสถานะเอง (pending = ได้รับการจอง, confirmed = ตั๋ว QR, rejected = สลิปไม่ผ่าน)
+ * ฝั่งนั้นจำไว้ว่าส่งสถานะไหนไปแล้ว เรียกซ้ำก็ไม่ส่งซ้ำ — คืน JSON จาก Apps Script หรือ null
+ */
+export function notifyNazaBooking(bookingId) {
+  if (!bookingId) return Promise.resolve(null)
+  return postToScript('notifyNazaBooking', { type: 'nazaBooking', bookingId }, { bookingId })
 }
 
 // เวอร์ชันเดิม (ส่งข้อความสำเร็จรูป) — เก็บไว้เผื่อ Apps Script ยังไม่รองรับ orderCreated

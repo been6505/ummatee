@@ -26,7 +26,8 @@
     "react-dom": "^18.3.1",
     "react-leaflet": "^4.2.1",
     "tesseract.js": "^5.1.1",
-    "thai-address-database": "^0.0.31"
+    "thai-address-database": "^0.0.31",
+    "three": "^0.160.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

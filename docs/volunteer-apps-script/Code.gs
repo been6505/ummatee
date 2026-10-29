@@ -15,6 +15,7 @@
 //   5. สมัครอาสาสมัคร           (handleVolunteer + อีเมลยืนยัน)
 //   6. B2UM                     (handleB2um)
 //   7. Iftar For Gaza           (handleIftar + อีเมลยืนยัน) — action เริ่มต้นเมื่อไม่ส่ง type
+//   8. NAZA for GAZA จองตั๋ว     (handleNazaBooking + nazaDailyReminder ตั้งเวลารายวัน)
 // ══════════════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════════════
@@ -36,7 +37,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-07-31.7'
+var SCRIPT_VERSION = '2026-10-29.1'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -84,10 +85,11 @@ function getHandler(type) {
   if (type === 'lineNotify') return handleLineNotify
   if (type === 'volunteer') return handleVolunteer
   if (type === 'b2um') return handleB2um
+  if (type === 'nazaBooking') return handleNazaBooking
   return null
 }
 
-var HANDLER_TYPES = ['adminNotify', 'orderCreated', 'orderShipped', 'lineNotify', 'volunteer', 'b2um', '(default) iftar']
+var HANDLER_TYPES = ['adminNotify', 'orderCreated', 'orderShipped', 'lineNotify', 'volunteer', 'b2um', 'nazaBooking', '(default) iftar']
 
 // ⚠️ ความปลอดภัย: doGet เดิม (token === SHEET_TOKEN) เปิดให้ใครก็ได้ที่รู้ token ดึง PII
 // (ชื่อ/เบอร์/อีเมล/ที่อยู่) ของอาสาสมัครและผู้ลงทะเบียน Iftar ทั้งหมดออกไปได้ โดยไม่ต้องล็อกอิน
@@ -806,4 +808,206 @@ function sendIftarConfirmation(data, ref) {
   } catch (err) {
     Logger.log('Email error: ' + err.message)
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 8. NAZA for GAZA — อีเมลถึงผู้จองตั๋ว (/events/Naza)
+//
+// เว็บส่งมาแค่ bookingId (หลังจอง / หลังแอดมินอนุมัติหรือปฏิเสธ / ปุ่ม "ส่งอีเมลอีกครั้ง")
+// ที่นี่อ่านการจองจริงจาก Firestore เอง (nazaBookings มี allow get: if true) แล้วเลือกอีเมลตามสถานะ:
+//   pending   → ได้รับการจองแล้ว รอตรวจสลิป
+//   confirmed → ตั๋วพร้อม QR สำหรับให้เจ้าหน้าที่สแกน
+//   rejected  → สลิปไม่ผ่าน ที่นั่งถูกคืน
+// ผู้เรียกจึงกำหนดผู้รับ/เนื้อหาเองไม่ได้ (SHEET_TOKEN อ่านได้จาก bundle เหมือนกรณีออเดอร์)
+//
+// กันส่งซ้ำ: จำไว้ใน Script Properties ว่า "การจองนี้ สถานะนี้ ครั้งตรวจนี้" ส่งไปแล้ว
+// (key รวม reviewedAt ด้วย — ถ้าแอดมินปฏิเสธแล้วกลับมาอนุมัติใหม่ ผู้จองจะได้อีเมลตั๋วอีกรอบ)
+//
+// เตือนก่อนวันงาน: ฟังก์ชัน nazaDailyReminder รันทุกวัน 9 โมง (ตั้งครั้งเดียวด้วย nazaInstallReminderTrigger)
+// ส่งหาผู้จองที่ยืนยันแล้วของรอบ "พรุ่งนี้" — รายการ id ที่ต้องเตือนสะสมไว้ตอนส่งอีเมลตั๋ว
+//
+// ⚠️ ต้องตรงกับ src/data/nazaConfig.js (มีเทสต์เทียบ NAZA_DAY_DATES ให้)
+// ══════════════════════════════════════════════════════════════════════
+var NAZA_SITE = 'https://ummatee-app.web.app'
+var NAZA_DAY_DATES = { d6: '2026-11-06', d7: '2026-11-07', d8: '2026-11-08' }
+var NAZA_DAY_LABEL = { d6: 'ศุกร์ 6 พ.ย. 2569', d7: 'เสาร์ 7 พ.ย. 2569', d8: 'อาทิตย์ 8 พ.ย. 2569' }
+var NAZA_TIME_LABEL = { '1400': '14:00–16:30 น.', '1830': '18:30–21:00 น.' }
+var NAZA_VENUE = 'Meeting Mall'
+var NAZA_IDS_KEY = 'naza:confirmedIds'
+
+function nazaFetchBooking(id) {
+  var url = 'https://firestore.googleapis.com/v1/projects/ummatee-app/databases/(default)/documents/nazaBookings/'
+    + encodeURIComponent(String(id))
+  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
+  if (res.getResponseCode() !== 200) return null
+  var f = (JSON.parse(res.getContentText()) || {}).fields || {}
+  var seats = (((f.seats || {}).arrayValue || {}).values || []).map(function (v) { return fsVal(v) })
+  return {
+    id: String(id), code: fsVal(f.code), round: fsVal(f.round), seats: seats,
+    name: fsVal(f.name), phone: fsVal(f.phone), email: String(fsVal(f.email) || '').trim(),
+    amount: fsVal(f.amount), status: fsVal(f.status),
+    createdAt: fsVal(f.createdAt), reviewedAt: fsVal(f.reviewedAt),
+  }
+}
+
+function nazaRoundText(round) {
+  var p = String(round || '').split('-')
+  return (NAZA_DAY_LABEL[p[0]] || round) + ' · ' + (NAZA_TIME_LABEL[p[1]] || '')
+}
+
+// ข้อความใน QR — ต้องตรงกับ ticketQrValue ใน src/components/naza/shared.jsx (เครื่องสแกนหน้างานอ่านรูปแบบนี้)
+function nazaQrValue(b) {
+  return 'NAZA|' + b.code + '|' + b.round + '|' + b.seats.join(',')
+}
+
+function nazaTicketLink(b) { return NAZA_SITE + '/events/Naza?t=' + encodeURIComponent(b.id) }
+
+function nazaRememberConfirmed(id) {
+  var props = PropertiesService.getScriptProperties()
+  var ids = JSON.parse(props.getProperty(NAZA_IDS_KEY) || '[]')
+  if (ids.indexOf(id) < 0) { ids.push(id); props.setProperty(NAZA_IDS_KEY, JSON.stringify(ids)) }
+}
+
+function handleNazaBooking(data) {
+  var id = String(data.bookingId || '')
+  if (!/^[A-Za-z0-9]{10,40}$/.test(id)) return jsonOut({ error: 'bad bookingId' })
+  var b = nazaFetchBooking(id)
+  if (!b) return jsonOut({ error: 'booking not found' })
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) return jsonOut({ ok: true, mailed: false, error: 'no email' })
+
+  var kind = b.status
+  if (kind !== 'pending' && kind !== 'confirmed' && kind !== 'rejected') return jsonOut({ error: 'unknown status' })
+  var key = 'naza:' + id + ':' + kind + ':' + (kind === 'pending' ? b.createdAt : b.reviewedAt)
+
+  // กันสองคำขอพร้อมกัน (กดซ้ำ/รีลองอัตโนมัติ) ส่งอีเมลเดียวกันสองฉบับ
+  var lock = LockService.getScriptLock()
+  if (!lock.tryLock(15000)) return jsonOut({ error: 'busy, try again' })
+  try {
+    var props = PropertiesService.getScriptProperties()
+    if (props.getProperty(key)) {
+      if (kind === 'confirmed') nazaRememberConfirmed(id)
+      return jsonOut({ ok: true, mailed: false, already: true, status: kind })
+    }
+    try {
+      nazaSendEmail(b, kind)
+    } catch (mailErr) {
+      Logger.log('naza mail error: ' + mailErr.message)
+      return jsonOut({ ok: false, mailed: false, error: mailErr.message })
+    }
+    props.setProperty(key, new Date().toISOString())
+    if (kind === 'confirmed') nazaRememberConfirmed(id)
+    return jsonOut({ ok: true, mailed: true, status: kind })
+  } finally {
+    lock.releaseLock()
+  }
+}
+
+// รัน "ครั้งเดียว" จาก Apps Script Editor (เลือกฟังก์ชันนี้แล้วกด Run) — ตั้งให้ nazaDailyReminder ทำงานทุกวัน 9 โมง
+function nazaInstallReminderTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'nazaDailyReminder') ScriptApp.deleteTrigger(t)
+  })
+  ScriptApp.newTrigger('nazaDailyReminder').timeBased().everyDays(1).atHour(9).inTimezone('Asia/Bangkok').create()
+}
+
+// ส่งอีเมลเตือนผู้จองที่ "ยืนยันแล้ว" ของรอบที่ฉายวันพรุ่งนี้ (ตามเวลาไทย) — ส่งครั้งเดียวต่อการจอง
+function nazaDailyReminder() {
+  var tomorrow = Utilities.formatDate(new Date(Date.now() + 24 * 3600 * 1000), 'Asia/Bangkok', 'yyyy-MM-dd')
+  var days = Object.keys(NAZA_DAY_DATES).filter(function (d) { return NAZA_DAY_DATES[d] === tomorrow })
+  if (!days.length) return
+
+  var props = PropertiesService.getScriptProperties()
+  var ids = JSON.parse(props.getProperty(NAZA_IDS_KEY) || '[]')
+  var sent = 0, skipped = 0
+  ids.forEach(function (id) {
+    var key = 'naza:' + id + ':reminder'
+    if (props.getProperty(key)) return
+    var b = nazaFetchBooking(id)
+    if (!b || b.status !== 'confirmed' || days.indexOf(String(b.round).split('-')[0]) < 0) return
+    if (MailApp.getRemainingDailyQuota() < 1) { skipped++; return }
+    try {
+      nazaSendEmail(b, 'reminder')
+      props.setProperty(key, new Date().toISOString())
+      sent++
+    } catch (e) { Logger.log('naza reminder error ' + id + ': ' + e.message); skipped++ }
+  })
+  Logger.log('nazaDailyReminder ' + tomorrow + ': sent ' + sent + ', skipped ' + skipped)
+  if (skipped) {
+    GmailApp.sendEmail(ADMIN_EMAIL, 'NAZA: ส่งอีเมลเตือนไม่ครบ ' + skipped + ' ราย',
+      'ส่งได้ ' + sent + ' ราย ไม่สำเร็จ ' + skipped + ' ราย (โควต้าอีเมลรายวันหมดหรือส่งไม่ผ่าน)\n'
+      + 'รัน nazaDailyReminder อีกครั้งพรุ่งนี้เช้าไม่ได้ เพราะจะเลยวันแล้ว — กรุณาแจ้งผู้จองทางโทรศัพท์/LINE แทน\n'
+      + NAZA_SITE + '/admin/events/naza')
+  }
+}
+
+function nazaSendEmail(b, kind) {
+  var head = {
+    pending: ['ได้รับการจองแล้ว', 'ทีมงานกำลังตรวจสลิป เมื่อยืนยันแล้วจะส่งตั๋วพร้อม QR มาที่อีเมลนี้'],
+    confirmed: ['ตั๋วของคุณพร้อมแล้ว', 'แสดง QR นี้ให้เจ้าหน้าที่สแกนที่จุดลงทะเบียนหน้าห้องฉาย'],
+    rejected: ['สลิปไม่ผ่านการตรวจ', 'ที่นั่งถูกคืนให้ผู้อื่นจองแล้ว หากโอนเงินแล้วกรุณาติดต่อทีมงานพร้อมรหัสการจองนี้'],
+    reminder: ['พรุ่งนี้พบกันที่ ' + NAZA_VENUE, 'อย่าลืมเตรียม QR นี้ไว้ให้เจ้าหน้าที่สแกนที่จุดลงทะเบียน · มาก่อนเวลาสัก 15 นาทีนะครับ'],
+  }[kind]
+  var subject = {
+    pending: 'ได้รับการจอง NAZA for GAZA · ' + b.code + ' (รอตรวจสลิป)',
+    confirmed: 'ตั๋ว NAZA for GAZA ของคุณ · ' + b.code,
+    rejected: 'การจอง NAZA for GAZA ' + b.code + ' · สลิปไม่ผ่านการตรวจ',
+    reminder: 'พรุ่งนี้! NAZA for GAZA · ' + nazaRoundText(b.round),
+  }[kind]
+  var withQr = kind === 'confirmed' || kind === 'reminder'
+  var link = nazaTicketLink(b)
+
+  // ดึงรูป QR มาแนบในอีเมลเลย (inline) — โปรแกรมอีเมลหลายตัวบล็อกรูปจากเว็บภายนอกจนกว่าจะกดโหลด
+  // ถ้าดึงไม่ได้ค่อยถอยไปใช้ URL ตรง ๆ (ยังมีรหัสการจอง + ลิงก์เปิดตั๋วในหน้าเว็บอยู่ดี)
+  var qrApi = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=8&data=' + encodeURIComponent(nazaQrValue(b))
+  var inline = {}, qrSrc = qrApi
+  if (withQr) {
+    try {
+      var qrRes = UrlFetchApp.fetch(qrApi, { muteHttpExceptions: true })
+      if (qrRes.getResponseCode() === 200) { inline.qr = qrRes.getBlob().setName('ticket-qr.png'); qrSrc = 'cid:qr' }
+    } catch (qrErr) { Logger.log('naza qr fetch error: ' + qrErr.message) }
+  }
+
+  var row = function (label, value) {
+    return '<tr><td style="padding:6px 0;color:#6a6a70;font-size:13px;width:110px">' + label + '</td>'
+      + '<td style="padding:6px 0;font-weight:700;font-size:15px">' + value + '</td></tr>'
+  }
+  var accent = kind === 'rejected' ? '#d4232c' : '#141416'
+  var body =
+    '<div style="font-family:Tahoma,Arial,sans-serif;max-width:520px;margin:auto;border:1px solid #e5e5e2;border-radius:16px;overflow:hidden;color:#141416">' +
+    '<div style="background:#11100c;color:#fff;padding:22px 24px;text-align:center">' +
+    '<div style="font-size:11px;letter-spacing:4px;color:#a6a6ab">UMMATEE THE SERIES</div>' +
+    '<div style="font-size:34px;font-weight:900;letter-spacing:2px;margin-top:2px">NAZA</div>' +
+    '<div style="font-size:15px">FOR <b style="color:#e3262f">GAZA</b></div>' +
+    '</div>' +
+    '<div style="padding:22px 24px;line-height:1.7">' +
+    '<h1 style="margin:0 0 4px;font-size:22px;color:' + accent + '">' + head[0] + '</h1>' +
+    '<p style="margin:0 0 16px;color:#3a3a3e">เรียน คุณ' + escapeHtml(b.name) + ' — ' + head[1] + '</p>' +
+    (withQr
+      ? '<div style="text-align:center;margin:8px 0 18px">' +
+        '<div style="display:inline-block;border:1px solid #e5e5e2;border-radius:14px;padding:10px;background:#fff">' +
+        '<img src="' + qrSrc + '" alt="QR ตั๋ว ' + escapeHtml(b.code) + '" width="200" height="200" style="display:block">' +
+        '</div></div>'
+      : '') +
+    '<table style="width:100%;border-collapse:collapse;border-top:1px dashed #d0d0cc;border-bottom:1px dashed #d0d0cc;margin:4px 0 16px">' +
+    row('รหัสการจอง', '<span style="font-family:monospace;font-size:18px;letter-spacing:1px">' + escapeHtml(b.code) + '</span>') +
+    row('รอบ', escapeHtml(nazaRoundText(b.round))) +
+    row('ที่นั่ง', '<span style="font-family:monospace">' + escapeHtml(b.seats.join(' ')) + '</span> (' + b.seats.length + ' ที่)') +
+    row('สถานที่', NAZA_VENUE) +
+    (kind === 'reminder' ? '' : row('ยอดโอน', '&#3647;' + escapeHtml(b.amount))) +
+    '</table>' +
+    '<div style="text-align:center;margin:18px 0 6px">' +
+    '<a href="' + link + '" style="display:inline-block;padding:13px 24px;background:#141416;color:#fff;text-decoration:none;border-radius:12px;font-weight:700">เปิดตั๋วในเว็บ</a>' +
+    '</div>' +
+    '<p style="font-size:12.5px;color:#6a6a70;text-align:center;margin:8px 0 0">ภาพยนตร์ + Talk · จัดโดย มูลนิธิอุมมะตี × Meeting Mall</p>' +
+    '</div>' +
+    '<div style="background:#faf3e0;color:#8a6d1a;padding:12px 24px;font-size:12.5px;text-align:center">' +
+    'อีเมลฉบับนี้เป็นข้อความอัตโนมัติ <b>ห้ามตอบกลับ</b> · ติดต่อทีมงานทาง LINE @745bvvgx' +
+    '</div>' +
+    '</div>'
+
+  var opts = { htmlBody: body, name: 'Ummatee · NAZA for GAZA' }
+  if (inline.qr) opts.inlineImages = inline
+  GmailApp.sendEmail(b.email, subject,
+    head[0] + ' — รหัสการจอง ' + b.code + ' · ' + nazaRoundText(b.round) + ' · ที่นั่ง ' + b.seats.join(' ') + '\nเปิดตั๋ว: ' + link,
+    opts)
 }

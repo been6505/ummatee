@@ -6,7 +6,7 @@
     "rules": "storage.rules"
   },
   "functions": {
-    "source": "functions"
+    "source": "firebase-functions"
   },
   "hosting": {
     "public": "dist",
@@ -14,7 +14,8 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "**/Sales 10_ OFF/**"
+      "**/Sales 10_ OFF/**",
+      "_headers"
     ],
     "rewrites": [
       {

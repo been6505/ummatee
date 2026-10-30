@@ -97,8 +97,8 @@
 .naza .aisle{flex:0 0 14px}
 .naza .zone{font-size:11px;letter-spacing:.2em;color:var(--dim);text-align:center;border-top:1px dashed var(--line-strong);padding-top:8px;margin-top:4px}
 .naza .seat.bean{flex:0 1 54px}
-.naza .seat.chair{flex:0 1 32px;min-width:0}
-.naza .srow.chair .seats{gap:4px}
+.naza .seat.chair{flex:0 1 34px;min-width:0}
+.naza .srow.chair .seats{gap:14px}
 .naza .seat.chair i{aspect-ratio:1/1.05;border-radius:7px 7px 4px 4px;background:linear-gradient(#ffffff,#ececea);border-bottom-width:5px;font-size:9.5px}
 .naza .seat.chair[aria-pressed="true"] i{background:var(--ink);border-color:var(--ink)}
 .naza .seat.chair[data-taken] i{background:transparent;border-bottom-width:5px}

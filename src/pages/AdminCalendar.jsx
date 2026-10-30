@@ -184,7 +184,7 @@ function InsightsTab() {
 // ซึ่งห้ามอยู่ในโค้ดฝั่งเบราว์เซอร์ และ access token ต้องเก็บฝั่งเซิร์ฟเวอร์ ummatee เป็น static site
 // (Firebase Hosting + Firestore บนแพลน Spark) ไม่มีเซิร์ฟเวอร์ให้ทำสองอย่างนี้
 //
-// เคยเขียน Cloud Functions ไว้ครบแล้ว (functions/index.js) แต่ deploy ไม่ได้เพราะต้องอัปเกรดเป็น
+// เคยเขียน Cloud Functions ไว้ครบแล้ว (firebase-functions/index.js) แต่ deploy ไม่ได้เพราะต้องอัปเกรดเป็น
 // แพลน Blaze (ผูกบัตร) — endpoint จึงตอบ 404 เสมอ ปุ่มเดิมที่ชี้ไปที่นั้นกดแล้วพาไปหน้า error
 // จึงเปลี่ยนมาส่งต่อไป Content Hub ที่ deploy ใช้งานได้จริงอยู่แล้วแทน
 const SOCIAL_PLATFORMS = [

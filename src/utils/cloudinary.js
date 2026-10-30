@@ -1,7 +1,7 @@
 // อัพโหลดไฟล์ขึ้น Cloudinary (unsigned preset) — ใช้ร่วมกันทุกหน้า
 // resourceType: 'image' (รูปเท่านั้น) หรือ 'auto' (รูป/วิดีโอ)
 // คืน { url, type, publicId } — type คือ resource_type จาก Cloudinary เช่น 'image' | 'video'
-// publicId ใช้ตอนลบไฟล์ทีหลัง (เช่น cleanupPublishedMedia ใน functions/index.js) — ไม่ได้ใช้ทุกที่ที่เรียกฟังก์ชันนี้
+// publicId ใช้ตอนลบไฟล์ทีหลัง (เช่น cleanupPublishedMedia ใน firebase-functions/index.js) — ไม่ได้ใช้ทุกที่ที่เรียกฟังก์ชันนี้
 //
 // ⚠️ preset นี้เป็นแบบ unsigned = ใครอ่าน JS bundle ก็ยิง POST เข้าบัญชี Cloudinary ของมูลนิธิได้ตรงๆ
 // ด่านจริงต้องตั้งที่ Cloudinary Console → Settings → Upload → preset "Ummatee":

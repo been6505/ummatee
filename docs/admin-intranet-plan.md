@@ -16,7 +16,7 @@
 | 4 | วางแผนคอนเทนต์ (ข้อความ/รูป/วิดีโอ/live) | 🟢 เกือบครบ | `AdminCalendar` + `contentPosts` + อัปโหลด Cloudinary + โพสต์จริงผ่าน content-hub — ขาดแค่ "live" เป็นชนิดคอนเทนต์ |
 | 5 | ขายสินค้า + คลัง + แจ้ง LINE เมื่อมีออเดอร์ | ✅ **เสร็จแล้ว** | `AdminShop`, `AdminInventory`, `stockMovements`, `AdminShopOrders`, `AdminShopSales` + แจ้งเตือน LINE/อีเมลตอนมีออเดอร์และตอนสต็อกใกล้หมด (วิ่งผ่าน Apps Script ที่ deploy แล้ว) |
 | 6 | Co ร้านค้า + รายชื่อร้านร่วม campaign | 🟡 บางส่วน | มี `partnerOrganizations` (หน้า `AdminPartners`) แต่ยังไม่ผูกกับ campaign |
-| 7 | รวมแชททุกแพลตฟอร์ม | 🔴 **ยังไม่ทำงานจริง** | โค้ด webhook LINE/FB/IG เขียนครบใน `functions/index.js` แต่ **ยัง deploy ไม่ได้** (ทดสอบแล้วตอบ HTTP 404) ตอนนี้ `chats` รับได้แค่จากวิดเจ็ตแชทบนเว็บ |
+| 7 | รวมแชททุกแพลตฟอร์ม | 🔴 **ยังไม่ทำงานจริง** | โค้ด webhook LINE/FB/IG เขียนครบใน `firebase-functions/index.js` แต่ **ยัง deploy ไม่ได้** (ทดสอบแล้วตอบ HTTP 404) ตอนนี้ `chats` รับได้แค่จากวิดเจ็ตแชทบนเว็บ |
 | 8 | เข้าใช้ผ่าน Gmail | ✅ **เสร็จแล้ว** | Google Sign-In ในหน้าล็อกอิน (เหลือเปิด provider ใน Firebase Console) |
 | 9 | Video call + Live ลง FB/TikTok/YouTube | ❌ ยังไม่มี | ติดข้อจำกัดโครงสร้างพื้นฐาน — ดูหัวข้อ 4 |
 

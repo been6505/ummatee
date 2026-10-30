@@ -1,0 +1,25 @@
+# Cloudflare Pages (เว็บ + API ใน functions/) — ดู docs/cloudflare-setup.md
+# ค่าที่ต้องแก้ก่อน deploy ครั้งแรก: database_id และ ACCESS_TEAM / ACCESS_AUD
+name = "ummatee"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ummatee"
+database_id = "00000000-0000-0000-0000-000000000000" # ← แทนด้วยค่าจาก `npx wrangler d1 create ummatee`
+migrations_dir = "cloudflare/migrations"
+
+[[r2_buckets]]
+binding = "SLIPS"
+bucket_name = "ummatee-slips"
+
+[vars]
+# Cloudflare Access (Zero Trust) ที่ป้องกัน /admin และ /api/admin
+ACCESS_TEAM = ""   # ชื่อทีม: <ACCESS_TEAM>.cloudflareaccess.com
+ACCESS_AUD = ""    # Application Audience (AUD) Tag ของ Access application
+# อีเมลที่จัดการระบบจองได้ (ชั้นที่สองต่อจาก policy ของ Access) — คั่นด้วย ,
+ADMIN_EMAILS = "akasitlove@gmail.com,ummatee.thailand@gmail.com,amalogmuslim@gmail.com"
+# URL Apps Script ส่งอีเมล (ตัวเดียวกับ VOLUNTEER_ENDPOINT ใน src/utils/endpoints.js)
+EMAIL_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJyyA9lqjuiJOVry-Mcl-8tXyAtbaIKggO704EqEL9y_A4rIodYL_LqysvbXrltBZKTA/exec"
+EMAIL_SCRIPT_TOKEN = "umt-7Kp2xQ9mZr4Wv8Td"

@@ -1,0 +1,24 @@
+# Cloudflare Worker สำรองข้อมูล Firestore + D1 → Google Sheets (ดู docs/cloudflare-setup.md)
+# deploy:  cd cloudflare/backup-worker && npx wrangler deploy
+name = "ummatee-backup"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# ทุก 3 ชั่วโมง (เวลา UTC — 00:00, 03:00, ... = 07:00, 10:00, ... เวลาไทย)
+[triggers]
+crons = ["0 */3 * * *"]
+
+[vars]
+FIREBASE_PROJECT_ID = "ummatee-app"
+# id ของ Google Sheet ปลายทาง — ส่วนระหว่าง /d/ กับ /edit ใน URL ของชีต
+BACKUP_SHEET_ID = ""
+
+# ฐานข้อมูล D1 เดียวกับเว็บ (ระบบจอง NAZA) — database_id ต้องตรงกับ wrangler.toml ที่รากโปรเจกต์
+[[d1_databases]]
+binding = "DB"
+database_name = "ummatee"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# secret ตั้งด้วยคำสั่ง (ไม่เก็บในไฟล์นี้):
+#   npx wrangler secret put GCP_SA_KEY       ← วางเนื้อไฟล์ JSON ของ service account ทั้งไฟล์
+#   npx wrangler secret put BACKUP_RUN_KEY   ← (ไม่บังคับ) รหัสสำหรับสั่งสำรองทันทีทาง /run?key=...

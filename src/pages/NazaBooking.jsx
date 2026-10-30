@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   NAZA_DAYS, NAZA_TIMES, NAZA_ROWS, SEATS_PER_ROUND, roundOf, roundLabel, baht, sortSeats, seatType,
-  seatDocId, newBookingCode, cleanPhone, cleanEmail, validateBookingForm,
+  seatDocId, cleanPhone, cleanEmail, validateBookingForm,
 } from '../data/nazaConfig.js'
 import { useNazaConfig, useNazaSeats, useMyNazaBookings, createNazaBooking, rememberBooking } from '../data/naza.js'
-import { uploadToCloudinary } from '../utils/cloudinary.js'
 import NazaRoom3D from '../components/naza/NazaRoom3D.jsx'
 import { Ticket, StatusPill, useNazaFonts } from '../components/naza/shared.jsx'
 
@@ -79,7 +78,7 @@ export default function NazaBooking() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [slip, setSlip] = useState(null) // { file, preview, name, uploadedUrl }
+  const [slip, setSlip] = useState(null) // { file, preview, name }
   const [errors, setErrors] = useState({})
   const [formErr, setFormErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -161,14 +160,9 @@ export default function NazaBooking() {
     setBusy(true)
     const seatList = sortSeats(selected)
     try {
-      let slipUrl = slip.uploadedUrl
-      if (!slipUrl) {
-        slipUrl = (await uploadToCloudinary(slip.file)).url
-        setSlip((s) => (s ? { ...s, uploadedUrl: slipUrl } : s)) // ลองส่งซ้ำได้โดยไม่ต้องอัปโหลดใหม่
-      }
+      // สลิปส่งไปพร้อมการจองในคำขอเดียว (เก็บใน R2 ส่วนตัว) — ราคา/รหัสการจองคิดที่เซิร์ฟเวอร์
       const id = await createNazaBooking({
-        code: newBookingCode(), round, seats: seatList, name: name.trim(), phone: cleanPhone(phone), email: cleanEmail(email),
-        slipUrl, amount: seatList.length * price,
+        round, seats: seatList, name: name.trim(), phone: cleanPhone(phone), email: cleanEmail(email), slipFile: slip.file,
       })
       setCurrent(id)
       resetForm()
@@ -178,8 +172,8 @@ export default function NazaBooking() {
         toast(`ที่นั่ง ${err.seat} เพิ่งถูกจองไป กรุณาเลือกใหม่`)
         setSelected((sel) => sel.filter((s) => s !== err.seat))
         show('seats')
-      } else if (err?.code === 'permission-denied') {
-        setFormErr('ระบบไม่รับการจองนี้ — ราคาหรือสถานะการเปิดรับจองอาจเพิ่งเปลี่ยน ลองรีเฟรชหน้าแล้วจองใหม่')
+      } else if (err?.status === 400) {
+        setFormErr(`ระบบไม่รับการจองนี้: ${err.message} — ลองรีเฟรชหน้าแล้วจองใหม่`)
       } else {
         setFormErr('ส่งการจองไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง')
       }
@@ -376,7 +370,7 @@ export default function NazaBooking() {
                   {mine.loading ? 'กำลังโหลด…' : 'ยังไม่มีการจอง'}
                   {!mine.loading && <button className="primary" onClick={() => show('round')}>เลือกรอบฉาย</button>}
                 </div>
-              ) : [...mine.list].sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)).map((b) => (
+              ) : [...mine.list].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((b) => (
                 <button key={b.id} className="mini" onClick={() => { setCurrent(b.id); show('ticket') }}>
                   <span className="c">{b.code}</span><StatusPill status={b.status} short />
                   <span className="s">{roundLabel(b.round)} · ที่นั่ง {sortSeats(b.seats).join(', ')}</span>

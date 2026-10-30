@@ -37,7 +37,7 @@ var ORDERS_SHEET_ID = '1faTElS1S7j4lNpCoHzYl7RAP25c-MANV53-zy-L7-Tg'
 
 // ขยับเลขนี้ทุกครั้งที่แก้แล้ว deploy ใหม่ — เปิด URL ของ Web App แล้วดูค่า version
 // จะรู้ทันทีว่าโค้ดที่รันอยู่จริงเป็นชุดล่าสุดหรือยัง (เคยเจอปัญหาแก้แล้วแต่ deploy ไม่ขึ้น)
-var SCRIPT_VERSION = '2026-10-29.1'
+var SCRIPT_VERSION = '2026-10-30.1'
 
 var ADMIN_EMAIL = 'ummatee.thailand@gmail.com'
 
@@ -813,8 +813,8 @@ function sendIftarConfirmation(data, ref) {
 // ══════════════════════════════════════════════════════════════════════
 // 8. NAZA for GAZA — อีเมลถึงผู้จองตั๋ว (/events/Naza)
 //
-// เว็บส่งมาแค่ bookingId (หลังจอง / หลังแอดมินอนุมัติหรือปฏิเสธ / ปุ่ม "ส่งอีเมลอีกครั้ง")
-// ที่นี่อ่านการจองจริงจาก Firestore เอง (nazaBookings มี allow get: if true) แล้วเลือกอีเมลตามสถานะ:
+// API ของเว็บ (Cloudflare) ส่งมาแค่ bookingId (หลังจอง / หลังแอดมินอนุมัติหรือปฏิเสธ / ปุ่ม "ส่งอีเมลอีกครั้ง")
+// ที่นี่อ่านการจองจริงจาก /api/naza/bookings/:id เอง แล้วเลือกอีเมลตามสถานะ:
 //   pending   → ได้รับการจองแล้ว รอตรวจสลิป
 //   confirmed → ตั๋วพร้อม QR สำหรับให้เจ้าหน้าที่สแกน
 //   rejected  → สลิปไม่ผ่าน ที่นั่งถูกคืน
@@ -828,25 +828,25 @@ function sendIftarConfirmation(data, ref) {
 //
 // ⚠️ ต้องตรงกับ src/data/nazaConfig.js (มีเทสต์เทียบ NAZA_DAY_DATES ให้)
 // ══════════════════════════════════════════════════════════════════════
-var NAZA_SITE = 'https://ummatee-app.web.app'
+// เว็บ + API ของระบบจอง (Cloudflare Pages) — ⚠️ แก้เป็นโดเมนจริงของ Pages/โดเมนของมูลนิธิก่อน deploy สคริปต์
+var NAZA_SITE = 'https://ummatee.pages.dev'
 var NAZA_DAY_DATES = { d6: '2026-11-06', d7: '2026-11-07', d8: '2026-11-08' }
 var NAZA_DAY_LABEL = { d6: 'ศุกร์ 6 พ.ย. 2569', d7: 'เสาร์ 7 พ.ย. 2569', d8: 'อาทิตย์ 8 พ.ย. 2569' }
 var NAZA_TIME_LABEL = { '1400': '14:00–16:30 น.', '1830': '18:30–21:00 น.' }
 var NAZA_VENUE = 'Meeting Mall'
 var NAZA_IDS_KEY = 'naza:confirmedIds'
 
+// อ่านการจองจาก API ของเว็บ (ข้อมูลอยู่ Cloudflare D1 แล้ว ไม่ใช่ Firestore) — endpoint นี้สาธารณะด้วย id สุ่ม
 function nazaFetchBooking(id) {
-  var url = 'https://firestore.googleapis.com/v1/projects/ummatee-app/databases/(default)/documents/nazaBookings/'
-    + encodeURIComponent(String(id))
-  var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true })
+  var res = UrlFetchApp.fetch(NAZA_SITE + '/api/naza/bookings/' + encodeURIComponent(String(id)), { muteHttpExceptions: true })
   if (res.getResponseCode() !== 200) return null
-  var f = (JSON.parse(res.getContentText()) || {}).fields || {}
-  var seats = (((f.seats || {}).arrayValue || {}).values || []).map(function (v) { return fsVal(v) })
+  var j = JSON.parse(res.getContentText()) || {}
+  if (!j.id) return null
   return {
-    id: String(id), code: fsVal(f.code), round: fsVal(f.round), seats: seats,
-    name: fsVal(f.name), phone: fsVal(f.phone), email: String(fsVal(f.email) || '').trim(),
-    amount: fsVal(f.amount), status: fsVal(f.status),
-    createdAt: fsVal(f.createdAt), reviewedAt: fsVal(f.reviewedAt),
+    id: String(j.id), code: j.code, round: j.round, seats: j.seats || [],
+    name: j.name, email: String(j.email || '').trim(),
+    amount: j.amount, status: j.status,
+    createdAt: String(j.createdAt || ''), reviewedAt: String(j.reviewedAt || ''),
   }
 }
 

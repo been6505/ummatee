@@ -10,3 +10,6 @@ dist
 .env
 .env.local
 .env.*.local
+
+# สถานะในเครื่องของ wrangler (D1/R2 จำลองตอน `wrangler pages dev`)
+.wrangler

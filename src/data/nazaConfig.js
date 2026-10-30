@@ -1,9 +1,6 @@
 // ค่าคงที่ + ฟังก์ชันล้วนของระบบจองตั๋ว NAZA for GAZA (/events/Naza)
-// แยกจาก naza.js (ที่แตะ Firestore) เพื่อให้เทสต์ได้โดยไม่ต้องโหลด firebase
-//
-// ⚠️ รายการรอบ (NAZA_ROUNDS) และรูปแบบรหัสที่นั่งถูกเขียนซ้ำไว้ใน firestore.rules
-// (validNazaBooking / match /nazaSeats) — แก้ที่นี่ต้องแก้ที่ rules ด้วย ไม่งั้นจองไม่ผ่าน
-// มีเทสต์ nazaConfig.test.js เทียบให้อยู่แล้ว
+// ใช้ร่วมกันทั้งหน้าเว็บและเซิร์ฟเวอร์ (functions/_lib/naza.js บน Cloudflare) — แก้รอบ/ผังที่นั่งที่นี่ที่เดียว
+// ที่ยังเขียนซ้ำอยู่คือวันที่/เวลาในอีเมล (docs/volunteer-apps-script/Code.gs) — มีเทสต์ nazaConfig.test.js เทียบให้
 
 // date (ค.ศ.) ใช้ตอนส่งอีเมลเตือนก่อนวันงาน — ซ้ำอยู่ใน NAZA_DAY_DATES ของ docs/volunteer-apps-script/Code.gs
 export const NAZA_DAYS = [
@@ -24,8 +21,7 @@ export const ALL_SEATS = NAZA_ROWS.flatMap(([r, n]) => Array.from({ length: n },
 
 export const NAZA_ROUNDS = NAZA_DAYS.flatMap((d) => NAZA_TIMES.map((t) => `${d.id}-${t.id}`))
 
-// ค่าเริ่มต้นของ config/nazaEvent — ใช้ตอนแอดมินยังไม่เคยบันทึกค่า
-// price ต้องตรงกับค่า fallback ใน nazaPrice() ของ firestore.rules
+// ค่าเริ่มต้นของค่าตั้งงาน (ตาราง naza_config ใน D1) — ใช้ตอนแอดมินยังไม่เคยบันทึกค่า
 export const NAZA_DEFAULTS = {
   price: 100,
   maxSeats: 4,
@@ -66,10 +62,10 @@ export function newBookingCode(rand = Math.random) {
 
 export const cleanPhone = (p) => String(p || '').replace(/[^\d]/g, '')
 export const cleanEmail = (e) => String(e || '').trim().toLowerCase()
-// ต้องตรงกับ d.email.matches(...) ใน firestore.rules (เทสต์เทียบให้)
+// เซิร์ฟเวอร์ (functions/_lib/naza.js) ใช้ regex ตัวเดียวกันนี้ตรวจซ้ำ
 export const NAZA_EMAIL_RE = /^[^@\s]+@[^@\s]+[.][^@\s]+$/
 
-// ตรวจฟอร์มผู้จอง — คืน object ของข้อความ error (ว่าง = ผ่าน) เงื่อนไขเดียวกับใน firestore.rules
+// ตรวจฟอร์มผู้จอง — คืน object ของข้อความ error (ว่าง = ผ่าน) เซิร์ฟเวอร์ตรวจซ้ำด้วย validateBooking ใน functions/_lib/naza.js
 export function validateBookingForm({ name, phone, email, hasSlip }) {
   const e = {}
   const n = String(name || '').trim()

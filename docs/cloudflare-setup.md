@@ -1,94 +1,120 @@
-# ย้ายโฮสต์ไป Cloudflare + สำรองข้อมูลลง Google Sheets
+# ย้ายไป Cloudflare
 
-ทำเป็น 3 ขั้น — **ฐานข้อมูลยังอยู่ Firestore เหมือนเดิม** (ไม่ต้องย้ายข้อมูล ไม่มีอะไรหาย)
-Firebase Hosting (`ummatee-app.web.app`) ยังเปิดอยู่คู่กันจนกว่าจะตัดสินใจปิด
+## สถานะการย้าย
 
-| ขั้น | ได้อะไร | ใช้เวลา |
+| ส่วน | อยู่ที่ | หมายเหตุ |
 |---|---|---|
-| 1. เว็บขึ้น Cloudflare Pages | merge เข้า `main` แล้วเว็บขึ้นเอง ไม่ต้องรัน `deploy.sh` | ~15 นาที |
-| 2. อนุญาตโดเมนใหม่ใน Firebase/Google | ล็อกอินแอดมิน, App Check, Google Drive ใช้ได้บนโดเมนใหม่ | ~10 นาที |
-| 3. Worker สำรองข้อมูลทุก 3 ชม. | Google Sheet ที่มีสำเนาการจอง/ออเดอร์/อาสาสมัคร ฯลฯ ล่าสุด | ~20 นาที |
+| โฮสต์เว็บ | **Cloudflare Pages** | merge เข้า `main` แล้วขึ้นเอง |
+| ระบบจองตั๋ว NAZA (การจอง/ที่นั่ง/ค่าตั้งงาน) | **Cloudflare D1** | API ใน `functions/api/naza`, `functions/api/admin` |
+| สลิปโอนเงินของ NAZA | **Cloudflare R2** (ส่วนตัว) | เปิดได้เฉพาะแอดมิน ไม่มี URL สาธารณะแล้ว |
+| ล็อกอินแอดมิน NAZA | **Cloudflare Access** (Google) | |
+| สำรองข้อมูล | **Cloudflare Worker** → Google Sheets | ทั้ง Firestore และ D1 ทุก 3 ชม. |
+| อีเมลแจ้งลูกค้า | Google Apps Script (Gmail) | Cloudflare ส่งอีเมลหาลูกค้าทั่วไปเองไม่ได้ |
+| ส่วนอื่นทั้งหมด (ร้านค้า, บริจาค, แอดมินส่วนอื่น ฯลฯ) | Firebase (Firestore + Auth) | ย้ายในเฟสถัดไป |
 
-> ⚠️ ทุกขั้นทำในหน้าเว็บของ Cloudflare / Google ด้วยบัญชีของมูลนิธิ — **ห้ามส่ง key/รหัสผ่านทางแชท**
+> ⚠️ ทุกขั้นทำด้วยบัญชีของมูลนิธิ — **ห้ามส่ง key/รหัสผ่าน/token ทางแชท**
 
 ---
 
-## ขั้น 1 — Cloudflare Pages (โฮสต์เว็บ)
+## ขั้น 1 — สร้างฐานข้อมูล D1 + ที่เก็บสลิป R2 (บนเครื่อง Mac)
 
-1. สมัคร/ล็อกอิน https://dash.cloudflare.com
-2. **Workers & Pages → Create → Pages → Connect to Git** → เชื่อม GitHub แล้วเลือก repo `been6505/ummatee`
-3. ตั้งค่า build:
+```bash
+npx wrangler login
+npx wrangler d1 create ummatee
+```
+คัดลอก `database_id` ที่ได้ ไปใส่แทน `00000000-...` ใน **2 ไฟล์**: `wrangler.toml` (รากโปรเจกต์) และ `cloudflare/backup-worker/wrangler.toml`
+
+```bash
+npx wrangler d1 migrations apply ummatee --remote
+npx wrangler r2 bucket create ummatee-slips
+```
+
+## ขั้น 2 — Cloudflare Pages (โฮสต์เว็บ + API)
+
+1. https://dash.cloudflare.com → **Workers & Pages → Create → Pages → Connect to Git** → repo `been6505/ummatee`
+2. ตั้งค่า build:
 
    | ช่อง | ค่า |
    |---|---|
    | Production branch | `main` |
-   | Framework preset | None |
    | Build command | `npm run build:pages` |
    | Build output directory | `dist` |
    | Environment variable | `NODE_VERSION` = `20` |
-   | Environment variable (ถ้าเปิดแจ้งเตือน push) | `VITE_FCM_VAPID_KEY` = ค่าเดียวกับใน `.env.local` |
 
-4. กด **Save and Deploy** — ได้ URL แบบ `https://ummatee.pages.dev`
-5. (ถ้ามีโดเมนของตัวเอง) แท็บ **Custom domains → Set up a domain**
+3. **Save and Deploy** → ได้ `https://<ชื่อโปรเจกต์>.pages.dev`
+4. (แนะนำ) **Custom domains** ใส่โดเมนของมูลนิธิ — Cloudflare Access (ขั้น 3) ทำงานกับโดเมนที่อยู่ใน Cloudflare
 
-สิ่งที่ตั้งไว้ในโค้ดแล้ว:
-- `public/_headers` — หัวความปลอดภัย (CSP ฯลฯ) และการแคช ชุดเดียวกับ `firebase.json` (มีเทสต์เทียบให้)
-- `npm run build:pages` — build แล้วลบโฟลเดอร์ `Sales 10_ OFF` (Firebase ข้ามโฟลเดอร์นี้อยู่แล้ว)
-- เส้นทางแบบ SPA (`/events/Naza`, `/admin/...`) — Pages ส่ง `index.html` ให้อัตโนมัติ
+D1/R2 ผูกให้อัตโนมัติจาก `wrangler.toml` (binding `DB`, `SLIPS`) ไม่ต้องตั้งในหน้าเว็บ
 
-ทุกครั้งที่ merge เข้า `main` Cloudflare จะ build + ขึ้นเว็บเอง และ PR ทุกอันได้ลิงก์พรีวิวของตัวเอง
+## ขั้น 3 — Cloudflare Access (ล็อกอินแอดมินด้วย Google)
 
-> **firestore.rules ยังต้อง deploy เองเมื่อมีการแก้** (Cloudflare ไม่รู้จัก Firebase):
-> `npx firebase-tools deploy --only firestore:rules`
+1. dashboard → **Zero Trust** (ครั้งแรกจะให้ตั้งชื่อทีม เช่น `ummatee` → ได้ `ummatee.cloudflareaccess.com`) เลือกแผน Free (ฟรีถึง 50 คน)
+2. **Settings → Authentication → Login methods → Add new → Google** (ทำตามขั้นตอนในหน้านั้น: สร้าง OAuth client ใน Google Cloud แล้วใส่ Client ID/Secret)
+3. **Access → Applications → Add an application → Self-hosted**
+   - Application domain: `<โดเมนเว็บ>` path `admin` **และ** เพิ่มอีกบรรทัด path `api/admin`
+   - Policy: Allow → Include → Emails → ใส่อีเมลแอดมิน/staff ที่ดูแลงาน NAZA
+4. เปิดหน้า Application ที่สร้าง → คัดลอก **Application Audience (AUD) Tag**
+5. แก้ `wrangler.toml` (รากโปรเจกต์):
+   - `ACCESS_TEAM` = ชื่อทีม (เช่น `ummatee`)
+   - `ACCESS_AUD` = AUD Tag
+   - `ADMIN_EMAILS` = อีเมลชุดเดียวกับ policy (โค้ดตรวจซ้ำอีกชั้น)
+6. commit + merge แล้ว Pages จะ deploy ใหม่เอง
 
-## ขั้น 2 — อนุญาตโดเมนใหม่ (ไม่ทำ = ล็อกอิน/บันทึกข้อมูลบนโดเมนใหม่ไม่ได้)
+> โดเมน `*.pages.dev` ไม่ได้อยู่หลัง Access — ตรงนั้น API แอดมินจะตอบ 401 เสมอ (โค้ดตรวจ token เอง) ให้แอดมินเข้าผ่านโดเมนหลักเท่านั้น
 
-ใส่โดเมนใหม่ (เช่น `ummatee.pages.dev` และโดเมนของตัวเองถ้ามี) ใน 4 ที่:
+## ขั้น 4 — อีเมล (Apps Script)
 
-1. **Firebase Console → Authentication → Settings → Authorized domains → Add domain**
-   (ไม่ทำ = ปุ่มล็อกอิน Google ของแอดมินขึ้น error `auth/unauthorized-domain`)
-2. **reCAPTCHA (App Check)** — https://www.google.com/recaptcha/admin → site key ที่ใช้ใน `src/firebase.js` → Domains → เพิ่มโดเมน
-   (ไม่ทำ = App Check ไม่ผ่าน ถ้าเปิดบังคับไว้ Firestore จะปฏิเสธทุกคำขอจากโดเมนใหม่)
-3. **Google Cloud Console → APIs & Services → Credentials** (โปรเจกต์ `ummatee-app`)
-   - API key ของ Google Drive/Picker → Website restrictions → เพิ่ม `https://<โดเมนใหม่>/*`
-   - OAuth client (Web) → Authorized JavaScript origins → เพิ่ม `https://<โดเมนใหม่>`
-4. **Cloudinary** — ถ้าตั้งจำกัดโดเมนไว้ที่ upload preset `Ummatee` ให้เพิ่มโดเมนใหม่
+1. เปิด `docs/volunteer-apps-script/Code.gs` แก้ `NAZA_SITE` เป็นโดเมนเว็บจริง (บรรทัด `var NAZA_SITE = ...`)
+2. วางทับใน Apps Script → **Deploy → Manage deployments → แก้ deployment เดิม**
+3. ถ้ายังไม่เคย: รันฟังก์ชัน `nazaInstallReminderTrigger` หนึ่งครั้ง (อีเมลเตือนก่อนวันงาน)
 
-ลิงก์ในอีเมล (Apps Script) ยังชี้ `ummatee-app.web.app` — ใช้ได้ตามปกติตราบที่ Firebase Hosting ยังเปิด
-ถ้าจะย้ายถาวรค่อยเปลี่ยน `NAZA_SITE` ใน `docs/volunteer-apps-script/Code.gs`
+เว็บสั่งส่งอีเมลจากฝั่งเซิร์ฟเวอร์ (`EMAIL_SCRIPT_URL` ใน `wrangler.toml`) — สคริปต์อ่านการจองจาก `/api/naza/bookings/:id` เอง
 
-## ขั้น 3 — Worker สำรองข้อมูลลง Google Sheets
+## ขั้น 5 — ย้ายการจองเก่าจาก Firestore (ทำเฉพาะถ้าเคยเปิดจองบนระบบเดิมแล้ว)
 
-Worker อยู่ที่ `cloudflare/backup-worker/` — ทุก 3 ชั่วโมง อ่าน Firestore แล้วเขียนลงชีต แท็บละ 1 collection
-(รายการอยู่ใน `BACKUP_COLLECTIONS` ใน `src/lib.js`) + แท็บ `_backup` บอกเวลาสำรองล่าสุดและ collection ที่ล้ม
-**ไม่สำรอง** token ลับ (`socialAccounts`, `pushTokens`) และแชท
+ต้องมี service account จากขั้น 6.1 ก่อน
+```bash
+node scripts/naza-firestore-to-d1.js /path/to/service-account.json > naza-import.sql
+npx wrangler d1 execute ummatee --remote --file naza-import.sql
+```
+รันซ้ำได้ ไม่ทับการจองใหม่ — สลิปของการจองเก่ายังเปิดได้ (ลิงก์ Cloudinary เดิม)
 
-### 3.1 สร้าง service account (Google Cloud Console โปรเจกต์ `ummatee-app`)
-1. **IAM & Admin → Service Accounts → Create** ชื่อ `sheets-backup`
-2. ให้ role **Cloud Datastore Viewer** (อ่าน Firestore ได้อย่างเดียว แก้/ลบไม่ได้)
-3. เปิดบัญชีที่สร้าง → **Keys → Add key → JSON** → ได้ไฟล์ `.json` (เก็บให้ดี ห้ามขึ้น git ห้ามส่งแชท)
-4. **APIs & Services → Library** → เปิด **Google Sheets API**
+## ขั้น 6 — Worker สำรองข้อมูลลง Google Sheets
 
-### 3.2 สร้าง Google Sheet ปลายทาง
-1. สร้างชีตเปล่าในบัญชีมูลนิธิ ตั้งชื่อเช่น `Ummatee Backup`
-2. **Share** ให้อีเมลของ service account (ลงท้าย `@ummatee-app.iam.gserviceaccount.com`) สิทธิ์ **Editor**
-3. คัดลอก id จาก URL: `https://docs.google.com/spreadsheets/d/`**`<id>`**`/edit`
-4. ชีตนี้มีข้อมูลส่วนตัว (ชื่อ/เบอร์/อีเมล) — **อย่าแชร์แบบ "ทุกคนที่มีลิงก์"**
+### 6.1 service account (Google Cloud Console โปรเจกต์ `ummatee-app`)
+1. **IAM & Admin → Service Accounts → Create** ชื่อ `sheets-backup` → role **Cloud Datastore Viewer**
+2. **Keys → Add key → JSON** (เก็บไฟล์ให้ดี ห้ามขึ้น git)
+3. **APIs & Services → Library** → เปิด **Google Sheets API**
 
-### 3.3 Deploy Worker (บนเครื่อง Mac)
+### 6.2 Google Sheet ปลายทาง
+สร้างชีตเปล่า → **Share** ให้อีเมล service account เป็น **Editor** → คัดลอก id จาก URL (`/d/<id>/edit`)
+ชีตมีข้อมูลส่วนตัว — **อย่าแชร์แบบ "ทุกคนที่มีลิงก์"**
+
+### 6.3 deploy
 ```bash
 cd cloudflare/backup-worker
-npx wrangler login                      # เปิดเบราว์เซอร์ให้ล็อกอิน Cloudflare
-# แก้ BACKUP_SHEET_ID ใน wrangler.toml เป็น id จากข้อ 3.2 แล้ว:
+# แก้ BACKUP_SHEET_ID และ database_id ใน wrangler.toml แล้ว:
 npx wrangler secret put GCP_SA_KEY < /path/to/service-account.json
-npx wrangler secret put BACKUP_RUN_KEY  # (ไม่บังคับ) ตั้งรหัสสำหรับสั่งสำรองทันที
+npx wrangler secret put BACKUP_RUN_KEY   # (ไม่บังคับ) รหัสสั่งสำรองทันที
 npx wrangler deploy
 ```
+ทดสอบ: `https://ummatee-backup.<บัญชี>.workers.dev/run?key=<BACKUP_RUN_KEY>` → ชีตมีแท็บ `_backup`, `d1_naza_bookings`, `orders` ฯลฯ
 
-### 3.4 ทดสอบ
-- สั่งสำรองทันที: เปิด `https://ummatee-backup.<บัญชี>.workers.dev/run?key=<BACKUP_RUN_KEY>`
-  ได้ `{"ok":true,...}` แล้วเปิดชีตดู แท็บ `_backup` ต้องมีเวลาล่าสุด
-- หรือใน Cloudflare dashboard → Workers → `ummatee-backup` → Triggers → รัน cron
-- `"ok":false` → ดูคอลัมน์ "ข้อผิดพลาด" ในแท็บ `_backup` (ส่วนใหญ่คือยังไม่ได้ให้ role/ยังไม่ได้แชร์ชีต)
+---
 
-ค่าใช้จ่าย: Pages และ Workers แผนฟรีพอสำหรับเว็บนี้ (Workers ฟรี 100,000 ครั้ง/วัน — Worker นี้รันวันละ 8 ครั้ง)
+## ทดสอบในเครื่องก่อนขึ้นจริง
+
+```bash
+npm run build:pages
+npx wrangler d1 migrations apply ummatee --local
+npx wrangler pages dev dist --binding DEV_ADMIN_EMAIL=you@gmail.com --binding EMAIL_SCRIPT_URL=
+```
+เปิด http://127.0.0.1:8788/events/Naza และ /admin/events/naza (`DEV_ADMIN_EMAIL` ใช้ได้เฉพาะ localhost)
+
+## หมายเหตุ
+
+- `firestore.rules` ยังต้อง deploy เองเมื่อแก้: `npx firebase-tools deploy --only firestore:rules`
+- เว็บบน `ummatee-app.web.app` (Firebase Hosting) จองตั๋ว NAZA ไม่ได้แล้ว (ไม่มี API) — ให้ประกาศลิงก์โดเมนใหม่
+  หรือถ้าต้องเปิดคู่กันชั่วคราว: build ฝั่ง Firebase ด้วย `VITE_API_BASE=https://<โดเมนใหม่> ./deploy.sh` (หน้าจองใช้ได้ หน้าแอดมินไม่ได้)
+- โฟลเดอร์ `firebase-functions/` คือ Cloud Functions เดิมที่ไม่เคย deploy ได้ (แผน Spark) — ย้ายชื่อเพราะ `functions/` เป็นของ Cloudflare
+- ค่าใช้จ่าย: Pages, Workers, D1, R2, Access แผนฟรีพอสำหรับเว็บนี้

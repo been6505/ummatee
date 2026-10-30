@@ -1,27 +1,23 @@
-import { useCallback, useMemo, useState } from 'react'
-import AdminNav from '../components/AdminNav.jsx'
-import StaffRoleGuard from '../components/StaffRoleGuard.jsx'
-import { writeAuditLog } from '../lib/auditLog.js'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { downloadCsv } from '../lib/csv.js'
 import {
   NAZA_ROWS, NAZA_ROUNDS, SEATS_PER_ROUND, NAZA_DEFAULTS, roundLabel, roundShort, baht, sortSeats, seatDocId,
 } from '../data/nazaConfig.js'
 import {
-  useNazaConfig, useNazaSeats, useNazaBookings, saveNazaConfig,
+  useNazaBookings, saveNazaConfig, nazaWhoAmI, resendNazaEmail,
   confirmNazaBooking, rejectNazaBooking, setNazaCheckIn,
 } from '../data/naza.js'
 import { StatusPill, useNazaFonts } from '../components/naza/shared.jsx'
 import NazaScanner from '../components/naza/NazaScanner.jsx'
-import { notifyNazaBooking } from '../utils/lineNotify.js'
 
 // แอดมินระบบจองตั๋ว NAZA for GAZA (/admin/events/naza)
 // ตรวจสลิป → อนุมัติ (ยืนยันที่นั่ง) / ปฏิเสธ (คืนที่นั่ง) · ดูผังที่นั่งทุกรอบ · เช็กอินหน้างาน · ตั้งราคา/พร้อมเพย์/ปิดรับจอง
-// สิทธิ์ตรงกับ isNazaStaff() ใน firestore.rules
+// ข้อมูลอยู่บน Cloudflare (D1/R2) — หน้านี้และ /api/admin/* อยู่หลัง Cloudflare Access (ล็อกอิน Google)
+// และอีเมลต้องอยู่ใน ADMIN_EMAILS ของ wrangler.toml (ตรวจซ้ำใน functions/api/admin/_middleware.js)
 
-const ROLES = ['admin', 'staff', 'field']
 const FILTERS = [['pending', 'รอตรวจ'], ['confirmed', 'ยืนยันแล้ว'], ['rejected', 'ปฏิเสธ'], ['all', 'ทั้งหมด']]
 const tsLabel = (ts) => {
-  const d = ts?.toDate ? ts.toDate() : null
+  const d = typeof ts === 'number' ? new Date(ts) : ts?.toDate ? ts.toDate() : null
   return d ? d.toLocaleString('th-TH', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
 }
 // ช่องค้นหารับข้อความจาก QR บนตั๋วได้ตรงๆ (NAZA|NZ-XXXXX|round|seats) — ดึงรหัสการจองออกมา
@@ -31,24 +27,35 @@ const normalizeSearch = (q) => {
   return (m ? m[1] : s).toLowerCase()
 }
 
+// ตรวจว่าผ่าน Cloudflare Access แล้ว + มีสิทธิ์ ก่อนแสดงหน้า (ไม่ใช้ล็อกอิน Firebase แล้ว)
 export default function AdminNaza() {
-  return (
-    <StaffRoleGuard allowedRoles={ROLES}>
-      {() => (
-        <main className="admin-dash">
-          <AdminNav />
-          <div className="admin-wrap"><NazaAdminBody /></div>
-        </main>
-      )}
-    </StaffRoleGuard>
-  )
+  const [who, setWho] = useState({ state: 'loading' })
+  useEffect(() => {
+    nazaWhoAmI()
+      .then((r) => setWho({ state: 'ok', email: r.email }))
+      .catch((e) => setWho({ state: 'denied', status: e.status, message: e.message }))
+  }, [])
+  if (who.state === 'loading') return null
+  if (who.state === 'denied') {
+    return (
+      <div className="naza admin"><div className="app"><div className="stephead">
+        <h1>NAZA · ตรวจสลิป</h1>
+        <p className="formerr" style={{ marginTop: 10 }}>
+          {who.status === 403 ? who.message
+            : who.status === 401 ? 'ต้องล็อกอินผ่าน Cloudflare Access ก่อน — เปิดหน้านี้จากโดเมนหลักของเว็บ (ไม่ใช่ *.pages.dev) แล้วล็อกอินด้วย Google'
+              : `ติดต่อระบบไม่ได้ (${who.message})`}
+        </p>
+        <p><a href="/cdn-cgi/access/logout">ออกจากระบบ Cloudflare Access</a> · <a href="/admin/dashboard">← หน้าแอดมินหลัก</a></p>
+      </div></div></div>
+    )
+  }
+  return <NazaAdminBody email={who.email} />
 }
 
-function NazaAdminBody() {
+function NazaAdminBody({ email }) {
   useNazaFonts('NAZA · ตรวจสลิป')
-  const { list, loading, error } = useNazaBookings()
-  const { seats } = useNazaSeats()
-  const { config, loaded } = useNazaConfig()
+  const { list, seats, config, loading, error, reload } = useNazaBookings()
+  const loaded = !loading
   const [filter, setFilter] = useState('pending')
   const [roundF, setRoundF] = useState('all')
   const [q, setQ] = useState('')
@@ -90,11 +97,9 @@ function NazaAdminBody() {
     try {
       if (kind === 'confirm') {
         await confirmNazaBooking(b)
-        writeAuditLog({ action: 'update', entityType: 'nazaBooking', entityId: b.id, summary: `อนุมัติการจอง ${b.code} (${roundShort(b.round)} ${b.seats.join(',')})` })
         flash(`ยืนยัน ${b.code} แล้ว`)
       } else if (kind === 'reject') {
         await rejectNazaBooking(b)
-        writeAuditLog({ action: 'update', entityType: 'nazaBooking', entityId: b.id, summary: `ปฏิเสธการจอง ${b.code} และคืนที่นั่ง` })
         flash(`ปฏิเสธ ${b.code} และคืนที่นั่งแล้ว`)
       } else if (kind === 'checkin' || kind === 'uncheckin') {
         await setNazaCheckIn(b.id, kind === 'checkin')
@@ -103,18 +108,19 @@ function NazaAdminBody() {
     } catch (e) {
       if (e?.code === 'seat-taken') alert(`อนุมัติไม่ได้: ที่นั่ง ${e.seat} ถูกการจองอื่นถือไว้แล้ว\nติดต่อผู้จองเพื่อเปลี่ยนรอบ/ที่นั่ง หรือคืนเงิน`)
       else alert('บันทึกไม่สำเร็จ: ' + (e?.message || e))
-    } finally { setBusyId(null) }
+    } finally { setBusyId(null); reload() }
   }
 
   // ใช้กับเครื่องสแกน — ต้องคงที่ ไม่งั้นกล้องปิด/เปิดใหม่ทุกครั้งที่รายการจองอัปเดต
   const scanCheckIn = useCallback(async (b) => {
     await setNazaCheckIn(b.id, true)
-  }, [])
+    reload()
+  }, [reload])
 
   // ส่งอีเมลตามสถานะปัจจุบันอีกครั้ง (เช่น Apps Script ล่มตอนกดอนุมัติ) — ฝั่งนั้นไม่ส่งซ้ำถ้าส่งสำเร็จไปแล้ว
   const resendEmail = async (b) => {
     setMailing(b.id)
-    const r = await notifyNazaBooking(b.id)
+    const r = await resendNazaEmail(b.id).catch(() => null)
     setMailing(null)
     if (!r) flash('ติดต่อระบบอีเมลไม่ได้ — ตรวจการ deploy ของ Apps Script')
     else if (r.already) flash(`อีเมลสถานะนี้ของ ${b.code} เคยส่งไปแล้ว`)
@@ -137,9 +143,10 @@ function NazaAdminBody() {
         <div className="stephead">
           <h1>NAZA for GAZA · ตรวจสลิป</h1>
           <p>อนุมัติเพื่อยืนยันที่นั่ง ปฏิเสธเพื่อคืนที่นั่งให้คนอื่นจอง · <a href="/events/Naza" target="_blank" rel="noreferrer">เปิดหน้าจอง ↗</a></p>
+          <p style={{ fontSize: 12.5 }}>ล็อกอินเป็น {email} · <a href="/cdn-cgi/access/logout">ออกจากระบบ</a></p>
         </div>
 
-        {error && <p className="formerr" style={{ marginTop: 12 }}>โหลดรายการจองไม่สำเร็จ ({error.code || 'error'}) — บัญชีนี้อาจไม่มีสิทธิ์</p>}
+        {error && <p className="formerr" style={{ marginTop: 12 }}>โหลดรายการจองไม่สำเร็จ: {error.message} — กำลังลองใหม่อัตโนมัติ</p>}
 
         <section className="sec">
           <div className="stats">
@@ -157,7 +164,7 @@ function NazaAdminBody() {
             <small>{loaded ? `${baht(config.price)}/ที่ · พร้อมเพย์ ${config.promptpay || 'ยังไม่ตั้ง'} · ${config.closed ? 'ปิดรับจอง' : 'เปิดรับจอง'}` : '…'}</small>
             <button className="linkbtn" onClick={() => setShowCfg((v) => !v)}>{showCfg ? 'ซ่อน' : 'แก้ไข'}</button>
           </h2>
-          {showCfg && loaded && <ConfigForm config={config} onSaved={() => { setShowCfg(false); flash('บันทึกการตั้งค่าแล้ว') }} />}
+          {showCfg && loaded && <ConfigForm config={config} onSaved={() => { setShowCfg(false); reload(); flash('บันทึกการตั้งค่าแล้ว') }} />}
         </section>
 
         <section className="sec">
@@ -293,7 +300,6 @@ function ConfigForm({ config, onSaved }) {
     setSaving(true)
     try {
       await saveNazaConfig({ price, maxSeats, promptpay: f.promptpay.trim(), accountName: f.accountName.trim(), closed: f.closed })
-      writeAuditLog({ action: 'update', entityType: 'nazaConfig', entityId: 'nazaEvent', summary: `ตั้งค่า NAZA: ${price} บาท/ที่, พร้อมเพย์ ${f.promptpay.trim() || '-'}, ${f.closed ? 'ปิด' : 'เปิด'}รับจอง` })
       onSaved()
     } catch (e) { alert('บันทึกไม่สำเร็จ: ' + (e?.message || e)) } finally { setSaving(false) }
   }

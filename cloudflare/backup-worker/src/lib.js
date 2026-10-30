@@ -5,9 +5,8 @@
 //   socialAccounts / socialInsightsCache — มี OAuth token ของเพจโซเชียล (ห้ามไปอยู่ในชีต)
 //   pushTokens — token แจ้งเตือนของผู้ใช้ ไม่มีประโยชน์ในชีต
 //   chats (+ messages) / auditLog / comments — ปริมาณเยอะ และเป็นบทสนทนาส่วนตัว
-//   nazaSeats — สร้างใหม่ได้จาก nazaBookings
+// (ระบบจอง NAZA ย้ายไป Cloudflare D1 แล้ว — สำรองจาก BACKUP_D1_TABLES ด้านล่างแทน)
 export const BACKUP_COLLECTIONS = [
-  'nazaBookings',
   'orders', 'products', 'stockMovements', 'shopPromotions', 'productReviews', 'shopIssues',
   'donations', 'campaigns', 'campaignPartners',
   'volunteerRegs', 'iftarRegs', 'eventRegistrations', 'events',
@@ -15,6 +14,9 @@ export const BACKUP_COLLECTIONS = [
   'partnerOrganizations', 'aidLocations', 'speakers', 'staff', 'staffDirectory',
   'publicUpdates', 'missionMedia', 'config',
 ]
+
+// ตารางใน Cloudflare D1 (binding DB) — แท็บชื่อ d1_<ตาราง>
+export const BACKUP_D1_TABLES = ['naza_bookings', 'naza_seats', 'naza_config']
 
 export const META_SHEET = '_backup'
 const MAX_CELL = 49000 // Google Sheets รับได้ 50,000 ตัวอักษรต่อช่อง
@@ -103,4 +105,12 @@ export function safeEqual(a, b) {
   let diff = x.length ^ y.length
   for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x.charCodeAt(i) || 0) ^ (y.charCodeAt(i) || 0)
   return diff === 0
+}
+
+// แถวจาก D1 → ตาราง 2 มิติ — คอลัมน์ที่ลงท้าย _at (เวลา ms) แปลงเป็นเวลาไทย
+export function buildD1Table(rows) {
+  const cols = []
+  for (const r of rows) for (const k of Object.keys(r)) if (!cols.includes(k)) cols.push(k)
+  const cell = (k, v) => (k.endsWith('_at') && typeof v === 'number' ? bangkokTime(new Date(v).toISOString()) : cellValue(v))
+  return [cols, ...rows.map((r) => cols.map((k) => cell(k, r[k])))]
 }

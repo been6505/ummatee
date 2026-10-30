@@ -80,13 +80,13 @@ describe('runBackup (จำลอง Google API)', () => {
         return valid ? ok({ access_token: 'tok' }) : new Response('{"error":"bad sig"}', { status: 400 })
       }
       expect(init.headers.Authorization).toBe('Bearer tok')
-      if (url.includes('?fields=sheets.properties.title')) return ok({ sheets: [{ properties: { title: 'orders' } }] })
+      if (url.includes('?fields=sheets.properties.title')) return ok({ sheets: [{ properties: { title: 'products' } }] })
       if (url.endsWith(':batchUpdate')) return ok({})
       if (url.includes('firestore.googleapis.com')) {
-        if (url.includes('/documents/nazaBookings')) {
+        if (url.includes('/documents/orders')) {
           return url.includes('pageToken=p2')
-            ? ok({ documents: [{ name: 'x/nazaBookings/b2', fields: { name: { stringValue: '=HYPERLINK("evil")' } } }] })
-            : ok({ documents: [{ name: 'x/nazaBookings/b1', fields: { name: { stringValue: 'สมชาย' } } }], nextPageToken: 'p2' })
+            ? ok({ documents: [{ name: 'x/orders/b2', fields: { name: { stringValue: '=HYPERLINK("evil")' } } }] })
+            : ok({ documents: [{ name: 'x/orders/b1', fields: { name: { stringValue: 'สมชาย' } } }], nextPageToken: 'p2' })
         }
         if (url.includes('/documents/donations')) return new Response('{"error":{"status":"PERMISSION_DENIED"}}', { status: 403 })
         return ok({})
@@ -106,14 +106,33 @@ describe('runBackup (จำลอง Google API)', () => {
     const add = calls.find(([, u]) => u.endsWith(':batchUpdate'))
     expect(add).toBeTruthy()
     // อ่านครบทั้ง 2 หน้า และข้อความที่ขึ้นต้นด้วย = ถูกเขียนแบบ RAW ตามตัวอักษร
-    expect(writes["'nazaBookings'"]).toEqual([['_id', 'name', '_updated'], ['b1', 'สมชาย', ''], ['b2', '=HYPERLINK("evil")', '']])
+    expect(writes["'orders'"]).toEqual([['_id', 'name', '_updated'], ['b1', 'สมชาย', ''], ['b2', '=HYPERLINK("evil")', '']])
     // collection ที่ล้มไม่ทำให้ตัวอื่นไม่ถูกสำรอง และถูกบันทึกในแท็บสรุป
     expect(r.ok).toBe(false)
     expect(r.failed.map((f) => f.collection)).toEqual(['donations'])
     const meta = writes[`'${META_SHEET}'`]
     expect(meta.find((row) => row[0] === 'donations')[2]).toBe('error')
-    expect(meta.find((row) => row[0] === 'nazaBookings')).toEqual(['nazaBookings', 2, 'ok', ''])
+    expect(meta.find((row) => row[0] === 'orders')).toEqual(['orders', 2, 'ok', ''])
     expect(Object.keys(writes)).toHaveLength(BACKUP_COLLECTIONS.length) // ทุก collection ที่ไม่ล้ม + _backup
+  })
+
+  it('สำรองตาราง D1 ด้วย (เวลาเป็นเวลาไทย)', async () => {
+    const kp = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign'])
+    const der = Buffer.from(await crypto.subtle.exportKey('pkcs8', kp.privateKey)).toString('base64')
+    const sa = { client_email: 'b@x.iam.gserviceaccount.com', project_id: 'ummatee-app', private_key: `-----BEGIN PRIVATE KEY-----\n${der}\n-----END PRIVATE KEY-----` }
+    const writes = {}
+    const fetchFn = async (url, init = {}) => {
+      const ok = (body) => new Response(JSON.stringify(body), { status: 200 })
+      if (url.includes('oauth2')) return ok({ access_token: 't' })
+      if (url.includes('fields=sheets')) return ok({ sheets: [] })
+      if (init.method === 'PUT') writes[decodeURIComponent(url.split('/values/')[1].split('!')[0])] = JSON.parse(init.body).values
+      return ok({})
+    }
+    const DB = { prepare: (sql) => ({ all: async () => ({ results: sql.includes('naza_bookings') ? [{ id: 'a', code: 'NZ-AAAAA', created_at: Date.UTC(2026, 10, 1, 3, 0, 0), checked_in_at: null }] : [] }) }) }
+    const r = await runBackup({ GCP_SA_KEY: JSON.stringify(sa), BACKUP_SHEET_ID: 'S', DB }, fetchFn)
+    expect(writes["'d1_naza_bookings'"]).toEqual([['id', 'code', 'created_at', 'checked_in_at'], ['a', 'NZ-AAAAA', '2026-11-01 10:00:00', '']])
+    expect(writes["'d1_naza_seats'"]).toEqual([['(ว่าง)']])
+    expect(r.collections).toBe(BACKUP_COLLECTIONS.length + 3)
   })
 
   it('บอกชัดเมื่อยังไม่ได้ตั้งค่า', async () => {

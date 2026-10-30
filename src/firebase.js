@@ -36,5 +36,5 @@ export const db = initializeFirestore(app, {
 })
 export const auth = getAuth(app)
 export const storage = getStorage(app)
-// Cloud Functions callable (เช่น เชื่อมต่อ/ยกเลิกเชื่อมต่อโซเชียล, โพสต์จริง) — ดู functions/index.js
+// Cloud Functions callable (เช่น เชื่อมต่อ/ยกเลิกเชื่อมต่อโซเชียล, โพสต์จริง) — ดู firebase-functions/index.js
 export const functions = getFunctions(app)

@@ -9,7 +9,7 @@
 // แต่ละ collection ได้แท็บของตัวเอง เขียนทับทั้งแท็บทุกรอบ (เป็นสำเนาล่าสุด ไม่ใช่ประวัติ)
 // แท็บ _backup บอกเวลาสำรองล่าสุด จำนวนเอกสาร และ collection ที่ล้ม
 // เขียนแบบ valueInputOption=RAW เสมอ — ข้อความที่ผู้ใช้กรอก (ขึ้นต้นด้วย = + - @) จะไม่ถูกตีความเป็นสูตร
-import { BACKUP_COLLECTIONS, META_SHEET, decodeDoc, buildTable, bangkokTime, a1, pemToDer, base64url, safeEqual } from './lib.js'
+import { BACKUP_COLLECTIONS, BACKUP_D1_TABLES, META_SHEET, decodeDoc, buildTable, buildD1Table, bangkokTime, a1, pemToDer, base64url, safeEqual } from './lib.js'
 
 const SCOPES = 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/spreadsheets'
 const SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets'
@@ -62,7 +62,8 @@ export async function runBackup(env, fetchFn = fetch) {
   // สร้างแท็บที่ยังไม่มี (ครั้งแรก หรือเพิ่ม collection ใหม่ในรายการ)
   const meta = await api(fetchFn, token, `${sheetUrl}?fields=sheets.properties.title`)
   const have = new Set((meta.sheets || []).map((s) => s.properties.title))
-  const missing = [META_SHEET, ...BACKUP_COLLECTIONS].filter((t) => !have.has(t))
+  const d1Tabs = env.DB ? BACKUP_D1_TABLES.map((t) => `d1_${t}`) : []
+  const missing = [META_SHEET, ...BACKUP_COLLECTIONS, ...d1Tabs].filter((t) => !have.has(t))
   if (missing.length) {
     await api(fetchFn, token, `${sheetUrl}:batchUpdate`, {
       method: 'POST', body: JSON.stringify({ requests: missing.map((title) => ({ addSheet: { properties: { title } } })) }),
@@ -83,6 +84,24 @@ export async function runBackup(env, fetchFn = fetch) {
     } catch (e) {
       // collection หนึ่งล้ม (เช่น สิทธิ์ไม่พอ/ข้อมูลใหญ่เกิน) ไม่ทำให้ที่เหลือไม่ได้สำรอง — บันทึกไว้ในแท็บ _backup
       summary.push([col, '', 'error', String(e.message || e).slice(0, 500)])
+    }
+  }
+
+  // ข้อมูลที่อยู่บน Cloudflare D1 (ระบบจอง NAZA) — มีเมื่อผูก binding DB ใน wrangler.toml
+  if (env.DB) {
+    for (const table of BACKUP_D1_TABLES) {
+      const tab = `d1_${table}`
+      try {
+        const { results = [] } = await env.DB.prepare(`SELECT * FROM ${table}`).all()
+        const values = results.length ? buildD1Table(results) : [['(ว่าง)']]
+        await api(fetchFn, token, `${sheetUrl}/values/${encodeURIComponent(a1(tab))}:clear`, { method: 'POST', body: '{}' })
+        await api(fetchFn, token, `${sheetUrl}/values/${encodeURIComponent(`${a1(tab)}!A1`)}?valueInputOption=RAW`, {
+          method: 'PUT', body: JSON.stringify({ values }),
+        })
+        summary.push([tab, results.length, 'ok', ''])
+      } catch (e) {
+        summary.push([tab, '', 'error', String(e.message || e).slice(0, 500)])
+      }
     }
   }
 

@@ -14,7 +14,8 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "**/Sales 10_ OFF/**"
+      "**/Sales 10_ OFF/**",
+      "_headers"
     ],
     "rewrites": [
       {

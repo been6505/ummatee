@@ -4,6 +4,9 @@ set -e
 
 MSG="${1:-อัพเดทเว็บ Ummatee}"
 
+# หมายเหตุ: ถ้าตั้ง Cloudflare Pages แล้ว (docs/cloudflare-setup.md) เว็บบน Pages ขึ้นเองเมื่อ merge เข้า main
+# สคริปต์นี้ยังใช้ deploy firestore.rules + Firebase Hosting (ummatee-app.web.app ที่ยังเปิดคู่กันอยู่)
+
 echo "📦 ติดตั้ง dependencies (ถ้ายังไม่มี)..."
 [ -d node_modules ] || npm install
 
